@@ -45,14 +45,14 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   if (!user || user.role !== "teacher") return null;
 
   const teacher = user as Teacher;
-  const initials = teacher.displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials = teacher.displayName.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--cream)" }}>
       <nav style={{
         background: "var(--white)",
         borderBottom: "1.5px solid var(--border)",
-        padding: "0 1.5rem",
+        padding: "0 1rem",
         display: "flex",
         alignItems: "center",
         gap: 0,
@@ -66,13 +66,17 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           fontWeight: 800,
           fontSize: "1.05rem",
           color: "var(--charcoal)",
-          padding: "0.875rem 2rem 0.875rem 0",
+          padding: "0.875rem 1.25rem 0.875rem 0",
           borderRight: "1.5px solid var(--border)",
-          marginRight: "1rem",
+          marginRight: "0.75rem",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
         }}>
           🎵 Cadenza
         </div>
-        <div style={{ display: "flex", gap: 0 }}>
+
+        {/* Tab links — scrollable on mobile */}
+        <div className="teacher-nav-tabs">
           {tabs.map(t => {
             const active = t.href === "/teacher" ? path === "/teacher" : path.startsWith(t.href);
             return (
@@ -85,21 +89,25 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 fontSize: "0.875rem",
                 borderBottom: active ? "2.5px solid var(--peach)" : "2.5px solid transparent",
                 transition: "all 0.15s",
+                whiteSpace: "nowrap",
               }}>
                 {t.label}
               </Link>
             );
           })}
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+
+        {/* Right side — hidden on small screens */}
+        <div className="teacher-nav-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.6rem" }}>
           {teacher.hasStudio() && (
-            <span style={{
+            <span className="teacher-nav-studio" style={{
               fontFamily: "Nunito, sans-serif",
               fontSize: "0.75rem",
               color: "var(--muted)",
               background: "var(--cream-deep)",
               padding: "0.2rem 0.6rem",
               borderRadius: "999px",
+              whiteSpace: "nowrap",
             }}>
               {teacher.studioName}
             </span>
@@ -116,19 +124,20 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             fontFamily: "Nunito, sans-serif",
             fontWeight: 700,
             color: "white",
+            flexShrink: 0,
           }}>
             {initials}
           </div>
-          <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)" }}>
+          <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)", whiteSpace: "nowrap" }}>
             {teacher.displayName}
           </span>
           <button
             onClick={toggleTheme}
-            title={theme === "game" ? "Switch to Elegant mode" : "Switch to Game mode"}
+            title={theme === "dark" ? "Switch to Light mode" : "Switch to Dark mode"}
             style={{
               background: "none",
               border: "1.5px solid var(--border)",
-              borderRadius: theme === "elegant" ? 2 : 100,
+              borderRadius: 100,
               padding: "0.2rem 0.6rem",
               cursor: "pointer",
               fontSize: "0.7rem",
@@ -141,11 +150,11 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               marginLeft: "0.25rem",
             }}
           >
-            {theme === "game" ? "✦ Elegant" : "◈ Game"}
+            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
         </div>
       </nav>
-      <main style={{ maxWidth: 1160, margin: "0 auto", padding: "2rem 1.5rem" }}>{children}</main>
+      <main className="teacher-main">{children}</main>
     </div>
   );
 }

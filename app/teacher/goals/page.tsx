@@ -119,7 +119,7 @@ export default function GoalBuilder() {
         Create goals that become nodes on your student's learning path.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", alignItems: "start" }}>
+      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 320px" }}>
 
         {/* Form */}
         <div className="card-base" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>

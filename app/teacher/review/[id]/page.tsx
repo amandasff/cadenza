@@ -251,7 +251,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "1.5rem", alignItems: "start" }}>
+      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 300px" }}>
         {/* Left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 

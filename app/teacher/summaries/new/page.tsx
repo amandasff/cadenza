@@ -20,7 +20,7 @@ export default function NewSummary() {
         <Link href="/teacher/summaries" style={{ color:"var(--muted)", textDecoration:"none", fontSize:"1.1rem" }}>←</Link>
         <h1 style={{ fontFamily:"Nunito,sans-serif", fontWeight:800, fontSize:"1.4rem", color:"var(--charcoal)" }}>Write Lesson Summary</h1>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:"1.5rem" }}>
+      <div className="r-two-col" style={{ gridTemplateColumns:"1fr 300px" }}>
         <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
           <div style={{ background:"var(--white)", borderRadius:20, padding:"1.5rem", border:"1.5px solid var(--border)" }}>
             <div style={{ display:"flex", gap:"1rem", marginBottom:"1rem", flexWrap:"wrap" }}>

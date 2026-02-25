@@ -46,14 +46,18 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   if (!user || user.role !== "student") return null;
 
   const student = user as Student;
+  const initials = student.displayName
+    .split(" ")
+    .map((w: string) => w[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh", maxWidth: 430, margin: "0 auto", position: "relative" }}>
-      {/* Top header */}
-      <div style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
+    <div className="student-shell">
+
+      {/* ── Mobile header (hidden ≥700px) ── */}
+      <div className="student-mobile-header" style={{
         background: "var(--white)",
         borderBottom: "1.5px solid var(--border)",
         padding: "0.6rem 1.25rem",
@@ -70,11 +74,11 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           <span className="points-pill">⭐ {student.totalPoints.toLocaleString()}</span>
           <button
             onClick={toggleTheme}
-            title={theme === "game" ? "Switch to Elegant mode" : "Switch to Game mode"}
+            title={theme === "dark" ? "Switch to Light mode" : "Switch to Dark mode"}
             style={{
               background: "none",
               border: "1.5px solid var(--border)",
-              borderRadius: theme === "elegant" ? 2 : 100,
+              borderRadius: 100,
               padding: "0.2rem 0.5rem",
               cursor: "pointer",
               fontSize: "0.7rem",
@@ -86,20 +90,135 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               whiteSpace: "nowrap",
             }}
           >
-            {theme === "game" ? "✦ Elegant" : "◈ Game"}
+            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: 80 }}>{children}</div>
+      {/* ── Desktop sidebar (hidden <700px) ── */}
+      <aside className="student-sidebar">
+        {/* Logo */}
+        <div style={{
+          fontFamily: "Nunito, sans-serif",
+          fontWeight: 800,
+          fontSize: "1rem",
+          color: "var(--charcoal)",
+          marginBottom: "1.5rem",
+          paddingBottom: "1rem",
+          borderBottom: "1.5px solid var(--border)",
+        }}>
+          🎵 Cadenza
+        </div>
 
-      <nav style={{
+        {/* Student avatar + stats */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.6rem",
+          marginBottom: "1.25rem",
+          padding: "0.625rem 0.75rem",
+          background: "var(--cream)",
+          borderRadius: "var(--radius-lg)",
+        }}>
+          <div style={{
+            width: 34,
+            height: 34,
+            background: "var(--peach)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "0.75rem",
+            fontFamily: "Nunito, sans-serif",
+            fontWeight: 700,
+            color: "white",
+            flexShrink: 0,
+          }}>
+            {initials}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontFamily: "Nunito, sans-serif",
+              fontWeight: 700,
+              fontSize: "0.8rem",
+              color: "var(--charcoal)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}>
+              {student.displayName}
+            </div>
+            <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
+              <span className="streak-pill" style={{ fontSize: "0.6rem" }}>🔥 {student.streakDays}d</span>
+              <span className="points-pill" style={{ fontSize: "0.6rem" }}>⭐ {student.totalPoints.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Nav links */}
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.15rem" }}>
+          {tabs.map(t => {
+            const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
+            return (
+              <Link key={t.href} href={t.href} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.6rem",
+                padding: "0.55rem 0.75rem",
+                borderRadius: "var(--radius-md)",
+                background: active ? "var(--peach-bg)" : "transparent",
+                color: active ? "var(--peach)" : "var(--muted)",
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: active ? 700 : 500,
+                fontSize: "0.875rem",
+                textDecoration: "none",
+                transition: "all 0.15s",
+              }}>
+                <span style={{ fontSize: "1rem", lineHeight: 1 }}>{t.icon}</span>
+                {t.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Theme toggle at bottom */}
+        <div style={{ paddingTop: "1rem", borderTop: "1.5px solid var(--border)" }}>
+          <button
+            onClick={toggleTheme}
+            style={{
+              width: "100%",
+              background: "none",
+              border: "1.5px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              padding: "0.45rem 0.75rem",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontFamily: "Nunito, sans-serif",
+              fontWeight: 700,
+              color: "var(--muted)",
+              textAlign: "left",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              transition: "all 0.15s",
+            }}
+          >
+            {theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Scrollable content area ── */}
+      <div className="student-scroll-area">
+        {children}
+      </div>
+
+      {/* ── Mobile bottom nav (hidden ≥700px via CSS) ── */}
+      <nav className="student-bottom-nav" style={{
         position: "fixed",
         bottom: 0,
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "100%",
-        maxWidth: 430,
+        left: 0,
+        right: 0,
         background: "var(--white)",
         borderTop: "1.5px solid var(--border)",
         display: "flex",

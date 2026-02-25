@@ -165,7 +165,7 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Two-column layout: Students + Activity */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", alignItems: "start" }}>
+      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 320px" }}>
 
         {/* Students */}
         <div>

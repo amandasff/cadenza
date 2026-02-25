@@ -184,7 +184,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* Two-column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "1.5rem", alignItems: "start" }}>
+      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 300px" }}>
 
         {/* Left: Goals + Sessions */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
