@@ -8,6 +8,7 @@ import { Teacher } from "../../lib/models/Teacher";
 const tabs = [
   { href: "/teacher", label: "Dashboard" },
   { href: "/teacher/goals", label: "Goals" },
+  { href: "/teacher/review", label: "Review" },
   { href: "/teacher/chat", label: "Chat" },
 ];
 

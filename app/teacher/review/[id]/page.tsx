@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
@@ -36,6 +36,17 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
 
   const [approving, setApproving] = useState(false);
   const [approved, setApproved] = useState(false);
+
+  // Teacher voice note recording
+  const [recording, setRecording] = useState(false);
+  const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
+  const [sendingVoice, setSendingVoice] = useState(false);
+  const [voiceSent, setVoiceSent] = useState(false);
+  const [recordError, setRecordError] = useState("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -82,6 +93,78 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
     };
     load();
   }, [id]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function startRecording() {
+    setRecordError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setRecordingBlob(blob);
+        setRecordingUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach(t => t.stop());
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setRecording(true);
+    } catch {
+      setRecordError("Microphone access denied. Check your browser permissions.");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }
+
+  function discardRecording() {
+    if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+    setRecordingBlob(null);
+    setRecordingUrl(null);
+    setVoiceSent(false);
+  }
+
+  async function sendVoiceNote() {
+    if (!recordingBlob || !session || !student || sendingVoice) return;
+    setSendingVoice(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const path = `teacher-notes/${teacher.id}/${Date.now()}.webm`;
+      const { error: uploadErr } = await supabase.storage
+        .from("practice-recordings")
+        .upload(path, recordingBlob, { contentType: "audio/webm", upsert: false });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
+      const audioUrl = urlData.publicUrl;
+
+      await ChatService.getInstance(supabase).sendPrivateMessage(
+        session.studio_id, teacher.id, teacher.displayName, student.id,
+        `🎙 Voice note from ${teacher.displayName}\nAUDIO:${audioUrl}`
+      );
+
+      setVoiceSent(true);
+    } catch (err) {
+      console.error("voice note error:", err);
+      setRecordError("Failed to send voice note. Please try again.");
+    } finally {
+      setSendingVoice(false);
+    }
+  }
 
   async function handleApprove() {
     if (!session || !goal || !student || approving || approved) return;
@@ -198,7 +281,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           {/* Recording */}
           <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
             <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-              Recording
+              Student Recording
             </div>
             {session.recording_url ? (
               <audio controls src={session.recording_url} style={{ width: "100%", borderRadius: 8 }} />
@@ -244,7 +327,97 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
             </div>
           )}
 
-          {/* Approve goal button — only shown if session has a goal */}
+          {/* Teacher Voice Note */}
+          <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
+            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
+              Record Voice Note
+            </div>
+
+            {!recordingBlob ? (
+              <div>
+                <button
+                  onClick={recording ? stopRecording : startRecording}
+                  style={{
+                    width: "100%",
+                    padding: "0.85rem",
+                    borderRadius: 100,
+                    border: recording ? "2px solid var(--rose)" : "2px solid var(--sky)",
+                    background: recording ? "var(--rose-bg)" : "var(--sky-bg)",
+                    color: recording ? "var(--rose)" : "var(--sky)",
+                    fontFamily: "Nunito, sans-serif",
+                    fontWeight: 800,
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  {recording ? (
+                    <>
+                      <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--rose)", animation: "pulse 1s infinite" }} />
+                      Stop Recording
+                    </>
+                  ) : (
+                    <>🎙 Start Recording</>
+                  )}
+                </button>
+                {recordError && (
+                  <div style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--rose)", fontFamily: "Nunito, sans-serif", fontWeight: 600 }}>
+                    {recordError}
+                  </div>
+                )}
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.5rem", margin: "0.5rem 0 0" }}>
+                  Record a voice note to send directly to {student?.display_name?.split(" ")[0] ?? "the student"} via chat.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <audio controls src={recordingUrl ?? undefined} style={{ width: "100%", borderRadius: 8 }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                  <button
+                    onClick={discardRecording}
+                    style={{
+                      padding: "0.65rem",
+                      borderRadius: 100,
+                      border: "1.5px solid var(--border)",
+                      background: "var(--cream)",
+                      color: "var(--muted)",
+                      fontFamily: "Nunito, sans-serif",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Discard
+                  </button>
+                  <button
+                    onClick={sendVoiceNote}
+                    disabled={sendingVoice || voiceSent}
+                    style={{
+                      padding: "0.65rem",
+                      borderRadius: 100,
+                      border: "none",
+                      background: voiceSent ? "var(--sage)" : "var(--sky)",
+                      color: "white",
+                      fontFamily: "Nunito, sans-serif",
+                      fontWeight: 800,
+                      fontSize: "0.85rem",
+                      cursor: sendingVoice || voiceSent ? "default" : "pointer",
+                      opacity: sendingVoice ? 0.7 : 1,
+                      transition: "background 0.15s",
+                    }}
+                  >
+                    {voiceSent ? "✓ Sent!" : sendingVoice ? "Sending…" : "Send to Student"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Approve goal button */}
           {goal && (
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button
@@ -297,6 +470,28 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.5rem", textAlign: "center" }}>
               No goal linked to this session
             </p>
+          )}
+
+          {/* Link to student profile */}
+          {student && (
+            <Link
+              href={`/teacher/student/${student.id}`}
+              style={{
+                display: "block",
+                marginTop: "1rem",
+                padding: "0.6rem",
+                borderRadius: 100,
+                border: "1.5px solid var(--border)",
+                textAlign: "center",
+                fontFamily: "Nunito, sans-serif",
+                fontWeight: 700,
+                fontSize: "0.8rem",
+                color: "var(--charcoal)",
+                textDecoration: "none",
+              }}
+            >
+              View {student.display_name.split(" ")[0]}&apos;s Profile →
+            </Link>
           )}
         </div>
       </div>

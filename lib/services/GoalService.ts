@@ -139,4 +139,23 @@ export class GoalService {
 
     if (error) throw error;
   }
+
+  async awardPoints(studentId: string, points: number): Promise<void> {
+    const { data: profile, error: fetchErr } = await this.supabase
+      .from('profiles')
+      .select('total_points')
+      .eq('id', studentId)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+
+    const current = profile as { total_points: number };
+
+    const { error } = await this.supabase
+      .from('profiles')
+      .update({ total_points: current.total_points + points })
+      .eq('id', studentId);
+
+    if (error) throw error;
+  }
 }
