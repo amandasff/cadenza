@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=Fredoka:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=Fredoka:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -535,4 +535,123 @@ h1, h2, h3, h4, h5, h6 {
 @layer base {
   * { @apply border-border outline-ring/50; }
   body { @apply bg-background text-foreground; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ELEGANT THEME — Dior / atelier aesthetic
+   Toggle by setting html[data-theme="elegant"]
+   ═══════════════════════════════════════════════════════════════ */
+
+html[data-theme="elegant"] {
+  /* Ivory + deep charcoal base */
+  --cream: #F9F7F4;
+  --cream-deep: #F1EDE5;
+  --white: #FEFEFE;
+  --charcoal: #1A1A1A;
+  --muted: #8A8278;
+  --border: #DDD9D0;
+  --border-strong: #C8C3B8;
+
+  /* Champagne gold replaces coral peach */
+  --peach: #8B6C3A;
+  --peach-dark: #745A2E;
+  --peach-light: #D4BF98;
+  --peach-bg: #F6F0E4;
+
+  /* Muted sage */
+  --sage: #547A66;
+  --sage-mid: #648A76;
+  --sage-light: #B4C8BC;
+  --sage-bg: #EBF0ED;
+
+  /* Dusty rose */
+  --rose: #96546A;
+  --rose-mid: #A6647A;
+  --rose-light: #DABEC8;
+  --rose-bg: #F2EAED;
+
+  /* Steel blue */
+  --sky: #4A6880;
+  --sky-mid: #5A7890;
+  --sky-light: #AABDCC;
+  --sky-bg: #EAF0F5;
+
+  /* Gold (same as peach in elegant) */
+  --butter: #8B6C3A;
+  --butter-mid: #9B7C4A;
+  --butter-light: #D4BF98;
+  --butter-bg: #F6F0E4;
+
+  /* Subdued shadows */
+  --shadow-xs: 0 1px 2px rgba(26,26,26,0.04);
+  --shadow-sm: 0 2px 6px rgba(26,26,26,0.06);
+  --shadow-md: 0 3px 10px rgba(26,26,26,0.07);
+  --shadow-lg: 0 6px 20px rgba(26,26,26,0.09);
+  --shadow-peach: 0 2px 12px rgba(139,108,58,0.16);
+  --shadow-sage: 0 2px 12px rgba(84,122,102,0.16);
+}
+
+/* ── Elegant: Playfair Display for all Nunito headings ── */
+/* This selector matches elements with inline fontFamily: "Nunito..." in React */
+html[data-theme="elegant"] [style*="Nunito"],
+html[data-theme="elegant"] h1,
+html[data-theme="elegant"] h2,
+html[data-theme="elegant"] h3,
+html[data-theme="elegant"] h4 {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif !important;
+  letter-spacing: -0.01em;
+}
+
+/* ── Elegant: sharp corners on component classes ── */
+html[data-theme="elegant"] .card-base {
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  border-color: var(--border-strong) !important;
+}
+html[data-theme="elegant"] .card-hover,
+html[data-theme="elegant"] .card-interactive {
+  border-radius: 3px !important;
+}
+html[data-theme="elegant"] .card-hover:hover,
+html[data-theme="elegant"] .card-interactive:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+html[data-theme="elegant"] .btn {
+  border-radius: 2px !important;
+  font-family: 'Playfair Display', Georgia, serif !important;
+  letter-spacing: 0.04em;
+}
+html[data-theme="elegant"] .streak-pill,
+html[data-theme="elegant"] .points-pill {
+  border-radius: 2px !important;
+}
+html[data-theme="elegant"] .progress-bar,
+html[data-theme="elegant"] .progress-fill {
+  border-radius: 1px !important;
+}
+
+/* ── Elegant: goal nodes become squares ── */
+html[data-theme="elegant"] .goal-node {
+  border-radius: 4px !important;
+}
+html[data-theme="elegant"] .goal-node-boss {
+  border-radius: 4px !important;
+}
+
+/* ── Elegant: chat bubbles ── */
+html[data-theme="elegant"] .bubble-student,
+html[data-theme="elegant"] .bubble-teacher {
+  border-radius: 3px !important;
+}
+
+/* ── Elegant: pulse animation off (too game-y) ── */
+html[data-theme="elegant"] .animate-pulse-ring,
+html[data-theme="elegant"] .goal-node-current {
+  animation: none !important;
+}
+
+/* ── Elegant: skeleton ── */
+html[data-theme="elegant"] .skeleton {
+  background: linear-gradient(90deg, var(--cream-deep) 25%, #F5F1EB 50%, var(--cream-deep) 75%) !important;
 }

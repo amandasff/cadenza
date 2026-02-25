@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
+import { useTheme } from "../../lib/context/ThemeContext";
 import { Teacher } from "../../lib/models/Teacher";
 
 const tabs = [
@@ -16,6 +17,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const path = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (loading) return;
@@ -120,6 +122,27 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)" }}>
             {teacher.displayName}
           </span>
+          <button
+            onClick={toggleTheme}
+            title={theme === "game" ? "Switch to Elegant mode" : "Switch to Game mode"}
+            style={{
+              background: "none",
+              border: "1.5px solid var(--border)",
+              borderRadius: theme === "elegant" ? 2 : 100,
+              padding: "0.2rem 0.6rem",
+              cursor: "pointer",
+              fontSize: "0.7rem",
+              fontFamily: "Nunito, sans-serif",
+              fontWeight: 700,
+              color: "var(--muted)",
+              lineHeight: 1.4,
+              transition: "all 0.15s",
+              whiteSpace: "nowrap",
+              marginLeft: "0.25rem",
+            }}
+          >
+            {theme === "game" ? "✦ Elegant" : "◈ Game"}
+          </button>
         </div>
       </nav>
       <main style={{ maxWidth: 1160, margin: "0 auto", padding: "2rem 1.5rem" }}>{children}</main>

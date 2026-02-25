@@ -3,19 +3,22 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
+import { useTheme } from "../../lib/context/ThemeContext";
 import { Student } from "../../lib/models/Student";
 
 const tabs = [
   { href: "/student", label: "Path", icon: "🗺" },
   { href: "/student/practice", label: "Record", icon: "🎙" },
   { href: "/student/chat", label: "Chat", icon: "💬" },
-  { href: "/student/rewards", label: "Rewards", icon: "⭐" },
+  { href: "/student/journey", label: "Journey", icon: "🎼" },
+  { href: "/student/rewards", label: "Stars", icon: "⭐" },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (loading) return;
@@ -46,7 +49,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh", maxWidth: 430, margin: "0 auto", position: "relative" }}>
-      {/* Top header strip showing streak/points */}
+      {/* Top header */}
       <div style={{
         position: "sticky",
         top: 0,
@@ -65,6 +68,26 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <span className="streak-pill">🔥 {student.streakDays}d</span>
           <span className="points-pill">⭐ {student.totalPoints.toLocaleString()}</span>
+          <button
+            onClick={toggleTheme}
+            title={theme === "game" ? "Switch to Elegant mode" : "Switch to Game mode"}
+            style={{
+              background: "none",
+              border: "1.5px solid var(--border)",
+              borderRadius: theme === "elegant" ? 2 : 100,
+              padding: "0.2rem 0.5rem",
+              cursor: "pointer",
+              fontSize: "0.7rem",
+              fontFamily: "Nunito, sans-serif",
+              fontWeight: 700,
+              color: "var(--muted)",
+              lineHeight: 1.4,
+              transition: "all 0.15s",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {theme === "game" ? "✦ Elegant" : "◈ Game"}
+          </button>
         </div>
       </div>
 
@@ -97,8 +120,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               color: active ? "var(--peach)" : "var(--muted)",
               transition: "color 0.15s",
             }}>
-              <span style={{ fontSize: "1.3rem", lineHeight: 1 }}>{t.icon}</span>
-              <span style={{ fontSize: "0.68rem", fontFamily: "Nunito, sans-serif", fontWeight: active ? 700 : 500 }}>{t.label}</span>
+              <span style={{ fontSize: "1.15rem", lineHeight: 1 }}>{t.icon}</span>
+              <span style={{ fontSize: "0.6rem", fontFamily: "Nunito, sans-serif", fontWeight: active ? 700 : 500 }}>{t.label}</span>
             </Link>
           );
         })}

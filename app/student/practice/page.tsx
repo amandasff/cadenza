@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PracticeService } from "../../../lib/services/PracticeService";
 import { GoalService } from "../../../lib/services/GoalService";
 import { ChatService } from "../../../lib/services/ChatService";
+import { PortfolioService } from "../../../lib/services/PortfolioService";
 import { Student } from "../../../lib/models/Student";
 import type { GoalRow, PracticeSegment } from "../../../lib/types";
 
@@ -46,6 +47,11 @@ export default function PracticeRecorder() {
   // Recording
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+
+  // Portfolio / Journey
+  const [portfolioSave, setPortfolioSave] = useState(false);
+  const [portfolioTitle, setPortfolioTitle] = useState("");
+  const [portfolioDesc, setPortfolioDesc] = useState("");
 
   // Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -262,7 +268,7 @@ export default function PracticeRecorder() {
         }
       }
 
-      await practiceService.logSession({
+      const sessionData = await practiceService.logSession({
         studentId: student.id,
         studioId: student.studioId,
         goalId: currentGoal?.id,
@@ -271,6 +277,18 @@ export default function PracticeRecorder() {
         segments: sessionSegments.length > 0 ? sessionSegments : undefined,
         recordingUrl,
       });
+
+      // Save to Journey/Portfolio if requested
+      if (portfolioSave && portfolioTitle.trim()) {
+        await PortfolioService.getInstance(supabase).addItem({
+          studentId: student.id,
+          studioId: student.studioId ?? undefined,
+          title: portfolioTitle.trim(),
+          description: portfolioDesc.trim() || undefined,
+          recordingUrl,
+          sessionId: sessionData.id,
+        }).catch(() => {});
+      }
 
       // Post system message to the private DM with the teacher
       if (teacherId) {
@@ -364,13 +382,74 @@ export default function PracticeRecorder() {
           />
         </div>
 
+        {/* Save to Journey */}
+        {audioBlobUrl && (
+          <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1.25rem", marginBottom: "0.25rem", textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--charcoal)", marginBottom: 2 }}>
+                  🎼 Save to My Journey
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
+                  Add this recording to your portfolio
+                </div>
+              </div>
+              {/* Toggle switch */}
+              <button
+                onClick={() => setPortfolioSave(v => !v)}
+                style={{
+                  width: 44, height: 24, borderRadius: 100, border: "none", flexShrink: 0,
+                  background: portfolioSave ? "var(--peach)" : "var(--border)",
+                  position: "relative", cursor: "pointer", transition: "background 0.15s",
+                }}
+              >
+                <div style={{
+                  width: 18, height: 18, borderRadius: "50%", background: "white",
+                  position: "absolute", top: 3,
+                  left: portfolioSave ? 23 : 3,
+                  transition: "left 0.15s",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                }} />
+              </button>
+            </div>
+
+            {portfolioSave && (
+              <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <input
+                  autoFocus
+                  value={portfolioTitle}
+                  onChange={e => setPortfolioTitle(e.target.value)}
+                  placeholder="Piece name, e.g. Für Elise"
+                  style={{
+                    width: "100%", borderRadius: 8, border: "1.5px solid var(--border)",
+                    padding: "0.6rem 0.875rem", fontFamily: "DM Sans, sans-serif", fontSize: "0.875rem",
+                    background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <textarea
+                  value={portfolioDesc}
+                  onChange={e => setPortfolioDesc(e.target.value)}
+                  placeholder="Notes about this recording... (optional)"
+                  style={{
+                    width: "100%", borderRadius: 8, border: "1.5px solid var(--border)",
+                    padding: "0.6rem 0.875rem", fontFamily: "DM Sans, sans-serif", fontSize: "0.875rem",
+                    background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none",
+                    boxSizing: "border-box", resize: "none", minHeight: 56,
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || (portfolioSave && !portfolioTitle.trim())}
           className="btn btn-primary"
-          style={{ width: "100%", maxWidth: 320, padding: "0.875rem", fontSize: "0.95rem", opacity: saving ? 0.65 : 1 }}
+          style={{ width: "100%", maxWidth: 320, padding: "0.875rem", fontSize: "0.95rem", opacity: (saving || (portfolioSave && !portfolioTitle.trim())) ? 0.65 : 1 }}
         >
-          {saving ? "Saving..." : "Submit Session ✓"}
+          {saving ? "Saving..." : portfolioSave ? "Submit & Save to Journey ✓" : "Submit Session ✓"}
         </button>
       </div>
     );
