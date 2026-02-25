@@ -37,7 +37,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+    <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.75rem" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎵</div>
@@ -63,7 +63,7 @@ export default function SignUpPage() {
               ))}
             </div>
           </CardHeader>
-          <CardContent style={{ paddingTop: "1.25rem" }}>
+          <CardContent style={{ padding: "1.5rem 1.75rem 1.75rem" }}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                 <Label htmlFor="name" style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>Display Name</Label>

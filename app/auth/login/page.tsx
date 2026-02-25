@@ -33,16 +33,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
-      <div style={{ width: "100%", maxWidth: 380 }}>
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+    <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.75rem" }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: "2.25rem" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎵</div>
           <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1.75rem", color: "var(--charcoal)" }}>Welcome</h1>
           <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.25rem" }}>Sign in to your Cadenza account</p>
         </div>
 
         <Card style={{ borderRadius: 20, border: "1.5px solid var(--border)", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-          <CardContent style={{ paddingTop: "1.5rem" }}>
+          <CardContent style={{ padding: "1.75rem 1.75rem 1.75rem" }}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                 <Label htmlFor="email" style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>Email</Label>

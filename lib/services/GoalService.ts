@@ -103,20 +103,17 @@ export class GoalService {
 
     const { data: profile, error: profileFetchError } = await this.supabase
       .from('profiles')
-      .select('total_points, streak_days')
+      .select('total_points')
       .eq('id', studentId)
       .single();
 
     if (profileFetchError) throw profileFetchError;
 
-    const current = profile as { total_points: number; streak_days: number };
+    const current = profile as { total_points: number };
 
     const { error: updateError } = await this.supabase
       .from('profiles')
-      .update({
-        total_points: current.total_points + pointsToAward,
-        streak_days: current.streak_days + 1,
-      })
+      .update({ total_points: current.total_points + pointsToAward })
       .eq('id', studentId);
 
     if (updateError) throw updateError;

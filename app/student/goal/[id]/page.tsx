@@ -1,7 +1,12 @@
 "use client";
 import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
+import { GoalService } from "../../../../lib/services/GoalService";
+import { ChatService } from "../../../../lib/services/ChatService";
+import { Student } from "../../../../lib/models/Student";
 import type { GoalRow } from "../../../../lib/types";
 
 const AREAS: Record<string, { label: string; color: string; bg: string; icon: string }> = {
@@ -13,9 +18,16 @@ const AREAS: Record<string, { label: string; color: string; bg: string; icon: st
 
 export default function GoalDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { user } = useAuth();
+  const student = user as Student;
+
   const [goal, setGoal] = useState<GoalRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [teacherId, setTeacherId] = useState<string | null>(null);
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState("");
 
   useEffect(() => {
     const fetchGoal = async () => {
@@ -29,7 +41,14 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
         if (error || !data) {
           setNotFound(true);
         } else {
-          setGoal(data as GoalRow);
+          const g = data as GoalRow;
+          setGoal(g);
+          const { data: studioData } = await supabase
+            .from("studios")
+            .select("owner_id")
+            .eq("id", g.studio_id)
+            .single();
+          setTeacherId(studioData?.owner_id ?? null);
         }
       } catch {
         setNotFound(true);
@@ -40,8 +59,34 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
     fetchGoal();
   }, [id]);
 
-  const area = goal ? (AREAS[goal.practice_area] ?? AREAS["technique"]) : null;
+  async function handleClaim() {
+    if (!goal || !student?.studioId || claiming) return;
+    setClaiming(true);
+    setClaimError("");
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await GoalService.getInstance(supabase).completeGoal(goal.id, student.id, goal.points);
 
+      if (teacherId) {
+        const bonusLine = goal.bonus_title && goal.bonus_points
+          ? `\n⭐ Bonus: ${goal.bonus_title} (+${goal.bonus_points} pts)`
+          : "";
+        await ChatService.getInstance(supabase).postSystemMessage(
+          goal.studio_id, student.id, teacherId,
+          `🎉 Goal completed!\n📌 ${goal.title}\n⭐ +${goal.points} stars earned${bonusLine}`
+        ).catch(() => {});
+      }
+
+      setGoal((prev) => prev ? { ...prev, status: "completed" } : prev);
+    } catch (err) {
+      const e = err as { message?: string };
+      setClaimError(e?.message ?? "Something went wrong");
+    } finally {
+      setClaiming(false);
+    }
+  }
+
+  const area = goal ? (AREAS[goal.practice_area] ?? AREAS["technique"]) : null;
   const statusLabel = goal?.status === "current" ? "In Progress" : goal?.status === "completed" ? "Completed" : "Locked";
   const statusColor = goal?.status === "current" ? "var(--peach)" : goal?.status === "completed" ? "var(--sage)" : "var(--muted)";
   const statusBg = goal?.status === "current" ? "var(--peach-bg)" : goal?.status === "completed" ? "var(--sage-bg)" : "var(--border)";
@@ -49,7 +94,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
   return (
     <div style={{ minHeight: "100dvh", background: "var(--cream)" }}>
       <div style={{ background: "var(--white)", borderBottom: "1.5px solid var(--border)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <Link href="/student" style={{ color: "var(--muted)", textDecoration: "none", fontSize: "1.1rem" }}>←</Link>
+        <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
         <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1.05rem", color: "var(--charcoal)", flex: 1, margin: 0 }}>
           Goal Detail
         </h1>
@@ -94,7 +139,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
               </h2>
               <div style={{ display: "flex", gap: "1.5rem" }}>
                 <div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--muted)", marginBottom: 2, fontFamily: "DM Sans, sans-serif" }}>Points</div>
+                  <div style={{ fontSize: "0.7rem", color: "var(--muted)", marginBottom: 2, fontFamily: "DM Sans, sans-serif" }}>Stars</div>
                   <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--butter)", fontSize: "1rem" }}>⭐ {goal.points}</div>
                 </div>
                 {goal.due_date && (
@@ -126,7 +171,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
                 <div style={{ fontSize: "0.75rem", color: "var(--butter)", marginBottom: "0.5rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   ⭐ Bonus Challenge
                 </div>
-                <p style={{ fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.5rem", margin: "0 0 0.5rem", fontFamily: "DM Sans, sans-serif" }}>
+                <p style={{ fontSize: "0.875rem", color: "var(--charcoal)", margin: "0 0 0.5rem", fontFamily: "DM Sans, sans-serif" }}>
                   {goal.bonus_title}
                 </p>
                 <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--butter)" }}>
@@ -152,11 +197,51 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
               </div>
             )}
 
-            {/* CTA */}
+            {/* Completed celebration */}
+            {goal.status === "completed" && (
+              <div style={{ background: "var(--sage-bg)", border: "1.5px solid var(--sage)", borderRadius: "var(--radius-xl)", padding: "1.5rem", textAlign: "center" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎉</div>
+                <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.05rem", color: "var(--sage)" }}>
+                  Goal Complete!
+                </div>
+                <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                  You earned ⭐ {goal.points} stars
+                </div>
+              </div>
+            )}
+
+            {/* CTAs — only for current goals */}
             {goal.status === "current" && (
-              <Link href="/student/practice" style={{ background: "var(--peach)", color: "white", padding: "0.9rem", borderRadius: 100, textAlign: "center", textDecoration: "none", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", display: "block", boxShadow: "var(--shadow-peach)" }}>
-                Record Practice Session
-              </Link>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingBottom: "1rem" }}>
+                <Link href="/student/practice" style={{ background: "var(--peach)", color: "white", padding: "0.9rem", borderRadius: 100, textAlign: "center", textDecoration: "none", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", display: "block", boxShadow: "var(--shadow-peach)" }}>
+                  🎙 Record Practice Session
+                </Link>
+
+                <button
+                  onClick={handleClaim}
+                  disabled={claiming}
+                  style={{
+                    width: "100%", padding: "0.9rem", borderRadius: 100,
+                    border: "2px solid var(--butter)",
+                    background: "var(--butter-bg)",
+                    color: "var(--butter)", fontFamily: "Nunito, sans-serif", fontWeight: 800,
+                    fontSize: "0.95rem", cursor: claiming ? "default" : "pointer",
+                    opacity: claiming ? 0.7 : 1, transition: "all 0.15s",
+                  }}
+                >
+                  {claiming ? "Claiming…" : `⭐ Complete & Claim ${goal.points} Stars`}
+                </button>
+
+                {claimError && (
+                  <div style={{ background: "var(--rose-bg)", border: "1.5px solid var(--rose-light)", borderRadius: 12, padding: "0.6rem 0.875rem", fontSize: "0.8rem", color: "var(--rose)", fontFamily: "Nunito, sans-serif", fontWeight: 600 }}>
+                    {claimError}
+                  </div>
+                )}
+
+                <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textAlign: "center", margin: 0 }}>
+                  Claim when you feel ready — your teacher will be notified
+                </p>
+              </div>
             )}
           </>
         )}

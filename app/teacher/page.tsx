@@ -20,12 +20,6 @@ function getGreeting() {
   return "Good evening";
 }
 
-function getLevelLabel(points: number) {
-  if (points >= 5000) return "Virtuoso";
-  if (points >= 2000) return "Performer";
-  if (points >= 500) return "Practitioner";
-  return "Beginner";
-}
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -168,7 +162,6 @@ export default function TeacherDashboard() {
               const completed = goals.filter(g => g.status === "completed").length;
               const total = goals.length;
               const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-              const level = getLevelLabel(profile.total_points);
               const initials = profile.display_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
               return (
@@ -189,7 +182,7 @@ export default function TeacherDashboard() {
                         {profile.display_name}
                       </div>
                       <div style={{ fontSize: "0.72rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
-                        {level} · {total} goals
+                        {total} goal{total !== 1 ? "s" : ""}
                       </div>
                     </div>
                   </div>
