@@ -6,11 +6,7 @@ import { PortfolioService, type PortfolioItemRow } from "../../../lib/services/P
 import { Student } from "../../../lib/models/Student";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString([], {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return new Date(iso).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" });
 }
 
 export default function JourneyPage() {
@@ -20,8 +16,6 @@ export default function JourneyPage() {
   const [items, setItems] = useState<PortfolioItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [noTable, setNoTable] = useState(false);
-
-  // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -37,10 +31,7 @@ export default function JourneyPage() {
         setItems(data);
       } catch (err) {
         const e = err as { message?: string; code?: string };
-        // If the table doesn't exist yet, show a friendly setup message
-        if (e?.message?.includes("portfolio_items") || e?.code === "42P01") {
-          setNoTable(true);
-        }
+        if (e?.message?.includes("portfolio_items") || e?.code === "42P01") setNoTable(true);
         console.error("portfolio load error:", e?.message);
       } finally {
         setLoading(false);
@@ -95,7 +86,7 @@ export default function JourneyPage() {
     return (
       <div style={{ padding: "1.5rem 1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
         {[1, 2, 3].map(i => (
-          <div key={i} className="skeleton" style={{ height: 140, borderRadius: "var(--radius-xl)" }} />
+          <div key={i} className="skeleton" style={{ height: 120, borderRadius: 4 }} />
         ))}
       </div>
     );
@@ -104,31 +95,16 @@ export default function JourneyPage() {
   if (noTable) {
     return (
       <div style={{ padding: "1.5rem 1.25rem" }}>
-        <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.4rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
-          My Journey
-        </h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.5rem", fontFamily: "DM Sans, sans-serif" }}>
-          Your documented learning path
-        </p>
-        <div style={{ background: "var(--butter-bg)", border: "1.5px solid var(--butter-light)", borderRadius: "var(--radius-xl)", padding: "1.5rem" }}>
-          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>
-            ⚙️ One-time setup needed
+        <h1 style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>My Journey</h1>
+        <p style={{ color: "var(--muted)", fontSize: "0.8125rem", marginBottom: "1.5rem", fontFamily: "Inter, sans-serif" }}>Your documented learning path</p>
+        <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1.5rem" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>
+            One-time setup needed
           </div>
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem", color: "var(--charcoal)", lineHeight: 1.6, marginBottom: "1rem" }}>
-            Run this SQL in your Supabase dashboard (SQL Editor) to enable the portfolio:
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.6, marginBottom: "1rem" }}>
+            Run this SQL in your Supabase dashboard to enable the portfolio:
           </p>
-          <pre style={{
-            background: "var(--white)",
-            border: "1.5px solid var(--border)",
-            borderRadius: 8,
-            padding: "1rem",
-            fontSize: "0.72rem",
-            fontFamily: "monospace",
-            color: "var(--charcoal)",
-            overflowX: "auto",
-            lineHeight: 1.7,
-            whiteSpace: "pre-wrap",
-          }}>{`create table public.portfolio_items (
+          <pre style={{ background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: 3, padding: "1rem", fontSize: "0.7rem", fontFamily: "monospace", color: "var(--charcoal)", overflowX: "auto", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{`create table public.portfolio_items (
   id uuid primary key default gen_random_uuid(),
   student_id uuid references auth.users(id)
     on delete cascade not null,
@@ -158,156 +134,88 @@ create policy "Teachers read studio portfolio"
         and p.studio_id = portfolio_items.studio_id
     )
   );`}</pre>
-          <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.875rem", lineHeight: 1.5 }}>
-            After running this, reload the page. Your journey is stored in Supabase — it will never be lost when the app is updated.
-          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "1.5rem 1.25rem 1rem", display: "flex", flexDirection: "column", gap: 0 }}>
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.4rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
+    <div style={{ padding: "1.5rem 1.25rem 1rem" }}>
+      <div style={{ marginBottom: "1.75rem" }}>
+        <h1 style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
           My Journey
         </h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.875rem", fontFamily: "DM Sans, sans-serif" }}>
-          {items.length === 0 ? "Your recorded pieces will appear here" : `${items.length} piece${items.length !== 1 ? "s" : ""} documented`}
+        <p style={{ color: "var(--muted)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif" }}>
+          {items.length === 0 ? "Recorded pieces will appear here" : `${items.length} piece${items.length !== 1 ? "s" : ""}`}
         </p>
       </div>
 
       {items.length === 0 ? (
-        <div className="empty-state" style={{ padding: "3rem 1rem" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎼</div>
-          <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, color: "var(--charcoal)", margin: 0, fontSize: "1rem" }}>
-            No recordings yet
-          </p>
-          <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.875rem", margin: "0.5rem 0 0", textAlign: "center", lineHeight: 1.5 }}>
-            After a practice session, tap &ldquo;Save to Journey&rdquo; to add a recording here.
-          </p>
+        <div className="empty-state">
+          <div className="empty-state-title">No recordings yet</div>
+          <p className="empty-state-desc">After a practice session, save it to your Journey to build your portfolio.</p>
         </div>
       ) : (
         <div style={{ position: "relative" }}>
-          {/* Timeline line */}
-          <div style={{
-            position: "absolute",
-            left: 19,
-            top: 24,
-            bottom: 24,
-            width: 2,
-            background: "linear-gradient(to bottom, var(--peach-light), var(--border))",
-            zIndex: 0,
-          }} />
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div style={{ position: "absolute", left: 19, top: 24, bottom: 24, width: 1, background: "var(--border)", zIndex: 0 }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             {items.map((item, idx) => (
               <div key={item.id} style={{ display: "flex", gap: "1rem", position: "relative", zIndex: 1 }}>
                 {/* Timeline dot */}
                 <div style={{
-                  width: 40, height: 40, flexShrink: 0,
-                  background: idx === 0 ? "var(--peach)" : "var(--white)",
-                  border: `2px solid ${idx === 0 ? "var(--peach)" : "var(--border-strong)"}`,
+                  width: 38, height: 38, flexShrink: 0,
+                  background: idx === 0 ? "var(--charcoal)" : "var(--white)",
+                  border: `1px solid ${idx === 0 ? "var(--charcoal)" : "var(--border-strong)"}`,
                   borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: idx === 0 ? "1rem" : "0.85rem",
-                  boxShadow: idx === 0 ? "var(--shadow-peach)" : "none",
+                  fontSize: "0.6875rem", color: idx === 0 ? "white" : "var(--muted)",
+                  fontFamily: "Inter, sans-serif",
                 }}>
-                  {idx === 0 ? "🎵" : "♩"}
+                  {idx + 1}
                 </div>
 
                 {/* Card */}
-                <div style={{
-                  flex: 1,
-                  background: "var(--white)",
-                  borderRadius: "var(--radius-xl)",
-                  border: "1.5px solid var(--border)",
-                  padding: "1rem 1.125rem",
-                  boxShadow: idx === 0 ? "var(--shadow-sm)" : "none",
-                }}>
+                <div style={{ flex: 1, background: "var(--white)", borderRadius: 4, border: "1px solid var(--border)", padding: "1rem 1.125rem" }}>
                   {editingId === item.id ? (
-                    // Edit mode
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                       <input
                         autoFocus
                         value={editTitle}
                         onChange={e => setEditTitle(e.target.value)}
-                        style={{
-                          borderRadius: 8, border: "1.5px solid var(--border)", padding: "0.5rem 0.75rem",
-                          fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.9rem",
-                          background: "var(--cream)", color: "var(--charcoal)", outline: "none", width: "100%", boxSizing: "border-box",
-                        }}
+                        style={{ borderRadius: 3, border: "1px solid var(--border-strong)", padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", width: "100%", boxSizing: "border-box" }}
                       />
                       <textarea
                         value={editDesc}
                         onChange={e => setEditDesc(e.target.value)}
                         placeholder="Add a note about this recording..."
-                        style={{
-                          borderRadius: 8, border: "1.5px solid var(--border)", padding: "0.5rem 0.75rem",
-                          fontFamily: "DM Sans, sans-serif", fontSize: "0.82rem",
-                          background: "var(--cream)", color: "var(--charcoal)", outline: "none",
-                          width: "100%", boxSizing: "border-box", resize: "none", minHeight: 60,
-                        }}
+                        style={{ borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", width: "100%", boxSizing: "border-box", resize: "none", minHeight: 56 }}
                       />
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          style={{ flex: 1, padding: "0.5rem", borderRadius: 100, border: "1.5px solid var(--border)", background: "var(--cream)", color: "var(--muted)", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
-                        >
+                        <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: "0.5rem", borderRadius: 3, border: "1px solid var(--border)", background: "var(--cream)", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>
                           Cancel
                         </button>
-                        <button
-                          onClick={() => saveEdit(item.id)}
-                          disabled={saving || !editTitle.trim()}
-                          style={{ flex: 1, padding: "0.5rem", borderRadius: 100, border: "none", background: "var(--peach)", color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
-                        >
+                        <button onClick={() => saveEdit(item.id)} disabled={saving || !editTitle.trim()} style={{ flex: 1, padding: "0.5rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "white", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>
                           {saving ? "Saving…" : "Save"}
                         </button>
                       </div>
                     </div>
                   ) : (
-                    // Display mode
                     <>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1rem", color: "var(--charcoal)", marginBottom: "0.1rem" }}>
-                            {item.title}
-                          </div>
-                          <div style={{ fontSize: "0.7rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
-                            {formatDate(item.created_at)}
-                          </div>
+                          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.125rem" }}>{item.title}</div>
+                          <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.01em" }}>{formatDate(item.created_at)}</div>
                         </div>
-                        <div style={{ display: "flex", gap: "0.3rem", flexShrink: 0, marginLeft: "0.5rem" }}>
-                          <button
-                            onClick={() => startEdit(item)}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.85rem", padding: "0.15rem 0.3rem" }}
-                            title="Edit"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => deleteItem(item.id)}
-                            disabled={deletingId === item.id}
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.85rem", padding: "0.15rem 0.3rem", opacity: deletingId === item.id ? 0.5 : 1 }}
-                            title="Remove"
-                          >
-                            🗑️
-                          </button>
+                        <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0, marginLeft: "0.5rem" }}>
+                          <button onClick={() => startEdit(item)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", padding: "0.125rem 0.375rem", fontFamily: "Inter, sans-serif" }} title="Edit">Edit</button>
+                          <button onClick={() => deleteItem(item.id)} disabled={deletingId === item.id} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", padding: "0.125rem 0.375rem", opacity: deletingId === item.id ? 0.5 : 1, fontFamily: "Inter, sans-serif" }} title="Remove">Remove</button>
                         </div>
                       </div>
-
                       {item.description && (
-                        <p style={{ fontSize: "0.82rem", color: "var(--charcoal)", lineHeight: 1.55, margin: "0 0 0.75rem", fontFamily: "DM Sans, sans-serif" }}>
-                          {item.description}
-                        </p>
+                        <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.6, margin: "0 0 0.75rem", fontFamily: "Inter, sans-serif" }}>{item.description}</p>
                       )}
-
                       {item.recording_url && (
-                        <audio
-                          controls
-                          src={item.recording_url}
-                          style={{ width: "100%", borderRadius: 6, marginTop: item.description ? 0 : "0.375rem" }}
-                        />
+                        <audio controls src={item.recording_url} style={{ width: "100%", borderRadius: 3, marginTop: item.description ? 0 : "0.375rem" }} />
                       )}
                     </>
                   )}

@@ -9,12 +9,12 @@ import type { PracticeSessionRow } from "../../../lib/types";
 const weekDayLabels = ["M", "T", "W", "T", "F", "S", "S"];
 
 const STATIC_BADGES = [
-  { emoji: "🎤", label: "First Recording", threshold: 1 },
-  { emoji: "🔥", label: "7-Day Streak", streakThreshold: 7 },
-  { emoji: "🎵", label: "First Goal", pointsThreshold: 1 },
-  { emoji: "⭐", label: "Practitioner", pointsThreshold: 500 },
-  { emoji: "🏆", label: "30-Day Streak", streakThreshold: 30 },
-  { emoji: "🎸", label: "Performer", pointsThreshold: 2000 },
+  { label: "First Recording", threshold: 1 },
+  { label: "7-Day Streak",    streakThreshold: 7 },
+  { label: "First Goal",      pointsThreshold: 1 },
+  { label: "Practitioner",    pointsThreshold: 500 },
+  { label: "30-Day Streak",   streakThreshold: 30 },
+  { label: "Performer",       pointsThreshold: 2000 },
 ];
 
 export default function Rewards() {
@@ -33,22 +33,19 @@ export default function Rewards() {
       setSessions(data);
     } catch (err) {
       const e = err as { message?: string; code?: string; details?: string };
-      console.error('loadSessions error:', e?.message, e?.code, e?.details);
+      console.error("loadSessions error:", e?.message, e?.code, e?.details);
     } finally {
       setLoading(false);
     }
   }, [student?.id]);
 
-  useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+  useEffect(() => { loadSessions(); }, [loadSessions]);
 
   if (!student) return null;
 
   const totalPoints = student.totalPoints;
   const streakDays = student.streakDays;
 
-  // Build last 7 days practiced array
   const last7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -56,7 +53,6 @@ export default function Rewards() {
     return sessions.some(s => s.created_at.slice(0, 10) === dateStr);
   });
 
-  // Determine which badges are earned
   const badges = STATIC_BADGES.map(b => {
     let earned = false;
     if (b.threshold !== undefined) earned = sessions.length >= b.threshold;
@@ -69,58 +65,53 @@ export default function Rewards() {
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--cream)" }}>
-      <div style={{ background: "var(--white)", borderBottom: "1.5px solid var(--border)", padding: "1rem 1.25rem" }}>
-        <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.1rem", color: "var(--charcoal)", margin: 0 }}>
-          Streaks & Rewards
+
+      {/* Page header */}
+      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem" }}>
+        <h1 style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", margin: 0, letterSpacing: "-0.005em" }}>
+          Progress & Awards
         </h1>
       </div>
 
-      <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ padding: "1.5rem 1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-        {/* Stars card */}
-        <div className="card-base" style={{ padding: "1.25rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
-          <div style={{
-            width: 52, height: 52,
-            background: "var(--butter-bg)",
-            borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "1.6rem", flexShrink: 0,
-          }}>
-            ⭐
-          </div>
+        {/* Points */}
+        <div className="card-base" style={{ padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1.25rem" }}>
           <div>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "2rem", color: "var(--charcoal)", lineHeight: 1 }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "2.5rem", color: "var(--charcoal)", lineHeight: 1, letterSpacing: "-0.02em" }}>
               {totalPoints.toLocaleString()}
             </div>
-            <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.78rem", color: "var(--muted)", marginTop: 2 }}>
-              Stars earned
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Points earned
             </div>
           </div>
         </div>
 
-        {/* Streak card */}
-        <div className="card-base" style={{ padding: "1.25rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
-            <span style={{ fontSize: "2rem" }}>🔥</span>
-            <div>
-              <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.8rem", color: "var(--peach)", lineHeight: 1 }}>
-                {streakDays} days
-              </div>
-              <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                Practice streak
-              </div>
+        {/* Streak */}
+        <div className="card-base" style={{ padding: "1.25rem 1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "0.625rem", marginBottom: "1rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "2.25rem", color: "var(--charcoal)", lineHeight: 1, letterSpacing: "-0.02em" }}>
+              {streakDays}
+            </div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Day streak
             </div>
           </div>
-          {/* Last 7 days */}
-          <div style={{ display: "flex", gap: "0.4rem" }}>
+          <div style={{ display: "flex", gap: "0.3rem" }}>
             {weekDayLabels.map((d, i) => (
-              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ fontSize: "0.65rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>{d}</div>
+              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
+                <div style={{ fontSize: "0.5625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.02em" }}>{d}</div>
                 <div style={{
-                  width: "100%", aspectRatio: "1", borderRadius: 8,
+                  width: "100%",
+                  aspectRatio: "1",
+                  borderRadius: 2,
                   background: last7[i] ? "var(--sage)" : "var(--border)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.6rem", color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.5rem",
+                  color: "white",
+                  fontFamily: "Inter, sans-serif",
                 }}>
                   {last7[i] ? "✓" : ""}
                 </div>
@@ -131,46 +122,51 @@ export default function Rewards() {
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-          <div className="card-base" style={{ padding: "1rem", textAlign: "center" }}>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.6rem", color: "var(--sky)" }}>
-              {loading ? "..." : sessions.length}
+          <div className="card-base" style={{ padding: "1.25rem", textAlign: "center" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "2rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+              {loading ? "—" : sessions.length}
             </div>
-            <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-              Practice sessions
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Sessions
             </div>
           </div>
-          <div className="card-base" style={{ padding: "1rem", textAlign: "center" }}>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.6rem", color: "var(--rose)" }}>
-              {loading ? "..." : totalMinutes}
+          <div className="card-base" style={{ padding: "1.25rem", textAlign: "center" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "2rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+              {loading ? "—" : totalMinutes}
             </div>
-            <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-              Total minutes
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Minutes
             </div>
           </div>
         </div>
 
         {/* Badges */}
         <div>
-          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
             Badges
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
             {badges.map((b, i) => (
               <div key={i} style={{
                 background: "var(--white)",
-                borderRadius: "var(--radius-lg)",
-                padding: "0.875rem 0.5rem",
-                border: `1.5px solid ${b.earned ? "var(--border-strong)" : "var(--border)"}`,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                borderRadius: 4,
+                padding: "1rem 0.5rem",
+                border: `1px solid ${b.earned ? "var(--border-strong)" : "var(--border)"}`,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "0.375rem",
                 opacity: b.earned ? 1 : 0.35,
                 transition: "opacity 0.2s",
               }}>
-                <span style={{ fontSize: "1.6rem" }}>{b.emoji}</span>
-                <span style={{ fontSize: "0.65rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--charcoal)", textAlign: "center" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: b.earned ? "var(--charcoal)" : "var(--border)" }} />
+                <span style={{ fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--charcoal)", textAlign: "center", letterSpacing: "0.01em", lineHeight: 1.4 }}>
                   {b.label}
                 </span>
                 {b.earned && (
-                  <span style={{ fontSize: "0.6rem", color: "var(--sage)", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>✓ Earned</span>
+                  <span style={{ fontSize: "0.5625rem", color: "var(--sage)", fontFamily: "Inter, sans-serif", fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                    Earned
+                  </span>
                 )}
               </div>
             ))}

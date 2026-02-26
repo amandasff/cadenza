@@ -2,10 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AuthService } from "@/lib/services/AuthService";
 import type { UserRole } from "@/lib/types";
@@ -38,63 +34,120 @@ export default function SignUpPage() {
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.75rem" }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎵</div>
-          <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1.75rem", color: "var(--charcoal)" }}>Join Cadenza</h1>
-          <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.25rem" }}>Create your account to get started</p>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+
+        {/* Wordmark */}
+        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>
+            Cadenza
+          </div>
+          <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 400, fontSize: "2rem", color: "var(--charcoal)", margin: 0, letterSpacing: "-0.01em" }}>
+            Create your account.
+          </h1>
         </div>
 
-        <Card style={{ borderRadius: 20, border: "1.5px solid var(--border)", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-          <CardHeader style={{ paddingBottom: 0 }}>
-            {/* Role selector */}
-            <div style={{ display: "flex", gap: "0.5rem", padding: "0.25rem", background: "var(--cream)", borderRadius: 14 }}>
+        <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4 }}>
+
+          {/* Role selector */}
+          <div style={{ padding: "1.25rem 1.75rem 0" }}>
+            <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 3, overflow: "hidden" }}>
               {(["student", "teacher"] as UserRole[]).map(r => (
-                <button key={r} type="button" onClick={() => setRole(r)} style={{
-                  flex: 1, padding: "0.6rem", borderRadius: 10, border: "none", cursor: "pointer",
-                  background: role === r ? "white" : "transparent",
-                  fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.875rem",
-                  color: role === r ? "var(--charcoal)" : "var(--muted)",
-                  boxShadow: role === r ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
-                  transition: "all 0.15s", textTransform: "capitalize"
-                }}>
-                  {r === "student" ? "🎹 Student" : "👩‍🏫 Teacher"}
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  style={{
+                    flex: 1,
+                    padding: "0.575rem",
+                    border: "none",
+                    cursor: "pointer",
+                    background: role === r ? "var(--charcoal)" : "transparent",
+                    fontFamily: "Inter, sans-serif",
+                    fontWeight: 500,
+                    fontSize: "0.8125rem",
+                    color: role === r ? "white" : "var(--muted)",
+                    transition: "all 0.15s",
+                    textTransform: "capitalize",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  {r === "student" ? "Student" : "Teacher"}
                 </button>
               ))}
             </div>
-          </CardHeader>
-          <CardContent style={{ padding: "1.5rem 1.75rem 1.75rem" }}>
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                <Label htmlFor="name" style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>Display Name</Label>
-                <Input id="name" type="text" placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"} value={displayName} onChange={e => setDisplayName(e.target.value)} required style={{ borderRadius: 12, border: "1.5px solid var(--border)", background: "var(--cream)", fontFamily: "DM Sans, sans-serif" }} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                <Label htmlFor="email" style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required style={{ borderRadius: 12, border: "1.5px solid var(--border)", background: "var(--cream)", fontFamily: "DM Sans, sans-serif" }} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                <Label htmlFor="password" style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>Password</Label>
-                <Input id="password" type="password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required style={{ borderRadius: 12, border: "1.5px solid var(--border)", background: "var(--cream)", fontFamily: "DM Sans, sans-serif" }} />
-              </div>
+          </div>
 
-              {error && (
-                <div style={{ background: "var(--rose-bg)", border: "1.5px solid var(--rose-light)", borderRadius: 12, padding: "0.6rem 0.875rem", fontSize: "0.8rem", color: "var(--rose)", fontFamily: "Nunito, sans-serif", fontWeight: 600 }}>
-                  {error}
-                </div>
-              )}
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.25rem 1.75rem 1.75rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              <label htmlFor="name" style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>
+                Display Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"}
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                required
+                style={{ borderRadius: 3, border: "1px solid var(--border-strong)", background: "var(--cream)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", padding: "0.625rem 0.875rem", outline: "none", width: "100%", boxSizing: "border-box" }}
+              />
+            </div>
 
-              <Button type="submit" disabled={loading} style={{ borderRadius: 100, background: "var(--peach)", color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", padding: "0.85rem", marginTop: "0.25rem" }}>
-                {loading ? "Creating account…" : "Create " + role + " account"}
-              </Button>
-            </form>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              <label htmlFor="email" style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                style={{ borderRadius: 3, border: "1px solid var(--border-strong)", background: "var(--cream)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", padding: "0.625rem 0.875rem", outline: "none", width: "100%", boxSizing: "border-box" }}
+              />
+            </div>
 
-            <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--muted)", marginTop: "1.25rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              <label htmlFor="password" style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                placeholder="At least 6 characters"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                style={{ borderRadius: 3, border: "1px solid var(--border-strong)", background: "var(--cream)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", padding: "0.625rem 0.875rem", outline: "none", width: "100%", boxSizing: "border-box" }}
+              />
+            </div>
+
+            {error && (
+              <div style={{ border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.625rem 0.875rem", fontSize: "0.8125rem", color: "var(--charcoal)", fontFamily: "Inter, sans-serif", background: "var(--cream-deep)" }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{ borderRadius: 3, background: loading ? "var(--border-strong)" : "var(--charcoal)", color: "white", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", padding: "0.75rem", border: "none", cursor: loading ? "default" : "pointer", marginTop: "0.25rem", letterSpacing: "0.01em", transition: "background 0.15s" }}
+            >
+              {loading ? "Creating account…" : `Create ${role} account`}
+            </button>
+          </form>
+
+          <div style={{ borderTop: "1px solid var(--border)", padding: "1rem 1.75rem", textAlign: "center" }}>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
               Already have an account?{" "}
-              <Link href="/auth/login" style={{ color: "var(--sky)", fontFamily: "Nunito, sans-serif", fontWeight: 700, textDecoration: "none" }}>Sign in</Link>
+              <Link href="/auth/login" style={{ color: "var(--charcoal)", fontWeight: 500, textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                Sign in
+              </Link>
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
       </div>
     </div>
   );
