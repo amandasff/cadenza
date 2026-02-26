@@ -538,120 +538,208 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ELEGANT THEME — Dior / atelier aesthetic
-   Toggle by setting html[data-theme="elegant"]
+   DARK THEME
+   Toggle by setting html[data-theme="dark"]
    ═══════════════════════════════════════════════════════════════ */
 
-html[data-theme="elegant"] {
-  /* Ivory + deep charcoal base */
-  --cream: #F9F7F4;
-  --cream-deep: #F1EDE5;
-  --white: #FEFEFE;
-  --charcoal: #1A1A1A;
-  --muted: #8A8278;
-  --border: #DDD9D0;
-  --border-strong: #C8C3B8;
+html[data-theme="dark"] {
+  /* Dark surfaces */
+  --cream: #121212;
+  --cream-deep: #0D0D0D;
+  --white: #1C1C1E;
+  --charcoal: #EDEDE9;
+  --muted: #888;
+  --border: #2E2E2E;
+  --border-strong: #3E3E3E;
 
-  /* Champagne gold replaces coral peach */
-  --peach: #8B6C3A;
-  --peach-dark: #745A2E;
-  --peach-light: #D4BF98;
-  --peach-bg: #F6F0E4;
+  /* Warm coral peach — slightly lighter on dark */
+  --peach: #D4886A;
+  --peach-dark: #E4987A;
+  --peach-light: #5A3020;
+  --peach-bg: #241410;
 
-  /* Muted sage */
-  --sage: #547A66;
-  --sage-mid: #648A76;
-  --sage-light: #B4C8BC;
-  --sage-bg: #EBF0ED;
+  /* Sage */
+  --sage: #87BAA2;
+  --sage-mid: #97CAB2;
+  --sage-light: #2A4035;
+  --sage-bg: #182A20;
 
-  /* Dusty rose */
-  --rose: #96546A;
-  --rose-mid: #A6647A;
-  --rose-light: #DABEC8;
-  --rose-bg: #F2EAED;
+  /* Rose */
+  --rose: #CC8EA0;
+  --rose-mid: #DC9EB0;
+  --rose-light: #44202A;
+  --rose-bg: #281418;
 
-  /* Steel blue */
-  --sky: #4A6880;
-  --sky-mid: #5A7890;
-  --sky-light: #AABDCC;
-  --sky-bg: #EAF0F5;
+  /* Sky */
+  --sky: #8AB2C8;
+  --sky-mid: #9AC2D8;
+  --sky-light: #1E3040;
+  --sky-bg: #12202A;
 
-  /* Gold (same as peach in elegant) */
-  --butter: #8B6C3A;
-  --butter-mid: #9B7C4A;
-  --butter-light: #D4BF98;
-  --butter-bg: #F6F0E4;
+  /* Butter/gold */
+  --butter: #CCAA48;
+  --butter-mid: #DCBA58;
+  --butter-light: #3A2C0A;
+  --butter-bg: #241C04;
 
-  /* Subdued shadows */
-  --shadow-xs: 0 1px 2px rgba(26,26,26,0.04);
-  --shadow-sm: 0 2px 6px rgba(26,26,26,0.06);
-  --shadow-md: 0 3px 10px rgba(26,26,26,0.07);
-  --shadow-lg: 0 6px 20px rgba(26,26,26,0.09);
-  --shadow-peach: 0 2px 12px rgba(139,108,58,0.16);
-  --shadow-sage: 0 2px 12px rgba(84,122,102,0.16);
+  /* Lavender */
+  --lavender: #A898C8;
+  --lavender-mid: #B8A8D8;
+  --lavender-light: #302840;
+  --lavender-bg: #1E1828;
+
+  /* Semantic */
+  --success: #6BAE8A;
+  --success-bg: #162A20;
+  --warning: #D4943A;
+  --warning-bg: #261A08;
+  --error: #C06070;
+  --error-bg: #281018;
+
+  /* Stronger shadows on dark */
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.6);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.7);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.8);
+  --shadow-peach: 0 4px 20px rgba(212,136,106,0.3);
+  --shadow-sage: 0 4px 20px rgba(135,186,162,0.25);
+
+  /* shadcn overrides for dark */
+  --background: oklch(0.09 0 0);
+  --foreground: oklch(0.93 0.006 71);
+  --card: oklch(0.13 0 0);
+  --card-foreground: oklch(0.93 0.006 71);
+  --popover: oklch(0.13 0 0);
+  --popover-foreground: oklch(0.93 0.006 71);
+  --primary: oklch(0.65 0.09 40);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.18 0 0);
+  --secondary-foreground: oklch(0.93 0.006 71);
+  --border: oklch(0.22 0 0);
+  --input: oklch(0.18 0 0);
+  --ring: oklch(0.65 0.09 40);
 }
 
-/* ── Elegant: Playfair Display for all Nunito headings ── */
-/* This selector matches elements with inline fontFamily: "Nunito..." in React */
-html[data-theme="elegant"] [style*="Nunito"],
-html[data-theme="elegant"] h1,
-html[data-theme="elegant"] h2,
-html[data-theme="elegant"] h3,
-html[data-theme="elegant"] h4 {
-  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif !important;
-  letter-spacing: -0.01em;
+/* Dark mode skeleton shimmer */
+html[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #1C1C1E 25%, #2A2A2C 50%, #1C1C1E 75%) !important;
+  background-size: 200% 100% !important;
 }
 
-/* ── Elegant: sharp corners on component classes ── */
-html[data-theme="elegant"] .card-base {
-  border-radius: 3px !important;
-  box-shadow: none !important;
-  border-color: var(--border-strong) !important;
-}
-html[data-theme="elegant"] .card-hover,
-html[data-theme="elegant"] .card-interactive {
-  border-radius: 3px !important;
-}
-html[data-theme="elegant"] .card-hover:hover,
-html[data-theme="elegant"] .card-interactive:hover {
-  transform: none !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-html[data-theme="elegant"] .btn {
-  border-radius: 2px !important;
-  font-family: 'Playfair Display', Georgia, serif !important;
-  letter-spacing: 0.04em;
-}
-html[data-theme="elegant"] .streak-pill,
-html[data-theme="elegant"] .points-pill {
-  border-radius: 2px !important;
-}
-html[data-theme="elegant"] .progress-bar,
-html[data-theme="elegant"] .progress-fill {
-  border-radius: 1px !important;
+/* Dark mode scrollbar */
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
 }
 
-/* ── Elegant: goal nodes become squares ── */
-html[data-theme="elegant"] .goal-node {
-  border-radius: 4px !important;
-}
-html[data-theme="elegant"] .goal-node-boss {
-  border-radius: 4px !important;
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT CLASSES
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Student app shell ── */
+.student-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  width: 100%;
 }
 
-/* ── Elegant: chat bubbles ── */
-html[data-theme="elegant"] .bubble-student,
-html[data-theme="elegant"] .bubble-teacher {
-  border-radius: 3px !important;
+.student-sidebar {
+  display: none; /* hidden on mobile */
 }
 
-/* ── Elegant: pulse animation off (too game-y) ── */
-html[data-theme="elegant"] .animate-pulse-ring,
-html[data-theme="elegant"] .goal-node-current {
-  animation: none !important;
+.student-mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-/* ── Elegant: skeleton ── */
-html[data-theme="elegant"] .skeleton {
-  background: linear-gradient(90deg, var(--cream-deep) 25%, #F5F1EB 50%, var(--cream-deep) 75%) !important;
+.student-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 76px;
+  position: relative;
+}
+
+/* Desktop/tablet sidebar layout */
+@media (min-width: 700px) {
+  .student-shell {
+    flex-direction: row;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .student-mobile-header {
+    display: none;
+  }
+
+  .student-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 210px;
+    min-width: 210px;
+    flex-shrink: 0;
+    height: 100dvh;
+    overflow-y: auto;
+    background: var(--white);
+    border-right: 1.5px solid var(--border);
+    padding: 1.25rem 0.875rem;
+    position: sticky;
+    top: 0;
+  }
+
+  .student-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 2rem;
+    max-width: 720px;
+  }
+
+  .student-bottom-nav {
+    display: none !important;
+  }
+}
+
+/* ── Teacher responsive ── */
+.teacher-nav-tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.teacher-nav-tabs::-webkit-scrollbar { display: none; }
+
+.teacher-main {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .teacher-main {
+    padding: 1.25rem 1rem;
+  }
+
+  .teacher-nav-right {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .teacher-nav-studio {
+    display: none;
+  }
+}
+
+/* ── Responsive two-column grid (teacher pages) ── */
+.r-two-col {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .r-two-col {
+    grid-template-columns: 1fr !important;
+  }
 }

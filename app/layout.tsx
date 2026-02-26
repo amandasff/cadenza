@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const themeScript = `
   try {
     var t = localStorage.getItem('cadenza-theme');
-    if (t === 'elegant') document.documentElement.setAttribute('data-theme', 'elegant');
+    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   } catch(e) {}
 `;
 
