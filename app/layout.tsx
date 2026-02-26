@@ -4,8 +4,8 @@ import { AuthProvider } from "@/lib/context/AuthContext";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "Cadenza — Music Practice",
-  description: "The async music teaching platform for teachers and students",
+  title: "Cadenza",
+  description: "The professional music teaching platform",
 };
 
 // Inline script: reads localStorage and sets data-theme before first paint,

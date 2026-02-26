@@ -7,18 +7,24 @@ import { GoalService } from "../../lib/services/GoalService";
 import { Student } from "../../lib/models/Student";
 import type { GoalRow } from "../../lib/types";
 
-const AREAS: Record<string, { color: string; bg: string; icon: string }> = {
-  technique:    { color: "var(--sage)",   bg: "var(--sage-bg)",   icon: "🌿" },
-  repertoire:   { color: "var(--rose)",   bg: "var(--rose-bg)",   icon: "🌸" },
-  ear_training: { color: "var(--sky)",    bg: "var(--sky-bg)",    icon: "🎧" },
-  theory:       { color: "var(--butter)", bg: "var(--butter-bg)", icon: "⭐" },
+const AREA_COLORS: Record<string, { color: string; bg: string }> = {
+  technique:    { color: "var(--sage)",   bg: "var(--sage-bg)" },
+  repertoire:   { color: "var(--rose)",   bg: "var(--rose-bg)" },
+  ear_training: { color: "var(--sky)",    bg: "var(--sky-bg)" },
+  theory:       { color: "var(--butter)", bg: "var(--butter-bg)" },
 };
 
-function NodeIcon({ goal }: { goal: GoalRow }) {
-  if (goal.status === "completed") return <span style={{ fontSize: "1.4rem" }}>✅</span>;
-  if (goal.is_boss) return <span style={{ fontSize: "1.6rem" }}>⭐</span>;
-  if (goal.status === "current") return <span style={{ fontSize: "1.4rem" }}>🎵</span>;
-  return <span style={{ fontSize: "1.4rem" }}>🔒</span>;
+function NodeMark({ goal }: { goal: GoalRow }) {
+  if (goal.status === "completed") {
+    return <span style={{ fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 600, color: "inherit", opacity: 0.7 }}>✓</span>;
+  }
+  if (goal.is_boss) {
+    return <span style={{ fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.7 }}>Boss</span>;
+  }
+  if (goal.status === "current") {
+    return <span style={{ width: 8, height: 8, borderRadius: "50%", background: "currentColor", display: "block", opacity: 0.9 }} />;
+  }
+  return <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", display: "block", opacity: 0.3 }} />;
 }
 
 export default function StudentPath() {
@@ -38,7 +44,7 @@ export default function StudentPath() {
       setGoals(data);
     } catch (err) {
       const e = err as { message?: string; code?: string; details?: string };
-      console.error('loadGoals error:', e?.message, e?.code, e?.details);
+      console.error("loadGoals error:", e?.message, e?.code, e?.details);
     } finally {
       setLoading(false);
     }
@@ -52,105 +58,145 @@ export default function StudentPath() {
 
   return (
     <div style={{ background: "var(--cream)", minHeight: "100%" }}>
-      {/* Start practice CTA */}
-      <div style={{ padding: "1rem 1.25rem 0.5rem" }}>
+
+      {/* Practice CTA */}
+      <div style={{ padding: "1.5rem 1.5rem 1rem" }}>
         <Link href="/student/practice" style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "var(--peach)", borderRadius: "var(--radius-lg)", padding: "0.9rem 1.1rem",
-          textDecoration: "none", color: "white",
-          boxShadow: "var(--shadow-peach)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "var(--charcoal)",
+          borderRadius: 4,
+          padding: "1rem 1.25rem",
+          textDecoration: "none",
+          color: "white",
+          transition: "background 0.15s",
         }}>
           <div>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.05rem" }}>
-              Start Practice
+            <div style={{
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 600,
+              fontSize: "0.9375rem",
+              letterSpacing: "0.005em",
+            }}>
+              Begin Practice
             </div>
             {currentGoal && (
-              <div style={{ fontSize: "0.78rem", opacity: 0.85, marginTop: 2, fontFamily: "DM Sans, sans-serif" }}>
-                Now: {currentGoal.title}
+              <div style={{
+                fontSize: "0.75rem",
+                opacity: 0.55,
+                marginTop: "0.25rem",
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 400,
+              }}>
+                {currentGoal.title}
               </div>
             )}
           </div>
-          <span style={{ fontSize: "1.6rem" }}>🎙</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.7, flexShrink: 0 }}>
+            <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </Link>
       </div>
 
-      {/* Path header */}
-      <div style={{ padding: "0.75rem 1.25rem 0", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <div style={{ height: 1.5, flex: 1, background: "var(--border)" }} />
-        <span style={{ fontFamily: "Nunito, sans-serif", fontSize: "0.85rem", color: "var(--muted)", fontWeight: 600 }}>
+      {/* Section label */}
+      <div style={{ padding: "0.5rem 1.5rem 1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
+        <span style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: "0.6875rem",
+          color: "var(--muted)",
+          fontWeight: 500,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}>
           Your Path
         </span>
-        <div style={{ height: 1.5, flex: 1, background: "var(--border)" }} />
+        <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
       </div>
 
-      {/* Nodes */}
-      <div style={{ padding: "0.5rem 2rem 2rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      {/* Goal nodes */}
+      <div style={{ padding: "0 2rem 3rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
         {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", alignItems: "center", padding: "2rem 0" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", alignItems: "center", padding: "2rem 0" }}>
             {[1, 2, 3].map(i => (
-              <div key={i} className="skeleton" style={{ width: 64, height: 64, borderRadius: "50%" }} />
+              <div key={i} className="skeleton" style={{ width: 56, height: 56, borderRadius: "50%" }} />
             ))}
           </div>
         ) : goals.length === 0 ? (
-          <div className="empty-state" style={{ padding: "3rem 1rem" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🗺</div>
-            <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, color: "var(--charcoal)", margin: 0, fontSize: "1rem" }}>
-              No goals yet!
-            </p>
-            <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.875rem", margin: "0.25rem 0 0", textAlign: "center" }}>
-              Your teacher will add goals to your path soon.
-            </p>
+          <div className="empty-state">
+            <div className="empty-state-title">No goals yet</div>
+            <p className="empty-state-desc">Your teacher will add goals to your path.</p>
           </div>
         ) : (
           [...goals].reverse().map((goal, i) => {
-            const area = AREAS[goal.practice_area] ?? AREAS["technique"];
+            const area = AREA_COLORS[goal.practice_area] ?? AREA_COLORS["technique"];
             const isLeft = i % 2 === 1;
             const isCurrent = goal.status === "current";
             const isBoss = goal.is_boss;
             const isLocked = goal.status === "locked";
             const isDone = goal.status === "completed";
-            const nodeSize = isBoss ? 80 : isCurrent ? 72 : 62;
+            const nodeSize = isBoss ? 72 : isCurrent ? 64 : 54;
 
             return (
               <div key={goal.id} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: isLeft ? "flex-start" : "flex-end" }}>
+                {/* Connector line */}
                 {i > 0 && (
                   <div style={{
-                    width: 3, height: 28,
+                    width: 1,
+                    height: 24,
                     background: isLocked ? "var(--border)" : area.color,
-                    marginLeft: isLeft ? 39 : undefined,
-                    marginRight: isLeft ? undefined : 39,
-                    opacity: isLocked ? 0.4 : 0.8,
-                    borderRadius: 2,
+                    marginLeft: isLeft ? nodeSize / 2 : undefined,
+                    marginRight: isLeft ? undefined : nodeSize / 2,
+                    opacity: isLocked ? 0.3 : 0.5,
                   }} />
                 )}
+
                 <Link href={isLocked ? "#" : `/student/goal/${goal.id}`} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                    animation: isCurrent ? "pulse-soft 2.5s ease-in-out infinite" : undefined,
-                  }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                    {/* Node circle */}
                     <div style={{
-                      width: nodeSize, height: nodeSize,
-                      background: isLocked ? "#ECECEC" : isDone ? area.bg : area.bg,
-                      border: isDone ? `2px solid ${area.color}` : isCurrent ? `3px solid ${area.color}` : isBoss ? `3px solid ${area.color}` : "2px solid transparent",
-                      borderRadius: isBoss ? 20 : 100,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      boxShadow: isCurrent ? `0 4px 16px ${area.color}44` : isBoss ? `0 4px 20px ${area.color}66` : undefined,
-                      opacity: isLocked ? 0.5 : 1,
-                      position: "relative",
+                      width: nodeSize,
+                      height: nodeSize,
+                      background: isLocked ? "var(--border)" : isDone ? area.bg : area.bg,
+                      border: isCurrent
+                        ? `2px solid ${area.color}`
+                        : isBoss
+                          ? `2px solid ${area.color}`
+                          : isDone
+                            ? `1.5px solid ${area.color}`
+                            : "1.5px solid transparent",
+                      borderRadius: isBoss ? 6 : "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: isLocked ? "var(--muted)" : area.color,
+                      opacity: isLocked ? 0.45 : 1,
+                      transition: "transform 0.15s ease",
                     }}>
-                      <NodeIcon goal={goal} />
-                      {isDone && (
-                        <div style={{ position: "absolute", top: -5, right: -5, width: 18, height: 18, background: "var(--sage)", borderRadius: 100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", color: "white", fontWeight: 700, border: "2px solid var(--white)" }}>
-                          ✓
-                        </div>
-                      )}
+                      <NodeMark goal={goal} />
                     </div>
-                    <div style={{ textAlign: "center", maxWidth: 120 }}>
-                      <div style={{ fontSize: "0.7rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, color: isLocked ? "var(--muted)" : "var(--charcoal)", lineHeight: 1.3 }}>
+
+                    {/* Label */}
+                    <div style={{ textAlign: "center", maxWidth: 110 }}>
+                      <div style={{
+                        fontSize: "0.6875rem",
+                        fontFamily: "Inter, sans-serif",
+                        fontWeight: isCurrent ? 500 : 400,
+                        color: isLocked ? "var(--muted)" : "var(--charcoal)",
+                        lineHeight: 1.35,
+                        letterSpacing: "0.005em",
+                      }}>
                         {goal.title}
                       </div>
                       {!isLocked && (
-                        <div style={{ fontSize: "0.65rem", color: area.color, fontWeight: 600, marginTop: 1 }}>
+                        <div style={{
+                          fontSize: "0.625rem",
+                          color: area.color,
+                          fontWeight: 500,
+                          marginTop: "0.125rem",
+                          letterSpacing: "0.02em",
+                        }}>
                           {goal.points} pts
                         </div>
                       )}
@@ -162,11 +208,26 @@ export default function StudentPath() {
           })
         )}
 
+        {/* Path origin marker */}
         {!loading && goals.length > 0 && (
-          <div style={{ marginTop: 24, padding: "0.6rem 1.25rem", background: "var(--white)", border: "1.5px solid var(--border)", borderRadius: 100 }}>
-            <span style={{ fontFamily: "Nunito, sans-serif", fontSize: "0.9rem", color: "var(--muted)", fontWeight: 600 }}>
-              🎵 Your journey begins here
+          <div style={{
+            marginTop: "1.5rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}>
+            <div style={{ height: 1, width: 24, background: "var(--border)" }} />
+            <span style={{
+              fontFamily: "Inter, sans-serif",
+              fontSize: "0.625rem",
+              color: "var(--muted)",
+              fontWeight: 400,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}>
+              Origin
             </span>
+            <div style={{ height: 1, width: 24, background: "var(--border)" }} />
           </div>
         )}
       </div>

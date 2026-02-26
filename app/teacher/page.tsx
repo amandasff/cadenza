@@ -30,7 +30,7 @@ function timeAgo(iso: string) {
   if (diffHours < 24) return `${diffHours}h ago`;
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
@@ -95,102 +95,134 @@ export default function TeacherDashboard() {
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
+
       {/* Header */}
       <div>
-        <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.6rem", color: "var(--charcoal)", margin: 0 }}>
-          {getGreeting()}, {teacher?.displayName?.split(" ")[0]} 👋
+        <h1 style={{
+          fontFamily: "Cormorant Garamond, Georgia, serif",
+          fontWeight: 500,
+          fontSize: "2rem",
+          color: "var(--charcoal)",
+          margin: 0,
+          letterSpacing: "-0.01em",
+          lineHeight: 1.1,
+        }}>
+          {getGreeting()}, {teacher?.displayName?.split(" ")[0]}.
         </h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginTop: "0.25rem", fontFamily: "DM Sans, sans-serif" }}>
-          {loading ? "Loading..." : `${students.length} student${students.length !== 1 ? "s" : ""} · ${completedGoalsCount} goals completed`}
+        <p style={{
+          color: "var(--muted)",
+          fontSize: "0.8125rem",
+          marginTop: "0.5rem",
+          fontFamily: "Inter, sans-serif",
+          fontWeight: 400,
+          letterSpacing: "0.005em",
+        }}>
+          {loading
+            ? "Loading studio data\u2026"
+            : `${students.length} student${students.length !== 1 ? "s" : ""} \u00b7 ${completedGoalsCount} goals completed`
+          }
         </p>
       </div>
 
-      {/* Invite code card */}
+      {/* Invite code */}
       {teacher?.inviteCode && (
         <div style={{
-          background: "linear-gradient(135deg, var(--peach) 0%, #e8875c 100%)",
-          borderRadius: "var(--radius-xl)",
-          padding: "1.5rem",
-          color: "white",
+          background: "var(--white)",
+          border: "1px solid var(--border)",
+          borderRadius: 4,
+          padding: "1.5rem 1.75rem",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "1rem",
-          boxShadow: "var(--shadow-peach)",
+          gap: "1.5rem",
         }}>
           <div>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", opacity: 0.85, marginBottom: "0.35rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            <div style={{
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              fontSize: "0.6875rem",
+              color: "var(--muted)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              marginBottom: "0.625rem",
+            }}>
               Studio Invite Code
             </div>
-            <div className="invite-code" style={{ color: "white", background: "rgba(255,255,255,0.2)", border: "none", fontSize: "1.75rem" }}>
+            <div className="invite-code">
               {teacher.inviteCode.toUpperCase()}
             </div>
-            <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.8rem", opacity: 0.8, marginTop: "0.5rem" }}>
-              Share this with your students so they can join
+            <div style={{
+              fontFamily: "Inter, sans-serif",
+              fontSize: "0.75rem",
+              color: "var(--muted)",
+              marginTop: "0.5rem",
+              fontWeight: 400,
+            }}>
+              Share with students to join your studio
             </div>
           </div>
           <button
             onClick={copyInviteCode}
-            style={{
-              background: "rgba(255,255,255,0.25)",
-              border: "1.5px solid rgba(255,255,255,0.5)",
-              color: "white",
-              borderRadius: "var(--radius-md)",
-              padding: "0.6rem 1.1rem",
-              fontFamily: "Nunito, sans-serif",
-              fontWeight: 700,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              transition: "background 0.15s",
-            }}
+            className="btn btn-secondary"
+            style={{ flexShrink: 0 }}
           >
-            {copied ? "✓ Copied!" : "Copy"}
+            {copied ? "Copied" : "Copy"}
           </button>
         </div>
       )}
 
       {/* Quick actions */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-        <Link href="/teacher/goals" className="btn btn-primary" style={{ textDecoration: "none", padding: "0.65rem 1.25rem", fontSize: "0.875rem" }}>
-          🎯 Create Goal
+        <Link href="/teacher/goals" className="btn btn-primary" style={{ textDecoration: "none" }}>
+          Create Goal
         </Link>
-        <Link href="/teacher/review" className="btn btn-secondary" style={{ textDecoration: "none", padding: "0.65rem 1.25rem", fontSize: "0.875rem" }}>
-          🎙 Review Sessions
+        <Link href="/teacher/review" className="btn btn-secondary" style={{ textDecoration: "none" }}>
+          Review Sessions
         </Link>
-        <Link href="/teacher/chat" className="btn btn-secondary" style={{ textDecoration: "none", padding: "0.65rem 1.25rem", fontSize: "0.875rem" }}>
-          💬 Open Chat
+        <Link href="/teacher/chat" className="btn btn-secondary" style={{ textDecoration: "none" }}>
+          Open Chat
         </Link>
       </div>
 
-      {/* Two-column layout: Students + Activity */}
-      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 320px" }}>
+      {/* Two-column layout */}
+      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 300px" }}>
 
         {/* Students */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "1rem",
+            paddingBottom: "0.75rem",
+            borderBottom: "1px solid var(--border)",
+          }}>
+            <span style={{
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              fontSize: "0.6875rem",
+              color: "var(--muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}>
               Students ({students.length})
-            </div>
+            </span>
           </div>
 
           {loading ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "0.75rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
               {[1, 2, 3].map(i => (
-                <div key={i} className="skeleton" style={{ height: 140, borderRadius: "var(--radius-xl)" }} />
+                <div key={i} className="skeleton" style={{ height: 128, borderRadius: 4 }} />
               ))}
             </div>
           ) : students.length === 0 ? (
             <div className="empty-state">
-              <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎹</div>
-              <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--charcoal)", margin: 0 }}>No students yet</p>
-              <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
-                Share your invite code to get started
-              </p>
+              <div className="empty-state-title">No students yet</div>
+              <p className="empty-state-desc">Share your invite code to get started.</p>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "0.75rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
               {students.map(({ profile, goals }) => {
                 const completed = goals.filter(g => g.status === "completed").length;
                 const total = goals.length;
@@ -201,53 +233,121 @@ export default function TeacherDashboard() {
                   <Link
                     key={profile.id}
                     href={`/teacher/student/${profile.id}`}
-                    className="card-hover"
+                    className="card-base card-interactive"
                     style={{ padding: "1.25rem", textDecoration: "none", display: "block" }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
                       <div style={{
-                        width: 42, height: 42,
-                        background: "var(--peach)",
+                        width: 36,
+                        height: 36,
+                        background: "var(--charcoal)",
                         borderRadius: "50%",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.85rem", color: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "Inter, sans-serif",
+                        fontWeight: 600,
+                        fontSize: "0.6875rem",
+                        color: "var(--white)",
                         flexShrink: 0,
+                        letterSpacing: "0.02em",
                       }}>
                         {initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{
+                          fontFamily: "Inter, sans-serif",
+                          fontWeight: 500,
+                          fontSize: "0.875rem",
+                          color: "var(--charcoal)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}>
                           {profile.display_name}
                         </div>
-                        <div style={{ fontSize: "0.72rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
+                        <div style={{
+                          fontSize: "0.6875rem",
+                          color: "var(--muted)",
+                          fontFamily: "Inter, sans-serif",
+                          marginTop: "0.125rem",
+                        }}>
                           {total} goal{total !== 1 ? "s" : ""}
                         </div>
                       </div>
-                      <span style={{ fontSize: "0.7rem", color: "var(--sky)", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>
-                        View →
-                      </span>
                     </div>
 
-                    {/* Progress bar */}
+                    {/* Progress */}
                     {total > 0 && (
                       <div style={{ marginBottom: "0.875rem" }}>
                         <div className="progress-bar">
                           <div className="progress-fill" style={{ width: `${pct}%` }} />
                         </div>
-                        <div style={{ fontSize: "0.68rem", color: "var(--muted)", marginTop: "0.3rem", fontFamily: "DM Sans, sans-serif" }}>
-                          {completed}/{total} goals complete
+                        <div style={{
+                          fontSize: "0.625rem",
+                          color: "var(--muted)",
+                          marginTop: "0.375rem",
+                          fontFamily: "Inter, sans-serif",
+                          letterSpacing: "0.02em",
+                        }}>
+                          {completed} of {total} complete
                         </div>
                       </div>
                     )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.4rem" }}>
-                      <div style={{ background: "var(--peach-bg)", borderRadius: "var(--radius-sm)", padding: "0.45rem", textAlign: "center" }}>
-                        <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.9rem", color: "var(--peach)" }}>🔥 {profile.streak_days}</div>
-                        <div style={{ fontSize: "0.6rem", color: "var(--muted)" }}>streak</div>
+                    {/* Stats row */}
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div style={{
+                        flex: 1,
+                        background: "var(--cream)",
+                        borderRadius: 2,
+                        padding: "0.375rem 0.5rem",
+                        textAlign: "center",
+                        border: "1px solid var(--border)",
+                      }}>
+                        <div style={{
+                          fontFamily: "Inter, sans-serif",
+                          fontWeight: 600,
+                          fontSize: "0.875rem",
+                          color: "var(--charcoal)",
+                        }}>
+                          {profile.streak_days}
+                        </div>
+                        <div style={{
+                          fontSize: "0.5625rem",
+                          color: "var(--muted)",
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                          marginTop: "0.125rem",
+                        }}>
+                          Day streak
+                        </div>
                       </div>
-                      <div style={{ background: "var(--butter-bg)", borderRadius: "var(--radius-sm)", padding: "0.45rem", textAlign: "center" }}>
-                        <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.8rem", color: "var(--butter)" }}>⭐ {profile.total_points.toLocaleString()}</div>
-                        <div style={{ fontSize: "0.6rem", color: "var(--muted)" }}>pts</div>
+                      <div style={{
+                        flex: 1,
+                        background: "var(--cream)",
+                        borderRadius: 2,
+                        padding: "0.375rem 0.5rem",
+                        textAlign: "center",
+                        border: "1px solid var(--border)",
+                      }}>
+                        <div style={{
+                          fontFamily: "Inter, sans-serif",
+                          fontWeight: 600,
+                          fontSize: "0.875rem",
+                          color: "var(--charcoal)",
+                        }}>
+                          {profile.total_points.toLocaleString()}
+                        </div>
+                        <div style={{
+                          fontSize: "0.5625rem",
+                          color: "var(--muted)",
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                          marginTop: "0.125rem",
+                        }}>
+                          Points
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -258,31 +358,62 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div style={{ background: "var(--white)", borderRadius: "var(--radius-xl)", border: "1.5px solid var(--border)", padding: "1.25rem" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        <div style={{
+          background: "var(--white)",
+          borderRadius: 4,
+          border: "1px solid var(--border)",
+          padding: "1.25rem 1.5rem",
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "1rem",
+            paddingBottom: "0.75rem",
+            borderBottom: "1px solid var(--border)",
+          }}>
+            <span style={{
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              fontSize: "0.6875rem",
+              color: "var(--muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+            }}>
               Recent Activity
-            </div>
-            <Link href="/teacher/review" style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--sky)", textDecoration: "none" }}>
-              See all →
+            </span>
+            <Link href="/teacher/review" style={{
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              fontSize: "0.6875rem",
+              color: "var(--muted)",
+              textDecoration: "none",
+              letterSpacing: "0.02em",
+              transition: "color 0.15s",
+            }}>
+              All →
             </Link>
           </div>
 
           {loading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {[1, 2, 3].map(i => (
-                <div key={i} className="skeleton" style={{ height: 52, borderRadius: 12 }} />
+                <div key={i} className="skeleton" style={{ height: 46, borderRadius: 3 }} />
               ))}
             </div>
           ) : recentSessions.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-              <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>🎵</div>
-              <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.8rem", color: "var(--muted)", margin: 0 }}>
+            <div style={{ textAlign: "center", padding: "2rem 0" }}>
+              <p style={{
+                fontFamily: "Inter, sans-serif",
+                fontSize: "0.8125rem",
+                color: "var(--muted)",
+                margin: 0,
+              }}>
                 No sessions yet
               </p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               {recentSessions.map(s => {
                 const profile = studentMap[s.student_id];
                 const initials = profile
@@ -293,25 +424,66 @@ export default function TeacherDashboard() {
                   <Link
                     key={s.id}
                     href={`/teacher/review/${s.id}`}
-                    style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0.625rem", borderRadius: 12, background: "var(--cream)", textDecoration: "none", transition: "background 0.12s" }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.625rem",
+                      padding: "0.5rem 0.625rem",
+                      borderRadius: 3,
+                      background: "transparent",
+                      textDecoration: "none",
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--cream)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >
                     <div style={{
-                      width: 30, height: 30, background: "var(--peach)", borderRadius: "50%",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.65rem", color: "white", flexShrink: 0,
+                      width: 26,
+                      height: 26,
+                      background: "var(--charcoal)",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: "Inter, sans-serif",
+                      fontWeight: 600,
+                      fontSize: "0.5625rem",
+                      color: "var(--white)",
+                      flexShrink: 0,
+                      letterSpacing: "0.02em",
                     }}>
                       {initials}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div style={{
+                        fontFamily: "Inter, sans-serif",
+                        fontWeight: 500,
+                        fontSize: "0.8125rem",
+                        color: "var(--charcoal)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}>
                         {profile?.display_name ?? "Student"}
                       </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
+                      <div style={{
+                        fontSize: "0.6875rem",
+                        color: "var(--muted)",
+                        fontFamily: "Inter, sans-serif",
+                        marginTop: "0.125rem",
+                        letterSpacing: "0.01em",
+                      }}>
                         {mins} min · {timeAgo(s.created_at)}
                       </div>
                     </div>
                     {s.recording_url && (
-                      <span style={{ fontSize: "0.75rem" }}>🎙</span>
+                      <div style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "var(--peach)",
+                        flexShrink: 0,
+                      }} />
                     )}
                   </Link>
                 );

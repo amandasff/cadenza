@@ -7,10 +7,10 @@ import { useTheme } from "../../lib/context/ThemeContext";
 import { Teacher } from "../../lib/models/Teacher";
 
 const tabs = [
-  { href: "/teacher", label: "Dashboard" },
-  { href: "/teacher/goals", label: "Goals" },
-  { href: "/teacher/review", label: "Review" },
-  { href: "/teacher/chat", label: "Chat" },
+  { href: "/teacher",         label: "Dashboard" },
+  { href: "/teacher/goals",   label: "Goals" },
+  { href: "/teacher/review",  label: "Review" },
+  { href: "/teacher/chat",    label: "Chat" },
 ];
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
@@ -35,8 +35,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     return (
       <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream)" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎵</div>
-          <p style={{ fontFamily: "Nunito, sans-serif", color: "var(--muted)", fontSize: "0.9rem" }}>Loading...</p>
+          <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>Loading</p>
         </div>
       </div>
     );
@@ -51,45 +50,48 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     <div style={{ minHeight: "100dvh", background: "var(--cream)" }}>
       <nav style={{
         background: "var(--white)",
-        borderBottom: "1.5px solid var(--border)",
-        padding: "0 1rem",
+        borderBottom: "1px solid var(--border)",
+        padding: "0 1.5rem",
         display: "flex",
         alignItems: "center",
         gap: 0,
         position: "sticky",
         top: 0,
         zIndex: 100,
-        boxShadow: "var(--shadow-xs)",
       }}>
+        {/* Wordmark */}
         <div style={{
-          fontFamily: "Nunito, sans-serif",
-          fontWeight: 800,
-          fontSize: "1.05rem",
+          fontFamily: "Inter, sans-serif",
+          fontWeight: 600,
+          fontSize: "0.8125rem",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
           color: "var(--charcoal)",
-          padding: "0.875rem 1.25rem 0.875rem 0",
-          borderRight: "1.5px solid var(--border)",
-          marginRight: "0.75rem",
+          padding: "1rem 1.5rem 1rem 0",
+          borderRight: "1px solid var(--border)",
+          marginRight: "1rem",
           whiteSpace: "nowrap",
           flexShrink: 0,
         }}>
-          🎵 Cadenza
+          Cadenza
         </div>
 
-        {/* Tab links — scrollable on mobile */}
+        {/* Tab links */}
         <div className="teacher-nav-tabs">
           {tabs.map(t => {
             const active = t.href === "/teacher" ? path === "/teacher" : path.startsWith(t.href);
             return (
               <Link key={t.href} href={t.href} style={{
                 padding: "1rem 0.875rem",
-                fontFamily: "Nunito, sans-serif",
-                fontWeight: active ? 700 : 500,
-                color: active ? "var(--peach)" : "var(--muted)",
+                fontFamily: "Inter, sans-serif",
+                fontWeight: active ? 500 : 400,
+                color: active ? "var(--charcoal)" : "var(--muted)",
                 textDecoration: "none",
                 fontSize: "0.875rem",
-                borderBottom: active ? "2.5px solid var(--peach)" : "2.5px solid transparent",
-                transition: "all 0.15s",
+                borderBottom: active ? "1.5px solid var(--charcoal)" : "1.5px solid transparent",
+                transition: "color 0.15s",
                 whiteSpace: "nowrap",
+                letterSpacing: "0.005em",
               }}>
                 {t.label}
               </Link>
@@ -97,60 +99,65 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           })}
         </div>
 
-        {/* Right side — hidden on small screens */}
-        <div className="teacher-nav-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+        {/* Right side */}
+        <div className="teacher-nav-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {teacher.hasStudio() && (
             <span className="teacher-nav-studio" style={{
-              fontFamily: "Nunito, sans-serif",
-              fontSize: "0.75rem",
+              fontFamily: "Inter, sans-serif",
+              fontSize: "0.6875rem",
               color: "var(--muted)",
-              background: "var(--cream-deep)",
-              padding: "0.2rem 0.6rem",
-              borderRadius: "999px",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
               whiteSpace: "nowrap",
             }}>
               {teacher.studioName}
             </span>
           )}
           <div style={{
-            width: 32,
-            height: 32,
-            background: "var(--peach)",
+            width: 28,
+            height: 28,
+            background: "var(--charcoal)",
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "0.75rem",
-            fontFamily: "Nunito, sans-serif",
-            fontWeight: 700,
-            color: "white",
+            fontSize: "0.625rem",
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 600,
+            color: "var(--white)",
             flexShrink: 0,
+            letterSpacing: "0.02em",
           }}>
             {initials}
           </div>
-          <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)", whiteSpace: "nowrap" }}>
+          <span style={{
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 500,
+            fontSize: "0.8125rem",
+            color: "var(--charcoal)",
+            whiteSpace: "nowrap",
+          }}>
             {teacher.displayName}
           </span>
           <button
             onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to Light mode" : "Switch to Dark mode"}
             style={{
               background: "none",
-              border: "1.5px solid var(--border)",
-              borderRadius: 100,
-              padding: "0.2rem 0.6rem",
+              border: "1px solid var(--border-strong)",
+              borderRadius: 2,
+              padding: "0.25rem 0.625rem",
               cursor: "pointer",
-              fontSize: "0.7rem",
-              fontFamily: "Nunito, sans-serif",
-              fontWeight: 700,
+              fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
               color: "var(--muted)",
-              lineHeight: 1.4,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
               transition: "all 0.15s",
-              whiteSpace: "nowrap",
               marginLeft: "0.25rem",
             }}
           >
-            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+            {theme === "dark" ? "Light" : "Dark"}
           </button>
         </div>
       </nav>
