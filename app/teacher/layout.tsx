@@ -16,7 +16,7 @@ const tabs = [
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -158,6 +158,25 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             }}
           >
             {theme === "dark" ? "Light" : "Dark"}
+          </button>
+          <button
+            onClick={() => signOut()}
+            style={{
+              background: "none",
+              border: "1px solid var(--border-strong)",
+              borderRadius: 2,
+              padding: "0.25rem 0.625rem",
+              cursor: "pointer",
+              fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              color: "var(--muted)",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              transition: "all 0.15s",
+            }}
+          >
+            Sign out
           </button>
         </div>
       </nav>

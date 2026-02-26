@@ -17,7 +17,7 @@ const tabs = [
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -95,6 +95,25 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             }}
           >
             {theme === "dark" ? "Light" : "Dark"}
+          </button>
+          <button
+            onClick={() => signOut()}
+            style={{
+              background: "none",
+              border: "1px solid var(--border-strong)",
+              borderRadius: 2,
+              padding: "0.25rem 0.625rem",
+              cursor: "pointer",
+              fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              color: "var(--muted)",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              transition: "all 0.15s",
+            }}
+          >
+            Out
           </button>
         </div>
       </div>
@@ -184,8 +203,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           })}
         </nav>
 
-        {/* Theme toggle */}
-        <div style={{ paddingTop: "1.5rem", borderTop: "1px solid var(--border)" }}>
+        {/* Theme toggle + logout */}
+        <div style={{ paddingTop: "1.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
           <button
             onClick={toggleTheme}
             style={{
@@ -206,6 +225,27 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             }}
           >
             {theme === "dark" ? "Light mode" : "Dark mode"}
+          </button>
+          <button
+            onClick={() => signOut()}
+            style={{
+              width: "100%",
+              background: "none",
+              border: "1px solid var(--border)",
+              borderRadius: 2,
+              padding: "0.4rem 0.75rem",
+              cursor: "pointer",
+              fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              color: "var(--muted)",
+              textAlign: "left",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              transition: "all 0.15s",
+            }}
+          >
+            Sign out
           </button>
         </div>
       </aside>

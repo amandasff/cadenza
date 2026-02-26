@@ -9,11 +9,11 @@ import { ChatService } from "../../../../lib/services/ChatService";
 import { Teacher } from "../../../../lib/models/Teacher";
 import type { ProfileRow, GoalRow, PracticeSessionRow } from "../../../../lib/types";
 
-const AREAS: Record<string, { label: string; color: string; icon: string }> = {
-  technique:    { label: "Technique",    color: "var(--sage)",   icon: "🌿" },
-  repertoire:   { label: "Repertoire",   color: "var(--rose)",   icon: "🌸" },
-  ear_training: { label: "Ear Training", color: "var(--sky)",    icon: "🎧" },
-  theory:       { label: "Theory",       color: "var(--butter)", icon: "⭐" },
+const AREAS: Record<string, { label: string; color: string }> = {
+  technique:    { label: "Technique",    color: "var(--sage)" },
+  repertoire:   { label: "Repertoire",   color: "var(--rose)" },
+  ear_training: { label: "Ear Training", color: "var(--sky)" },
+  theory:       { label: "Theory",       color: "var(--butter)" },
 };
 
 const PRESET_AWARDS = [5, 10, 25, 50];
@@ -45,6 +45,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [awarding, setAwarding] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState("");
+
+  // Goal completion state
+  const [completingGoalId, setCompletingGoalId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -83,12 +86,11 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       const supabase = getSupabaseBrowserClient();
       await GoalService.getInstance(supabase).awardPoints(student.id, points);
 
-      // Notify student via chat
       if (teacher?.studioId) {
-        const note = awardNote.trim() ? `\n"${awardNote.trim()}"` : "";
+        const note = awardNote.trim() ? ` — "${awardNote.trim()}"` : "";
         await ChatService.getInstance(supabase).postSystemMessage(
           teacher.studioId, teacher.id, student.id,
-          `⭐ Your teacher awarded you ${points} stars!${note}`
+          `Your teacher awarded you ${points} points!${note}`
         ).catch(() => {});
       }
 
@@ -99,9 +101,32 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       setTimeout(() => setAwardSuccess(false), 3000);
     } catch (err) {
       const e = err as { message?: string };
-      setAwardError(e?.message ?? "Failed to award stars");
+      setAwardError(e?.message ?? "Failed to award points");
     } finally {
       setAwarding(false);
+    }
+  }
+
+  async function handleCompleteGoal(goal: GoalRow) {
+    if (completingGoalId) return;
+    setCompletingGoalId(goal.id);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await GoalService.getInstance(supabase).completeGoal(goal.id, goal.student_id, goal.points);
+
+      if (teacher?.studioId) {
+        await ChatService.getInstance(supabase).postSystemMessage(
+          teacher.studioId, teacher.id, goal.student_id,
+          `Your teacher marked "${goal.title}" complete — you earned ${goal.points} points!`
+        ).catch(() => {});
+      }
+
+      setGoals(prev => prev.map(g => g.id === goal.id ? { ...g, status: "completed" } : g));
+      setStudent(prev => prev ? { ...prev, total_points: prev.total_points + goal.points } : prev);
+    } catch (err) {
+      console.error("complete goal error:", err);
+    } finally {
+      setCompletingGoalId(null);
     }
   }
 
@@ -115,9 +140,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <div className="skeleton" style={{ height: 32, width: "40%", borderRadius: 100 }} />
-        <div className="skeleton" style={{ height: 120, borderRadius: 20 }} />
-        <div className="skeleton" style={{ height: 200, borderRadius: 20 }} />
+        {[1, 2, 3].map(i => (
+          <div key={i} className="skeleton" style={{ height: i === 1 ? 60 : 140, borderRadius: 4 }} />
+        ))}
       </div>
     );
   }
@@ -125,10 +150,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   if (notFound || !student) {
     return (
       <div className="empty-state" style={{ padding: "3rem 0" }}>
-        <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>😕</div>
-        <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, color: "var(--charcoal)", margin: 0 }}>Student not found</p>
-        <Link href="/teacher" style={{ marginTop: "1rem", display: "inline-block", color: "var(--peach)", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.875rem", textDecoration: "none" }}>
-          ← Back to dashboard
+        <div className="empty-state-title">Student not found</div>
+        <Link href="/teacher" style={{ marginTop: "1rem", display: "inline-block", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", textDecoration: "underline" }}>
+          Back to dashboard
         </Link>
       </div>
     );
@@ -136,26 +160,27 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
       {/* Back + header */}
       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <Link href="/teacher" style={{ color: "var(--muted)", textDecoration: "none", fontSize: "1.1rem" }}>←</Link>
+        <Link href="/teacher" style={{ color: "var(--muted)", textDecoration: "none", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>← Back</Link>
         <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", flex: 1 }}>
           <div style={{
-            width: 52, height: 52,
-            background: "var(--peach)",
+            width: 44, height: 44,
+            background: "var(--charcoal)",
             borderRadius: "50%",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1rem", color: "white",
-            flexShrink: 0,
+            fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--white)",
+            flexShrink: 0, letterSpacing: "0.02em",
           }}>
             {initials}
           </div>
           <div>
-            <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.3rem", color: "var(--charcoal)", margin: 0 }}>
+            <h1 style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1.125rem", color: "var(--charcoal)", margin: 0, letterSpacing: "-0.01em" }}>
               {student.display_name}
             </h1>
-            <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: "0.1rem 0 0", fontFamily: "DM Sans, sans-serif" }}>
-              {goals.length} goals · joined {new Date(student.created_at).toLocaleDateString([], { month: "short", year: "numeric" })}
+            <p style={{ color: "var(--muted)", fontSize: "0.75rem", margin: "0.125rem 0 0", fontFamily: "Inter, sans-serif" }}>
+              {goals.length} goal{goals.length !== 1 ? "s" : ""} · joined {new Date(student.created_at).toLocaleDateString([], { month: "short", year: "numeric" })}
             </p>
           </div>
         </div>
@@ -163,75 +188,88 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
-        <div style={{ background: "var(--white)", borderRadius: "var(--radius-xl)", border: "1.5px solid var(--border)", padding: "1rem", textAlign: "center" }}>
-          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.5rem", color: "var(--butter)" }}>
-            ⭐ {student.total_points.toLocaleString()}
+        {[
+          { value: student.total_points.toLocaleString(), label: "Points" },
+          { value: student.streak_days, label: "Day streak" },
+          { value: `${pct}%`, label: "Goals done" },
+        ].map(stat => (
+          <div key={stat.label} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem", textAlign: "center" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.75rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+              {stat.value}
+            </div>
+            <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              {stat.label}
+            </div>
           </div>
-          <div style={{ fontSize: "0.7rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>Total Stars</div>
-        </div>
-        <div style={{ background: "var(--white)", borderRadius: "var(--radius-xl)", border: "1.5px solid var(--border)", padding: "1rem", textAlign: "center" }}>
-          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.5rem", color: "var(--peach)" }}>
-            🔥 {student.streak_days}
-          </div>
-          <div style={{ fontSize: "0.7rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>Day Streak</div>
-        </div>
-        <div style={{ background: "var(--white)", borderRadius: "var(--radius-xl)", border: "1.5px solid var(--border)", padding: "1rem", textAlign: "center" }}>
-          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.5rem", color: "var(--sage)" }}>
-            {pct}%
-          </div>
-          <div style={{ fontSize: "0.7rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>Goals Done</div>
-        </div>
+        ))}
       </div>
 
       {/* Two-column layout */}
-      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 300px" }}>
+      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 280px" }}>
 
         {/* Left: Goals + Sessions */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
           {/* Goals */}
-          <div style={{ background: "var(--white)", borderRadius: "var(--radius-xl)", border: "1.5px solid var(--border)", padding: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-              <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1.25rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Goals ({goals.length})
-              </div>
+              </span>
               <Link
                 href={`/teacher/goals?student=${id}`}
-                style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--peach)", textDecoration: "none" }}
+                style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--charcoal)", textDecoration: "none", letterSpacing: "0.02em" }}
               >
-                + Add Goal
+                + Add goal
               </Link>
             </div>
 
             {goals.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "1.5rem 0", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem" }}>
-                No goals yet
+              <div className="empty-state">
+                <div className="empty-state-title">No goals yet</div>
+                <p className="empty-state-desc">Add a goal to start tracking progress.</p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {/* Current goals first */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                {/* Current goals */}
                 {currentGoals.length > 0 && (
                   <>
-                    <div style={{ fontSize: "0.68rem", color: "var(--muted)", fontFamily: "Nunito, sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>
+                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.375rem" }}>
                       In Progress
                     </div>
                     {currentGoals.map(g => {
                       const area = AREAS[g.practice_area] ?? AREAS["technique"];
+                      const isCompleting = completingGoalId === g.id;
                       return (
-                        <div key={g.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", borderRadius: 12, background: "var(--cream)" }}>
-                          <span style={{ fontSize: "1rem" }}>{area.icon}</span>
+                        <div key={g.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", borderRadius: 3, border: "1px solid var(--border)", background: "var(--cream)" }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {g.title}
                             </div>
-                            <div style={{ fontSize: "0.68rem", color: area.color, fontFamily: "DM Sans, sans-serif" }}>{area.label}</div>
+                            <div style={{ fontSize: "0.6875rem", color: area.color, fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>
+                              {area.label} · {g.points} pts
+                            </div>
                           </div>
-                          <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--butter)", whiteSpace: "nowrap" }}>
-                            ⭐ {g.points}
-                          </span>
-                          <span style={{ background: "var(--peach-bg)", color: "var(--peach)", padding: "0.15rem 0.5rem", borderRadius: 100, fontSize: "0.65rem", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>
-                            Active
-                          </span>
+                          <button
+                            onClick={() => handleCompleteGoal(g)}
+                            disabled={!!completingGoalId}
+                            style={{
+                              flexShrink: 0,
+                              padding: "0.375rem 0.75rem",
+                              borderRadius: 3,
+                              border: "1px solid var(--border-strong)",
+                              background: isCompleting ? "var(--border)" : "var(--white)",
+                              color: "var(--charcoal)",
+                              fontFamily: "Inter, sans-serif",
+                              fontWeight: 500,
+                              fontSize: "0.75rem",
+                              cursor: completingGoalId ? "default" : "pointer",
+                              transition: "all 0.15s",
+                              letterSpacing: "0.01em",
+                            }}
+                          >
+                            {isCompleting ? "Saving…" : "Complete"}
+                          </button>
                         </div>
                       );
                     })}
@@ -241,22 +279,22 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 {/* Completed goals */}
                 {completedGoals.length > 0 && (
                   <>
-                    <div style={{ fontSize: "0.68rem", color: "var(--muted)", fontFamily: "Nunito, sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.5rem", marginBottom: "0.25rem" }}>
+                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: currentGoals.length > 0 ? "0.75rem" : 0, marginBottom: "0.375rem" }}>
                       Completed ({completedGoals.length})
                     </div>
                     {completedGoals.map(g => {
                       const area = AREAS[g.practice_area] ?? AREAS["technique"];
                       return (
-                        <div key={g.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", borderRadius: 12, opacity: 0.7 }}>
-                          <span style={{ fontSize: "1rem" }}>{area.icon}</span>
+                        <div key={g.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", borderRadius: 3, opacity: 0.5 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {g.title}
                             </div>
+                            <div style={{ fontSize: "0.6875rem", color: area.color, fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>
+                              {area.label} · {g.points} pts
+                            </div>
                           </div>
-                          <span style={{ background: "var(--sage-bg)", color: "var(--sage)", padding: "0.15rem 0.5rem", borderRadius: 100, fontSize: "0.65rem", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>
-                            ✓ Done
-                          </span>
+                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, flexShrink: 0 }}>Done</span>
                         </div>
                       );
                     })}
@@ -267,16 +305,16 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Recent Sessions */}
-          <div style={{ background: "var(--white)", borderRadius: "var(--radius-xl)", border: "1.5px solid var(--border)", padding: "1.25rem" }}>
-            <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1.25rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)" }}>
               Recent Sessions ({sessions.length})
             </div>
             {sessions.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "1.5rem 0", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem" }}>
-                No sessions yet
+              <div className="empty-state">
+                <div className="empty-state-title">No sessions yet</div>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                 {sessions.map(s => {
                   const mins = Math.max(1, Math.round(s.duration_seconds / 60));
                   const segCount = Array.isArray(s.segments_json) ? s.segments_json.length : 0;
@@ -284,18 +322,20 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                     <Link
                       key={s.id}
                       href={`/teacher/review/${s.id}`}
-                      style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", borderRadius: 12, background: "var(--cream)", textDecoration: "none" }}
+                      style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0.75rem", borderRadius: 3, background: "transparent", textDecoration: "none", transition: "background 0.12s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "var(--cream)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                     >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
                           {mins} min session
-                          {s.recording_url && <span style={{ marginLeft: "0.4rem", fontSize: "0.8rem" }}>🎙</span>}
+                          {s.recording_url && <span style={{ marginLeft: "0.375rem", color: "var(--muted)", fontSize: "0.75rem" }}>· rec</span>}
                         </div>
-                        <div style={{ fontSize: "0.68rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
+                        <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>
                           {segCount > 0 ? `${segCount} segment${segCount !== 1 ? "s" : ""}` : "No segments"} · {timeAgo(s.created_at)}
                         </div>
                       </div>
-                      <span style={{ color: "var(--sky)", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem" }}>Review →</span>
+                      <span style={{ color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, flexShrink: 0 }}>Review →</span>
                     </Link>
                   );
                 })}
@@ -304,43 +344,44 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           </div>
         </div>
 
-        {/* Right: Award Stars */}
-        <div style={{ background: "var(--white)", borderRadius: "var(--radius-xl)", border: "1.5px solid var(--border)", padding: "1.25rem" }}>
-          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
-            Award Stars
+        {/* Right: Award Points */}
+        <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1.25rem", alignSelf: "start" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)" }}>
+            Award Points
           </div>
 
           {/* Quick preset buttons */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.375rem", marginBottom: "1rem" }}>
             {PRESET_AWARDS.map(pts => (
               <button
                 key={pts}
                 onClick={() => handleAward(pts)}
                 disabled={awarding}
                 style={{
-                  padding: "0.65rem",
-                  borderRadius: 12,
-                  border: "1.5px solid var(--butter-light, #f0d060)",
-                  background: "var(--butter-bg)",
-                  color: "var(--butter)",
-                  fontFamily: "Nunito, sans-serif",
-                  fontWeight: 800,
+                  padding: "0.625rem",
+                  borderRadius: 3,
+                  border: "1px solid var(--border-strong)",
+                  background: "var(--cream)",
+                  color: "var(--charcoal)",
+                  fontFamily: "Inter, sans-serif",
+                  fontWeight: 500,
                   fontSize: "0.875rem",
                   cursor: awarding ? "default" : "pointer",
-                  opacity: awarding ? 0.6 : 1,
+                  opacity: awarding ? 0.5 : 1,
                   transition: "all 0.15s",
+                  letterSpacing: "0.01em",
                 }}
               >
-                ⭐ +{pts}
+                +{pts}
               </button>
             ))}
           </div>
 
           {/* Custom amount */}
-          <div style={{ marginBottom: "0.75rem" }}>
-            <div style={{ fontSize: "0.72rem", color: "var(--muted)", fontFamily: "Nunito, sans-serif", fontWeight: 700, marginBottom: "0.35rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.75rem" }}>
+            <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>
               Custom amount
-            </div>
+            </label>
             <input
               type="number"
               min="1"
@@ -349,41 +390,41 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
               onChange={e => setCustomAward(e.target.value)}
               placeholder="e.g. 15"
               style={{
-                width: "100%",
-                borderRadius: 10,
-                border: "1.5px solid var(--border)",
-                padding: "0.55rem 0.75rem",
-                fontFamily: "DM Sans, sans-serif",
+                borderRadius: 3,
+                border: "1px solid var(--border-strong)",
+                padding: "0.5rem 0.75rem",
+                fontFamily: "Inter, sans-serif",
                 fontSize: "0.875rem",
                 background: "var(--cream)",
                 color: "var(--charcoal)",
-                boxSizing: "border-box",
                 outline: "none",
+                width: "100%",
+                boxSizing: "border-box",
               }}
             />
           </div>
 
           {/* Optional note */}
-          <div style={{ marginBottom: "0.75rem" }}>
-            <div style={{ fontSize: "0.72rem", color: "var(--muted)", fontFamily: "Nunito, sans-serif", fontWeight: 700, marginBottom: "0.35rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.875rem" }}>
+            <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>
               Note (optional)
-            </div>
+            </label>
             <input
               type="text"
               value={awardNote}
               onChange={e => setAwardNote(e.target.value)}
               placeholder="Great work on your recital!"
               style={{
-                width: "100%",
-                borderRadius: 10,
-                border: "1.5px solid var(--border)",
-                padding: "0.55rem 0.75rem",
-                fontFamily: "DM Sans, sans-serif",
+                borderRadius: 3,
+                border: "1px solid var(--border-strong)",
+                padding: "0.5rem 0.75rem",
+                fontFamily: "Inter, sans-serif",
                 fontSize: "0.875rem",
                 background: "var(--cream)",
                 color: "var(--charcoal)",
-                boxSizing: "border-box",
                 outline: "none",
+                width: "100%",
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -396,32 +437,35 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             disabled={awarding || !customAward || parseInt(customAward, 10) <= 0}
             style={{
               width: "100%",
-              padding: "0.7rem",
-              borderRadius: 100,
+              padding: "0.625rem",
+              borderRadius: 3,
               border: "none",
-              background: awardSuccess ? "var(--sage)" : !customAward ? "var(--border)" : "var(--peach)",
+              background: awardSuccess
+                ? "var(--sage)"
+                : !customAward || parseInt(customAward, 10) <= 0
+                  ? "var(--border)"
+                  : "var(--charcoal)",
               color: "white",
-              fontFamily: "Nunito, sans-serif",
-              fontWeight: 800,
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
               fontSize: "0.875rem",
               cursor: awarding || !customAward ? "default" : "pointer",
               transition: "background 0.15s",
+              letterSpacing: "0.01em",
             }}
           >
-            {awardSuccess ? "✓ Stars Awarded!" : awarding ? "Awarding…" : "Award Custom Stars"}
+            {awardSuccess ? "Awarded!" : awarding ? "Awarding…" : "Award Custom Points"}
           </button>
 
           {awardError && (
-            <div style={{ marginTop: "0.5rem", background: "var(--rose-bg)", borderRadius: 10, padding: "0.5rem 0.75rem", fontSize: "0.78rem", color: "var(--rose)", fontFamily: "Nunito, sans-serif", fontWeight: 600 }}>
+            <div style={{ marginTop: "0.5rem", background: "var(--cream-deep)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "var(--charcoal)", fontFamily: "Inter, sans-serif" }}>
               {awardError}
             </div>
           )}
 
-          <div style={{ marginTop: "1rem", borderTop: "1px solid var(--border)", paddingTop: "0.875rem" }}>
-            <div style={{ fontSize: "0.68rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", lineHeight: 1.5 }}>
-              Stars are added to {student.display_name.split(" ")[0]}&apos;s total and they receive a notification in chat.
-            </div>
-          </div>
+          <p style={{ marginTop: "1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}>
+            Points are added to {student.display_name.split(" ")[0]}&apos;s total and they receive a notification in chat.
+          </p>
         </div>
       </div>
     </div>

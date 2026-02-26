@@ -23,6 +23,8 @@ export default function Rewards() {
 
   const [sessions, setSessions] = useState<PracticeSessionRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [livePoints, setLivePoints] = useState<number | null>(null);
+  const [liveStreak, setLiveStreak] = useState<number | null>(null);
 
   const loadSessions = useCallback(async () => {
     if (!student?.id) return;
@@ -39,12 +41,30 @@ export default function Rewards() {
     }
   }, [student?.id]);
 
+  // Fetch live points/streak from DB (context values are a login-time snapshot)
+  useEffect(() => {
+    if (!student?.id) return;
+    const supabase = getSupabaseBrowserClient();
+    supabase
+      .from("profiles")
+      .select("total_points, streak_days")
+      .eq("id", student.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const row = data as { total_points: number; streak_days: number };
+          setLivePoints(row.total_points);
+          setLiveStreak(row.streak_days);
+        }
+      });
+  }, [student?.id]);
+
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
   if (!student) return null;
 
-  const totalPoints = student.totalPoints;
-  const streakDays = student.streakDays;
+  const totalPoints = livePoints ?? student.totalPoints;
+  const streakDays = liveStreak ?? student.streakDays;
 
   const last7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
