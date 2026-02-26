@@ -7,6 +7,7 @@ export interface ProfileRow {
   streak_days: number;
   total_points: number;
   studio_id: string | null;
+  avatar_url?: string | null;
   created_at: string;
 }
 

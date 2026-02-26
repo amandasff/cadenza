@@ -1,9 +1,10 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
+import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Teacher } from "../../lib/models/Teacher";
 
 const tabs = [
@@ -19,6 +20,10 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (loading) return;
     if (!user || user.role !== "teacher") {
@@ -30,6 +35,49 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       router.replace("/teacher/onboard");
     }
   }, [user, loading, path, router]);
+
+  // Load avatar from DB on mount
+  useEffect(() => {
+    const teacher = user as Teacher | null;
+    if (!teacher?.id) return;
+    const supabase = getSupabaseBrowserClient();
+    supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", teacher.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const row = data as { avatar_url?: string | null };
+          if (row.avatar_url) setAvatarUrl(row.avatar_url);
+        }
+      });
+  }, [(user as Teacher | null)?.id]);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const teacher = user as Teacher | null;
+    if (!file || !teacher?.id) return;
+    setUploading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const filePath = `${teacher.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      const url = urlData.publicUrl + "?t=" + Date.now();
+      await supabase.from("profiles").update({ avatar_url: urlData.publicUrl }).eq("id", teacher.id);
+      setAvatarUrl(url);
+    } catch (err) {
+      console.error("avatar upload error:", err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   if (loading) {
     return (
@@ -59,8 +107,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         top: 0,
         zIndex: 100,
       }}>
-        {/* Wordmark */}
-        <div style={{
+        {/* Wordmark → landing page */}
+        <Link href="/" style={{
           fontFamily: "Inter, sans-serif",
           fontWeight: 600,
           fontSize: "0.8125rem",
@@ -72,9 +120,10 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           marginRight: "1rem",
           whiteSpace: "nowrap",
           flexShrink: 0,
+          textDecoration: "none",
         }}>
           Cadenza
-        </div>
+        </Link>
 
         {/* Tab links */}
         <div className="teacher-nav-tabs">
@@ -99,7 +148,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           })}
         </div>
 
-        {/* Right side */}
+        {/* Right side: studio name + avatar + name + theme (hidden on mobile) */}
         <div className="teacher-nav-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {teacher.hasStudio() && (
             <span className="teacher-nav-studio" style={{
@@ -113,72 +162,72 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               {teacher.studioName}
             </span>
           )}
-          <div style={{
-            width: 28,
-            height: 28,
-            background: "var(--charcoal)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.625rem",
-            fontFamily: "Inter, sans-serif",
-            fontWeight: 600,
-            color: "var(--white)",
-            flexShrink: 0,
-            letterSpacing: "0.02em",
-          }}>
-            {initials}
-          </div>
+
+          {/* Clickable avatar */}
+          <label
+            htmlFor="teacher-avatar-upload"
+            style={{
+              width: 28, height: 28,
+              background: avatarUrl ? "transparent" : "var(--charcoal)",
+              borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 600,
+              color: "var(--white)", flexShrink: 0, letterSpacing: "0.02em",
+              cursor: uploading ? "default" : "pointer",
+              overflow: "hidden",
+            }}
+            title="Click to change photo"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={teacher.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              uploading ? "…" : initials
+            )}
+          </label>
+          <input
+            id="teacher-avatar-upload"
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            style={{ display: "none" }}
+          />
+
           <span style={{
-            fontFamily: "Inter, sans-serif",
-            fontWeight: 500,
-            fontSize: "0.8125rem",
-            color: "var(--charcoal)",
-            whiteSpace: "nowrap",
+            fontFamily: "Inter, sans-serif", fontWeight: 500,
+            fontSize: "0.8125rem", color: "var(--charcoal)", whiteSpace: "nowrap",
           }}>
             {teacher.displayName}
           </span>
+
           <button
             onClick={toggleTheme}
             style={{
-              background: "none",
-              border: "1px solid var(--border-strong)",
-              borderRadius: 2,
-              padding: "0.25rem 0.625rem",
-              cursor: "pointer",
-              fontSize: "0.6875rem",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              color: "var(--muted)",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
+              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+              padding: "0.25rem 0.625rem", cursor: "pointer", fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
               marginLeft: "0.25rem",
             }}
           >
             {theme === "dark" ? "Light" : "Dark"}
           </button>
-          <button
-            onClick={() => signOut()}
-            style={{
-              background: "none",
-              border: "1px solid var(--border-strong)",
-              borderRadius: 2,
-              padding: "0.25rem 0.625rem",
-              cursor: "pointer",
-              fontSize: "0.6875rem",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              color: "var(--muted)",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
-            }}
-          >
-            Sign out
-          </button>
         </div>
+
+        {/* Sign out — outside teacher-nav-right so it's always visible on all screen sizes */}
+        <button
+          onClick={() => signOut()}
+          style={{
+            flexShrink: 0,
+            marginLeft: "0.75rem",
+            background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+            padding: "0.25rem 0.625rem", cursor: "pointer", fontSize: "0.6875rem",
+            fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+            letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
+          }}
+        >
+          Sign out
+        </button>
       </nav>
       <main className="teacher-main">{children}</main>
     </div>

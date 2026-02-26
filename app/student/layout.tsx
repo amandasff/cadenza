@@ -1,9 +1,10 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
+import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 
 const tabs = [
@@ -20,6 +21,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (loading) return;
     if (!user || user.role !== "student") {
@@ -31,6 +36,49 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       router.replace("/student/join");
     }
   }, [user, loading, path, router]);
+
+  // Load avatar from DB on mount
+  useEffect(() => {
+    const student = user as Student | null;
+    if (!student?.id) return;
+    const supabase = getSupabaseBrowserClient();
+    supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", student.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const row = data as { avatar_url?: string | null };
+          if (row.avatar_url) setAvatarUrl(row.avatar_url);
+        }
+      });
+  }, [(user as Student | null)?.id]);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const student = user as Student | null;
+    if (!file || !student?.id) return;
+    setUploading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${student.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = urlData.publicUrl + "?t=" + Date.now();
+      await supabase.from("profiles").update({ avatar_url: urlData.publicUrl }).eq("id", student.id);
+      setAvatarUrl(url);
+    } catch (err) {
+      console.error("avatar upload error:", err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   if (loading) {
     return (
@@ -52,6 +100,39 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     .slice(0, 2)
     .toUpperCase();
 
+  const avatarCircle = (size: number, fontSize: string) => (
+    <>
+      <label
+        htmlFor="student-avatar-upload"
+        style={{
+          width: size, height: size,
+          background: avatarUrl ? "transparent" : "var(--charcoal)",
+          borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize, fontFamily: "Inter, sans-serif", fontWeight: 600,
+          color: "var(--white)", flexShrink: 0, letterSpacing: "0.02em",
+          cursor: uploading ? "default" : "pointer",
+          overflow: "hidden", position: "relative",
+        }}
+        title="Click to change photo"
+      >
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={student.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          uploading ? "…" : initials
+        )}
+      </label>
+      <input
+        id="student-avatar-upload"
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleAvatarUpload}
+        style={{ display: "none" }}
+      />
+    </>
+  );
+
   return (
     <div className="student-shell">
 
@@ -64,34 +145,26 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         alignItems: "center",
         justifyContent: "space-between",
       }}>
-        <span style={{
+        <Link href="/" style={{
           fontFamily: "Inter, sans-serif",
           fontWeight: 600,
           fontSize: "0.875rem",
           letterSpacing: "0.08em",
           textTransform: "uppercase",
           color: "var(--charcoal)",
+          textDecoration: "none",
         }}>
           Cadenza
-        </span>
+        </Link>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <span className="streak-pill">{student.streakDays}d</span>
-          <span className="points-pill">{student.totalPoints.toLocaleString()}</span>
+          {avatarCircle(28, "0.625rem")}
           <button
             onClick={toggleTheme}
             style={{
-              background: "none",
-              border: "1px solid var(--border-strong)",
-              borderRadius: 2,
-              padding: "0.25rem 0.625rem",
-              cursor: "pointer",
-              fontSize: "0.6875rem",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              color: "var(--muted)",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
+              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+              padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.625rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
             {theme === "dark" ? "Light" : "Dark"}
@@ -99,18 +172,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           <button
             onClick={() => signOut()}
             style={{
-              background: "none",
-              border: "1px solid var(--border-strong)",
-              borderRadius: 2,
-              padding: "0.25rem 0.625rem",
-              cursor: "pointer",
-              fontSize: "0.6875rem",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              color: "var(--muted)",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
+              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+              padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.625rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
             Out
@@ -120,8 +185,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
       {/* ── Desktop sidebar (hidden <700px) ── */}
       <aside className="student-sidebar">
-        {/* Wordmark */}
-        <div style={{
+        {/* Wordmark → landing page */}
+        <Link href="/" style={{
           fontFamily: "Inter, sans-serif",
           fontWeight: 600,
           fontSize: "0.8125rem",
@@ -131,43 +196,19 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           marginBottom: "2rem",
           paddingBottom: "1.25rem",
           borderBottom: "1px solid var(--border)",
+          textDecoration: "none",
+          display: "block",
         }}>
           Cadenza
-        </div>
+        </Link>
 
         {/* Student profile */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.625rem",
-          marginBottom: "2rem",
-        }}>
-          <div style={{
-            width: 32,
-            height: 32,
-            background: "var(--charcoal)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.6875rem",
-            fontFamily: "Inter, sans-serif",
-            fontWeight: 600,
-            color: "var(--white)",
-            flexShrink: 0,
-            letterSpacing: "0.02em",
-          }}>
-            {initials}
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "2rem" }}>
+          {avatarCircle(36, "0.75rem")}
           <div style={{ minWidth: 0 }}>
             <div style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              fontSize: "0.8125rem",
-              color: "var(--charcoal)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
+              color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}>
               {student.displayName}
             </div>
@@ -184,18 +225,14 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
             return (
               <Link key={t.href} href={t.href} style={{
-                display: "flex",
-                alignItems: "center",
+                display: "flex", alignItems: "center",
                 padding: "0.5rem 0.75rem",
                 borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
                 background: active ? "var(--cream-deep)" : "transparent",
                 color: active ? "var(--charcoal)" : "var(--muted)",
-                fontFamily: "Inter, sans-serif",
-                fontWeight: active ? 500 : 400,
-                fontSize: "0.875rem",
-                textDecoration: "none",
-                transition: "all 0.15s",
-                letterSpacing: "0.005em",
+                fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
+                fontSize: "0.875rem", textDecoration: "none",
+                transition: "all 0.15s", letterSpacing: "0.005em",
               }}>
                 {t.label}
               </Link>
@@ -203,25 +240,15 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           })}
         </nav>
 
-        {/* Theme toggle + logout */}
+        {/* Footer: theme + sign out */}
         <div style={{ paddingTop: "1.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
           <button
             onClick={toggleTheme}
             style={{
-              width: "100%",
-              background: "none",
-              border: "1px solid var(--border)",
-              borderRadius: 2,
-              padding: "0.4rem 0.75rem",
-              cursor: "pointer",
-              fontSize: "0.6875rem",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              color: "var(--muted)",
-              textAlign: "left",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
+              width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
+              padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
             {theme === "dark" ? "Light mode" : "Dark mode"}
@@ -229,20 +256,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           <button
             onClick={() => signOut()}
             style={{
-              width: "100%",
-              background: "none",
-              border: "1px solid var(--border)",
-              borderRadius: 2,
-              padding: "0.4rem 0.75rem",
-              cursor: "pointer",
-              fontSize: "0.6875rem",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              color: "var(--muted)",
-              textAlign: "left",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              transition: "all 0.15s",
+              width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
+              padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
             Sign out
@@ -257,49 +274,29 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
       {/* ── Mobile bottom nav (hidden ≥700px via CSS) ── */}
       <nav className="student-bottom-nav" style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: "var(--white)",
-        borderTop: "1px solid var(--border)",
-        display: "flex",
-        zIndex: 100,
-        padding: "0.5rem 0 0.625rem",
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        background: "var(--white)", borderTop: "1px solid var(--border)",
+        display: "flex", zIndex: 100, padding: "0.5rem 0 0.625rem",
       }}>
         {tabs.map(t => {
           const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
           return (
             <Link key={t.href} href={t.href} style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "3px",
-              textDecoration: "none",
-              padding: "0.375rem 0",
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+              textDecoration: "none", padding: "0.375rem 0",
               color: active ? "var(--charcoal)" : "var(--muted)",
-              transition: "color 0.15s",
-              position: "relative",
+              transition: "color 0.15s", position: "relative",
             }}>
               {active && (
                 <div style={{
-                  position: "absolute",
-                  top: 0,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: 20,
-                  height: 1.5,
-                  background: "var(--charcoal)",
+                  position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+                  width: 20, height: 1.5, background: "var(--charcoal)",
                 }} />
               )}
               <span style={{
-                fontSize: "0.5625rem",
-                fontFamily: "Inter, sans-serif",
-                fontWeight: active ? 600 : 400,
-                letterSpacing: "0.07em",
-                textTransform: "uppercase",
-                marginTop: "0.125rem",
+                fontSize: "0.5625rem", fontFamily: "Inter, sans-serif",
+                fontWeight: active ? 600 : 400, letterSpacing: "0.07em",
+                textTransform: "uppercase", marginTop: "0.125rem",
               }}>
                 {t.label}
               </span>
