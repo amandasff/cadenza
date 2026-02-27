@@ -20,5 +20,35 @@ CREATE POLICY "Authenticated users can read hearts"
   TO authenticated
   USING (true);
 
--- Enable realtime for heart counts (optional but nice)
+-- Allow users to heart any message
+CREATE POLICY "Users can insert own hearts"
+  ON public.message_hearts FOR INSERT
+  TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+-- Allow users to remove their own hearts
+CREATE POLICY "Users can delete own hearts"
+  ON public.message_hearts FOR DELETE
+  TO authenticated
+  USING (user_id = auth.uid());
+
+-- Enable realtime for heart counts
 ALTER PUBLICATION supabase_realtime ADD TABLE public.message_hearts;
+
+-- ============================================================
+-- RLS policies for messages table (edit & delete own messages)
+-- Run these if edit/delete isn't working without a service role key
+-- ============================================================
+
+-- Allow users to update their own messages
+CREATE POLICY "Users can update own messages"
+  ON public.messages FOR UPDATE
+  TO authenticated
+  USING (sender_id = auth.uid())
+  WITH CHECK (sender_id = auth.uid());
+
+-- Allow users to delete their own messages
+CREATE POLICY "Users can delete own messages"
+  ON public.messages FOR DELETE
+  TO authenticated
+  USING (sender_id = auth.uid());
