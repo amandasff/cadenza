@@ -50,11 +50,10 @@ export default function Rewards() {
       .select("total_points, streak_days")
       .eq("id", student.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data }: { data: { total_points: number; streak_days: number } | null }) => {
         if (data) {
-          const row = data as { total_points: number; streak_days: number };
-          setLivePoints(row.total_points);
-          setLiveStreak(row.streak_days);
+          setLivePoints(data.total_points);
+          setLiveStreak(data.streak_days);
         }
       });
   }, [student?.id]);
