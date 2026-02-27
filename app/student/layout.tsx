@@ -47,10 +47,9 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       .select("avatar_url")
       .eq("id", student.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data }: { data: { avatar_url?: string | null } | null }) => {
         if (data) {
-          const row = data as { avatar_url?: string | null };
-          if (row.avatar_url) setAvatarUrl(row.avatar_url);
+          if (data.avatar_url) setAvatarUrl(data.avatar_url);
         }
       });
   }, [(user as Student | null)?.id]);
