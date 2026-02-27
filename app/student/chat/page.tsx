@@ -12,21 +12,10 @@ function formatTime(iso: string) {
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
   if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   if (diffDays === 1) return "Yesterday";
-  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
 type Tab = "announcements" | "private";
-
-const actionBtnStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: "0.2rem 0.3rem",
-  borderRadius: 4,
-  fontSize: "0.7rem",
-  color: "var(--muted)",
-  lineHeight: 1,
-};
 
 export default function StudentChat() {
   const { user } = useAuth();
@@ -42,6 +31,7 @@ export default function StudentChat() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -56,10 +46,7 @@ export default function StudentChat() {
 
     const load = async () => {
       const { data: studioData } = await supabase
-        .from("studios")
-        .select("owner_id")
-        .eq("id", student.studioId!)
-        .single();
+        .from("studios").select("owner_id").eq("id", student.studioId!).single();
       const tId = studioData?.owner_id ?? null;
       setTeacherId(tId);
       const anns = await chatService.getAnnouncements(student.studioId!);
@@ -70,18 +57,13 @@ export default function StudentChat() {
       }
       setLoading(false);
     };
+    load().catch(() => setLoading(false));
 
-    load().catch((err) => {
-      console.error("chat load error:", (err as { message?: string }).message);
-      setLoading(false);
-    });
-
-    // Subscribe to announcements (teacher can also edit/delete them)
     const unsubAnn = chatService.subscribeToAnnouncements(
       student.studioId,
-      (msg) => setAnnouncements((prev) => [...prev, msg]),
-      (msg) => setAnnouncements((prev) => prev.map(m => m.id === msg.id ? msg : m)),
-      (id) => setAnnouncements((prev) => prev.filter(m => m.id !== id))
+      msg => setAnnouncements(p => [...p, msg]),
+      msg => setAnnouncements(p => p.map(m => m.id === msg.id ? msg : m)),
+      id  => setAnnouncements(p => p.filter(m => m.id !== id))
     );
     return unsubAnn;
   }, [student?.studioId, student?.id]);
@@ -92,9 +74,9 @@ export default function StudentChat() {
     const chatService = ChatService.getInstance(supabase);
     const unsubPriv = chatService.subscribeToPrivateThread(
       student.studioId, student.id, teacherId,
-      (msg) => setPrivateMessages((prev) => [...prev, msg]),
-      (msg) => setPrivateMessages((prev) => prev.map(m => m.id === msg.id ? msg : m)),
-      (id) => setPrivateMessages((prev) => prev.filter(m => m.id !== id))
+      msg => setPrivateMessages(p => [...p, msg]),
+      msg => setPrivateMessages(p => p.map(m => m.id === msg.id ? msg : m)),
+      id  => setPrivateMessages(p => p.filter(m => m.id !== id))
     );
     return unsubPriv;
   }, [student?.studioId, student?.id, teacherId]);
@@ -108,11 +90,9 @@ export default function StudentChat() {
     setSending(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = ChatService.getInstance(supabase);
-      await service.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
+      await ChatService.getInstance(supabase).sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
       setTab("private");
-    } catch (err) {
-      console.error("send error:", (err as { message?: string }).message);
+    } catch {
       setInput(text);
     } finally {
       setSending(false);
@@ -121,25 +101,24 @@ export default function StudentChat() {
   }
 
   async function handleDelete(msgId: string) {
+    setPrivateMessages(p => p.filter(m => m.id !== msgId));
     try {
       const supabase = getSupabaseBrowserClient();
       await ChatService.getInstance(supabase).deleteMessage(msgId);
-      setPrivateMessages(prev => prev.filter(m => m.id !== msgId));
-    } catch (err) {
-      console.error("delete error:", (err as { message?: string }).message);
-    }
+    } catch { /* no-op */ }
   }
 
   async function handleEditSave(msgId: string) {
     const trimmed = editText.trim();
     if (!trimmed) return;
+    setEditError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const updated = await ChatService.getInstance(supabase).updateMessage(msgId, trimmed);
-      setPrivateMessages(prev => prev.map(m => m.id === msgId ? updated : m));
+      setPrivateMessages(p => p.map(m => m.id === msgId ? updated : m));
       setEditingId(null);
-    } catch (err) {
-      console.error("edit error:", (err as { message?: string }).message);
+    } catch {
+      setEditError("Could not save — check your permissions.");
     }
   }
 
@@ -148,72 +127,68 @@ export default function StudentChat() {
   }
 
   const activeMessages = tab === "announcements" ? announcements : privateMessages;
-  // Students can only edit/delete their own private messages
-  const canEditDelete = tab === "private";
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", flexDirection: "column" }}>
 
       {/* Header */}
-      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "0.875rem 1.25rem" }}>
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.875rem" }}>
+      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem 0" }}>
+        <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.875rem" }}>
           Messages
         </div>
-        {/* Underline-style tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid var(--border)", gap: 0 }}>
-          {(["announcements", "private"] as Tab[]).map((t) => (
+        <div style={{ display: "flex", gap: 0 }}>
+          {(["announcements", "private"] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               style={{
-                padding: "0.5rem 1rem",
-                background: "none",
-                border: "none",
+                padding: "0.5rem 1.125rem",
+                background: "none", border: "none",
                 borderBottom: tab === t ? "1.5px solid var(--charcoal)" : "1.5px solid transparent",
                 marginBottom: -1,
-                fontFamily: "Inter, sans-serif",
-                fontWeight: tab === t ? 500 : 400,
                 fontSize: "0.8125rem",
+                fontWeight: tab === t ? 500 : 400,
                 color: tab === t ? "var(--charcoal)" : "var(--muted)",
                 cursor: "pointer",
-                transition: "color 0.15s",
               }}
             >
               {t === "announcements" ? "Studio" : "Private"}
             </button>
           ))}
         </div>
+        <div style={{ height: 1, background: "var(--border)" }} />
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem", paddingBottom: "6rem" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "7rem" }}>
         {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingTop: "1rem" }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton" style={{ height: 44, borderRadius: 3, width: i % 2 === 0 ? "60%" : "45%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", paddingTop: "1rem" }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="skeleton" style={{ height: 40, borderRadius: 3, width: i % 2 === 0 ? "58%" : "44%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />
             ))}
           </div>
         ) : activeMessages.length === 0 ? (
           <div className="empty-state" style={{ flex: 1, justifyContent: "center" }}>
-            <div className="empty-state-title">
-              {tab === "announcements" ? "No announcements yet" : "No private messages yet"}
-            </div>
+            <p className="empty-state-title">
+              {tab === "announcements" ? "No announcements yet" : "No messages yet"}
+            </p>
             <p className="empty-state-desc">
               {tab === "announcements"
                 ? "Studio announcements from your teacher appear here."
-                : "Message your teacher privately below."}
+                : "Send your teacher a message below."}
             </p>
           </div>
         ) : (
           activeMessages.map((msg, i) => {
+            // System message
             if (msg.message_type === "system") {
               const lines = msg.content.split("\n");
-              const audioUrl = lines.find((l) => l.startsWith("AUDIO:"))?.slice(6);
-              const textContent = lines.filter((l) => !l.startsWith("AUDIO:")).join("\n");
+              const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
+              const text = lines.filter(l => !l.startsWith("AUDIO:")).join("\n");
               return (
-                <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.25rem 0" }}>
-                  <div style={{ padding: "0.625rem 0.875rem", background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", maxWidth: "88%", lineHeight: 1.6 }}>
-                    <div style={{ whiteSpace: "pre-line" }}>{textContent}</div>
+                <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.5rem 0" }}>
+                  <div style={{ padding: "0.5rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "88%", lineHeight: 1.6 }}>
+                    <div style={{ whiteSpace: "pre-line" }}>{text}</div>
                     {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", marginTop: "0.5rem", height: 32 }} />}
                   </div>
                 </div>
@@ -222,110 +197,100 @@ export default function StudentChat() {
 
             const isMe = msg.sender_id === student?.id;
             const prev = i > 0 ? activeMessages[i - 1] : null;
-            const showName = !isMe && prev?.sender_id !== msg.sender_id;
+            const next = i < activeMessages.length - 1 ? activeMessages[i + 1] : null;
+            const showSender = !isMe && prev?.sender_id !== msg.sender_id;
+            const isLast = !next || next.sender_id !== msg.sender_id;
             const isHovered = hoveredId === msg.id;
             const isEditing = editingId === msg.id;
+            const canAct = tab === "private" && isMe;
 
             return (
               <div
                 key={msg.id}
-                style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", gap: "0.15rem" }}
+                style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : 0 }}
                 onMouseEnter={() => setHoveredId(msg.id)}
                 onMouseLeave={() => setHoveredId(null)}
               >
-                {showName && (
-                  <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", paddingLeft: "0.25rem" }}>
+                {showSender && (
+                  <span style={{ fontSize: "0.6875rem", fontWeight: 500, color: "var(--muted)", marginBottom: "0.25rem", paddingLeft: "0.25rem" }}>
                     {msg.sender_name}
                   </span>
                 )}
 
-                {/* Bubble row */}
-                <div style={{ display: "flex", alignItems: "flex-end", gap: "0.375rem", flexDirection: isMe ? "row-reverse" : "row" }}>
-                  {/* Action buttons — own messages in private tab only */}
-                  {isMe && canEditDelete && isHovered && !isEditing && (
-                    <div style={{ display: "flex", gap: "0.125rem", marginBottom: "0.1rem" }}>
+                {isEditing ? (
+                  <div style={{ width: "100%", maxWidth: 400 }}>
+                    <textarea
+                      value={editText}
+                      onChange={e => { setEditText(e.target.value); setEditError(null); }}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(msg.id); }
+                        if (e.key === "Escape") { setEditingId(null); setEditError(null); }
+                      }}
+                      autoFocus
+                      rows={Math.max(1, editText.split("\n").length)}
+                      style={{
+                        width: "100%", borderRadius: 3,
+                        border: `1px solid ${editError ? "var(--error)" : "var(--border-strong)"}`,
+                        padding: "0.5rem 0.75rem", fontSize: "0.875rem",
+                        lineHeight: 1.5, outline: "none", resize: "none",
+                        background: "var(--white)", color: "var(--charcoal)",
+                        fontFamily: "Inter, sans-serif",
+                      }}
+                    />
+                    {editError && <p style={{ fontSize: "0.6875rem", color: "var(--error)", margin: "0.25rem 0 0" }}>{editError}</p>}
+                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.375rem", justifyContent: "flex-end" }}>
                       <button
-                        style={actionBtnStyle}
-                        title="Edit"
-                        onClick={() => { setEditingId(msg.id); setEditText(msg.content); }}
+                        onClick={() => { setEditingId(null); setEditError(null); }}
+                        style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}
                       >
-                        ✏
+                        Cancel
                       </button>
                       <button
-                        style={actionBtnStyle}
-                        title="Delete"
-                        onClick={() => handleDelete(msg.id)}
+                        onClick={() => handleEditSave(msg.id)}
+                        style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "white", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}
                       >
-                        🗑
+                        Save
                       </button>
                     </div>
-                  )}
+                  </div>
+                ) : (
+                  <div style={{
+                    maxWidth: "78%",
+                    padding: "0.5rem 0.875rem",
+                    background: isMe ? "var(--charcoal)" : "var(--white)",
+                    color: isMe ? "white" : "var(--charcoal)",
+                    borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                    border: isMe ? "none" : "1px solid var(--border)",
+                    fontSize: "0.875rem",
+                    lineHeight: 1.55,
+                  }}>
+                    {msg.content}
+                  </div>
+                )}
 
-                  {/* Message content / edit input */}
-                  {isEditing ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxWidth: "75%" }}>
-                      <input
-                        value={editText}
-                        onChange={e => setEditText(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(msg.id); }
-                          if (e.key === "Escape") setEditingId(null);
-                        }}
-                        autoFocus
-                        style={{
-                          borderRadius: 3, border: "1px solid var(--border-strong)",
-                          padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif",
-                          fontSize: "0.875rem", outline: "none",
-                          background: "var(--cream)", color: "var(--charcoal)",
-                        }}
-                      />
-                      <div style={{ display: "flex", gap: "0.375rem", justifyContent: "flex-end" }}>
+                {isLast && !isEditing && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.2rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
+                    <span style={{ fontSize: "0.625rem", color: "var(--muted)", letterSpacing: "0.02em" }}>
+                      {formatTime(msg.created_at)}
+                    </span>
+                    {canAct && (
+                      <span style={{ display: "flex", gap: "0.375rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none" }}>
                         <button
-                          onClick={() => handleEditSave(msg.id)}
-                          style={{
-                            padding: "0.25rem 0.625rem", borderRadius: 3, border: "none",
-                            background: "var(--charcoal)", color: "white",
-                            cursor: "pointer", fontSize: "0.73rem",
-                            fontFamily: "Inter, sans-serif", fontWeight: 500,
-                          }}
+                          onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}
                         >
-                          Save
+                          Edit
                         </button>
+                        <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
                         <button
-                          onClick={() => setEditingId(null)}
-                          style={{
-                            padding: "0.25rem 0.625rem", borderRadius: 3,
-                            border: "1px solid var(--border-strong)",
-                            background: "none", color: "var(--muted)",
-                            cursor: "pointer", fontSize: "0.73rem",
-                            fontFamily: "Inter, sans-serif",
-                          }}
+                          onClick={() => handleDelete(msg.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}
                         >
-                          Cancel
+                          Delete
                         </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{
-                      maxWidth: "75%",
-                      padding: "0.575rem 0.875rem",
-                      background: isMe ? "var(--charcoal)" : "var(--white)",
-                      color: isMe ? "white" : "var(--charcoal)",
-                      borderRadius: isMe ? "12px 12px 3px 12px" : "12px 12px 12px 3px",
-                      border: isMe ? "none" : "1px solid var(--border)",
-                      fontSize: "0.875rem",
-                      lineHeight: 1.5,
-                      fontFamily: "Inter, sans-serif",
-                    }}>
-                      {msg.content}
-                    </div>
-                  )}
-                </div>
-
-                {(i === activeMessages.length - 1 || activeMessages[i + 1]?.sender_id !== msg.sender_id) && (
-                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", paddingLeft: "0.25rem", paddingRight: "0.25rem", letterSpacing: "0.02em" }}>
-                    {formatTime(msg.created_at)}
-                  </span>
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -333,11 +298,12 @@ export default function StudentChat() {
         )}
 
         {!loading && tab === "announcements" && announcements.length > 0 && (
-          <div onClick={() => setTab("private")} style={{ marginTop: "0.5rem", padding: "0.625rem 0.875rem", background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: 3, cursor: "pointer" }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-              Reply privately to your teacher →
-            </span>
-          </div>
+          <button
+            onClick={() => setTab("private")}
+            style={{ all: "unset", marginTop: "0.75rem", padding: "0.625rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, cursor: "pointer", fontSize: "0.8125rem", color: "var(--muted)", width: "100%", boxSizing: "border-box" }}
+          >
+            Reply privately to your teacher →
+          </button>
         )}
 
         <div ref={bottomRef} />
@@ -349,18 +315,18 @@ export default function StudentChat() {
           <input
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={teacherId ? "Message your teacher" : "Loading…"}
+            placeholder={teacherId ? "Message your teacher…" : "Loading…"}
             disabled={sending || !teacherId}
-            style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border-strong)", padding: "0.575rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }}
+            style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }}
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || sending || !teacherId}
-            style={{ width: 36, height: 36, borderRadius: 3, background: !input.trim() || !teacherId ? "var(--border)" : "var(--charcoal)", border: "none", cursor: !input.trim() || !teacherId ? "default" : "pointer", color: "white", fontSize: "0.875rem", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s", flexShrink: 0 }}
+            style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "white", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s" }}
           >
-            →
+            Send
           </button>
         </div>
       )}

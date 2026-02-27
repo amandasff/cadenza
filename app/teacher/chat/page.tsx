@@ -13,20 +13,12 @@ function formatTime(iso: string) {
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
   if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   if (diffDays === 1) return "Yesterday";
-  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-const actionBtnStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: "0.2rem 0.3rem",
-  borderRadius: 4,
-  fontSize: "0.7rem",
-  color: "var(--muted)",
-  lineHeight: 1,
-  transition: "color 0.1s",
-};
+function initials(name: string) {
+  return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}
 
 export default function TeacherChat() {
   const { user } = useAuth();
@@ -42,6 +34,7 @@ export default function TeacherChat() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,58 +42,41 @@ export default function TeacherChat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // Load student roster once
   useEffect(() => {
     if (!teacher?.studioId) return;
     const supabase = getSupabaseBrowserClient();
     StudioService.getInstance(supabase)
       .getStudents(teacher.studioId)
       .then((data) => { setStudents(data); setLoadingStudents(false); })
-      .catch((err) => {
-        console.error("getStudents error:", (err as { message?: string }).message);
-        setLoadingStudents(false);
-      });
+      .catch(() => setLoadingStudents(false));
   }, [teacher?.studioId]);
 
-  // Load messages + subscribe whenever the active pane changes
   useEffect(() => {
     if (!teacher?.studioId || !teacher?.id) return;
     setLoadingMessages(true);
     setMessages([]);
     setEditingId(null);
+    setEditError(null);
     const supabase = getSupabaseBrowserClient();
     const service = ChatService.getInstance(supabase);
 
-    const onInsert = (msg: MessageRow) => setMessages((prev) => [...prev, msg]);
-    const onUpdate = (msg: MessageRow) => setMessages((prev) => prev.map(m => m.id === msg.id ? msg : m));
-    const onDelete = (id: string) => setMessages((prev) => prev.filter(m => m.id !== id));
+    const onInsert = (msg: MessageRow) => setMessages(p => [...p, msg]);
+    const onUpdate = (msg: MessageRow) => setMessages(p => p.map(m => m.id === msg.id ? msg : m));
+    const onDelete = (id: string) => setMessages(p => p.filter(m => m.id !== id));
 
-    let unsubscribe: () => void;
-
+    let unsub: () => void;
     if (selectedStudent === null) {
-      service
-        .getAnnouncements(teacher.studioId)
-        .then((msgs) => { setMessages(msgs); setLoadingMessages(false); })
-        .catch((err) => {
-          console.error("getAnnouncements error:", (err as { message?: string }).message);
-          setLoadingMessages(false);
-        });
-      unsubscribe = service.subscribeToAnnouncements(teacher.studioId, onInsert, onUpdate, onDelete);
+      service.getAnnouncements(teacher.studioId)
+        .then(msgs => { setMessages(msgs); setLoadingMessages(false); })
+        .catch(() => setLoadingMessages(false));
+      unsub = service.subscribeToAnnouncements(teacher.studioId, onInsert, onUpdate, onDelete);
     } else {
-      service
-        .getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id)
-        .then((msgs) => { setMessages(msgs); setLoadingMessages(false); })
-        .catch((err) => {
-          console.error("getPrivateThread error:", (err as { message?: string }).message);
-          setLoadingMessages(false);
-        });
-      unsubscribe = service.subscribeToPrivateThread(
-        teacher.studioId, teacher.id, selectedStudent.id,
-        onInsert, onUpdate, onDelete
-      );
+      service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id)
+        .then(msgs => { setMessages(msgs); setLoadingMessages(false); })
+        .catch(() => setLoadingMessages(false));
+      unsub = service.subscribeToPrivateThread(teacher.studioId, teacher.id, selectedStudent.id, onInsert, onUpdate, onDelete);
     }
-
-    return unsubscribe;
+    return unsub;
   }, [teacher?.studioId, teacher?.id, selectedStudent]);
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
@@ -116,12 +92,9 @@ export default function TeacherChat() {
       if (selectedStudent === null) {
         await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, text);
       } else {
-        await service.sendPrivateMessage(
-          teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, text
-        );
+        await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, text);
       }
-    } catch (err) {
-      console.error("send error:", (err as { message?: string }).message);
+    } catch {
       setInput(text);
     } finally {
       setSending(false);
@@ -130,25 +103,26 @@ export default function TeacherChat() {
   }
 
   async function handleDelete(msgId: string) {
+    setMessages(p => p.filter(m => m.id !== msgId));
     try {
       const supabase = getSupabaseBrowserClient();
       await ChatService.getInstance(supabase).deleteMessage(msgId);
-      setMessages(prev => prev.filter(m => m.id !== msgId));
-    } catch (err) {
-      console.error("delete error:", (err as { message?: string }).message);
+    } catch {
+      // restore on failure would require keeping the old list — just log for now
     }
   }
 
   async function handleEditSave(msgId: string) {
     const trimmed = editText.trim();
     if (!trimmed) return;
+    setEditError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const updated = await ChatService.getInstance(supabase).updateMessage(msgId, trimmed);
-      setMessages(prev => prev.map(m => m.id === msgId ? updated : m));
+      setMessages(p => p.map(m => m.id === msgId ? updated : m));
       setEditingId(null);
-    } catch (err) {
-      console.error("edit error:", (err as { message?: string }).message);
+    } catch {
+      setEditError("Could not save — check your permissions.");
     }
   }
 
@@ -158,52 +132,48 @@ export default function TeacherChat() {
 
   const isAnnouncements = selectedStudent === null;
   const headerTitle = isAnnouncements ? "Announcements" : selectedStudent.display_name;
-  const headerSub = isAnnouncements ? "All students see these" : "Private message";
-  const placeholder = isAnnouncements
-    ? "Post an announcement to all students…"
-    : `Message ${selectedStudent?.display_name}…`;
+  const headerSub = isAnnouncements ? "Visible to all students" : "Private message";
 
   return (
     <div>
-      <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.4rem", color: "var(--charcoal)", marginBottom: "1.25rem" }}>
+      <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 500, fontSize: "1.875rem", color: "var(--charcoal)", marginBottom: "1.5rem", letterSpacing: "-0.01em" }}>
         Messages
       </h1>
 
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "1rem", height: "72vh" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "1px", height: "74vh", background: "var(--border)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+
         {/* Left sidebar */}
-        <div className="card-base" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          {/* Announcements button */}
+        <div style={{ background: "var(--white)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+          {/* Announcements row */}
           <button
             onClick={() => setSelectedStudent(null)}
             style={{
               all: "unset",
-              display: "flex", alignItems: "center", gap: "0.625rem",
+              display: "flex", alignItems: "center", gap: "0.75rem",
               padding: "0.875rem 1rem",
-              borderBottom: "1.5px solid var(--border)",
+              borderBottom: "1px solid var(--border)",
               cursor: "pointer",
-              background: isAnnouncements ? "var(--peach-bg)" : "transparent",
-              transition: "background 0.15s",
-              boxSizing: "border-box",
-              width: "100%",
+              background: isAnnouncements ? "var(--cream)" : "transparent",
+              boxSizing: "border-box", width: "100%",
             }}
           >
             <div style={{
-              width: 32, height: 32,
-              background: isAnnouncements ? "var(--peach)" : "var(--cream-deep)",
-              borderRadius: "50%",
+              width: 28, height: 28, borderRadius: "50%",
+              background: isAnnouncements ? "var(--peach-bg)" : "var(--cream-deep)",
+              border: `1px solid ${isAnnouncements ? "var(--peach-light)" : "var(--border)"}`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "0.85rem", flexShrink: 0,
-              transition: "background 0.15s",
+              flexShrink: 0,
             }}>
-              📢
+              <span style={{ fontSize: "0.625rem", fontWeight: 600, color: isAnnouncements ? "var(--peach)" : "var(--muted)", letterSpacing: "0.02em" }}>ALL</span>
             </div>
-            <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: isAnnouncements ? "var(--peach)" : "var(--charcoal)" }}>
+            <span style={{ fontSize: "0.8125rem", fontWeight: isAnnouncements ? 500 : 400, color: isAnnouncements ? "var(--charcoal)" : "var(--muted)" }}>
               Announcements
             </span>
           </button>
 
-          {/* DMs header */}
-          <div style={{ padding: "0.5rem 1rem", fontSize: "0.67rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--border)" }}>
+          {/* DMs label */}
+          <div style={{ padding: "0.625rem 1rem 0.375rem", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid var(--border)" }}>
             Direct Messages
           </div>
 
@@ -211,107 +181,82 @@ export default function TeacherChat() {
           <div style={{ flex: 1, overflowY: "auto" }}>
             {loadingStudents ? (
               <div style={{ padding: "0.75rem 1rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="skeleton" style={{ height: 36, borderRadius: "var(--radius-md)" }} />
-                ))}
+                {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 32, borderRadius: 3 }} />)}
               </div>
             ) : students.length === 0 ? (
-              <div style={{ padding: "1.25rem 1rem", textAlign: "center" }}>
-                <div style={{ fontSize: "1.5rem", marginBottom: "0.3rem" }}>🎹</div>
-                <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.78rem", margin: 0 }}>No students yet</p>
+              <div style={{ padding: "2rem 1rem", textAlign: "center" }}>
+                <p style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>No students yet</p>
               </div>
-            ) : (
-              students.map((s) => {
-                const isSelected = selectedStudent?.id === s.id;
-                const initials = s.display_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedStudent(s)}
-                    style={{
-                      all: "unset",
-                      display: "flex", alignItems: "center", gap: "0.625rem",
-                      padding: "0.75rem 1rem",
-                      borderBottom: "1px solid var(--border)",
-                      cursor: "pointer",
-                      background: isSelected ? "var(--sky-bg)" : "transparent",
-                      width: "100%",
-                      boxSizing: "border-box",
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    <div style={{
-                      width: 32, height: 32,
-                      background: isSelected ? "var(--sky)" : "var(--sky-bg)",
-                      borderRadius: "50%",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.7rem",
-                      color: isSelected ? "white" : "var(--sky)",
-                      flexShrink: 0, transition: "all 0.15s",
-                    }}>
-                      {initials}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {s.display_name}
-                      </div>
-                      <div style={{ fontSize: "0.65rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
-                        🔥 {s.streak_days}d · ⭐ {s.total_points}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
+            ) : students.map(s => {
+              const isSel = selectedStudent?.id === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedStudent(s)}
+                  style={{
+                    all: "unset",
+                    display: "flex", alignItems: "center", gap: "0.625rem",
+                    padding: "0.75rem 1rem",
+                    borderBottom: "1px solid var(--border)",
+                    cursor: "pointer",
+                    background: isSel ? "var(--cream)" : "transparent",
+                    width: "100%", boxSizing: "border-box",
+                  }}
+                >
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: isSel ? "var(--charcoal)" : "var(--cream-deep)",
+                    border: `1px solid ${isSel ? "var(--charcoal)" : "var(--border)"}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "0.5625rem", fontWeight: 600,
+                    color: isSel ? "white" : "var(--muted)",
+                    flexShrink: 0,
+                  }}>
+                    {initials(s.display_name)}
+                  </div>
+                  <span style={{ fontSize: "0.8125rem", fontWeight: isSel ? 500 : 400, color: isSel ? "var(--charcoal)" : "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {s.display_name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Right: message pane */}
-        <div className="card-base" style={{ padding: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ background: "var(--cream)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
           {/* Header */}
-          <div style={{ padding: "0.875rem 1.25rem", borderBottom: "1.5px solid var(--border)", display: "flex", alignItems: "center", gap: "0.625rem" }}>
-            <span style={{ fontSize: "1.1rem" }}>{isAnnouncements ? "📢" : "💬"}</span>
-            <div>
-              <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", color: "var(--charcoal)" }}>
-                {headerTitle}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
-                {headerSub}
-              </div>
-            </div>
+          <div style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid var(--border)", background: "var(--white)", display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
+            <span style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)" }}>{headerTitle}</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{headerSub}</span>
           </div>
 
           {/* Messages */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
             {loadingMessages ? (
-              [1, 2, 3, 4].map((i) => (
-                <div key={i} className="skeleton" style={{ height: 36, borderRadius: "var(--radius-md)", width: i % 2 === 0 ? "60%" : "45%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />
+              [1, 2, 3, 4].map(i => (
+                <div key={i} className="skeleton" style={{ height: 38, borderRadius: 3, width: i % 2 === 0 ? "55%" : "42%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />
               ))
             ) : messages.length === 0 ? (
               <div className="empty-state" style={{ flex: 1, justifyContent: "center" }}>
-                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>{isAnnouncements ? "📢" : "💬"}</div>
-                <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--charcoal)", margin: 0 }}>
-                  {isAnnouncements ? "No announcements yet" : "No messages yet"}
-                </p>
-                <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.8rem", margin: "0.25rem 0 0" }}>
-                  {isAnnouncements
-                    ? "Post an announcement below — all students will see it"
-                    : `Start a conversation with ${selectedStudent?.display_name}`}
+                <p className="empty-state-title">{isAnnouncements ? "No announcements yet" : "No messages yet"}</p>
+                <p className="empty-state-desc">
+                  {isAnnouncements ? "Post an announcement — all students will see it" : `Start a conversation with ${selectedStudent?.display_name}`}
                 </p>
               </div>
             ) : (
-              messages.map((msg) => {
+              messages.map((msg, i) => {
+                // System message
                 if (msg.message_type === "system") {
                   const lines = msg.content.split("\n");
-                  const audioUrl = lines.find((l) => l.startsWith("AUDIO:"))?.slice(6);
-                  const textContent = lines.filter((l) => !l.startsWith("AUDIO:")).join("\n");
+                  const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
+                  const text = lines.filter(l => !l.startsWith("AUDIO:")).join("\n");
                   return (
-                    <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.25rem 0" }}>
-                      <div style={{ padding: "0.625rem 0.875rem", background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", fontSize: "0.73rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", maxWidth: "88%", lineHeight: 1.6 }}>
-                        <div style={{ whiteSpace: "pre-line" }}>{textContent}</div>
-                        {audioUrl && (
-                          <audio controls src={audioUrl} style={{ width: "100%", marginTop: "0.5rem", height: 36 }} />
-                        )}
+                    <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.5rem 0" }}>
+                      <div style={{ padding: "0.5rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "80%", lineHeight: 1.6 }}>
+                        <div style={{ whiteSpace: "pre-line" }}>{text}</div>
+                        {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", marginTop: "0.5rem", height: 32 }} />}
                       </div>
                     </div>
                   );
@@ -320,104 +265,110 @@ export default function TeacherChat() {
                 const isMe = msg.sender_id === teacher?.id;
                 const isHovered = hoveredId === msg.id;
                 const isEditing = editingId === msg.id;
+                const prev = i > 0 ? messages[i - 1] : null;
+                const next = i < messages.length - 1 ? messages[i + 1] : null;
+                const showSender = !isMe && prev?.sender_id !== msg.sender_id;
+                const isLast = !next || next.sender_id !== msg.sender_id;
 
                 return (
                   <div
                     key={msg.id}
-                    style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", gap: "0.2rem" }}
+                    style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : 0 }}
                     onMouseEnter={() => setHoveredId(msg.id)}
                     onMouseLeave={() => setHoveredId(null)}
                   >
-                    {!isMe && (
-                      <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.68rem", color: "var(--muted)", paddingLeft: "0.25rem" }}>
+                    {showSender && (
+                      <span style={{ fontSize: "0.6875rem", fontWeight: 500, color: "var(--muted)", marginBottom: "0.25rem", paddingLeft: "0.25rem" }}>
                         {msg.sender_name}
                       </span>
                     )}
 
-                    {/* Bubble row: action buttons + message content */}
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: "0.375rem", flexDirection: isMe ? "row-reverse" : "row" }}>
-                      {/* Action buttons — own messages only */}
-                      {isMe && isHovered && !isEditing && (
-                        <div style={{ display: "flex", gap: "0.125rem", marginBottom: "0.1rem" }}>
+                    {isEditing ? (
+                      <div style={{ width: "100%", maxWidth: 420 }}>
+                        <textarea
+                          value={editText}
+                          onChange={e => { setEditText(e.target.value); setEditError(null); }}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(msg.id); }
+                            if (e.key === "Escape") { setEditingId(null); setEditError(null); }
+                          }}
+                          autoFocus
+                          rows={Math.max(1, editText.split("\n").length)}
+                          style={{
+                            width: "100%", borderRadius: 3,
+                            border: `1px solid ${editError ? "var(--error)" : "var(--border-strong)"}`,
+                            padding: "0.5rem 0.75rem", fontSize: "0.875rem",
+                            lineHeight: 1.5, outline: "none", resize: "none",
+                            background: "var(--white)", color: "var(--charcoal)",
+                            fontFamily: "Inter, sans-serif",
+                          }}
+                        />
+                        {editError && <p style={{ fontSize: "0.6875rem", color: "var(--error)", margin: "0.25rem 0 0" }}>{editError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.375rem", justifyContent: "flex-end" }}>
                           <button
-                            style={actionBtnStyle}
-                            title="Edit"
-                            onClick={() => { setEditingId(msg.id); setEditText(msg.content); }}
+                            onClick={() => { setEditingId(null); setEditError(null); }}
+                            style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}
                           >
-                            ✏
+                            Cancel
                           </button>
                           <button
-                            style={{ ...actionBtnStyle, color: "var(--muted)" }}
-                            title="Delete"
-                            onClick={() => handleDelete(msg.id)}
+                            onClick={() => handleEditSave(msg.id)}
+                            style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "white", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}
                           >
-                            🗑
+                            Save
                           </button>
                         </div>
-                      )}
-
-                      {/* Message content / edit input */}
-                      {isEditing ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxWidth: "68%" }}>
-                          <input
-                            value={editText}
-                            onChange={e => setEditText(e.target.value)}
-                            onKeyDown={e => {
-                              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(msg.id); }
-                              if (e.key === "Escape") setEditingId(null);
-                            }}
-                            autoFocus
-                            style={{
-                              borderRadius: 8, border: "1.5px solid var(--border-strong)",
-                              padding: "0.5rem 0.75rem", fontFamily: "DM Sans, sans-serif",
-                              fontSize: "0.875rem", outline: "none",
-                              background: "var(--cream)", color: "var(--charcoal)",
-                            }}
-                          />
-                          <div style={{ display: "flex", gap: "0.375rem", justifyContent: "flex-end" }}>
-                            <button
-                              onClick={() => handleEditSave(msg.id)}
-                              style={{
-                                padding: "0.25rem 0.625rem", borderRadius: 4, border: "none",
-                                background: isAnnouncements ? "var(--peach)" : "var(--sky)",
-                                color: "white", cursor: "pointer", fontSize: "0.73rem",
-                                fontFamily: "DM Sans, sans-serif", fontWeight: 500,
-                              }}
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              style={{
-                                padding: "0.25rem 0.625rem", borderRadius: 4,
-                                border: "1px solid var(--border-strong)",
-                                background: "none", color: "var(--muted)", cursor: "pointer",
-                                fontSize: "0.73rem", fontFamily: "DM Sans, sans-serif",
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{
-                          maxWidth: "68%",
-                          padding: "0.55rem 0.875rem",
-                          background: isMe ? (isAnnouncements ? "var(--peach)" : "var(--sky)") : "var(--cream-deep)",
-                          color: isMe ? "white" : "var(--charcoal)",
-                          borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                      </div>
+                    ) : (
+                      <div
+                        className={isMe ? "bubble-student" : "bubble-teacher"}
+                        style={{
+                          maxWidth: "66%",
+                          padding: "0.5rem 0.875rem",
                           fontSize: "0.875rem",
-                          lineHeight: 1.5,
-                          fontFamily: "DM Sans, sans-serif",
-                        }}>
-                          {msg.content}
-                        </div>
-                      )}
-                    </div>
+                          lineHeight: 1.55,
+                          background: isMe
+                            ? (isAnnouncements ? "var(--peach-bg)" : "var(--charcoal)")
+                            : "var(--white)",
+                          color: isMe
+                            ? (isAnnouncements ? "var(--charcoal)" : "white")
+                            : "var(--charcoal)",
+                          border: isMe
+                            ? (isAnnouncements ? "1px solid var(--peach-light)" : "none")
+                            : "1px solid var(--border)",
+                          borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                        }}
+                      >
+                        {msg.content}
+                      </div>
+                    )}
 
-                    <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.65rem", color: "var(--muted)", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
-                      {formatTime(msg.created_at)}
-                    </span>
+                    {/* Timestamp + action links */}
+                    {isLast && !isEditing && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.2rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
+                        <span style={{ fontSize: "0.625rem", color: "var(--muted)", letterSpacing: "0.02em" }}>
+                          {formatTime(msg.created_at)}
+                        </span>
+                        {/* Edit/Delete — always in DOM, opacity-toggled to avoid click-before-render */}
+                        {isMe && (
+                          <span style={{ display: "flex", gap: "0.375rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none" }}>
+                            <button
+                              onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }}
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}
+                            >
+                              Edit
+                            </button>
+                            <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
+                            <button
+                              onClick={() => handleDelete(msg.id)}
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}
+                            >
+                              Delete
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -426,34 +377,31 @@ export default function TeacherChat() {
           </div>
 
           {/* Input */}
-          <div style={{ padding: "0.75rem 1rem", borderTop: "1.5px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div style={{ padding: "0.875rem 1.25rem", borderTop: "1px solid var(--border)", background: "var(--white)", display: "flex", gap: "0.625rem", alignItems: "center" }}>
             <input
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={placeholder}
+              placeholder={isAnnouncements ? "Post an announcement…" : `Message ${selectedStudent?.display_name}…`}
               disabled={sending}
               style={{
-                flex: 1, borderRadius: 100, border: "1.5px solid var(--border)",
-                padding: "0.6rem 1rem", fontFamily: "DM Sans, sans-serif",
-                fontSize: "0.875rem", outline: "none",
-                background: "var(--cream)", color: "var(--charcoal)",
+                flex: 1, border: "1px solid var(--border)", borderRadius: 3,
+                padding: "0.5625rem 0.875rem", fontSize: "0.875rem",
+                outline: "none", background: "var(--cream)", color: "var(--charcoal)",
               }}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || sending}
               style={{
-                width: 36, height: 36, borderRadius: "50%",
-                background: !input.trim() ? "var(--border)" : isAnnouncements ? "var(--peach)" : "var(--sky)",
-                border: "none", cursor: !input.trim() ? "default" : "pointer",
-                color: "white", fontSize: "1rem",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "background 0.15s", flexShrink: 0,
+                padding: "0.5625rem 1.25rem", borderRadius: 3, border: "none",
+                background: input.trim() ? "var(--charcoal)" : "var(--border)",
+                color: "white", cursor: input.trim() ? "pointer" : "default",
+                fontSize: "0.8125rem", fontWeight: 500, transition: "background 0.15s", flexShrink: 0,
               }}
             >
-              →
+              Send
             </button>
           </div>
         </div>
