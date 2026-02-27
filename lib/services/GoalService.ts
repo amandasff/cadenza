@@ -13,6 +13,8 @@ interface CreateGoalInput {
   bonusPoints?: number;
   isBoss?: boolean;
   dueDate?: string;
+  pieceId?: string;
+  initialStatus?: 'locked' | 'current';
 }
 
 export class GoalService {
@@ -79,7 +81,8 @@ export class GoalService {
         bonus_points: input.bonusPoints ?? null,
         is_boss: input.isBoss ?? false,
         due_date: input.dueDate ?? null,
-        status: 'current',
+        piece_id: input.pieceId ?? null,
+        status: input.initialStatus ?? 'current',
         path_order: nextOrder,
       })
       .select()

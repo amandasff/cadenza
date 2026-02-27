@@ -8,10 +8,10 @@ import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 
 const tabs = [
-  { href: "/student",          label: "Path" },
+  { href: "/student",          label: "This Week" },
+  { href: "/student/pieces",   label: "Pieces" },
   { href: "/student/practice", label: "Practice" },
   { href: "/student/chat",     label: "Chat" },
-  { href: "/student/journey",  label: "Journey" },
   { href: "/student/rewards",  label: "Awards" },
 ];
 

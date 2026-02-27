@@ -35,6 +35,7 @@ export interface GoalRow {
   path_order: number;
   due_date: string | null;
   teacher_feedback: string | null;
+  piece_id: string | null;
   created_at: string;
 }
 
@@ -70,4 +71,32 @@ export interface PracticeSessionRow {
 
 export interface StudioMemberRow extends ProfileRow {
   studioName: string;
+}
+
+export type PieceCategory = 'technique' | 'etude' | 'repertoire' | 'theory' | 'ear_training' | 'sight_reading' | 'free';
+export type PieceStatus = 'learning' | 'polishing' | 'performance_ready' | 'completed';
+
+export interface PieceRow {
+  id: string;
+  student_id: string;
+  teacher_id: string;
+  studio_id: string;
+  program_id: string | null;
+  title: string;
+  composer: string | null;
+  book: string | null;
+  category: PieceCategory;
+  status: PieceStatus;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ProgramRow {
+  id: string;
+  student_id: string;
+  teacher_id: string;
+  studio_id: string;
+  title: string;
+  status: 'active' | 'completed';
+  created_at: string;
 }
