@@ -35,6 +35,9 @@ export default function PracticeRecorder() {
 
   const [bpm, setBpm] = useState(72);
   const [metronome, setMetronome] = useState(false);
+  const [beats, setBeats] = useState(4);           // beats per bar
+  const [accentOn, setAccentOn] = useState(true);  // accent the downbeat
+  const [soundMode, setSoundMode] = useState<"click" | "voice">("click");
 
   const [segments, setSegments] = useState<SegmentWithId[]>([]);
   const [showAddSeg, setShowAddSeg] = useState(false);
@@ -84,31 +87,58 @@ export default function PracticeRecorder() {
 
   useEffect(() => {
     if (!metronome) return;
-    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-    const ctx = audioCtxRef.current;
-    if (ctx.state === "suspended") ctx.resume().catch(() => {});
-
-    function playTick(accent: boolean) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = accent ? 1000 : 800;
-      gain.gain.setValueAtTime(accent ? 0.7 : 0.45, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.1);
-    }
-
-    let beat = 0;
-    playTick(true);
     const intervalMs = Math.round((60 / bpm) * 1000);
-    const id = setInterval(() => {
-      beat = (beat + 1) % 4;
-      playTick(beat === 0);
-    }, intervalMs);
-    return () => clearInterval(id);
-  }, [metronome, bpm]);
+    let beat = 0;
+
+    if (soundMode === "click") {
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+      function playTick(isAccent: boolean) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = isAccent ? 1100 : 800;
+        gain.gain.setValueAtTime(isAccent ? 0.8 : 0.45, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.12);
+      }
+
+      playTick(accentOn); // beat 1
+      const id = setInterval(() => {
+        beat = (beat + 1) % beats;
+        playTick(accentOn && beat === 0);
+      }, intervalMs);
+      return () => clearInterval(id);
+
+    } else {
+      // Voice counting via Web Speech API
+      const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
+      if (!synth) return;
+
+      function speak(n: number, isAccent: boolean) {
+        synth!.cancel();
+        const u = new SpeechSynthesisUtterance(String(n));
+        u.rate = 3.5;
+        u.volume = 1;
+        u.pitch = isAccent ? 1.4 : 1.0;
+        synth!.speak(u);
+      }
+
+      speak(1, accentOn);
+      const id = setInterval(() => {
+        beat = (beat + 1) % beats;
+        speak(beat + 1, accentOn && beat === 0);
+      }, intervalMs);
+      return () => {
+        clearInterval(id);
+        synth.cancel();
+      };
+    }
+  }, [metronome, bpm, beats, accentOn, soundMode]);
 
   function startWaveform(analyser: AnalyserNode) {
     const canvas = canvasRef.current;
@@ -456,22 +486,113 @@ export default function PracticeRecorder() {
 
         {/* Metronome */}
         <div style={{ width: "100%", background: "var(--white)", borderRadius: 3, padding: "1rem 1.25rem", border: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+          {/* Header row */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
             <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Metronome</span>
             <button
               onClick={() => { if (!metronome && !audioCtxRef.current) audioCtxRef.current = new AudioContext(); setMetronome((m) => !m); }}
-              style={{ background: metronome ? "var(--charcoal)" : "transparent", border: `1px solid ${metronome ? "var(--charcoal)" : "var(--border-strong)"}`, borderRadius: 2, padding: "0.2rem 0.75rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: metronome ? "white" : "var(--muted)", transition: "all 0.15s" }}
+              style={{
+                background: metronome ? "var(--charcoal)" : "transparent",
+                border: `1px solid ${metronome ? "var(--charcoal)" : "var(--border-strong)"}`,
+                borderRadius: 2, padding: "0.2rem 0.75rem", cursor: "pointer",
+                fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem",
+                color: metronome ? "white" : "var(--muted)", transition: "all 0.15s",
+              }}
             >
               {metronome ? "On" : "Off"}
             </button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <button onClick={() => setBpm((b) => Math.max(40, b - 1))} style={{ width: 32, height: 32, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>−</button>
+
+          {/* BPM row */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
+            <button
+              onClick={() => setBpm((b) => Math.max(40, b - 5))}
+              onDoubleClick={() => setBpm((b) => Math.max(40, b - 1))}
+              style={{ width: 32, height: 32, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}
+            >−</button>
             <div style={{ flex: 1, textAlign: "center", fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.5rem", color: "var(--charcoal)", letterSpacing: "-0.01em" }}>
               {bpm}<span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)", marginLeft: 4, letterSpacing: "0.04em" }}>BPM</span>
             </div>
-            <button onClick={() => setBpm((b) => Math.min(220, b + 1))} style={{ width: 32, height: 32, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>+</button>
+            <button
+              onClick={() => setBpm((b) => Math.min(220, b + 5))}
+              onDoubleClick={() => setBpm((b) => Math.min(220, b + 1))}
+              style={{ width: 32, height: 32, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}
+            >+</button>
           </div>
+
+          {/* Time signature row */}
+          <div style={{ marginBottom: "0.75rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.375rem" }}>
+              Beats per bar
+            </div>
+            <div style={{ display: "flex", gap: "0.375rem" }}>
+              {[2, 3, 4, 5, 6].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setBeats(n)}
+                  style={{
+                    flex: 1, height: 30, borderRadius: 2, cursor: "pointer",
+                    fontFamily: "Inter, sans-serif", fontWeight: beats === n ? 600 : 400,
+                    fontSize: "0.8125rem",
+                    background: beats === n ? "var(--charcoal)" : "var(--cream)",
+                    border: `1px solid ${beats === n ? "var(--charcoal)" : "var(--border)"}`,
+                    color: beats === n ? "white" : "var(--muted)",
+                    transition: "all 0.12s",
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Options row — accent + sound mode */}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            {/* Accent toggle */}
+            <button
+              onClick={() => setAccentOn(a => !a)}
+              style={{
+                flex: 1, height: 30, borderRadius: 2, cursor: "pointer",
+                fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem",
+                letterSpacing: "0.02em",
+                background: accentOn ? "var(--sage-bg)" : "var(--cream)",
+                border: `1px solid ${accentOn ? "var(--sage)" : "var(--border)"}`,
+                color: accentOn ? "var(--sage)" : "var(--muted)",
+                transition: "all 0.12s",
+              }}
+            >
+              Accent ↓ 1
+            </button>
+
+            {/* Sound mode toggle */}
+            <div style={{ flex: 1, display: "flex", border: "1px solid var(--border)", borderRadius: 2, overflow: "hidden" }}>
+              {(["click", "voice"] as const).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setSoundMode(mode)}
+                  style={{
+                    flex: 1, height: 28, cursor: "pointer", border: "none",
+                    fontFamily: "Inter, sans-serif", fontWeight: soundMode === mode ? 600 : 400,
+                    fontSize: "0.6875rem", letterSpacing: "0.02em",
+                    background: soundMode === mode ? "var(--charcoal)" : "transparent",
+                    color: soundMode === mode ? "white" : "var(--muted)",
+                    transition: "all 0.12s",
+                  }}
+                >
+                  {mode === "click" ? "Click" : "Count"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {soundMode === "voice" && (
+            <div style={{
+              marginTop: "0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.6rem",
+              color: "var(--muted)", letterSpacing: "0.02em", fontStyle: "italic",
+            }}>
+              Counting uses your browser&apos;s voice — works best at moderate tempos.
+            </div>
+          )}
         </div>
       </div>
 
