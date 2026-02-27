@@ -61,10 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const signOut = useCallback(async () => {
-    const supabase = getSupabaseBrowserClient();
-    const service = AuthService.getInstance(supabase);
-    await service.signOut();
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const service = AuthService.getInstance(supabase);
+      await service.signOut();
+    } catch {
+      // sign out regardless
+    }
     setUser(null);
+    window.location.href = '/auth/login';
   }, []);
 
   return (

@@ -16,11 +16,22 @@ function formatTime(iso: string) {
   return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 
+const actionBtnStyle: React.CSSProperties = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  padding: "0.2rem 0.3rem",
+  borderRadius: 4,
+  fontSize: "0.7rem",
+  color: "var(--muted)",
+  lineHeight: 1,
+  transition: "color 0.1s",
+};
+
 export default function TeacherChat() {
   const { user } = useAuth();
   const teacher = user as Teacher;
 
-  // null = Announcements view; a ProfileRow = DM with that student
   const [selectedStudent, setSelectedStudent] = useState<ProfileRow | null>(null);
   const [students, setStudents] = useState<ProfileRow[]>([]);
   const [messages, setMessages] = useState<MessageRow[]>([]);
@@ -28,6 +39,9 @@ export default function TeacherChat() {
   const [sending, setSending] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(true);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,8 +57,7 @@ export default function TeacherChat() {
       .getStudents(teacher.studioId)
       .then((data) => { setStudents(data); setLoadingStudents(false); })
       .catch((err) => {
-        const e = err as { message?: string };
-        console.error("getStudents error:", e?.message);
+        console.error("getStudents error:", (err as { message?: string }).message);
         setLoadingStudents(false);
       });
   }, [teacher?.studioId]);
@@ -54,8 +67,13 @@ export default function TeacherChat() {
     if (!teacher?.studioId || !teacher?.id) return;
     setLoadingMessages(true);
     setMessages([]);
+    setEditingId(null);
     const supabase = getSupabaseBrowserClient();
     const service = ChatService.getInstance(supabase);
+
+    const onInsert = (msg: MessageRow) => setMessages((prev) => [...prev, msg]);
+    const onUpdate = (msg: MessageRow) => setMessages((prev) => prev.map(m => m.id === msg.id ? msg : m));
+    const onDelete = (id: string) => setMessages((prev) => prev.filter(m => m.id !== id));
 
     let unsubscribe: () => void;
 
@@ -64,27 +82,21 @@ export default function TeacherChat() {
         .getAnnouncements(teacher.studioId)
         .then((msgs) => { setMessages(msgs); setLoadingMessages(false); })
         .catch((err) => {
-          const e = err as { message?: string };
-          console.error("getAnnouncements error:", e?.message);
+          console.error("getAnnouncements error:", (err as { message?: string }).message);
           setLoadingMessages(false);
         });
-      unsubscribe = service.subscribeToAnnouncements(teacher.studioId, (msg) => {
-        setMessages((prev) => [...prev, msg]);
-      });
+      unsubscribe = service.subscribeToAnnouncements(teacher.studioId, onInsert, onUpdate, onDelete);
     } else {
       service
         .getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id)
         .then((msgs) => { setMessages(msgs); setLoadingMessages(false); })
         .catch((err) => {
-          const e = err as { message?: string };
-          console.error("getPrivateThread error:", e?.message);
+          console.error("getPrivateThread error:", (err as { message?: string }).message);
           setLoadingMessages(false);
         });
       unsubscribe = service.subscribeToPrivateThread(
-        teacher.studioId,
-        teacher.id,
-        selectedStudent.id,
-        (msg) => { setMessages((prev) => [...prev, msg]); }
+        teacher.studioId, teacher.id, selectedStudent.id,
+        onInsert, onUpdate, onDelete
       );
     }
 
@@ -109,12 +121,34 @@ export default function TeacherChat() {
         );
       }
     } catch (err) {
-      const e = err as { message?: string };
-      console.error("send error:", e?.message);
+      console.error("send error:", (err as { message?: string }).message);
       setInput(text);
     } finally {
       setSending(false);
       inputRef.current?.focus();
+    }
+  }
+
+  async function handleDelete(msgId: string) {
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await ChatService.getInstance(supabase).deleteMessage(msgId);
+      setMessages(prev => prev.filter(m => m.id !== msgId));
+    } catch (err) {
+      console.error("delete error:", (err as { message?: string }).message);
+    }
+  }
+
+  async function handleEditSave(msgId: string) {
+    const trimmed = editText.trim();
+    if (!trimmed) return;
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const updated = await ChatService.getInstance(supabase).updateMessage(msgId, trimmed);
+      setMessages(prev => prev.map(m => m.id === msgId ? updated : m));
+      setEditingId(null);
+    } catch (err) {
+      console.error("edit error:", (err as { message?: string }).message);
     }
   }
 
@@ -282,26 +316,105 @@ export default function TeacherChat() {
                     </div>
                   );
                 }
+
                 const isMe = msg.sender_id === teacher?.id;
+                const isHovered = hoveredId === msg.id;
+                const isEditing = editingId === msg.id;
+
                 return (
-                  <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", gap: "0.2rem" }}>
+                  <div
+                    key={msg.id}
+                    style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", gap: "0.2rem" }}
+                    onMouseEnter={() => setHoveredId(msg.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                  >
                     {!isMe && (
                       <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.68rem", color: "var(--muted)", paddingLeft: "0.25rem" }}>
                         {msg.sender_name}
                       </span>
                     )}
-                    <div style={{
-                      maxWidth: "68%",
-                      padding: "0.55rem 0.875rem",
-                      background: isMe ? (isAnnouncements ? "var(--peach)" : "var(--sky)") : "var(--cream-deep)",
-                      color: isMe ? "white" : "var(--charcoal)",
-                      borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                      fontSize: "0.875rem",
-                      lineHeight: 1.5,
-                      fontFamily: "DM Sans, sans-serif",
-                    }}>
-                      {msg.content}
+
+                    {/* Bubble row: action buttons + message content */}
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: "0.375rem", flexDirection: isMe ? "row-reverse" : "row" }}>
+                      {/* Action buttons — own messages only */}
+                      {isMe && isHovered && !isEditing && (
+                        <div style={{ display: "flex", gap: "0.125rem", marginBottom: "0.1rem" }}>
+                          <button
+                            style={actionBtnStyle}
+                            title="Edit"
+                            onClick={() => { setEditingId(msg.id); setEditText(msg.content); }}
+                          >
+                            ✏
+                          </button>
+                          <button
+                            style={{ ...actionBtnStyle, color: "var(--muted)" }}
+                            title="Delete"
+                            onClick={() => handleDelete(msg.id)}
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Message content / edit input */}
+                      {isEditing ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", maxWidth: "68%" }}>
+                          <input
+                            value={editText}
+                            onChange={e => setEditText(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(msg.id); }
+                              if (e.key === "Escape") setEditingId(null);
+                            }}
+                            autoFocus
+                            style={{
+                              borderRadius: 8, border: "1.5px solid var(--border-strong)",
+                              padding: "0.5rem 0.75rem", fontFamily: "DM Sans, sans-serif",
+                              fontSize: "0.875rem", outline: "none",
+                              background: "var(--cream)", color: "var(--charcoal)",
+                            }}
+                          />
+                          <div style={{ display: "flex", gap: "0.375rem", justifyContent: "flex-end" }}>
+                            <button
+                              onClick={() => handleEditSave(msg.id)}
+                              style={{
+                                padding: "0.25rem 0.625rem", borderRadius: 4, border: "none",
+                                background: isAnnouncements ? "var(--peach)" : "var(--sky)",
+                                color: "white", cursor: "pointer", fontSize: "0.73rem",
+                                fontFamily: "DM Sans, sans-serif", fontWeight: 500,
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              style={{
+                                padding: "0.25rem 0.625rem", borderRadius: 4,
+                                border: "1px solid var(--border-strong)",
+                                background: "none", color: "var(--muted)", cursor: "pointer",
+                                fontSize: "0.73rem", fontFamily: "DM Sans, sans-serif",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{
+                          maxWidth: "68%",
+                          padding: "0.55rem 0.875rem",
+                          background: isMe ? (isAnnouncements ? "var(--peach)" : "var(--sky)") : "var(--cream-deep)",
+                          color: isMe ? "white" : "var(--charcoal)",
+                          borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                          fontSize: "0.875rem",
+                          lineHeight: 1.5,
+                          fontFamily: "DM Sans, sans-serif",
+                        }}>
+                          {msg.content}
+                        </div>
+                      )}
                     </div>
+
                     <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.65rem", color: "var(--muted)", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
                       {formatTime(msg.created_at)}
                     </span>

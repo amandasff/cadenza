@@ -81,10 +81,33 @@ export class ChatService {
     return data as MessageRow;
   }
 
-  // Subscribe to announcements (filter client-side for recipient_id IS NULL)
+  async updateMessage(messageId: string, content: string): Promise<MessageRow> {
+    const { data, error } = await this.supabase
+      .from('messages')
+      .update({ content })
+      .eq('id', messageId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as MessageRow;
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (error) throw error;
+  }
+
+  // Subscribe to announcements — handles INSERT, UPDATE, and DELETE in real-time
   subscribeToAnnouncements(
     studioId: string,
-    callback: (msg: MessageRow) => void
+    onInsert: (msg: MessageRow) => void,
+    onUpdate?: (msg: MessageRow) => void,
+    onDelete?: (id: string) => void
   ): () => void {
     const channel = this.supabase
       .channel('announcements:' + studioId)
@@ -93,7 +116,25 @@ export class ChatService {
         { event: 'INSERT', schema: 'public', table: 'messages', filter: 'studio_id=eq.' + studioId },
         (payload) => {
           const msg = payload.new as MessageRow;
-          if (msg.recipient_id === null) callback(msg);
+          if (msg.recipient_id === null) onInsert(msg);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'studio_id=eq.' + studioId },
+        (payload) => {
+          if (!onUpdate) return;
+          const msg = payload.new as MessageRow;
+          if (msg.recipient_id === null) onUpdate(msg);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'messages', filter: 'studio_id=eq.' + studioId },
+        (payload) => {
+          if (!onDelete) return;
+          const old = payload.old as Partial<MessageRow>;
+          if (old.id) onDelete(old.id);
         }
       )
       .subscribe();
@@ -125,14 +166,20 @@ export class ChatService {
     return data as MessageRow;
   }
 
-  // Subscribe to a private DM thread between two users (filter client-side)
+  // Subscribe to a private DM thread — handles INSERT, UPDATE, and DELETE in real-time
   subscribeToPrivateThread(
     studioId: string,
     userId1: string,
     userId2: string,
-    callback: (msg: MessageRow) => void
+    onInsert: (msg: MessageRow) => void,
+    onUpdate?: (msg: MessageRow) => void,
+    onDelete?: (id: string) => void
   ): () => void {
     const channelKey = `dm:${studioId}:${[userId1, userId2].sort().join(':')}`;
+    const isThread = (msg: MessageRow) =>
+      (msg.sender_id === userId1 && msg.recipient_id === userId2) ||
+      (msg.sender_id === userId2 && msg.recipient_id === userId1);
+
     const channel = this.supabase
       .channel(channelKey)
       .on(
@@ -140,12 +187,25 @@ export class ChatService {
         { event: 'INSERT', schema: 'public', table: 'messages', filter: 'studio_id=eq.' + studioId },
         (payload) => {
           const msg = payload.new as MessageRow;
-          if (msg.recipient_id !== null) {
-            const isThread =
-              (msg.sender_id === userId1 && msg.recipient_id === userId2) ||
-              (msg.sender_id === userId2 && msg.recipient_id === userId1);
-            if (isThread) callback(msg);
-          }
+          if (msg.recipient_id !== null && isThread(msg)) onInsert(msg);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'studio_id=eq.' + studioId },
+        (payload) => {
+          if (!onUpdate) return;
+          const msg = payload.new as MessageRow;
+          if (msg.recipient_id !== null && isThread(msg)) onUpdate(msg);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'messages', filter: 'studio_id=eq.' + studioId },
+        (payload) => {
+          if (!onDelete) return;
+          const old = payload.old as Partial<MessageRow>;
+          if (old.id) onDelete(old.id);
         }
       )
       .subscribe();
