@@ -16,6 +16,7 @@ function formatTime(iso: string) {
 }
 
 type Tab = "announcements" | "private";
+type HeartMap = Record<string, { count: number; liked: boolean }>;
 
 export default function StudentChat() {
   const { user } = useAuth();
@@ -32,6 +33,7 @@ export default function StudentChat() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  const [hearts, setHearts] = useState<HeartMap>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,10 +53,15 @@ export default function StudentChat() {
       setTeacherId(tId);
       const anns = await chatService.getAnnouncements(student.studioId!);
       setAnnouncements(anns);
+      let priv: MessageRow[] = [];
       if (tId) {
-        const priv = await chatService.getPrivateThread(student.studioId!, student.id, tId);
+        priv = await chatService.getPrivateThread(student.studioId!, student.id, tId);
         setPrivateMessages(priv);
       }
+      // Load hearts for all messages
+      const allMsgs = [...anns, ...priv];
+      const heartMap = await chatService.getHearts(allMsgs.map(m => m.id), student.id);
+      setHearts(heartMap);
       setLoading(false);
     };
     load().catch(() => setLoading(false));
@@ -117,8 +124,22 @@ export default function StudentChat() {
       const updated = await ChatService.getInstance(supabase).updateMessage(msgId, trimmed);
       setPrivateMessages(p => p.map(m => m.id === msgId ? updated : m));
       setEditingId(null);
+    } catch (err) {
+      setEditError((err as Error).message ?? "Could not save.");
+    }
+  }
+
+  async function handleHeart(msgId: string) {
+    const current = hearts[msgId] ?? { count: 0, liked: false };
+    setHearts(prev => ({
+      ...prev,
+      [msgId]: { count: current.liked ? Math.max(0, current.count - 1) : current.count + 1, liked: !current.liked },
+    }));
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await ChatService.getInstance(supabase).toggleHeart(msgId);
     } catch {
-      setEditError("Could not save — check your permissions.");
+      setHearts(prev => ({ ...prev, [msgId]: current }));
     }
   }
 
@@ -133,25 +154,10 @@ export default function StudentChat() {
 
       {/* Header */}
       <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem 0" }}>
-        <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.875rem" }}>
-          Messages
-        </div>
+        <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.875rem" }}>Messages</div>
         <div style={{ display: "flex", gap: 0 }}>
           {(["announcements", "private"] as Tab[]).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              style={{
-                padding: "0.5rem 1.125rem",
-                background: "none", border: "none",
-                borderBottom: tab === t ? "1.5px solid var(--charcoal)" : "1.5px solid transparent",
-                marginBottom: -1,
-                fontSize: "0.8125rem",
-                fontWeight: tab === t ? 500 : 400,
-                color: tab === t ? "var(--charcoal)" : "var(--muted)",
-                cursor: "pointer",
-              }}
-            >
+            <button key={t} onClick={() => setTab(t)} style={{ padding: "0.5rem 1.125rem", background: "none", border: "none", borderBottom: tab === t ? "1.5px solid var(--charcoal)" : "1.5px solid transparent", marginBottom: -1, fontSize: "0.8125rem", fontWeight: tab === t ? 500 : 400, color: tab === t ? "var(--charcoal)" : "var(--muted)", cursor: "pointer" }}>
               {t === "announcements" ? "Studio" : "Private"}
             </button>
           ))}
@@ -163,24 +169,15 @@ export default function StudentChat() {
       <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "7rem" }}>
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", paddingTop: "1rem" }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} className="skeleton" style={{ height: 40, borderRadius: 3, width: i % 2 === 0 ? "58%" : "44%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />
-            ))}
+            {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 40, borderRadius: 3, width: i % 2 === 0 ? "58%" : "44%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />)}
           </div>
         ) : activeMessages.length === 0 ? (
           <div className="empty-state" style={{ flex: 1, justifyContent: "center" }}>
-            <p className="empty-state-title">
-              {tab === "announcements" ? "No announcements yet" : "No messages yet"}
-            </p>
-            <p className="empty-state-desc">
-              {tab === "announcements"
-                ? "Studio announcements from your teacher appear here."
-                : "Send your teacher a message below."}
-            </p>
+            <p className="empty-state-title">{tab === "announcements" ? "No announcements yet" : "No messages yet"}</p>
+            <p className="empty-state-desc">{tab === "announcements" ? "Studio announcements from your teacher appear here." : "Send your teacher a message below."}</p>
           </div>
         ) : (
           activeMessages.map((msg, i) => {
-            // System message
             if (msg.message_type === "system") {
               const lines = msg.content.split("\n");
               const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
@@ -203,11 +200,10 @@ export default function StudentChat() {
             const isHovered = hoveredId === msg.id;
             const isEditing = editingId === msg.id;
             const canAct = tab === "private" && isMe;
+            const heartInfo = hearts[msg.id] ?? { count: 0, liked: false };
 
             return (
-              <div
-                key={msg.id}
-                style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : 0 }}
+              <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : 0 }}
                 onMouseEnter={() => setHoveredId(msg.id)}
                 onMouseLeave={() => setHoveredId(null)}
               >
@@ -228,41 +224,22 @@ export default function StudentChat() {
                       }}
                       autoFocus
                       rows={Math.max(1, editText.split("\n").length)}
-                      style={{
-                        width: "100%", borderRadius: 3,
-                        border: `1px solid ${editError ? "var(--error)" : "var(--border-strong)"}`,
-                        padding: "0.5rem 0.75rem", fontSize: "0.875rem",
-                        lineHeight: 1.5, outline: "none", resize: "none",
-                        background: "var(--white)", color: "var(--charcoal)",
-                        fontFamily: "Inter, sans-serif",
-                      }}
+                      style={{ width: "100%", borderRadius: 3, border: `1px solid ${editError ? "var(--error)" : "var(--border-strong)"}`, padding: "0.5rem 0.75rem", fontSize: "0.875rem", lineHeight: 1.5, outline: "none", resize: "none", background: "var(--white)", color: "var(--charcoal)", fontFamily: "Inter, sans-serif" }}
                     />
                     {editError && <p style={{ fontSize: "0.6875rem", color: "var(--error)", margin: "0.25rem 0 0" }}>{editError}</p>}
                     <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.375rem", justifyContent: "flex-end" }}>
-                      <button
-                        onClick={() => { setEditingId(null); setEditError(null); }}
-                        style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => handleEditSave(msg.id)}
-                        style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "white", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}
-                      >
-                        Save
-                      </button>
+                      <button onClick={() => { setEditingId(null); setEditError(null); }} style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}>Cancel</button>
+                      <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "white", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
                     </div>
                   </div>
                 ) : (
                   <div style={{
-                    maxWidth: "78%",
-                    padding: "0.5rem 0.875rem",
+                    maxWidth: "78%", padding: "0.5rem 0.875rem",
                     background: isMe ? "var(--charcoal)" : "var(--white)",
                     color: isMe ? "white" : "var(--charcoal)",
                     borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                     border: isMe ? "none" : "1px solid var(--border)",
-                    fontSize: "0.875rem",
-                    lineHeight: 1.55,
+                    fontSize: "0.875rem", lineHeight: 1.55,
                   }}>
                     {msg.content}
                   </div>
@@ -270,24 +247,23 @@ export default function StudentChat() {
 
                 {isLast && !isEditing && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.2rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
-                    <span style={{ fontSize: "0.625rem", color: "var(--muted)", letterSpacing: "0.02em" }}>
-                      {formatTime(msg.created_at)}
-                    </span>
+                    <span style={{ fontSize: "0.625rem", color: "var(--muted)", letterSpacing: "0.02em" }}>{formatTime(msg.created_at)}</span>
+
+                    {/* Heart */}
+                    <button
+                      onClick={() => handleHeart(msg.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: "0.2rem", fontSize: "0.75rem", color: heartInfo.liked ? "var(--peach)" : "var(--muted)", transition: "color 0.15s" }}
+                    >
+                      {heartInfo.liked ? "♥" : "♡"}
+                      {heartInfo.count > 0 && <span style={{ fontSize: "0.625rem" }}>{heartInfo.count}</span>}
+                    </button>
+
+                    {/* Edit / Delete — own private messages */}
                     {canAct && (
                       <span style={{ display: "flex", gap: "0.375rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none" }}>
-                        <button
-                          onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }}
-                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}
-                        >
-                          Edit
-                        </button>
+                        <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
                         <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                        <button
-                          onClick={() => handleDelete(msg.id)}
-                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
                       </span>
                     )}
                   </div>
@@ -298,10 +274,7 @@ export default function StudentChat() {
         )}
 
         {!loading && tab === "announcements" && announcements.length > 0 && (
-          <button
-            onClick={() => setTab("private")}
-            style={{ all: "unset", marginTop: "0.75rem", padding: "0.625rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, cursor: "pointer", fontSize: "0.8125rem", color: "var(--muted)", width: "100%", boxSizing: "border-box" }}
-          >
+          <button onClick={() => setTab("private")} style={{ all: "unset", marginTop: "0.75rem", padding: "0.625rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, cursor: "pointer", fontSize: "0.8125rem", color: "var(--muted)", width: "100%", boxSizing: "border-box" }}>
             Reply privately to your teacher →
           </button>
         )}
@@ -309,25 +282,10 @@ export default function StudentChat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       {tab === "private" && (
         <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={teacherId ? "Message your teacher…" : "Loading…"}
-            disabled={sending || !teacherId}
-            style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || sending || !teacherId}
-            style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "white", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s" }}
-          >
-            Send
-          </button>
+          <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }} />
+          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "white", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s" }}>Send</button>
         </div>
       )}
     </div>

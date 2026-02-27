@@ -82,24 +82,57 @@ export class ChatService {
   }
 
   async updateMessage(messageId: string, content: string): Promise<MessageRow> {
-    const { data, error } = await this.supabase
-      .from('messages')
-      .update({ content })
-      .eq('id', messageId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as MessageRow;
+    const res = await fetch(`/api/messages/${messageId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? 'Failed to update message');
+    }
+    return res.json();
   }
 
   async deleteMessage(messageId: string): Promise<void> {
-    const { error } = await this.supabase
-      .from('messages')
-      .delete()
-      .eq('id', messageId);
+    const res = await fetch(`/api/messages/${messageId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? 'Failed to delete message');
+    }
+  }
 
-    if (error) throw error;
+  // Load hearts for a set of messages
+  async getHearts(
+    messageIds: string[],
+    currentUserId: string
+  ): Promise<Record<string, { count: number; liked: boolean }>> {
+    if (!messageIds.length) return {};
+    try {
+      const { data } = await this.supabase
+        .from('message_hearts')
+        .select('message_id, user_id')
+        .in('message_id', messageIds);
+      const map: Record<string, { count: number; liked: boolean }> = {};
+      for (const h of (data ?? []) as { message_id: string; user_id: string }[]) {
+        map[h.message_id] ??= { count: 0, liked: false };
+        map[h.message_id].count++;
+        if (h.user_id === currentUserId) map[h.message_id].liked = true;
+      }
+      return map;
+    } catch {
+      return {}; // table may not exist yet
+    }
+  }
+
+  // Toggle heart on a message (uses API route)
+  async toggleHeart(messageId: string): Promise<{ hearted: boolean }> {
+    const res = await fetch(`/api/messages/${messageId}/heart`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? 'Failed to toggle heart');
+    }
+    return res.json();
   }
 
   // Subscribe to announcements — handles INSERT, UPDATE, and DELETE in real-time
