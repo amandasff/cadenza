@@ -272,7 +272,7 @@ export default function TeacherDashboard() {
                           fontFamily: "Inter, sans-serif",
                           marginTop: "0.125rem",
                         }}>
-                          {total} goal{total !== 1 ? "s" : ""}
+                          {total} goal{total !== 1 ? "s" : ""} · view repertoire →
                         </div>
                       </div>
                     </div>

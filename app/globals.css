@@ -669,7 +669,6 @@ html[data-theme="dark"] .progress-fill {
     flex: 1;
     overflow-y: auto;
     padding-bottom: 2rem;
-    max-width: 680px;
   }
 
   .student-bottom-nav {
