@@ -199,8 +199,9 @@ function PieceBlock({
   const [showRecordings, setShowRecordings] = useState(false);
   const [addingRecording, setAddingRecording] = useState(false);
   const [pasteMode, setPasteMode] = useState(false);
+  const [pendingPastes, setPendingPastes] = useState<File[]>([]);
 
-  // Keep a stable ref so the paste handler always calls the latest version
+  // Keep a stable ref so the upload handler doesn't stale-close
   const uploadRef = useRef(onUploadSheetMusic);
   useEffect(() => { uploadRef.current = onUploadSheetMusic; }, [onUploadSheetMusic]);
 
@@ -210,12 +211,23 @@ function PieceBlock({
       const imageItem = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"));
       if (imageItem) {
         const file = imageItem.getAsFile();
-        if (file) { uploadRef.current(piece.id, [file]); setPasteMode(false); }
+        if (file) setPendingPastes(prev => [...prev, file]);
       }
     }
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);
   }, [pasteMode, piece.id]);
+
+  function cancelPaste() {
+    setPasteMode(false);
+    setPendingPastes([]);
+  }
+
+  function uploadPastes() {
+    if (pendingPastes.length > 0) uploadRef.current(piece.id, pendingPastes);
+    setPasteMode(false);
+    setPendingPastes([]);
+  }
 
   const sheetInputId = `sheet-${piece.id}`;
   const done = piece.goals.filter(g => g.status === "completed").length;
@@ -264,7 +276,7 @@ function PieceBlock({
             onChange={e => { const files = Array.from(e.target.files ?? []); if (files.length) onUploadSheetMusic(piece.id, files); e.target.value = ""; }}
           />
           <button
-            onClick={() => setPasteMode(v => !v)}
+            onClick={() => { if (pasteMode) { cancelPaste(); } else { setPasteMode(true); } }}
             title="Paste screenshot from clipboard (Ctrl+V / ⌘V)"
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", background: pasteMode ? "var(--charcoal)" : "none", color: pasteMode ? "var(--white)" : "var(--muted)" }}
           >
@@ -291,12 +303,22 @@ function PieceBlock({
       {pasteMode && (
         <div style={{
           padding: "0.5rem 1rem", background: "var(--charcoal)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          display: "flex", alignItems: "center", gap: "0.75rem",
         }}>
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--white)", letterSpacing: "0.01em" }}>
-            Ready — press <strong>Ctrl+V</strong> (or <strong>⌘V</strong>) to paste your screenshot
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--white)", flex: 1 }}>
+            {pendingPastes.length === 0
+              ? <>Press <strong>Ctrl+V</strong> / <strong>⌘V</strong> to paste — keep pasting to add more pages</>
+              : <>{pendingPastes.length} screenshot{pendingPastes.length > 1 ? "s" : ""} — paste more or click Upload</>}
           </span>
-          <button onClick={() => setPasteMode(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
+          {pendingPastes.length > 0 && (
+            <button
+              onClick={uploadPastes}
+              style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 2, cursor: "pointer", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, padding: "0.2rem 0.625rem", letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap" }}
+            >
+              Upload {pendingPastes.length}
+            </button>
+          )}
+          <button onClick={cancelPaste} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
         </div>
       )}
 
@@ -411,7 +433,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       const imageItem = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"));
       if (imageItem) {
         const file = imageItem.getAsFile();
-        if (file) { setSheetFiles(prev => [...prev, file]); setFormPasteReady(false); }
+        if (file) { setSheetFiles(prev => [...prev, file]); }
       }
     }
     document.addEventListener("paste", onPaste);
@@ -818,7 +840,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                       fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", cursor: "pointer",
                     }}
                   >
-                    {formPasteReady ? "Ready — press Ctrl+V / ⌘V" : "📋 Paste a screenshot"}
+                    {formPasteReady
+                      ? sheetFiles.length > 0 ? `${sheetFiles.length} pasted — paste more or click to stop` : "Ready — Ctrl+V / ⌘V"
+                      : "📋 Paste screenshots"}
                   </button>
                   {sheetFiles.length > 0 && (
                     <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
