@@ -249,6 +249,10 @@ h1, h2, h3, h4, h5, h6 {
   background: #2C2820;
 }
 
+.avatar-upload-label:hover .avatar-camera-overlay {
+  opacity: 1 !important;
+}
+
 .btn-secondary {
   background: var(--white);
   color: var(--charcoal);

@@ -166,6 +166,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           {/* Clickable avatar */}
           <label
             htmlFor="teacher-avatar-upload"
+            className="avatar-upload-label"
             style={{
               width: 28, height: 28,
               background: avatarUrl ? "transparent" : "var(--charcoal)",
@@ -174,7 +175,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 600,
               color: "var(--white)", flexShrink: 0, letterSpacing: "0.02em",
               cursor: uploading ? "default" : "pointer",
-              overflow: "hidden",
+              overflow: "hidden", position: "relative",
             }}
             title="Click to change photo"
           >
@@ -182,6 +183,13 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               <img src={avatarUrl} alt={teacher.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
               uploading ? "…" : initials
+            )}
+            {!uploading && (
+              <span className="avatar-camera-overlay" style={{
+                position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "0.5rem", opacity: 0, transition: "opacity 0.15s", borderRadius: "50%",
+              }}>📷</span>
             )}
           </label>
           <input

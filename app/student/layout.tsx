@@ -104,6 +104,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     <>
       <label
         htmlFor="student-avatar-upload"
+        className="avatar-upload-label"
         style={{
           width: size, height: size,
           background: avatarUrl ? "transparent" : "var(--charcoal)",
@@ -120,6 +121,14 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           <img src={avatarUrl} alt={student.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           uploading ? "…" : initials
+        )}
+        {!uploading && (
+          <span className="avatar-camera-overlay" style={{
+            position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: size > 30 ? "0.875rem" : "0.5rem",
+            opacity: 0, transition: "opacity 0.15s", borderRadius: "50%",
+          }}>📷</span>
         )}
       </label>
       <input
