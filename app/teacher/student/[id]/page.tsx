@@ -298,6 +298,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPdfFor, setUploadingPdfFor] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [addGoalFor, setAddGoalFor] = useState<string | "standalone" | null>(null);
   const [goalForm, setGoalForm] = useState(emptyGoalForm());
@@ -414,10 +415,17 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         const path = `${newPiece.id}.pdf`;
         const { error: uploadErr } = await supabase.storage
           .from("sheet-music").upload(path, pdfFile, { upsert: true, contentType: "application/pdf" });
-        if (!uploadErr) {
+        if (uploadErr) {
+          setUploadError(`PDF upload failed: ${uploadErr.message}. Make sure the 'sheet-music' storage bucket exists in Supabase.`);
+        } else {
           const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
           sheetMusicUrl = urlData.publicUrl;
-          await pieceService.updatePiece(newPiece.id, { sheet_music_url: sheetMusicUrl });
+          try {
+            await pieceService.updatePiece(newPiece.id, { sheet_music_url: sheetMusicUrl });
+          } catch (updateErr) {
+            setUploadError(`Piece created but PDF URL save failed: ${(updateErr as Error).message}. Run the Supabase SQL migration to add the sheet_music_url column.`);
+            sheetMusicUrl = null;
+          }
         }
       }
       setPieces(prev => [...prev, { ...newPiece, sheet_music_url: sheetMusicUrl, goals: [] }]);
@@ -434,18 +442,25 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
   async function handleUploadSheetMusic(pieceId: string, file: File) {
     setUploadingPdfFor(pieceId);
+    setUploadError(null);
     try {
       const path = `${pieceId}.pdf`;
       const { error: uploadErr } = await supabase.storage
         .from("sheet-music").upload(path, file, { upsert: true, contentType: "application/pdf" });
-      if (!uploadErr) {
+      if (uploadErr) {
+        setUploadError(`PDF upload failed: ${uploadErr.message}. Make sure the 'sheet-music' storage bucket exists in Supabase.`);
+      } else {
         const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
         const url = urlData.publicUrl + "?t=" + Date.now();
-        await PieceService.getInstance(supabase).updatePiece(pieceId, { sheet_music_url: urlData.publicUrl });
-        setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: url } : p));
+        try {
+          await PieceService.getInstance(supabase).updatePiece(pieceId, { sheet_music_url: urlData.publicUrl });
+          setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: url } : p));
+        } catch (updateErr) {
+          setUploadError(`PDF uploaded but URL save failed: ${(updateErr as Error).message}. Run the Supabase SQL migration.`);
+        }
       }
     } catch (err) {
-      console.error("sheet music upload error:", err);
+      setUploadError(`Upload error: ${(err as Error).message}`);
     } finally {
       setUploadingPdfFor(null);
     }
@@ -565,6 +580,20 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 + Add Piece
               </button>
             </div>
+
+            {/* Upload error banner */}
+            {uploadError && (
+              <div style={{
+                marginBottom: "1rem", padding: "0.75rem 1rem", background: "#fff0f0",
+                border: "1px solid #f5c6c6", borderRadius: 4, display: "flex",
+                alignItems: "flex-start", gap: "0.625rem",
+              }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b", flex: 1, lineHeight: 1.5 }}>
+                  {uploadError}
+                </span>
+                <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontSize: "1rem", lineHeight: 1, padding: 0, flexShrink: 0 }}>✕</button>
+              </div>
+            )}
 
             {/* Add piece form */}
             {showAddPiece && (
