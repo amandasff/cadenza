@@ -83,7 +83,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{ borderRadius: 3, background: loading ? "var(--border-strong)" : "var(--charcoal)", color: "white", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", padding: "0.75rem", border: "none", cursor: loading ? "default" : "pointer", marginTop: "0.25rem", letterSpacing: "0.01em", transition: "background 0.15s" }}
+              style={{ borderRadius: 3, background: loading ? "var(--border-strong)" : "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", padding: "0.75rem", border: "none", cursor: loading ? "default" : "pointer", marginTop: "0.25rem", letterSpacing: "0.01em", transition: "background 0.15s" }}
             >
               {loading ? "Signing in…" : "Sign in"}
             </button>

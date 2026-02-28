@@ -143,7 +143,7 @@ export default function ThisWeek() {
           borderRadius: 4,
           padding: "1rem 1.25rem",
           textDecoration: "none",
-          color: "white",
+          color: "var(--white)",
         }}>
           <div>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "0.005em" }}>

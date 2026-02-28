@@ -45,7 +45,7 @@ const inputStyle: React.CSSProperties = {
 };
 const primaryBtnStyle: React.CSSProperties = {
   padding: "0.5rem 0.875rem", borderRadius: 3, border: "none",
-  background: "var(--charcoal)", color: "white", fontFamily: "Inter, sans-serif",
+  background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif",
   fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer", letterSpacing: "0.01em",
 };
 const ghostBtnStyle: React.CSSProperties = {
@@ -646,7 +646,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           <button
             onClick={() => { const pts = parseInt(customAward, 10); if (!isNaN(pts) && pts > 0) handleAward(pts); }}
             disabled={awarding || !customAward || parseInt(customAward, 10) <= 0}
-            style={{ width: "100%", padding: "0.625rem", borderRadius: 3, border: "none", background: awardSuccess ? "var(--sage)" : !customAward || parseInt(customAward, 10) <= 0 ? "var(--border)" : "var(--charcoal)", color: "white", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", cursor: awarding || !customAward ? "default" : "pointer", transition: "background 0.15s", letterSpacing: "0.01em" }}
+            style={{ width: "100%", padding: "0.625rem", borderRadius: 3, border: "none", background: awardSuccess ? "var(--sage)" : !customAward || parseInt(customAward, 10) <= 0 ? "var(--border)" : "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", cursor: awarding || !customAward ? "default" : "pointer", transition: "background 0.15s", letterSpacing: "0.01em" }}
           >
             {awardSuccess ? "Awarded!" : awarding ? "Awarding…" : "Award Custom Points"}
           </button>

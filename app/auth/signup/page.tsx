@@ -65,7 +65,7 @@ export default function SignUpPage() {
                     fontFamily: "Inter, sans-serif",
                     fontWeight: 500,
                     fontSize: "0.8125rem",
-                    color: role === r ? "white" : "var(--muted)",
+                    color: role === r ? "var(--white)" : "var(--muted)",
                     transition: "all 0.15s",
                     textTransform: "capitalize",
                     letterSpacing: "0.01em",
@@ -132,7 +132,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{ borderRadius: 3, background: loading ? "var(--border-strong)" : "var(--charcoal)", color: "white", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", padding: "0.75rem", border: "none", cursor: loading ? "default" : "pointer", marginTop: "0.25rem", letterSpacing: "0.01em", transition: "background 0.15s" }}
+              style={{ borderRadius: 3, background: loading ? "var(--border-strong)" : "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", padding: "0.75rem", border: "none", cursor: loading ? "default" : "pointer", marginTop: "0.25rem", letterSpacing: "0.01em", transition: "background 0.15s" }}
             >
               {loading ? "Creating account…" : `Create ${role} account`}
             </button>

@@ -495,7 +495,7 @@ export default function PracticeRecorder() {
                       <option key={k} value={k}>{v.label}</option>
                     ))}
                   </select>
-                  <button onClick={handleAddSegment} style={{ borderRadius: 3, border: "none", background: "var(--charcoal)", color: "white", padding: "0.45rem 0.875rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem" }}>Add</button>
+                  <button onClick={handleAddSegment} style={{ borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", padding: "0.45rem 0.875rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem" }}>Add</button>
                   <button onClick={() => setShowAddSeg(false)} style={{ borderRadius: 3, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", padding: "0.45rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>✕</button>
                 </div>
               </div>
@@ -515,7 +515,7 @@ export default function PracticeRecorder() {
                 border: `1px solid ${metronome ? "var(--charcoal)" : "var(--border-strong)"}`,
                 borderRadius: 2, padding: "0.2rem 0.75rem", cursor: "pointer",
                 fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem",
-                color: metronome ? "white" : "var(--muted)", transition: "all 0.15s",
+                color: metronome ? "var(--white)" : "var(--muted)", transition: "all 0.15s",
               }}
             >
               {metronome ? "On" : "Off"}
@@ -555,7 +555,7 @@ export default function PracticeRecorder() {
                     fontSize: "0.8125rem",
                     background: beats === n ? "var(--charcoal)" : "var(--cream)",
                     border: `1px solid ${beats === n ? "var(--charcoal)" : "var(--border)"}`,
-                    color: beats === n ? "white" : "var(--muted)",
+                    color: beats === n ? "var(--white)" : "var(--muted)",
                     transition: "all 0.12s",
                   }}
                 >
@@ -594,7 +594,7 @@ export default function PracticeRecorder() {
                     fontFamily: "Inter, sans-serif", fontWeight: soundMode === mode ? 600 : 400,
                     fontSize: "0.6875rem", letterSpacing: "0.02em",
                     background: soundMode === mode ? "var(--charcoal)" : "transparent",
-                    color: soundMode === mode ? "white" : "var(--muted)",
+                    color: soundMode === mode ? "var(--white)" : "var(--muted)",
                     transition: "all 0.12s",
                   }}
                 >
@@ -624,7 +624,7 @@ export default function PracticeRecorder() {
         )}
         <button
           onClick={() => { if (recording) handleDone(); else if (!hasStarted) handleStartRecording(); else handleResume(); }}
-          style={{ width: 68, height: 68, borderRadius: "50%", background: recording ? "#8A3030" : "var(--charcoal)", border: "none", cursor: "pointer", fontSize: "1.25rem", transition: "background 0.2s", color: "white" }}
+          style={{ width: 68, height: 68, borderRadius: "50%", background: recording ? "#8A3030" : "var(--charcoal)", border: "none", cursor: "pointer", fontSize: "1.25rem", transition: "background 0.2s", color: recording ? "white" : "var(--white)" }}
         >
           {recording ? "⏹" : "⏺"}
         </button>

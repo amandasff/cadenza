@@ -28,7 +28,7 @@ export default function Home() {
           <Link href="/auth/login" style={{ padding: "0.4rem 1rem", borderRadius: 2, background: "transparent", color: "var(--charcoal)", textDecoration: "none", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", border: "1px solid var(--border-strong)", transition: "all 0.15s" }}>
             Sign In
           </Link>
-          <Link href="/auth/signup" style={{ padding: "0.4rem 1rem", borderRadius: 2, background: "var(--charcoal)", color: "white", textDecoration: "none", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem" }}>
+          <Link href="/auth/signup" style={{ padding: "0.4rem 1rem", borderRadius: 2, background: "var(--charcoal)", color: "var(--white)", textDecoration: "none", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem" }}>
             Get Started
           </Link>
         </div>
@@ -52,7 +52,7 @@ export default function Home() {
         </p>
 
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center", marginBottom: "1rem" }}>
-          <Link href="/auth/signup?role=teacher" style={{ background: "var(--charcoal)", color: "white", padding: "0.875rem 2rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", letterSpacing: "0.01em" }}>
+          <Link href="/auth/signup?role=teacher" style={{ background: "var(--charcoal)", color: "var(--white)", padding: "0.875rem 2rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", letterSpacing: "0.01em" }}>
             For Teachers
           </Link>
           <Link href="/auth/signup?role=student" style={{ background: "transparent", color: "var(--charcoal)", padding: "0.875rem 2rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", border: "1px solid var(--border-strong)", letterSpacing: "0.01em" }}>
@@ -107,7 +107,7 @@ export default function Home() {
           <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "var(--charcoal)", marginBottom: "1.5rem", letterSpacing: "-0.01em", lineHeight: 1.15 }}>
             Built for serious teachers<br />and ambitious students.
           </h2>
-          <Link href="/auth/signup" style={{ background: "var(--charcoal)", color: "white", padding: "0.875rem 2.25rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", letterSpacing: "0.01em", display: "inline-block" }}>
+          <Link href="/auth/signup" style={{ background: "var(--charcoal)", color: "var(--white)", padding: "0.875rem 2.25rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", letterSpacing: "0.01em", display: "inline-block" }}>
             Start for free
           </Link>
           <p style={{ marginTop: "1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.02em" }}>

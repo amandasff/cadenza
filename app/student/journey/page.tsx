@@ -168,7 +168,7 @@ create policy "Teachers read studio portfolio"
                   border: `1px solid ${idx === 0 ? "var(--charcoal)" : "var(--border-strong)"}`,
                   borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.6875rem", color: idx === 0 ? "white" : "var(--muted)",
+                  fontSize: "0.6875rem", color: idx === 0 ? "var(--white)" : "var(--muted)",
                   fontFamily: "Inter, sans-serif",
                 }}>
                   {idx + 1}
@@ -194,7 +194,7 @@ create policy "Teachers read studio portfolio"
                         <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: "0.5rem", borderRadius: 3, border: "1px solid var(--border)", background: "var(--cream)", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>
                           Cancel
                         </button>
-                        <button onClick={() => saveEdit(item.id)} disabled={saving || !editTitle.trim()} style={{ flex: 1, padding: "0.5rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "white", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>
+                        <button onClick={() => saveEdit(item.id)} disabled={saving || !editTitle.trim()} style={{ flex: 1, padding: "0.5rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>
                           {saving ? "Saving…" : "Save"}
                         </button>
                       </div>

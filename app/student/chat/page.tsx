@@ -229,14 +229,14 @@ export default function StudentChat() {
                     {editError && <p style={{ fontSize: "0.6875rem", color: "var(--error)", margin: "0.25rem 0 0" }}>{editError}</p>}
                     <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.375rem", justifyContent: "flex-end" }}>
                       <button onClick={() => { setEditingId(null); setEditError(null); }} style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}>Cancel</button>
-                      <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "white", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
+                      <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
                     </div>
                   </div>
                 ) : (
                   <div style={{
                     maxWidth: "78%", padding: "0.5rem 0.875rem",
                     background: isMe ? "var(--charcoal)" : "var(--white)",
-                    color: isMe ? "white" : "var(--charcoal)",
+                    color: isMe ? "var(--white)" : "var(--charcoal)",
                     borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                     border: isMe ? "none" : "1px solid var(--border)",
                     fontSize: "0.875rem", lineHeight: 1.55,
@@ -285,7 +285,7 @@ export default function StudentChat() {
       {tab === "private" && (
         <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }} />
-          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "white", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s" }}>Send</button>
+          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s" }}>Send</button>
         </div>
       )}
     </div>
