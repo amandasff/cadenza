@@ -191,7 +191,7 @@ function PieceBlock({
   onAddGoal: (e: React.FormEvent) => void;
   onCompleteGoal: (g: GoalRow) => void;
   onToggleGoalStatus: (g: GoalRow) => void;
-  onUploadSheetMusic: (pieceId: string, file: File) => void;
+  onUploadSheetMusic: (pieceId: string, files: File[]) => void;
   onAddRecording: (pieceId: string, video: YouTubeResult) => Promise<void>;
   onRemoveRecording: (recordingId: string, pieceId: string) => void;
   onSetPrimaryRecording: (recordingId: string, pieceId: string) => void;
@@ -232,7 +232,7 @@ function PieceBlock({
           {/* Sheet music upload */}
           <label
             htmlFor={sheetInputId}
-            title={piece.sheet_music_url ? "Replace sheet music PDF" : "Upload sheet music PDF"}
+            title={piece.sheet_music_url ? "Replace sheet music (PDF or images)" : "Upload sheet music (PDF or screenshots)"}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingPdf ? "default" : "pointer", opacity: uploadingPdf ? 0.5 : 1 }}
           >
             {uploadingPdf ? "…" : piece.sheet_music_url ? "📄✓" : "📄+"}
@@ -240,9 +240,10 @@ function PieceBlock({
           <input
             id={sheetInputId}
             type="file"
-            accept=".pdf,application/pdf"
+            accept=".pdf,application/pdf,image/*"
+            multiple
             style={{ display: "none" }}
-            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadSheetMusic(piece.id, f); e.target.value = ""; }}
+            onChange={e => { const files = Array.from(e.target.files ?? []); if (files.length) onUploadSheetMusic(piece.id, files); e.target.value = ""; }}
           />
           {/* Recordings toggle */}
           <button
@@ -360,8 +361,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [showAddPiece, setShowAddPiece] = useState(false);
   const [pieceForm, setPieceForm] = useState(emptyPieceForm());
   const [addingPiece, setAddingPiece] = useState(false);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [sheetFiles, setSheetFiles] = useState<File[]>([]);
+  const sheetInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPdfFor, setUploadingPdfFor] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -476,27 +477,39 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         category: pieceForm.category,
       });
       let sheetMusicUrl: string | null = null;
-      if (pdfFile) {
-        const path = `${newPiece.id}.pdf`;
-        const { error: uploadErr } = await supabase.storage
-          .from("sheet-music").upload(path, pdfFile, { upsert: true, contentType: "application/pdf" });
-        if (uploadErr) {
-          setUploadError(`PDF upload failed: ${uploadErr.message}. Make sure the 'sheet-music' storage bucket exists in Supabase.`);
-        } else {
+      if (sheetFiles.length > 0) {
+        const urls: string[] = [];
+        for (let i = 0; i < sheetFiles.length; i++) {
+          const file = sheetFiles[i];
+          const isImage = file.type.startsWith("image/");
+          const ext = file.name.split(".").pop() ?? (isImage ? "jpg" : "pdf");
+          const path = sheetFiles.length > 1
+            ? `${newPiece.id}/img_${i}.${ext}`
+            : isImage ? `${newPiece.id}_img.${ext}` : `${newPiece.id}.pdf`;
+          const contentType = isImage ? (file.type || "image/jpeg") : "application/pdf";
+          const { error: uploadErr } = await supabase.storage
+            .from("sheet-music").upload(path, file, { upsert: true, contentType });
+          if (uploadErr) {
+            setUploadError(`Upload failed: ${uploadErr.message}. Make sure the 'sheet-music' storage bucket exists in Supabase.`);
+            break;
+          }
           const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
-          sheetMusicUrl = urlData.publicUrl;
+          urls.push(urlData.publicUrl);
+        }
+        if (urls.length > 0) {
+          sheetMusicUrl = urls.length === 1 ? urls[0] : JSON.stringify(urls);
           try {
             await pieceService.updatePiece(newPiece.id, { sheet_music_url: sheetMusicUrl });
           } catch (updateErr) {
-            setUploadError(`Piece created but PDF URL save failed: ${(updateErr as Error).message}. Run the Supabase SQL migration to add the sheet_music_url column.`);
+            setUploadError(`Piece created but sheet music URL save failed: ${(updateErr as Error).message}. Run the Supabase SQL migration to add the sheet_music_url column.`);
             sheetMusicUrl = null;
           }
         }
       }
       setPieces(prev => [...prev, { ...newPiece, sheet_music_url: sheetMusicUrl, goals: [], recordings: [] }]);
       setPieceForm(emptyPieceForm());
-      setPdfFile(null);
-      if (pdfInputRef.current) pdfInputRef.current.value = "";
+      setSheetFiles([]);
+      if (sheetInputRef.current) sheetInputRef.current.value = "";
       setShowAddPiece(false);
     } catch (err) {
       console.error("add piece error:", err);
@@ -505,24 +518,34 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     }
   }
 
-  async function handleUploadSheetMusic(pieceId: string, file: File) {
+  async function handleUploadSheetMusic(pieceId: string, files: File[]) {
     setUploadingPdfFor(pieceId);
     setUploadError(null);
     try {
-      const path = `${pieceId}.pdf`;
-      const { error: uploadErr } = await supabase.storage
-        .from("sheet-music").upload(path, file, { upsert: true, contentType: "application/pdf" });
-      if (uploadErr) {
-        setUploadError(`PDF upload failed: ${uploadErr.message}. Make sure the 'sheet-music' storage bucket exists in Supabase.`);
-      } else {
-        const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
-        const url = urlData.publicUrl + "?t=" + Date.now();
-        try {
-          await PieceService.getInstance(supabase).updatePiece(pieceId, { sheet_music_url: urlData.publicUrl });
-          setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: url } : p));
-        } catch (updateErr) {
-          setUploadError(`PDF uploaded but URL save failed: ${(updateErr as Error).message}. Run the Supabase SQL migration.`);
+      const urls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const isImage = file.type.startsWith("image/");
+        const ext = file.name.split(".").pop() ?? (isImage ? "jpg" : "pdf");
+        const path = files.length > 1
+          ? `${pieceId}/img_${i}.${ext}`
+          : isImage ? `${pieceId}_img.${ext}` : `${pieceId}.pdf`;
+        const contentType = isImage ? (file.type || "image/jpeg") : "application/pdf";
+        const { error: uploadErr } = await supabase.storage
+          .from("sheet-music").upload(path, file, { upsert: true, contentType });
+        if (uploadErr) {
+          setUploadError(`Upload failed: ${uploadErr.message}. Make sure the 'sheet-music' storage bucket exists.`);
+          return;
         }
+        const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
+        urls.push(urlData.publicUrl);
+      }
+      const sheetMusicUrl = urls.length === 1 ? urls[0] : JSON.stringify(urls);
+      try {
+        await PieceService.getInstance(supabase).updatePiece(pieceId, { sheet_music_url: sheetMusicUrl });
+        setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: sheetMusicUrl } : p));
+      } catch (updateErr) {
+        setUploadError(`Uploaded but URL save failed: ${(updateErr as Error).message}. Run the Supabase SQL migration.`);
       }
     } catch (err) {
       setUploadError(`Upload error: ${(err as Error).message}`);
@@ -721,18 +744,21 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 </select>
                 <div>
                   <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>
-                    Sheet Music PDF (optional)
+                    Sheet Music — PDF or screenshots (optional)
                   </label>
                   <input
-                    ref={pdfInputRef}
+                    ref={sheetInputRef}
                     type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
+                    accept=".pdf,application/pdf,image/*"
+                    multiple
+                    onChange={e => setSheetFiles(Array.from(e.target.files ?? []))}
                     style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)" }}
                   />
-                  {pdfFile && (
+                  {sheetFiles.length > 0 && (
                     <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-                      📄 {pdfFile.name}
+                      {sheetFiles.length === 1
+                        ? `📄 ${sheetFiles[0].name}`
+                        : `🖼 ${sheetFiles.length} images selected`}
                     </div>
                   )}
                 </div>
@@ -740,7 +766,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                   <button type="submit" disabled={addingPiece || !pieceForm.title.trim()} style={{ ...primaryBtnStyle, flex: 1, opacity: addingPiece || !pieceForm.title.trim() ? 0.5 : 1 }}>
                     {addingPiece ? "Adding…" : "Add Piece"}
                   </button>
-                  <button type="button" onClick={() => { setShowAddPiece(false); setPdfFile(null); }} style={ghostBtnStyle}>Cancel</button>
+                  <button type="button" onClick={() => { setShowAddPiece(false); setSheetFiles([]); }} style={ghostBtnStyle}>Cancel</button>
                 </div>
               </form>
             )}

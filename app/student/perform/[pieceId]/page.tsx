@@ -74,6 +74,11 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   const [piece, setPiece] = useState<PieceRow | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Sheet music type
+  const [sheetType, setSheetType] = useState<"pdf" | "images">("pdf");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const imgRef = useRef<HTMLImageElement>(null);
+
   // PDF
   const [numPages, setNumPages] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
@@ -160,14 +165,39 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
     })();
   }, [student?.id, pieceId]);
 
-  // ── Load PDF ────────────────────────────────────────────────────────────────
+  // ── Load sheet music (PDF or images) ───────────────────────────────────────
 
   useEffect(() => {
     if (!piece?.sheet_music_url) return;
+    const url = piece.sheet_music_url;
+
+    // JSON array of image URLs (multiple screenshots)
+    if (url.startsWith("[")) {
+      try {
+        const urls = JSON.parse(url) as string[];
+        setImageUrls(urls);
+        setNumPages(urls.length);
+        setPageIndex(0);
+        setSheetType("images");
+        return;
+      } catch { /* fall through to PDF */ }
+    }
+
+    // Single image URL
+    if (/\.(jpg|jpeg|png|gif|webp|avif)/i.test(url) || url.includes("_img.")) {
+      setImageUrls([url]);
+      setNumPages(1);
+      setPageIndex(0);
+      setSheetType("images");
+      return;
+    }
+
+    // PDF
+    setSheetType("pdf");
     (async () => {
       const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-      const doc = await pdfjsLib.getDocument(piece.sheet_music_url!).promise;
+      const doc = await pdfjsLib.getDocument(url).promise;
       pdfDocRef.current = doc as unknown as { getPage: (n: number) => Promise<unknown> };
       setNumPages(doc.numPages);
       setPageIndex(0);
@@ -205,10 +235,19 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
 
   function redrawAnnotations() {
     const canvas = annotCanvasRef.current;
+    if (!canvas) return;
     const pdfCanvas = pdfCanvasRef.current;
-    if (!canvas || !pdfCanvas) return;
-    canvas.width = pdfCanvas.width;
-    canvas.height = pdfCanvas.height;
+    const img = imgRef.current;
+    let w: number, h: number;
+    if (pdfCanvas && pdfCanvas.width > 0) {
+      w = pdfCanvas.width; h = pdfCanvas.height;
+    } else if (img && img.complete && img.naturalWidth > 0) {
+      w = img.naturalWidth; h = img.naturalHeight;
+    } else {
+      return;
+    }
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d")!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const strokes = annotationsRef.current.get(pageIndex) ?? [];
@@ -542,7 +581,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   if (!piece?.sheet_music_url) {
     return (
       <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", background: "var(--cream)" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem" }}>No sheet music uploaded for this piece.</p>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem" }}>No sheet music uploaded for this piece yet.</p>
         <Link href="/student/pieces" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", textDecoration: "underline" }}>← Back to pieces</Link>
       </div>
     );
@@ -577,9 +616,19 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
           </>
         )}
 
-        {/* PDF + annotation canvas stack */}
-        <div style={{ position: "relative", maxWidth: "100%", maxHeight: "100%", display: "flex" }}>
-          <canvas ref={pdfCanvasRef} style={{ maxWidth: "100%", maxHeight: "calc(100dvh - 128px)", objectFit: "contain", display: "block" }} />
+        {/* Sheet music + annotation canvas stack */}
+        <div style={{ position: "relative", maxWidth: "100%", maxHeight: "100%", display: "inline-flex" }}>
+          {sheetType === "pdf" ? (
+            <canvas ref={pdfCanvasRef} style={{ maxWidth: "100%", maxHeight: "calc(100dvh - 128px)", objectFit: "contain", display: "block" }} />
+          ) : (
+            <img
+              ref={imgRef}
+              src={imageUrls[pageIndex]}
+              alt="Sheet music"
+              onLoad={() => redrawAnnotations()}
+              style={{ maxWidth: "100%", maxHeight: "calc(100dvh - 128px)", objectFit: "contain", display: "block" }}
+            />
+          )}
           <canvas
             ref={annotCanvasRef}
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: tool === "eraser" ? "cell" : tool === "pencil" ? "crosshair" : "default", zIndex: tool !== "none" ? 10 : 0 }}
@@ -594,7 +643,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         </div>
 
         {numPages === 0 && (
-          <p style={{ color: "#888", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>Loading PDF…</p>
+          <p style={{ color: "#888", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>Loading…</p>
         )}
       </div>
 
