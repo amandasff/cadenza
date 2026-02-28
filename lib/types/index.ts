@@ -88,7 +88,22 @@ export interface PieceRow {
   category: PieceCategory;
   status: PieceStatus;
   sort_order: number;
+  sheet_music_url: string | null;
   created_at: string;
+}
+
+export interface StrokeData {
+  color: string;
+  width: number;
+  points: [number, number][];
+}
+
+export interface AnnotationRow {
+  piece_id: string;
+  student_id: string;
+  page_index: number;
+  strokes: StrokeData[];
+  updated_at: string;
 }
 
 export interface ProgramRow {

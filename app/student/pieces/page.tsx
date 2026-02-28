@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PieceService } from "../../../lib/services/PieceService";
@@ -138,21 +139,36 @@ export default function MyPieces() {
                           )}
                         </div>
 
-                        {/* Status badge */}
-                        <div style={{
-                          flexShrink: 0,
-                          fontFamily: "Inter, sans-serif",
-                          fontSize: "0.625rem",
-                          fontWeight: 500,
-                          letterSpacing: "0.05em",
-                          textTransform: "uppercase",
-                          color: isComplete ? section.color : "var(--muted)",
-                          border: `1px solid ${isComplete ? section.color : "var(--border)"}`,
-                          borderRadius: 2,
-                          padding: "0.2rem 0.5rem",
-                          whiteSpace: "nowrap",
-                        }}>
-                          {STATUS_LABELS[piece.status] ?? piece.status}
+                        {/* Right side: perform button + status badge */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                          {piece.sheet_music_url && (
+                            <Link
+                              href={`/student/perform/${piece.id}`}
+                              style={{
+                                fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500,
+                                letterSpacing: "0.04em", textTransform: "uppercase",
+                                background: "var(--charcoal)", color: "var(--white)",
+                                borderRadius: 2, padding: "0.25rem 0.625rem",
+                                textDecoration: "none", whiteSpace: "nowrap",
+                              }}
+                            >
+                              Perform
+                            </Link>
+                          )}
+                          <div style={{
+                            fontFamily: "Inter, sans-serif",
+                            fontSize: "0.625rem",
+                            fontWeight: 500,
+                            letterSpacing: "0.05em",
+                            textTransform: "uppercase",
+                            color: isComplete ? section.color : "var(--muted)",
+                            border: `1px solid ${isComplete ? section.color : "var(--border)"}`,
+                            borderRadius: 2,
+                            padding: "0.2rem 0.5rem",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {STATUS_LABELS[piece.status] ?? piece.status}
+                          </div>
                         </div>
                       </div>
 

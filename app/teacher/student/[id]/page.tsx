@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
@@ -174,7 +174,7 @@ function GoalItem({
 
 function PieceBlock({
   piece, color, addGoalFor, goalForm, addingGoal, completingGoalId, togglingGoalId,
-  onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
+  uploadingPdf, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus, onUploadSheetMusic,
 }: {
   piece: PieceWithGoals;
   color: string;
@@ -183,12 +183,15 @@ function PieceBlock({
   addingGoal: boolean;
   completingGoalId: string | null;
   togglingGoalId: string | null;
+  uploadingPdf: boolean;
   onSetAddGoalFor: (v: string | "standalone" | null) => void;
   onGoalFormChange: (f: ReturnType<typeof emptyGoalForm>) => void;
   onAddGoal: (e: React.FormEvent) => void;
   onCompleteGoal: (g: GoalRow) => void;
   onToggleGoalStatus: (g: GoalRow) => void;
+  onUploadSheetMusic: (pieceId: string, file: File) => void;
 }) {
+  const sheetInputId = `sheet-${piece.id}`;
   const done = piece.goals.filter(g => g.status === "completed").length;
   const total = piece.goals.length;
 
@@ -217,12 +220,29 @@ function PieceBlock({
             </div>
           )}
         </div>
-        <button
-          onClick={() => onSetAddGoalFor(addGoalFor === piece.id ? null : piece.id)}
-          style={{ ...ghostBtnStyle, padding: "0.25rem 0.6rem", fontSize: "0.6875rem", flexShrink: 0 }}
-        >
-          + Goal
-        </button>
+        <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0, alignItems: "center" }}>
+          {/* Sheet music upload */}
+          <label
+            htmlFor={sheetInputId}
+            title={piece.sheet_music_url ? "Replace sheet music PDF" : "Upload sheet music PDF"}
+            style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingPdf ? "default" : "pointer", opacity: uploadingPdf ? 0.5 : 1 }}
+          >
+            {uploadingPdf ? "…" : piece.sheet_music_url ? "📄✓" : "📄+"}
+          </label>
+          <input
+            id={sheetInputId}
+            type="file"
+            accept=".pdf,application/pdf"
+            style={{ display: "none" }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) onUploadSheetMusic(piece.id, f); e.target.value = ""; }}
+          />
+          <button
+            onClick={() => onSetAddGoalFor(addGoalFor === piece.id ? null : piece.id)}
+            style={{ ...ghostBtnStyle, padding: "0.25rem 0.6rem", fontSize: "0.6875rem", flexShrink: 0 }}
+          >
+            + Goal
+          </button>
+        </div>
       </div>
 
       {/* Goals */}
@@ -275,6 +295,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [showAddPiece, setShowAddPiece] = useState(false);
   const [pieceForm, setPieceForm] = useState(emptyPieceForm());
   const [addingPiece, setAddingPiece] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPdfFor, setUploadingPdfFor] = useState<string | null>(null);
 
   const [addGoalFor, setAddGoalFor] = useState<string | "standalone" | null>(null);
   const [goalForm, setGoalForm] = useState(emptyGoalForm());
@@ -378,20 +401,53 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     if (!pieceForm.title.trim() || !teacher?.studioId) return;
     setAddingPiece(true);
     try {
-      const newPiece = await PieceService.getInstance(supabase).createPiece({
+      const pieceService = PieceService.getInstance(supabase);
+      const newPiece = await pieceService.createPiece({
         studentId: id, teacherId: teacher.id, studioId: teacher.studioId,
         title: pieceForm.title.trim(),
         composer: pieceForm.composer.trim() || undefined,
         book: pieceForm.book.trim() || undefined,
         category: pieceForm.category,
       });
-      setPieces(prev => [...prev, { ...newPiece, goals: [] }]);
+      let sheetMusicUrl: string | null = null;
+      if (pdfFile) {
+        const path = `${newPiece.id}.pdf`;
+        const { error: uploadErr } = await supabase.storage
+          .from("sheet-music").upload(path, pdfFile, { upsert: true, contentType: "application/pdf" });
+        if (!uploadErr) {
+          const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
+          sheetMusicUrl = urlData.publicUrl;
+          await pieceService.updatePiece(newPiece.id, { sheet_music_url: sheetMusicUrl });
+        }
+      }
+      setPieces(prev => [...prev, { ...newPiece, sheet_music_url: sheetMusicUrl, goals: [] }]);
       setPieceForm(emptyPieceForm());
+      setPdfFile(null);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
       setShowAddPiece(false);
     } catch (err) {
       console.error("add piece error:", err);
     } finally {
       setAddingPiece(false);
+    }
+  }
+
+  async function handleUploadSheetMusic(pieceId: string, file: File) {
+    setUploadingPdfFor(pieceId);
+    try {
+      const path = `${pieceId}.pdf`;
+      const { error: uploadErr } = await supabase.storage
+        .from("sheet-music").upload(path, file, { upsert: true, contentType: "application/pdf" });
+      if (!uploadErr) {
+        const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
+        const url = urlData.publicUrl + "?t=" + Date.now();
+        await PieceService.getInstance(supabase).updatePiece(pieceId, { sheet_music_url: urlData.publicUrl });
+        setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: url } : p));
+      }
+    } catch (err) {
+      console.error("sheet music upload error:", err);
+    } finally {
+      setUploadingPdfFor(null);
     }
   }
 
@@ -522,11 +578,28 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 <select value={pieceForm.category} onChange={e => setPieceForm(f => ({ ...f, category: e.target.value }))} style={inputStyle}>
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
+                <div>
+                  <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>
+                    Sheet Music PDF (optional)
+                  </label>
+                  <input
+                    ref={pdfInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
+                    style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)" }}
+                  />
+                  {pdfFile && (
+                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                      📄 {pdfFile.name}
+                    </div>
+                  )}
+                </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button type="submit" disabled={addingPiece || !pieceForm.title.trim()} style={{ ...primaryBtnStyle, flex: 1, opacity: addingPiece || !pieceForm.title.trim() ? 0.5 : 1 }}>
                     {addingPiece ? "Adding…" : "Add Piece"}
                   </button>
-                  <button type="button" onClick={() => setShowAddPiece(false)} style={ghostBtnStyle}>Cancel</button>
+                  <button type="button" onClick={() => { setShowAddPiece(false); setPdfFile(null); }} style={ghostBtnStyle}>Cancel</button>
                 </div>
               </form>
             )}
@@ -553,11 +626,13 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                           piece={piece} color={section.color}
                           addGoalFor={addGoalFor} goalForm={goalForm} addingGoal={addingGoal}
                           completingGoalId={completingGoalId} togglingGoalId={togglingGoalId}
+                          uploadingPdf={uploadingPdfFor === piece.id}
                           onSetAddGoalFor={v => { setAddGoalFor(v); setGoalForm(emptyGoalForm()); }}
                           onGoalFormChange={setGoalForm}
                           onAddGoal={handleAddGoal}
                           onCompleteGoal={handleCompleteGoal}
                           onToggleGoalStatus={handleToggleGoalStatus}
+                          onUploadSheetMusic={handleUploadSheetMusic}
                         />
                       ))}
                     </div>

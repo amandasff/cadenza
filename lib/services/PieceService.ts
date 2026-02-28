@@ -14,6 +14,7 @@ export interface CreatePieceInput {
   book?: string;
   category: string;
   programId?: string;
+  sheetMusicUrl?: string;
 }
 
 export class PieceService {
@@ -82,6 +83,7 @@ export class PieceService {
         program_id: input.programId ?? null,
         sort_order: nextOrder,
         status: 'learning',
+        sheet_music_url: input.sheetMusicUrl ?? null,
       })
       .select()
       .single();
@@ -92,7 +94,7 @@ export class PieceService {
 
   async updatePiece(
     pieceId: string,
-    updates: Partial<Pick<PieceRow, 'status' | 'title' | 'composer' | 'book' | 'category'>>
+    updates: Partial<Pick<PieceRow, 'status' | 'title' | 'composer' | 'book' | 'category' | 'sheet_music_url'>>
   ): Promise<void> {
     const { error } = await this.supabase.from('pieces').update(updates).eq('id', pieceId);
     if (error) throw error;
