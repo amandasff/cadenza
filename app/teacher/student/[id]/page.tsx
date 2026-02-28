@@ -198,6 +198,24 @@ function PieceBlock({
 }) {
   const [showRecordings, setShowRecordings] = useState(false);
   const [addingRecording, setAddingRecording] = useState(false);
+  const [pasteMode, setPasteMode] = useState(false);
+
+  // Keep a stable ref so the paste handler always calls the latest version
+  const uploadRef = useRef(onUploadSheetMusic);
+  useEffect(() => { uploadRef.current = onUploadSheetMusic; }, [onUploadSheetMusic]);
+
+  useEffect(() => {
+    if (!pasteMode) return;
+    function onPaste(e: ClipboardEvent) {
+      const imageItem = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"));
+      if (imageItem) {
+        const file = imageItem.getAsFile();
+        if (file) { uploadRef.current(piece.id, [file]); setPasteMode(false); }
+      }
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [pasteMode, piece.id]);
 
   const sheetInputId = `sheet-${piece.id}`;
   const done = piece.goals.filter(g => g.status === "completed").length;
@@ -245,6 +263,13 @@ function PieceBlock({
             style={{ display: "none" }}
             onChange={e => { const files = Array.from(e.target.files ?? []); if (files.length) onUploadSheetMusic(piece.id, files); e.target.value = ""; }}
           />
+          <button
+            onClick={() => setPasteMode(v => !v)}
+            title="Paste screenshot from clipboard (Ctrl+V / ⌘V)"
+            style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", background: pasteMode ? "var(--charcoal)" : "none", color: pasteMode ? "var(--white)" : "var(--muted)" }}
+          >
+            📋
+          </button>
           {/* Recordings toggle */}
           <button
             onClick={() => setShowRecordings(v => !v)}
@@ -261,6 +286,19 @@ function PieceBlock({
           </button>
         </div>
       </div>
+
+      {/* Paste mode banner */}
+      {pasteMode && (
+        <div style={{
+          padding: "0.5rem 1rem", background: "var(--charcoal)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--white)", letterSpacing: "0.01em" }}>
+            Ready — press <strong>Ctrl+V</strong> (or <strong>⌘V</strong>) to paste your screenshot
+          </span>
+          <button onClick={() => setPasteMode(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
+        </div>
+      )}
 
       {/* Recordings panel */}
       {showRecordings && (
@@ -365,6 +403,20 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const sheetInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPdfFor, setUploadingPdfFor] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [formPasteReady, setFormPasteReady] = useState(false);
+
+  useEffect(() => {
+    if (!formPasteReady || !showAddPiece) return;
+    function onPaste(e: ClipboardEvent) {
+      const imageItem = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"));
+      if (imageItem) {
+        const file = imageItem.getAsFile();
+        if (file) { setSheetFiles(prev => [...prev, file]); setFormPasteReady(false); }
+      }
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [formPasteReady, showAddPiece]);
 
   const [addGoalFor, setAddGoalFor] = useState<string | "standalone" | null>(null);
   const [goalForm, setGoalForm] = useState(emptyGoalForm());
@@ -754,11 +806,26 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                     onChange={e => setSheetFiles(Array.from(e.target.files ?? []))}
                     style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)" }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setFormPasteReady(v => !v)}
+                    style={{
+                      marginTop: "0.375rem", display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                      background: formPasteReady ? "var(--charcoal)" : "none",
+                      color: formPasteReady ? "var(--white)" : "var(--muted)",
+                      border: `1px solid ${formPasteReady ? "var(--charcoal)" : "var(--border)"}`,
+                      borderRadius: 2, padding: "0.25rem 0.625rem",
+                      fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", cursor: "pointer",
+                    }}
+                  >
+                    {formPasteReady ? "Ready — press Ctrl+V / ⌘V" : "📋 Paste a screenshot"}
+                  </button>
                   {sheetFiles.length > 0 && (
-                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       {sheetFiles.length === 1
                         ? `📄 ${sheetFiles[0].name}`
                         : `🖼 ${sheetFiles.length} images selected`}
+                      <button type="button" onClick={() => setSheetFiles([])} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", padding: 0, lineHeight: 1 }}>✕</button>
                     </div>
                   )}
                 </div>
@@ -766,7 +833,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                   <button type="submit" disabled={addingPiece || !pieceForm.title.trim()} style={{ ...primaryBtnStyle, flex: 1, opacity: addingPiece || !pieceForm.title.trim() ? 0.5 : 1 }}>
                     {addingPiece ? "Adding…" : "Add Piece"}
                   </button>
-                  <button type="button" onClick={() => { setShowAddPiece(false); setSheetFiles([]); }} style={ghostBtnStyle}>Cancel</button>
+                  <button type="button" onClick={() => { setShowAddPiece(false); setSheetFiles([]); setFormPasteReady(false); }} style={ghostBtnStyle}>Cancel</button>
                 </div>
               </form>
             )}
