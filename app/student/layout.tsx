@@ -6,6 +6,8 @@ import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
+import { PlayerProvider } from "../../lib/context/PlayerContext";
+import MiniPlayer from "../../components/MiniPlayer";
 
 const tabs = [
   { href: "/student",                label: "This Week" },
@@ -143,6 +145,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   );
 
   return (
+    <PlayerProvider>
     <div className="student-shell">
 
       {/* ── Mobile header (hidden ≥700px) ── */}
@@ -313,6 +316,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           );
         })}
       </nav>
+      <MiniPlayer />
     </div>
+    </PlayerProvider>
   );
 }

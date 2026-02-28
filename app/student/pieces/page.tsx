@@ -6,7 +6,9 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PieceService } from "../../../lib/services/PieceService";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 import { Student } from "../../../lib/models/Student";
-import YouTubePlayer from "../../../components/YouTubePlayer";
+import { usePlayer } from "../../../lib/context/PlayerContext";
+import YouTubeSearch from "../../../components/YouTubeSearch";
+import type { YouTubeResult } from "../../../lib/types";
 
 const SECTIONS: { category: string; label: string; color: string }[] = [
   { category: "technique",    label: "Technique",    color: "var(--sage)" },
@@ -28,11 +30,11 @@ const STATUS_LABELS: Record<string, string> = {
 export default function MyPieces() {
   const { user } = useAuth();
   const student = user as Student;
+  const player = usePlayer();
 
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
   const [loading, setLoading] = useState(true);
-  const [listeningPieceId, setListeningPieceId] = useState<string | null>(null);
-  const [listenIndex, setListenIndex] = useState(0);
+  const [searchOpenFor, setSearchOpenFor] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!student?.id) return;
@@ -50,13 +52,28 @@ export default function MyPieces() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Group by category
+  function handlePlayPiece(piece: PieceWithGoals) {
+    if (piece.recordings.length === 0) return;
+    const tracks = piece.recordings.map(r => ({ id: r.youtube_id, title: r.title, thumbnail: r.thumbnail_url ?? undefined }));
+    const primaryIdx = piece.recordings.findIndex(r => r.is_primary);
+    const primary = tracks[primaryIdx >= 0 ? primaryIdx : 0];
+    player.play(primary, tracks);
+  }
+
+  function handleSearchPlay(video: YouTubeResult, pieceId: string) {
+    setSearchOpenFor(null);
+    player.play({ id: video.id, title: video.title, thumbnail: video.thumbnail });
+  }
+
+  const isPlaying = (piece: PieceWithGoals) =>
+    player.current !== null && piece.recordings.some(r => r.youtube_id === player.current?.id);
+
   const grouped = SECTIONS
     .map(s => ({ ...s, pieces: pieces.filter(p => p.category === s.category) }))
     .filter(s => s.pieces.length > 0);
 
   return (
-    <div style={{ background: "var(--cream)", minHeight: "100%", padding: "1.5rem 1.5rem 3rem" }}>
+    <div style={{ background: "var(--cream)", minHeight: "100%", padding: "1.5rem 1.5rem 5rem" }}>
 
       {/* Header */}
       <div style={{ marginBottom: "1.75rem" }}>
@@ -106,13 +123,15 @@ export default function MyPieces() {
                   const current = piece.goals.filter(g => g.status === "current").length;
                   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                   const isComplete = piece.status === "completed" || (total > 0 && done === total);
+                  const playing = isPlaying(piece);
+                  const hasRecordings = piece.recordings.length > 0;
 
                   return (
                     <div
                       key={piece.id}
                       style={{
                         background: "var(--white)",
-                        border: "1px solid var(--border)",
+                        border: playing ? "1.5px solid var(--charcoal)" : "1px solid var(--border)",
                         borderRadius: 4,
                         padding: "1rem 1.25rem",
                       }}
@@ -122,10 +141,8 @@ export default function MyPieces() {
                         <div style={{ minWidth: 0 }}>
                           <div style={{
                             fontFamily: "Cormorant Garamond, Georgia, serif",
-                            fontWeight: 600,
-                            fontSize: "1.0625rem",
-                            color: "var(--charcoal)",
-                            lineHeight: 1.25,
+                            fontWeight: 600, fontSize: "1.0625rem",
+                            color: "var(--charcoal)", lineHeight: 1.25,
                           }}>
                             {piece.title}
                             {piece.composer && (
@@ -133,39 +150,42 @@ export default function MyPieces() {
                             )}
                           </div>
                           {piece.book && (
-                            <div style={{
-                              fontFamily: "Inter, sans-serif", fontSize: "0.6875rem",
-                              color: "var(--muted)", marginTop: "0.2rem",
-                            }}>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.2rem" }}>
                               {piece.book}
                             </div>
                           )}
                         </div>
 
-                        {/* Right side: listen + perform + status badge */}
+                        {/* Right: listen + search + perform + status */}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-                          {piece.recordings.length > 0 && (
+                          {hasRecordings ? (
                             <button
-                              onClick={() => {
-                                if (listeningPieceId === piece.id) {
-                                  setListeningPieceId(null);
-                                } else {
-                                  setListeningPieceId(piece.id);
-                                  const primaryIdx = piece.recordings.findIndex(r => r.is_primary);
-                                  setListenIndex(primaryIdx >= 0 ? primaryIdx : 0);
-                                }
-                              }}
+                              onClick={() => playing ? player.stop() : handlePlayPiece(piece)}
                               style={{
                                 fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500,
                                 letterSpacing: "0.04em", textTransform: "uppercase",
-                                background: listeningPieceId === piece.id ? "var(--charcoal)" : "none",
-                                color: listeningPieceId === piece.id ? "var(--white)" : "var(--charcoal)",
+                                background: playing ? "var(--charcoal)" : "none",
+                                color: playing ? "var(--white)" : "var(--charcoal)",
                                 border: "1px solid var(--charcoal)",
                                 borderRadius: 2, padding: "0.25rem 0.625rem",
                                 cursor: "pointer", whiteSpace: "nowrap",
                               }}
                             >
-                              {listeningPieceId === piece.id ? "▶ Playing" : `▶ Listen${piece.recordings.length > 1 ? ` (${piece.recordings.length})` : ""}`}
+                              {playing ? "▶ Playing" : `▶ Listen${piece.recordings.length > 1 ? ` (${piece.recordings.length})` : ""}`}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setSearchOpenFor(searchOpenFor === piece.id ? null : piece.id)}
+                              title="Search for music to play"
+                              style={{
+                                fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500,
+                                letterSpacing: "0.04em", textTransform: "uppercase",
+                                background: "none", color: "var(--muted)",
+                                border: "1px solid var(--border)", borderRadius: 2,
+                                padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap",
+                              }}
+                            >
+                              🔍 Play
                             </button>
                           )}
                           {piece.sheet_music_url && (
@@ -183,47 +203,37 @@ export default function MyPieces() {
                             </Link>
                           )}
                           <div style={{
-                            fontFamily: "Inter, sans-serif",
-                            fontSize: "0.625rem",
-                            fontWeight: 500,
-                            letterSpacing: "0.05em",
-                            textTransform: "uppercase",
+                            fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500,
+                            letterSpacing: "0.05em", textTransform: "uppercase",
                             color: isComplete ? section.color : "var(--muted)",
                             border: `1px solid ${isComplete ? section.color : "var(--border)"}`,
-                            borderRadius: 2,
-                            padding: "0.2rem 0.5rem",
-                            whiteSpace: "nowrap",
+                            borderRadius: 2, padding: "0.2rem 0.5rem", whiteSpace: "nowrap",
                           }}>
                             {STATUS_LABELS[piece.status] ?? piece.status}
                           </div>
                         </div>
                       </div>
 
+                      {/* Per-piece YouTube search (for pieces without assigned recordings) */}
+                      {searchOpenFor === piece.id && (
+                        <div style={{ marginTop: "0.75rem", padding: "0.75rem", background: "var(--cream)", borderRadius: 3, border: "1px solid var(--border)" }}>
+                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                            Search for a recording to play
+                          </div>
+                          <YouTubeSearch
+                            placeholder={`${piece.title}${piece.composer ? ` ${piece.composer}` : ""}…`}
+                            onSelect={(v: YouTubeResult) => handleSearchPlay(v, piece.id)}
+                          />
+                        </div>
+                      )}
+
                       {/* Progress */}
                       {total > 0 && (
                         <div style={{ marginTop: "0.875rem" }}>
-                          <div style={{
-                            height: 3,
-                            background: "var(--border)",
-                            borderRadius: 2,
-                            overflow: "hidden",
-                            marginBottom: "0.375rem",
-                          }}>
-                            <div style={{
-                              height: "100%",
-                              width: `${pct}%`,
-                              background: section.color,
-                              borderRadius: 2,
-                              transition: "width 0.4s ease",
-                            }} />
+                          <div style={{ height: 3, background: "var(--border)", borderRadius: 2, overflow: "hidden", marginBottom: "0.375rem" }}>
+                            <div style={{ height: "100%", width: `${pct}%`, background: section.color, borderRadius: 2, transition: "width 0.4s ease" }} />
                           </div>
-                          <div style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            fontFamily: "Inter, sans-serif",
-                            fontSize: "0.625rem",
-                            color: "var(--muted)",
-                          }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>
                             <span>{done}/{total} goals done{current > 0 ? ` · ${current} assigned` : ""}</span>
                             <span>{pct}%</span>
                           </div>
@@ -231,25 +241,9 @@ export default function MyPieces() {
                       )}
 
                       {total === 0 && (
-                        <div style={{
-                          marginTop: "0.625rem",
-                          fontFamily: "Inter, sans-serif",
-                          fontSize: "0.6875rem",
-                          color: "var(--muted)",
-                          fontStyle: "italic",
-                        }}>
+                        <div style={{ marginTop: "0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontStyle: "italic" }}>
                           No goals assigned yet
                         </div>
-                      )}
-
-                      {/* Inline YouTube player */}
-                      {listeningPieceId === piece.id && piece.recordings.length > 0 && (
-                        <YouTubePlayer
-                          recordings={piece.recordings}
-                          activeIndex={listenIndex}
-                          onChangeIndex={setListenIndex}
-                          onClose={() => setListeningPieceId(null)}
-                        />
                       )}
                     </div>
                   );

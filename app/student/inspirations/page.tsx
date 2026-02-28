@@ -4,12 +4,13 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import type { Inspiration, YouTubeResult } from "../../../lib/types";
 import YouTubeSearch from "../../../components/YouTubeSearch";
+import { usePlayer } from "../../../lib/context/PlayerContext";
 
 export default function InspirationPage() {
   const { user } = useAuth();
+  const player = usePlayer();
   const [inspirations, setInspirations] = useState<Inspiration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
 
   const supabase = getSupabaseBrowserClient();
@@ -46,7 +47,7 @@ export default function InspirationPage() {
         if (prev.some(i => i.youtube_id === video.id)) return prev;
         return [data as Inspiration, ...prev];
       });
-      setPlayingId(video.id);
+      player.play({ id: video.id, title: video.title, thumbnail: video.thumbnail || undefined });
     }
     setSaving(null);
   }
@@ -54,10 +55,8 @@ export default function InspirationPage() {
   async function handleRemove(inspiration: Inspiration) {
     await supabase.from("inspirations").delete().eq("id", inspiration.id);
     setInspirations(prev => prev.filter(i => i.id !== inspiration.id));
-    if (playingId === inspiration.youtube_id) setPlayingId(null);
+    if (player.current?.id === inspiration.youtube_id) player.stop();
   }
-
-  const playing = inspirations.find(i => i.youtube_id === playingId);
 
   return (
     <div style={{ background: "var(--cream)", minHeight: "100%", padding: "1.5rem 1.5rem 5rem" }}>
@@ -92,30 +91,6 @@ export default function InspirationPage() {
         )}
       </div>
 
-      {/* Now playing */}
-      {playing && (
-        <div style={{ marginBottom: "1.5rem", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", background: "var(--charcoal)" }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "0.375rem 0.75rem", background: "var(--cream)", borderBottom: "1px solid var(--border)",
-          }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: "0.5rem" }}>
-              {playing.title}
-            </span>
-            <button onClick={() => setPlayingId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
-          </div>
-          <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
-            <iframe
-              src={`https://www.youtube.com/embed/${playing.youtube_id}?autoplay=1`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
-              title={playing.title}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Saved grid */}
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.75rem" }}>
@@ -128,16 +103,18 @@ export default function InspirationPage() {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.75rem" }}>
-          {inspirations.map(ins => (
+          {inspirations.map(ins => {
+            const isPlaying = player.current?.id === ins.youtube_id;
+            return (
             <div
               key={ins.id}
               style={{
-                border: playingId === ins.youtube_id ? "2px solid var(--charcoal)" : "1px solid var(--border)",
+                border: isPlaying ? "2px solid var(--charcoal)" : "1px solid var(--border)",
                 borderRadius: 4, overflow: "hidden", background: "var(--white)",
                 cursor: "pointer", transition: "border-color 0.15s",
               }}
             >
-              <div onClick={() => setPlayingId(playingId === ins.youtube_id ? null : ins.youtube_id)} style={{ display: "block" }}>
+              <div onClick={() => isPlaying ? player.stop() : player.play({ id: ins.youtube_id, title: ins.title, thumbnail: ins.thumbnail_url ?? undefined })} style={{ display: "block" }}>
                 {ins.thumbnail_url ? (
                   <img src={ins.thumbnail_url} alt={ins.title} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
                 ) : (
@@ -156,14 +133,14 @@ export default function InspirationPage() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.375rem" }}>
                   <button
-                    onClick={() => setPlayingId(playingId === ins.youtube_id ? null : ins.youtube_id)}
+                    onClick={() => isPlaying ? player.stop() : player.play({ id: ins.youtube_id, title: ins.title, thumbnail: ins.thumbnail_url ?? undefined })}
                     style={{
                       background: "none", border: "none", cursor: "pointer", padding: 0,
                       fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500,
                       color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase",
                     }}
                   >
-                    {playingId === ins.youtube_id ? "▶ Playing" : "▶ Play"}
+                    {isPlaying ? "▶ Playing" : "▶ Play"}
                   </button>
                   <button
                     onClick={() => handleRemove(ins)}
@@ -178,7 +155,7 @@ export default function InspirationPage() {
                 </div>
               </div>
             </div>
-          ))}
+          ); })}
         </div>
       )}
     </div>
