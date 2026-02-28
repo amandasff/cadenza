@@ -106,6 +106,33 @@ export interface AnnotationRow {
   updated_at: string;
 }
 
+export interface PieceRecording {
+  id: string;
+  piece_id: string;
+  youtube_id: string;
+  title: string;
+  thumbnail_url: string | null;
+  is_primary: boolean;
+  added_by_id: string;
+  created_at: string;
+}
+
+export interface Inspiration {
+  id: string;
+  user_id: string;
+  youtube_id: string;
+  title: string;
+  thumbnail_url: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface YouTubeResult {
+  id: string;
+  title: string;
+  thumbnail: string;
+}
+
 export interface ProgramRow {
   id: string;
   student_id: string;

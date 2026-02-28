@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(/c/Users/amand/cadenza/app/page.tsx:*)",
+      "Bash(gh run list --limit 3)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx next build)",
+      "Bash(npm install pdfjs-dist @mediapipe/tasks-vision)"
+    ]
+  }
+}

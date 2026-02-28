@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PieceService } from "../../../lib/services/PieceService";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 import { Student } from "../../../lib/models/Student";
+import YouTubePlayer from "../../../components/YouTubePlayer";
 
 const SECTIONS: { category: string; label: string; color: string }[] = [
   { category: "technique",    label: "Technique",    color: "var(--sage)" },
@@ -30,6 +31,8 @@ export default function MyPieces() {
 
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
   const [loading, setLoading] = useState(true);
+  const [listeningPieceId, setListeningPieceId] = useState<string | null>(null);
+  const [listenIndex, setListenIndex] = useState(0);
 
   const load = useCallback(async () => {
     if (!student?.id) return;
@@ -139,8 +142,32 @@ export default function MyPieces() {
                           )}
                         </div>
 
-                        {/* Right side: perform button + status badge */}
+                        {/* Right side: listen + perform + status badge */}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                          {piece.recordings.length > 0 && (
+                            <button
+                              onClick={() => {
+                                if (listeningPieceId === piece.id) {
+                                  setListeningPieceId(null);
+                                } else {
+                                  setListeningPieceId(piece.id);
+                                  const primaryIdx = piece.recordings.findIndex(r => r.is_primary);
+                                  setListenIndex(primaryIdx >= 0 ? primaryIdx : 0);
+                                }
+                              }}
+                              style={{
+                                fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500,
+                                letterSpacing: "0.04em", textTransform: "uppercase",
+                                background: listeningPieceId === piece.id ? "var(--charcoal)" : "none",
+                                color: listeningPieceId === piece.id ? "var(--white)" : "var(--charcoal)",
+                                border: "1px solid var(--charcoal)",
+                                borderRadius: 2, padding: "0.25rem 0.625rem",
+                                cursor: "pointer", whiteSpace: "nowrap",
+                              }}
+                            >
+                              {listeningPieceId === piece.id ? "▶ Playing" : `▶ Listen${piece.recordings.length > 1 ? ` (${piece.recordings.length})` : ""}`}
+                            </button>
+                          )}
                           {piece.sheet_music_url && (
                             <Link
                               href={`/student/perform/${piece.id}`}
@@ -213,6 +240,16 @@ export default function MyPieces() {
                         }}>
                           No goals assigned yet
                         </div>
+                      )}
+
+                      {/* Inline YouTube player */}
+                      {listeningPieceId === piece.id && piece.recordings.length > 0 && (
+                        <YouTubePlayer
+                          recordings={piece.recordings}
+                          activeIndex={listenIndex}
+                          onChangeIndex={setListenIndex}
+                          onClose={() => setListeningPieceId(null)}
+                        />
                       )}
                     </div>
                   );

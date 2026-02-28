@@ -1,8 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { PieceRow, GoalRow } from '../types';
+import type { PieceRow, GoalRow, PieceRecording, YouTubeResult } from '../types';
 
 export interface PieceWithGoals extends PieceRow {
   goals: GoalRow[];
+  recordings: PieceRecording[];
 }
 
 export interface CreatePieceInput {
@@ -40,11 +41,19 @@ export class PieceService {
       if (error || !pieces?.length) return [];
 
       const pieceIds = (pieces as PieceRow[]).map(p => p.id);
-      const { data: goals } = await this.supabase
-        .from('goals')
-        .select('*')
-        .in('piece_id', pieceIds)
-        .order('path_order', { ascending: true });
+
+      const [{ data: goals }, { data: recordings }] = await Promise.all([
+        this.supabase
+          .from('goals')
+          .select('*')
+          .in('piece_id', pieceIds)
+          .order('path_order', { ascending: true }),
+        this.supabase
+          .from('piece_recordings')
+          .select('*')
+          .in('piece_id', pieceIds)
+          .order('created_at', { ascending: true }),
+      ]);
 
       const byPiece: Record<string, GoalRow[]> = {};
       for (const g of (goals ?? []) as GoalRow[]) {
@@ -53,7 +62,17 @@ export class PieceService {
         byPiece[g.piece_id].push(g);
       }
 
-      return (pieces as PieceRow[]).map(p => ({ ...p, goals: byPiece[p.id] ?? [] }));
+      const recsByPiece: Record<string, PieceRecording[]> = {};
+      for (const r of (recordings ?? []) as PieceRecording[]) {
+        recsByPiece[r.piece_id] ??= [];
+        recsByPiece[r.piece_id].push(r);
+      }
+
+      return (pieces as PieceRow[]).map(p => ({
+        ...p,
+        goals: byPiece[p.id] ?? [],
+        recordings: recsByPiece[p.id] ?? [],
+      }));
     } catch {
       return [];
     }
@@ -102,6 +121,57 @@ export class PieceService {
 
   async deletePiece(pieceId: string): Promise<void> {
     const { error } = await this.supabase.from('pieces').delete().eq('id', pieceId);
+    if (error) throw error;
+  }
+
+  async addRecording(
+    pieceId: string,
+    video: YouTubeResult,
+    userId: string,
+    isPrimary: boolean
+  ): Promise<PieceRecording> {
+    // If this is the primary, clear existing primary first
+    if (isPrimary) {
+      await this.supabase
+        .from('piece_recordings')
+        .update({ is_primary: false })
+        .eq('piece_id', pieceId);
+    }
+
+    const { data, error } = await this.supabase
+      .from('piece_recordings')
+      .insert({
+        piece_id: pieceId,
+        youtube_id: video.id,
+        title: video.title,
+        thumbnail_url: video.thumbnail || null,
+        is_primary: isPrimary,
+        added_by_id: userId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as PieceRecording;
+  }
+
+  async removeRecording(recordingId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('piece_recordings')
+      .delete()
+      .eq('id', recordingId);
+    if (error) throw error;
+  }
+
+  async setPrimaryRecording(pieceId: string, recordingId: string): Promise<void> {
+    await this.supabase
+      .from('piece_recordings')
+      .update({ is_primary: false })
+      .eq('piece_id', pieceId);
+    const { error } = await this.supabase
+      .from('piece_recordings')
+      .update({ is_primary: true })
+      .eq('id', recordingId);
     if (error) throw error;
   }
 }

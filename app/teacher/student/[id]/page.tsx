@@ -9,7 +9,8 @@ import type { PieceWithGoals } from "../../../../lib/services/PieceService";
 import { PracticeService } from "../../../../lib/services/PracticeService";
 import { ChatService } from "../../../../lib/services/ChatService";
 import { Teacher } from "../../../../lib/models/Teacher";
-import type { ProfileRow, GoalRow, PracticeSessionRow } from "../../../../lib/types";
+import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeResult } from "../../../../lib/types";
+import YouTubeSearch from "../../../../components/YouTubeSearch";
 
 const CATEGORIES: { value: string; label: string; color: string }[] = [
   { value: "technique",    label: "Technique",    color: "var(--sage)" },
@@ -174,7 +175,8 @@ function GoalItem({
 
 function PieceBlock({
   piece, color, addGoalFor, goalForm, addingGoal, completingGoalId, togglingGoalId,
-  uploadingPdf, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus, onUploadSheetMusic,
+  uploadingPdf, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
+  onUploadSheetMusic, onAddRecording, onRemoveRecording, onSetPrimaryRecording,
 }: {
   piece: PieceWithGoals;
   color: string;
@@ -190,7 +192,13 @@ function PieceBlock({
   onCompleteGoal: (g: GoalRow) => void;
   onToggleGoalStatus: (g: GoalRow) => void;
   onUploadSheetMusic: (pieceId: string, file: File) => void;
+  onAddRecording: (pieceId: string, video: YouTubeResult) => Promise<void>;
+  onRemoveRecording: (recordingId: string, pieceId: string) => void;
+  onSetPrimaryRecording: (recordingId: string, pieceId: string) => void;
 }) {
+  const [showRecordings, setShowRecordings] = useState(false);
+  const [addingRecording, setAddingRecording] = useState(false);
+
   const sheetInputId = `sheet-${piece.id}`;
   const done = piece.goals.filter(g => g.status === "completed").length;
   const total = piece.goals.length;
@@ -236,6 +244,14 @@ function PieceBlock({
             style={{ display: "none" }}
             onChange={e => { const f = e.target.files?.[0]; if (f) onUploadSheetMusic(piece.id, f); e.target.value = ""; }}
           />
+          {/* Recordings toggle */}
+          <button
+            onClick={() => setShowRecordings(v => !v)}
+            title="Reference recordings"
+            style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem" }}
+          >
+            {piece.recordings.length > 0 ? `🎧${piece.recordings.length}` : "🎧+"}
+          </button>
           <button
             onClick={() => onSetAddGoalFor(addGoalFor === piece.id ? null : piece.id)}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.6rem", fontSize: "0.6875rem", flexShrink: 0 }}
@@ -244,6 +260,55 @@ function PieceBlock({
           </button>
         </div>
       </div>
+
+      {/* Recordings panel */}
+      {showRecordings && (
+        <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", background: "var(--white)" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>
+            Reference Recordings
+          </div>
+          {piece.recordings.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.75rem" }}>
+              {piece.recordings.map(rec => (
+                <div key={rec.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.375rem 0.5rem", background: "var(--cream)", borderRadius: 3, border: "1px solid var(--border)" }}>
+                  {rec.thumbnail_url && (
+                    <img src={rec.thumbnail_url} alt="" style={{ width: 48, height: 27, objectFit: "cover", borderRadius: 2, flexShrink: 0 }} />
+                  )}
+                  <span style={{ flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {rec.is_primary && <span style={{ color: "var(--muted)", marginRight: "0.25rem" }}>★</span>}
+                    {rec.title}
+                  </span>
+                  <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0 }}>
+                    {!rec.is_primary && (
+                      <button
+                        onClick={() => onSetPrimaryRecording(rec.id, piece.id)}
+                        style={{ ...ghostBtnStyle, padding: "0.125rem 0.375rem", fontSize: "0.5625rem" }}
+                        title="Set as primary"
+                      >★</button>
+                    )}
+                    <button
+                      onClick={() => onRemoveRecording(rec.id, piece.id)}
+                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, cursor: "pointer", color: "var(--muted)", fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}
+                      title="Remove"
+                    >✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <YouTubeSearch
+            placeholder="Search and add a recording…"
+            onSelect={async (video) => {
+              setAddingRecording(true);
+              await onAddRecording(piece.id, video);
+              setAddingRecording(false);
+            }}
+          />
+          {addingRecording && (
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem" }}>Adding…</div>
+          )}
+        </div>
+      )}
 
       {/* Goals */}
       {piece.goals.length > 0 && (
@@ -428,7 +493,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           }
         }
       }
-      setPieces(prev => [...prev, { ...newPiece, sheet_music_url: sheetMusicUrl, goals: [] }]);
+      setPieces(prev => [...prev, { ...newPiece, sheet_music_url: sheetMusicUrl, goals: [], recordings: [] }]);
       setPieceForm(emptyPieceForm());
       setPdfFile(null);
       if (pdfInputRef.current) pdfInputRef.current.value = "";
@@ -463,6 +528,53 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       setUploadError(`Upload error: ${(err as Error).message}`);
     } finally {
       setUploadingPdfFor(null);
+    }
+  }
+
+  async function handleAddRecording(pieceId: string, video: YouTubeResult) {
+    const svc = PieceService.getInstance(supabase);
+    const currentPiece = pieces.find(p => p.id === pieceId);
+    const isPrimary = !currentPiece || currentPiece.recordings.length === 0;
+    try {
+      const rec = await svc.addRecording(pieceId, video, teacher.id, isPrimary);
+      setPieces(prev => prev.map(p => {
+        if (p.id !== pieceId) return p;
+        const updated = isPrimary
+          ? p.recordings.map(r => ({ ...r, is_primary: false }))
+          : p.recordings;
+        return { ...p, recordings: [...updated, rec] };
+      }));
+    } catch (err) {
+      console.error("add recording error:", err);
+    }
+  }
+
+  async function handleRemoveRecording(recordingId: string, pieceId: string) {
+    try {
+      await PieceService.getInstance(supabase).removeRecording(recordingId);
+      setPieces(prev => prev.map(p => {
+        if (p.id !== pieceId) return p;
+        const remaining = p.recordings.filter(r => r.id !== recordingId);
+        // If we removed the primary and there are others, set first as primary
+        if (remaining.length > 0 && !remaining.some(r => r.is_primary)) {
+          remaining[0] = { ...remaining[0], is_primary: true };
+        }
+        return { ...p, recordings: remaining };
+      }));
+    } catch (err) {
+      console.error("remove recording error:", err);
+    }
+  }
+
+  async function handleSetPrimaryRecording(recordingId: string, pieceId: string) {
+    try {
+      await PieceService.getInstance(supabase).setPrimaryRecording(pieceId, recordingId);
+      setPieces(prev => prev.map(p => {
+        if (p.id !== pieceId) return p;
+        return { ...p, recordings: p.recordings.map(r => ({ ...r, is_primary: r.id === recordingId })) };
+      }));
+    } catch (err) {
+      console.error("set primary error:", err);
     }
   }
 
@@ -662,6 +774,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                           onCompleteGoal={handleCompleteGoal}
                           onToggleGoalStatus={handleToggleGoalStatus}
                           onUploadSheetMusic={handleUploadSheetMusic}
+                          onAddRecording={handleAddRecording}
+                          onRemoveRecording={handleRemoveRecording}
+                          onSetPrimaryRecording={handleSetPrimaryRecording}
                         />
                       ))}
                     </div>

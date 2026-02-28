@@ -8,11 +8,12 @@ import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 
 const tabs = [
-  { href: "/student",          label: "This Week" },
-  { href: "/student/pieces",   label: "Pieces" },
-  { href: "/student/practice", label: "Practice" },
-  { href: "/student/chat",     label: "Chat" },
-  { href: "/student/rewards",  label: "Awards" },
+  { href: "/student",                label: "This Week" },
+  { href: "/student/pieces",         label: "Pieces" },
+  { href: "/student/practice",       label: "Practice" },
+  { href: "/student/inspirations",   label: "Inspire" },
+  { href: "/student/chat",           label: "Chat" },
+  { href: "/student/rewards",        label: "Awards" },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
