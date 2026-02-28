@@ -176,7 +176,15 @@ export default function PracticeRecorder() {
     setHasStarted(true);
     setRecording(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Disable voice-call processing — these destroy musical quality
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 48000,
+        },
+      });
       micStreamRef.current = stream;
       const ctx = audioCtxRef.current!;
       if (ctx.state === "suspended") await ctx.resume();
@@ -187,11 +195,22 @@ export default function PracticeRecorder() {
       analyserRef.current = analyser;
       startWaveform(analyser);
       if (typeof MediaRecorder !== "undefined") {
-        const recorder = new MediaRecorder(stream);
+        // Pick highest-quality supported codec
+        const preferredTypes = [
+          "audio/webm;codecs=opus",
+          "audio/ogg;codecs=opus",
+          "audio/mp4;codecs=aac",
+          "audio/webm",
+        ];
+        const mimeType = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) ?? "";
+        const recorderOpts: MediaRecorderOptions = { audioBitsPerSecond: 128000 };
+        if (mimeType) recorderOpts.mimeType = mimeType;
+
+        const recorder = new MediaRecorder(stream, recorderOpts);
         chunksRef.current = [];
         recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
         recorder.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+          const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
           setRecordingBlob(blob);
           setAudioBlobUrl(URL.createObjectURL(blob));
         };
