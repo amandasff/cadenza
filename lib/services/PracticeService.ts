@@ -5,6 +5,7 @@ interface LogSessionInput {
   studentId: string;
   studioId: string;
   goalId?: string;
+  pieceId?: string;
   durationSeconds: number;
   notes?: string;
   segments?: PracticeSegment[];
@@ -29,6 +30,7 @@ export class PracticeService {
         student_id: input.studentId,
         studio_id: input.studioId,
         goal_id: input.goalId ?? null,
+        piece_id: input.pieceId ?? null,
         duration_seconds: input.durationSeconds,
         notes: input.notes ?? null,
         segments_json: input.segments ?? null,
@@ -39,13 +41,13 @@ export class PracticeService {
 
     if (error) throw error;
 
-    // Work out today and yesterday as UTC date strings (Supabase timestamps are UTC)
+    // UTC date strings for streak + daily-bonus logic
     const todayStr = new Date().toISOString().slice(0, 10);
     const yDate = new Date();
     yDate.setUTCDate(yDate.getUTCDate() - 1);
     const yesterdayStr = yDate.toISOString().slice(0, 10);
 
-    // Find the most recent session BEFORE this one to determine last practice date
+    // Most recent session BEFORE this one
     const { data: prevSessions } = await this.supabase
       .from('practice_sessions')
       .select('created_at')
@@ -56,35 +58,59 @@ export class PracticeService {
 
     const lastDate = prevSessions?.[0]?.created_at?.slice(0, 10) ?? null;
 
+    // Fetch current profile (streak + points)
     const { data: profile, error: profileFetchError } = await this.supabase
       .from('profiles')
-      .select('streak_days')
+      .select('streak_days, total_points')
       .eq('id', input.studentId)
       .single();
 
     if (profileFetchError) throw profileFetchError;
 
-    const current = profile as { streak_days: number };
+    const current = profile as { streak_days: number; total_points: number };
 
+    // ── Streak calculation ──────────────────────────────────────────────
     let newStreak: number;
     if (lastDate === null) {
-      // Very first session ever
-      newStreak = 1;
+      newStreak = 1;                                // first ever session
     } else if (lastDate === todayStr) {
-      // Already practiced today — don't touch the streak
-      newStreak = current.streak_days;
+      newStreak = current.streak_days;              // already practiced today
     } else if (lastDate === yesterdayStr) {
-      // Practiced yesterday — extend the streak
-      newStreak = current.streak_days + 1;
+      newStreak = current.streak_days + 1;          // extend streak
     } else {
-      // Gap of 2+ days — streak broken, restart at 1
-      newStreak = 1;
+      newStreak = 1;                                // gap — reset
     }
 
-    if (newStreak !== current.streak_days) {
+    // ── Points calculation ──────────────────────────────────────────────
+    // 1 pt per minute practiced, scaled by streak multiplier
+    // Streak multipliers (inspired by Tonara / Practice Space):
+    //   7-day  → 1.5×   (one week of consistency)
+    //   14-day → 2×     (two weeks)
+    //   30-day → 3×     (one month — significant reward)
+    const minutesPracticed = Math.floor(input.durationSeconds / 60);
+
+    let multiplier = 1;
+    if (newStreak >= 30) multiplier = 3;
+    else if (newStreak >= 14) multiplier = 2;
+    else if (newStreak >= 7) multiplier = 1.5;
+
+    // +10 bonus for the first session of each day (daily habit reward)
+    const isFirstSessionToday = lastDate !== todayStr; // null also qualifies
+    const dailyBonus = isFirstSessionToday && minutesPracticed > 0 ? 10 : 0;
+
+    const pointsEarned = minutesPracticed > 0
+      ? Math.round(minutesPracticed * multiplier) + dailyBonus
+      : 0;
+
+    // ── Write profile update ────────────────────────────────────────────
+    const updates: Record<string, number> = {};
+    if (newStreak !== current.streak_days) updates.streak_days = newStreak;
+    if (pointsEarned > 0) updates.total_points = current.total_points + pointsEarned;
+
+    if (Object.keys(updates).length > 0) {
       const { error: updateError } = await this.supabase
         .from('profiles')
-        .update({ streak_days: newStreak })
+        .update(updates)
         .eq('id', input.studentId);
 
       if (updateError) throw updateError;

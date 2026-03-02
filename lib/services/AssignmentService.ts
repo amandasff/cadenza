@@ -206,6 +206,23 @@ export class AssignmentService {
       .eq('student_id', studentId);
 
     if (updateError) throw updateError;
+
+    // Award 50 points for completing an assignment (silently — don't block if points fail)
+    try {
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('total_points')
+        .eq('id', studentId)
+        .single();
+
+      if (profile) {
+        const current = profile as { total_points: number };
+        await this.supabase
+          .from('profiles')
+          .update({ total_points: current.total_points + 50 })
+          .eq('id', studentId);
+      }
+    } catch { /* points are a bonus — never fail the completion */ }
   }
 
   // Upload teacher voice note to Supabase storage, return public URL

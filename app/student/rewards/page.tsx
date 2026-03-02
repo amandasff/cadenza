@@ -4,8 +4,83 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PracticeService } from "../../../lib/services/PracticeService";
 import { Student } from "../../../lib/models/Student";
-import type { PracticeSessionRow } from "../../../lib/types";
+import type { PracticeSessionRow, GoalRow } from "../../../lib/types";
 
+// ── Level system ─────────────────────────────────────────────────────────────
+// Calibrated so:
+//  • Apprentice reachable in ~1 week of casual practice (150 pts)
+//  • Performer in ~10 weeks of consistent practice (900 pts)
+//  • Virtuoso after ~6 months of serious daily practice (4500 pts)
+//  • Maestro is the long-term prestige tier (9000 pts)
+const LEVELS = [
+  { name: "Beginner",   min: 0,    color: "var(--muted)" },
+  { name: "Apprentice", min: 150,  color: "var(--sage)" },
+  { name: "Student",    min: 400,  color: "#7b9cbf" },
+  { name: "Performer",  min: 900,  color: "#9b8bbf" },
+  { name: "Advanced",   min: 2000, color: "var(--peach)" },
+  { name: "Virtuoso",   min: 4500, color: "#c9a227" },
+  { name: "Maestro",    min: 9000, color: "var(--charcoal)" },
+];
+
+function getLevel(points: number) {
+  let idx = 0;
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (points >= LEVELS[i].min) { idx = i; break; }
+  }
+  const current = LEVELS[idx];
+  const next = LEVELS[idx + 1] ?? null;
+  const progress = next
+    ? Math.min(100, ((points - current.min) / (next.min - current.min)) * 100)
+    : 100;
+  return { current, next, progress, idx };
+}
+
+function streakMultiplier(streak: number): { mult: number; label: string } {
+  if (streak >= 30) return { mult: 3,   label: "3×" };
+  if (streak >= 14) return { mult: 2,   label: "2×" };
+  if (streak >= 7)  return { mult: 1.5, label: "1.5×" };
+  return               { mult: 1,   label: "1×" };
+}
+
+// ── Badge definitions ─────────────────────────────────────────────────────────
+// Inspired by Tonara's achievement system + behavioral psychology:
+//  • Early badges are easy wins (hook the habit loop)
+//  • Streak badges create loss aversion (don't break the chain!)
+//  • Points/time badges show long-term progress
+//  • Goal badges tie back to teacher-set milestones
+interface BadgeStats {
+  sessions: number;
+  totalMinutes: number;
+  streakDays: number;
+  totalPoints: number;
+  completedGoals: number;
+  completedAssignments: number;
+}
+
+const BADGES = [
+  // ── Habit formation ──
+  { id: "first_note",    icon: "♪",  name: "First Note",       desc: "Log your first practice session",  unlocked: (s: BadgeStats) => s.sessions >= 1 },
+  { id: "on_a_roll",     icon: "🔥", name: "On a Roll",         desc: "3-day practice streak",            unlocked: (s: BadgeStats) => s.streakDays >= 3 },
+  { id: "daily_ten",     icon: "📅", name: "10 Sessions",       desc: "Complete 10 practice sessions",    unlocked: (s: BadgeStats) => s.sessions >= 10 },
+  // ── Streak milestones (loss aversion loop) ──
+  { id: "week_warrior",  icon: "⚡", name: "Week Warrior",      desc: "7-day streak — 1.5× pts bonus!",  unlocked: (s: BadgeStats) => s.streakDays >= 7 },
+  { id: "fortnight",     icon: "💫", name: "Fortnight Fire",    desc: "14-day streak — 2× pts bonus!",   unlocked: (s: BadgeStats) => s.streakDays >= 14 },
+  { id: "monthly",       icon: "👑", name: "Monthly Maestro",   desc: "30-day streak — 3× pts bonus!",   unlocked: (s: BadgeStats) => s.streakDays >= 30 },
+  // ── Practice time ──
+  { id: "hour_power",    icon: "⏱", name: "Hour Power",        desc: "Practice 60 minutes total",       unlocked: (s: BadgeStats) => s.totalMinutes >= 60 },
+  { id: "ten_hours",     icon: "⌛", name: "Ten Hours",          desc: "Practice 10 hours total",         unlocked: (s: BadgeStats) => s.totalMinutes >= 600 },
+  { id: "fifty_hours",   icon: "🏆", name: "Fifty Hours",       desc: "Practice 50 hours total",         unlocked: (s: BadgeStats) => s.totalMinutes >= 3000 },
+  // ── Goals & assignments ──
+  { id: "goal_getter",   icon: "🎵", name: "Goal Getter",       desc: "Complete your first goal",        unlocked: (s: BadgeStats) => s.completedGoals >= 1 },
+  { id: "overachiever",  icon: "🌟", name: "Overachiever",      desc: "Complete 5 goals",                unlocked: (s: BadgeStats) => s.completedGoals >= 5 },
+  { id: "assignment_ace",icon: "✅", name: "Assignment Ace",    desc: "Complete 5 assignments",          unlocked: (s: BadgeStats) => s.completedAssignments >= 5 },
+  // ── Points milestones ──
+  { id: "rising_star",   icon: "⭐", name: "Rising Star",       desc: "Earn 500 points",                 unlocked: (s: BadgeStats) => s.totalPoints >= 500 },
+  { id: "high_achiever", icon: "💎", name: "High Achiever",     desc: "Earn 2,000 points",               unlocked: (s: BadgeStats) => s.totalPoints >= 2000 },
+  { id: "elite",         icon: "🎹", name: "Elite",              desc: "Earn 5,000 points",               unlocked: (s: BadgeStats) => s.totalPoints >= 5000 },
+];
+
+// ── Calendar helpers ──────────────────────────────────────────────────────────
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 function toDateStr(year: number, month: number, day: number) {
@@ -16,8 +91,7 @@ function getMonthCells(firstOfMonth: Date): (number | null)[] {
   const year = firstOfMonth.getFullYear();
   const month = firstOfMonth.getMonth();
   const lastDate = new Date(year, month + 1, 0).getDate();
-  // Mon=0 offset
-  let startDow = firstOfMonth.getDay(); // 0=Sun
+  let startDow = firstOfMonth.getDay();
   startDow = (startDow + 6) % 7;
   const cells: (number | null)[] = Array(startDow).fill(null);
   for (let d = 1; d <= lastDate; d++) cells.push(d);
@@ -25,6 +99,7 @@ function getMonthCells(firstOfMonth: Date): (number | null)[] {
   return cells;
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function Rewards() {
   const { user } = useAuth();
   const student = user as Student;
@@ -33,45 +108,60 @@ export default function Rewards() {
   const [loading, setLoading] = useState(true);
   const [livePoints, setLivePoints] = useState<number | null>(null);
   const [liveStreak, setLiveStreak] = useState<number | null>(null);
+  const [completedGoals, setCompletedGoals] = useState<GoalRow[]>([]);
+  const [completedAssignments, setCompletedAssignments] = useState(0);
 
-  // Calendar navigation — default to current month
   const [calendarDate, setCalendarDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  const loadSessions = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     if (!student?.id) return;
+    const supabase = getSupabaseBrowserClient();
     try {
-      const supabase = getSupabaseBrowserClient();
-      const service = PracticeService.getInstance(supabase);
-      const data = await service.getStudentSessions(student.id, 500);
-      setSessions(data);
+      const [sessionData] = await Promise.all([
+        PracticeService.getInstance(supabase).getStudentSessions(student.id, 500),
+      ]);
+      setSessions(sessionData);
+
+      // Live stats
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("total_points, streak_days")
+        .eq("id", student.id)
+        .single();
+      if (profile) {
+        const p = profile as { total_points: number; streak_days: number };
+        setLivePoints(p.total_points);
+        setLiveStreak(p.streak_days);
+      }
+
+      // Completed goals (for badges)
+      const { data: goals } = await supabase
+        .from("goals")
+        .select()
+        .eq("student_id", student.id)
+        .eq("status", "completed");
+      setCompletedGoals((goals ?? []) as GoalRow[]);
+
+      // Assignment completions (silently skip if table doesn't exist)
+      try {
+        const { data: completions } = await supabase
+          .from("assignment_completions")
+          .select("id")
+          .eq("student_id", student.id);
+        setCompletedAssignments((completions ?? []).length);
+      } catch { /* table may not exist yet */ }
+
     } catch (err) {
-      const e = err as { message?: string };
-      console.error("loadSessions error:", e?.message);
+      console.error("rewards load error:", err);
     } finally {
       setLoading(false);
     }
   }, [student?.id]);
 
-  useEffect(() => {
-    if (!student?.id) return;
-    const supabase = getSupabaseBrowserClient();
-    supabase
-      .from("profiles")
-      .select("total_points, streak_days")
-      .eq("id", student.id)
-      .single()
-      .then(({ data }: { data: { total_points: number; streak_days: number } | null }) => {
-        if (data) {
-          setLivePoints(data.total_points);
-          setLiveStreak(data.streak_days);
-        }
-      });
-  }, [student?.id]);
-
-  useEffect(() => { loadSessions(); }, [loadSessions]);
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   if (!student) return null;
 
@@ -79,24 +169,38 @@ export default function Rewards() {
   const streakDays  = liveStreak  ?? student.streakDays;
   const totalMinutes = sessions.reduce((sum, s) => sum + Math.round(s.duration_seconds / 60), 0);
 
-  // Set of "YYYY-MM-DD" strings that have at least one session
-  const practicedDays = new Set(sessions.map(s => s.created_at.slice(0, 10)));
+  // Level
+  const { current: lvl, next: nextLvl, progress: lvlProgress } = getLevel(totalPoints);
 
+  // Streak multiplier
+  const { mult, label: multLabel } = streakMultiplier(streakDays);
+
+  // This week
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekSessions = sessions.filter(s => new Date(s.created_at) >= weekAgo);
+  const weekMinutes  = weekSessions.reduce((sum, s) => sum + Math.round(s.duration_seconds / 60), 0);
+  const weekPtsEst   = Math.round(weekMinutes * mult) + weekSessions.length * 10; // approx (includes daily bonuses)
+
+  // Badges
+  const badgeStats: BadgeStats = {
+    sessions: sessions.length,
+    totalMinutes,
+    streakDays,
+    totalPoints,
+    completedGoals: completedGoals.length,
+    completedAssignments,
+  };
+  const badges = BADGES.map(b => ({ ...b, earned: b.unlocked(badgeStats) }));
+  const earnedCount = badges.filter(b => b.earned).length;
+
+  // Calendar
+  const practicedDays = new Set(sessions.map(s => s.created_at.slice(0, 10)));
   const today = new Date();
   const isCurrentMonth =
     calendarDate.getFullYear() === today.getFullYear() &&
-    calendarDate.getMonth() === today.getMonth();
-
+    calendarDate.getMonth()    === today.getMonth();
   const monthCells = getMonthCells(calendarDate);
-
-  function prevMonth() {
-    setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-  }
-  function nextMonth() {
-    if (!isCurrentMonth) setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
-  }
-
-  // Count sessions in the visible month (for the month label)
   const monthSessionCount = sessions.filter(s => {
     const dt = new Date(s.created_at);
     return dt.getFullYear() === calendarDate.getFullYear() && dt.getMonth() === calendarDate.getMonth();
@@ -105,161 +209,291 @@ export default function Rewards() {
   return (
     <div style={{ background: "var(--cream)", minHeight: "100%" }}>
 
-      {/* Page header */}
-      <div style={{ padding: "1.5rem 1.5rem 1rem" }}>
+      {/* Header */}
+      <div style={{ padding: "1.5rem 1.5rem 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
-          <span style={{
-            fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)",
-            fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase",
-          }}>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>
             Progress
           </span>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
         </div>
       </div>
 
-      <div style={{ padding: "0 1.5rem 3rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ padding: "1rem 1.5rem 5rem", display: "flex", flexDirection: "column", gap: "0.875rem" }}>
 
-        {/* Points */}
-        <div className="card-base" style={{ padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1.25rem" }}>
-          <div>
-            <div style={{
-              fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "2.5rem",
-              color: "var(--charcoal)", lineHeight: 1, letterSpacing: "-0.02em",
-            }}>
-              {totalPoints.toLocaleString()}
+        {/* ── Level card ── */}
+        <div className="card-base" style={{ padding: "1.25rem 1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1.25rem", color: "var(--charcoal)", letterSpacing: "-0.01em" }}>
+                {lvl.name}
+              </div>
+              {nextLvl ? (
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                  {(nextLvl.min - totalPoints).toLocaleString()} pts to {nextLvl.name}
+                </div>
+              ) : (
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                  Maximum level reached
+                </div>
+              )}
             </div>
-            <div style={{
-              fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)",
-              marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase",
-            }}>
-              Points earned
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "2rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+                {totalPoints.toLocaleString()}
+              </div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>
+                total points
+              </div>
             </div>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 7, background: "var(--cream-deep)", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{
+              height: "100%",
+              width: `${lvlProgress}%`,
+              background: lvl.color,
+              borderRadius: 4,
+              transition: "width 0.8s ease",
+            }} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.375rem" }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)" }}>
+              {lvl.min.toLocaleString()}
+            </span>
+            {nextLvl && (
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)" }}>
+                {nextLvl.min.toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.625rem" }}>
+        {/* ── Stats row ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "0.5rem" }}>
           {[
-            { value: loading ? "—" : String(sessions.length), label: "Sessions" },
-            { value: loading ? "—" : String(totalMinutes),    label: "Minutes" },
-            { value: String(streakDays),                       label: "Day streak" },
-          ].map(({ value, label }) => (
-            <div key={label} className="card-base" style={{ padding: "1rem 0.75rem", textAlign: "center" }}>
-              <div style={{
-                fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.75rem",
-                color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1,
-              }}>
+            {
+              value: String(streakDays),
+              label: "Day streak",
+              sub: mult > 1 ? `${multLabel} multiplier` : undefined,
+              subColor: "var(--sage)",
+            },
+            {
+              value: String(sessions.length),
+              label: "Sessions",
+              sub: undefined,
+              subColor: undefined,
+            },
+            {
+              value: totalMinutes >= 60
+                ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
+                : `${totalMinutes}m`,
+              label: "Practiced",
+              sub: undefined,
+              subColor: undefined,
+            },
+            {
+              value: String(completedGoals.length),
+              label: "Goals done",
+              sub: undefined,
+              subColor: undefined,
+            },
+          ].map(({ value, label, sub, subColor }) => (
+            <div key={label} className="card-base" style={{ padding: "0.875rem 0.5rem", textAlign: "center" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.375rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
                 {value}
               </div>
-              <div style={{
-                fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)",
-                marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase",
-              }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", marginTop: "0.25rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
                 {label}
               </div>
+              {sub && (
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.4375rem", color: subColor, marginTop: "0.125rem", letterSpacing: "0.02em" }}>
+                  {sub}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Calendar */}
+        {/* ── This week ── */}
+        {!loading && weekSessions.length > 0 && (
+          <div className="card-base" style={{ padding: "1rem 1.25rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
+              This Week
+            </div>
+            <div style={{ display: "flex", gap: "2rem", alignItems: "flex-end" }}>
+              <div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.5rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+                  {weekSessions.length}
+                </div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.25rem" }}>
+                  sessions
+                </div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.5rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+                  {weekMinutes}
+                </div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.25rem" }}>
+                  minutes
+                </div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.5rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>
+                  ~{weekPtsEst}
+                </div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.25rem" }}>
+                  pts earned
+                </div>
+              </div>
+            </div>
+            {mult > 1 && (
+              <div style={{ marginTop: "0.75rem", padding: "0.5rem 0.75rem", background: "var(--cream-deep)", borderRadius: 3, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>
+                🔥 {streakDays}-day streak = <strong>{multLabel} multiplier</strong> — practice points are supercharged right now
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── How to earn points ── */}
+        <div className="card-base" style={{ padding: "1rem 1.25rem" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
+            How you earn points
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {[
+              { label: "Practice",             value: "1 pt / min  ·  +10 first session each day" },
+              { label: "7-day streak",          value: "1.5× multiplier on all practice" },
+              { label: "14-day streak",         value: "2× multiplier on all practice" },
+              { label: "30-day streak",         value: "3× multiplier on all practice" },
+              { label: "Complete assignment",   value: "+50 pts" },
+              { label: "Complete goal",         value: "Points set by your teacher" },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "1rem" }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", flexShrink: 0 }}>{label}</span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", textAlign: "right" }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Badges ── */}
+        <div className="card-base" style={{ padding: "1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+              Achievements
+            </div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+              {earnedCount} / {badges.length} earned
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.5rem" }}>
+            {badges.map(badge => (
+              <div
+                key={badge.id}
+                title={badge.desc}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  padding: "0.75rem 0.25rem 0.625rem",
+                  borderRadius: 4,
+                  background: badge.earned ? "var(--cream-deep)" : "transparent",
+                  border: "1px solid var(--border)",
+                  opacity: badge.earned ? 1 : 0.35,
+                  cursor: "default",
+                }}
+              >
+                <span style={{ fontSize: "1.125rem", filter: badge.earned ? "none" : "grayscale(1)" }}>
+                  {badge.icon}
+                </span>
+                <span style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "0.4375rem",
+                  fontWeight: badge.earned ? 600 : 400,
+                  color: badge.earned ? "var(--charcoal)" : "var(--muted)",
+                  textAlign: "center",
+                  lineHeight: 1.3,
+                  letterSpacing: "0.01em",
+                }}>
+                  {badge.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Practice calendar ── */}
         <div className="card-base" style={{ padding: "1.25rem 1.5rem" }}>
-          {/* Month navigation */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
             <button
-              onClick={prevMonth}
-              style={{
-                background: "none", border: "1px solid var(--border)", borderRadius: 2,
-                width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center",
-                justifyContent: "center", color: "var(--muted)", fontSize: "0.875rem",
-              }}
+              onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "0.875rem" }}
             >
               ‹
             </button>
 
             <div style={{ textAlign: "center" }}>
-              <div style={{
-                fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
-                color: "var(--charcoal)", letterSpacing: "0.005em",
-              }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", letterSpacing: "0.005em" }}>
                 {calendarDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
               </div>
               {!loading && monthSessionCount > 0 && (
-                <div style={{
-                  fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--sage)",
-                  marginTop: "0.125rem", letterSpacing: "0.04em",
-                }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--sage)", marginTop: "0.125rem", letterSpacing: "0.04em" }}>
                   {monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}
                 </div>
               )}
             </div>
 
             <button
-              onClick={nextMonth}
+              onClick={() => { if (!isCurrentMonth) setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1)); }}
               disabled={isCurrentMonth}
-              style={{
-                background: "none", border: "1px solid var(--border)", borderRadius: 2,
-                width: 28, height: 28, cursor: isCurrentMonth ? "default" : "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: isCurrentMonth ? "var(--border)" : "var(--muted)", fontSize: "0.875rem",
-              }}
+              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, width: 28, height: 28, cursor: isCurrentMonth ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: isCurrentMonth ? "var(--border)" : "var(--muted)", fontSize: "0.875rem" }}
             >
               ›
             </button>
           </div>
 
-          {/* Day-of-week headers */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.125rem", marginBottom: "0.25rem" }}>
             {DAY_LABELS.map((d, i) => (
-              <div key={i} style={{
-                textAlign: "center", fontSize: "0.5625rem", color: "var(--muted)",
-                fontFamily: "Inter, sans-serif", paddingBottom: "0.25rem", letterSpacing: "0.02em",
-              }}>
+              <div key={i} style={{ textAlign: "center", fontSize: "0.5625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", paddingBottom: "0.25rem", letterSpacing: "0.02em" }}>
                 {d}
               </div>
             ))}
           </div>
 
-          {/* Calendar grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.1875rem" }}>
             {monthCells.map((day, i) => {
               if (day === null) return <div key={i} />;
-
               const dateStr = toDateStr(calendarDate.getFullYear(), calendarDate.getMonth(), day);
               const practiced = practicedDays.has(dateStr);
               const isToday =
                 today.getFullYear() === calendarDate.getFullYear() &&
                 today.getMonth()    === calendarDate.getMonth() &&
                 today.getDate()     === day;
-              const isFuture =
-                isCurrentMonth && day > today.getDate();
-
+              const isFuture = isCurrentMonth && day > today.getDate();
               return (
-                <div
-                  key={i}
-                  style={{
-                    aspectRatio: "1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 3,
-                    background: practiced ? "var(--sage)" : isToday ? "var(--cream-deep)" : "transparent",
-                    border: isToday && !practiced ? "1px solid var(--border-strong)" : "1px solid transparent",
-                    fontSize: "0.625rem",
-                    fontFamily: "Inter, sans-serif",
-                    fontWeight: isToday ? 600 : 400,
-                    color: practiced ? "white" : isFuture ? "var(--border-strong)" : "var(--muted)",
-                    opacity: isFuture ? 0.4 : 1,
-                  }}
-                >
+                <div key={i} style={{
+                  aspectRatio: "1",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: 3,
+                  background: practiced ? "var(--sage)" : isToday ? "var(--cream-deep)" : "transparent",
+                  border: isToday && !practiced ? "1px solid var(--border-strong)" : "1px solid transparent",
+                  fontSize: "0.625rem",
+                  fontFamily: "Inter, sans-serif",
+                  fontWeight: isToday ? 600 : 400,
+                  color: practiced ? "white" : isFuture ? "var(--border-strong)" : "var(--muted)",
+                  opacity: isFuture ? 0.4 : 1,
+                }}>
                   {day}
                 </div>
               );
             })}
           </div>
 
-          {/* Legend */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.875rem", justifyContent: "flex-end" }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--sage)" }} />
             <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", letterSpacing: "0.03em" }}>
@@ -267,6 +501,7 @@ export default function Rewards() {
             </span>
           </div>
         </div>
+
       </div>
     </div>
   );

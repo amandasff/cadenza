@@ -97,6 +97,16 @@ export class GoalService {
     studentId: string,
     pointsToAward: number
   ): Promise<void> {
+    // Fetch bonus_points from goal before marking complete
+    const { data: goalData } = await this.supabase
+      .from('goals')
+      .select('bonus_points')
+      .eq('id', goalId)
+      .single();
+
+    const bonusPoints = (goalData as { bonus_points: number | null } | null)?.bonus_points ?? 0;
+    const totalToAward = pointsToAward + bonusPoints;
+
     const { error: goalError } = await this.supabase
       .from('goals')
       .update({ status: 'completed' })
@@ -116,7 +126,7 @@ export class GoalService {
 
     const { error: updateError } = await this.supabase
       .from('profiles')
-      .update({ total_points: current.total_points + pointsToAward })
+      .update({ total_points: current.total_points + totalToAward })
       .eq('id', studentId);
 
     if (updateError) throw updateError;
