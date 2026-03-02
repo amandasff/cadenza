@@ -42,7 +42,7 @@ export default function MyPieces() {
   const [pasteMode, setPasteMode] = useState<string | null>(null); // pieceId when paste mode active
   const [pendingPastes, setPendingPastes] = useState<File[]>([]);
   const sheetInputRef = useRef<HTMLInputElement>(null);
-  const uploadRef = useRef<(pieceId: string, files: File[]) => Promise<void>>();
+  const uploadRef = useRef<((pieceId: string, files: File[]) => Promise<void>) | undefined>(undefined);
 
   const supabase = getSupabaseBrowserClient();
 
