@@ -136,6 +136,8 @@ export default function SchedulePage() {
     recurring: false,
   });
   const [scheduling, setScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Voice note recording (tracks which draft index is recording)
   const [recordingDraftId, setRecordingDraftId] = useState<string | null>(null);
@@ -225,6 +227,7 @@ export default function SchedulePage() {
   async function handleCompleteLesson() {
     if (!completingLesson) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const lessonService = LessonService.getInstance(supabase);
@@ -258,7 +261,10 @@ export default function SchedulePage() {
       setLessons(prev => prev.filter(l => l.id !== completingLesson.id));
       setCompletingLesson(null);
     } catch (err) {
-      console.error(err);
+      const msg = (err as { message?: string })?.message ?? String(err);
+      setSaveError(msg.includes("does not exist")
+        ? "Database tables not set up yet. Run supabase/lessons.sql in your Supabase dashboard first."
+        : `Error: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -268,6 +274,7 @@ export default function SchedulePage() {
   async function handleScheduleLesson() {
     if (!scheduleForm.studentId || !scheduleForm.scheduledAt) return;
     setScheduling(true);
+    setScheduleError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const lessonService = LessonService.getInstance(supabase);
@@ -296,7 +303,10 @@ export default function SchedulePage() {
       setScheduleForm({ studentId: "", scheduledAt: "", durationMinutes: 45, recurring: false });
       await loadData();
     } catch (err) {
-      console.error(err);
+      const msg = (err as { message?: string })?.message ?? String(err);
+      setScheduleError(msg.includes("does not exist")
+        ? "Database tables not set up yet. Run supabase/lessons.sql in your Supabase dashboard first."
+        : `Error: ${msg}`);
     } finally {
       setScheduling(false);
     }
@@ -664,8 +674,17 @@ export default function SchedulePage() {
             })}
 
             {/* Modal actions */}
+            {saveError && (
+              <div style={{
+                marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: 4,
+                background: "#fff0f0", border: "1px solid #fca5a5",
+                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#dc2626",
+              }}>
+                {saveError}
+              </div>
+            )}
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "1.25rem" }}>
-              <button onClick={() => setCompletingLesson(null)} style={btnSecondary} disabled={saving}>
+              <button onClick={() => { setCompletingLesson(null); setSaveError(null); }} style={btnSecondary} disabled={saving}>
                 Cancel
               </button>
               <button onClick={handleCompleteLesson} style={btnPrimary} disabled={saving}>
@@ -745,13 +764,26 @@ export default function SchedulePage() {
               </p>
             )}
 
+            {scheduleError && (
+              <div style={{
+                marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: 4,
+                background: "#fff0f0", border: "1px solid #fca5a5",
+                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#dc2626",
+              }}>
+                {scheduleError}
+              </div>
+            )}
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-              <button onClick={() => setShowScheduleModal(false)} style={btnSecondary} disabled={scheduling}>
+              <button onClick={() => { setShowScheduleModal(false); setScheduleError(null); }} style={btnSecondary} disabled={scheduling}>
                 Cancel
               </button>
               <button
                 onClick={handleScheduleLesson}
-                style={btnPrimary}
+                style={{
+                  ...btnPrimary,
+                  opacity: (scheduling || !scheduleForm.studentId || !scheduleForm.scheduledAt) ? 0.45 : 1,
+                  cursor: (scheduling || !scheduleForm.studentId || !scheduleForm.scheduledAt) ? "not-allowed" : "pointer",
+                }}
                 disabled={scheduling || !scheduleForm.studentId || !scheduleForm.scheduledAt}
               >
                 {scheduling ? "Scheduling…" : scheduleForm.recurring ? "Schedule + Repeat" : "Schedule Lesson"}
