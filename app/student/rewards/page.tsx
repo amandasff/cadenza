@@ -178,6 +178,16 @@ export default function Rewards() {
   // Level
   const { current: lvl, next: nextLvl, progress: lvlProgress } = getLevel(totalPoints);
 
+  // Effective streak — must come before streakMultiplier call.
+  // The stored streak_days only changes when a session is logged, so it can be stale
+  // after a student misses a day. Calculate the real display value from session history.
+  const lastSessionDate = sessions.length > 0 ? toLocalDateStr(new Date(sessions[0].created_at)) : null;
+  const todayLocal = toLocalDateStr(new Date());
+  const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayLocal = toLocalDateStr(yesterdayDate);
+  const streakIsActive = lastSessionDate === todayLocal || lastSessionDate === yesterdayLocal;
+  const effectiveStreak = streakIsActive ? streakDays : 0;
+
   // Streak multiplier (based on effective streak)
   const { mult, label: multLabel } = streakMultiplier(effectiveStreak);
 
@@ -199,16 +209,6 @@ export default function Rewards() {
   };
   const badges = BADGES.map(b => ({ ...b, earned: b.unlocked(badgeStats) }));
   const earnedCount = badges.filter(b => b.earned).length;
-
-  // Effective streak — the stored streak_days value only changes when a session is logged,
-  // so it can show stale data after a student misses a day. Calculate what the streak
-  // should actually display based on the last session's local date.
-  const lastSessionDate = sessions.length > 0 ? toLocalDateStr(new Date(sessions[0].created_at)) : null;
-  const todayLocal = toLocalDateStr(new Date());
-  const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayLocal = toLocalDateStr(yesterdayDate);
-  const streakIsActive = lastSessionDate === todayLocal || lastSessionDate === yesterdayLocal;
-  const effectiveStreak = streakIsActive ? streakDays : 0;
 
   // Calendar — use local dates so sessions show on the day the student actually practiced
   const practicedDays = new Set(sessions.map(s => toLocalDateStr(new Date(s.created_at))));
