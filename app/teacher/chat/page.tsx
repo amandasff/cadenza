@@ -113,13 +113,15 @@ export default function TeacherChat() {
     try {
       const supabase = getSupabaseBrowserClient();
       const service = ChatService.getInstance(supabase);
-      let msg: MessageRow;
       if (selectedStudent === null) {
-        msg = await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, text);
+        await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, text);
+        const fresh = await service.getAnnouncements(teacher.studioId);
+        setMessages(fresh);
       } else {
-        msg = await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, text);
+        await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, text);
+        const fresh = await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id);
+        setMessages(fresh);
       }
-      setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
     } catch {
       setInput(text);
     } finally {

@@ -117,8 +117,10 @@ export default function StudentChat() {
     setSending(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const msg = await ChatService.getInstance(supabase).sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
-      setPrivateMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg]);
+      const svc = ChatService.getInstance(supabase);
+      await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
+      const fresh = await svc.getPrivateThread(student.studioId!, student.id, teacherId);
+      setPrivateMessages(fresh);
       setTab("private");
     } catch {
       setInput(text);
