@@ -8,8 +8,10 @@ import { PieceService } from "../../../../lib/services/PieceService";
 import type { PieceWithGoals } from "../../../../lib/services/PieceService";
 import { PracticeService } from "../../../../lib/services/PracticeService";
 import { ChatService } from "../../../../lib/services/ChatService";
+import { LessonService } from "../../../../lib/services/LessonService";
+import { AssignmentService } from "../../../../lib/services/AssignmentService";
 import { Teacher } from "../../../../lib/models/Teacher";
-import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeResult } from "../../../../lib/types";
+import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeResult, LessonRow, AssignmentWithContext } from "../../../../lib/types";
 import YouTubeSearch from "../../../../components/YouTubeSearch";
 
 const CATEGORIES: { value: string; label: string; color: string }[] = [
@@ -446,6 +448,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
   const [completingGoalId, setCompletingGoalId] = useState<string | null>(null);
   const [togglingGoalId, setTogglingGoalId] = useState<string | null>(null);
+  const [nextLesson, setNextLesson] = useState<LessonRow | null>(null);
+  const [studentAssignments, setStudentAssignments] = useState<AssignmentWithContext[]>([]);
 
   const supabase = getSupabaseBrowserClient();
 
@@ -469,6 +473,16 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           .from("goals").select("*").eq("student_id", id).is("piece_id", null)
           .order("path_order", { ascending: true });
         setStandaloneGoals((sgData ?? []) as GoalRow[]);
+
+        // Load next lesson + active assignments for pre-lesson report
+        const lessonService = LessonService.getInstance(supabase);
+        const assignmentService = AssignmentService.getInstance(supabase);
+        const [lesson, activeAssignments] = await Promise.all([
+          lessonService.getLessonsForStudent(teacher?.id ?? "", id).then(ls => ls.find(l => l.status === "scheduled" && new Date(l.scheduled_at) > new Date()) ?? null),
+          assignmentService.getAssignmentsWithCompletions(teacher?.id ?? "", id),
+        ]);
+        setNextLesson(lesson ?? null);
+        setStudentAssignments(activeAssignments);
       } catch {
         setNotFound(true);
       } finally {
@@ -767,6 +781,69 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Upcoming lesson + pre-lesson report */}
+      <div style={{ display: "grid", gridTemplateColumns: nextLesson ? "1fr 1fr" : "1fr", gap: "0.75rem" }}>
+
+        {/* Next lesson */}
+        {nextLesson && (
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem 1.25rem" }}>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 0.625rem" }}>
+              Next Lesson
+            </p>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
+              {new Date(nextLesson.scheduled_at).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
+            </div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+              {new Date(nextLesson.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {nextLesson.duration_minutes} min
+            </div>
+            {nextLesson.lesson_notes && (
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.625rem", padding: "0.5rem 0.75rem", background: "var(--cream)", borderRadius: 3, fontStyle: "italic" }}>
+                Last lesson: {nextLesson.lesson_notes}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Active assignments (pre-lesson report) */}
+        {studentAssignments.length > 0 && (
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem 1.25rem" }}>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 0.625rem" }}>
+              This Week's Assignments
+              <span style={{ marginLeft: "0.5rem", fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: "0.6875rem" }}>
+                {studentAssignments.filter(a => a.completion).length}/{studentAssignments.length} complete
+              </span>
+            </p>
+            {studentAssignments.map(a => {
+              const RATING_COLORS: Record<string, string> = { struggling: "#dc2626", getting_there: "#d97706", nailed_it: "#16a34a" };
+              const RATING_EMOJI: Record<string, string> = { struggling: "😓", getting_there: "🙂", nailed_it: "🎉" };
+              return (
+                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                    background: a.completion ? "#16a34a" : "var(--border-strong)",
+                  }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {a.title}
+                    </div>
+                    {a.piece_title && (
+                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                        {a.piece_title}{a.focus ? ` · ${a.focus}` : ""}
+                      </div>
+                    )}
+                  </div>
+                  {a.completion?.self_rating && (
+                    <span style={{ fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", color: RATING_COLORS[a.completion.self_rating], fontWeight: 600, flexShrink: 0 }}>
+                      {RATING_EMOJI[a.completion.self_rating]}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Main layout */}

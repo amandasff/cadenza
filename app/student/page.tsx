@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useAuth } from "../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
-import type { GoalRow, PieceRow } from "../../lib/types";
+import { LessonService } from "../../lib/services/LessonService";
+import { AssignmentService } from "../../lib/services/AssignmentService";
+import type { GoalRow, PieceRow, LessonRow, AssignmentWithContext, SelfRating } from "../../lib/types";
+import { useRouter } from "next/navigation";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -79,9 +82,17 @@ function todayLabel() {
 export default function ThisWeek() {
   const { user } = useAuth();
   const student = user as Student;
+  const router = useRouter();
 
   const [goals, setGoals] = useState<GoalWithPiece[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nextLesson, setNextLesson] = useState<LessonRow | null>(null);
+  const [assignments, setAssignments] = useState<AssignmentWithContext[]>([]);
+  // Self-rating modal
+  const [ratingAssignment, setRatingAssignment] = useState<AssignmentWithContext | null>(null);
+  const [ratingValue, setRatingValue] = useState<SelfRating | null>(null);
+  const [ratingNote, setRatingNote] = useState("");
+  const [ratingSaving, setRatingSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!student?.id) return;
@@ -114,6 +125,16 @@ export default function ThisWeek() {
         ...g,
         piece: g.piece_id ? (piecesMap[g.piece_id] ?? null) : null,
       })));
+
+      // Load next lesson + assignments in parallel
+      const lessonService = LessonService.getInstance(supabase);
+      const assignmentService = AssignmentService.getInstance(supabase);
+      const [lesson, activeAssignments] = await Promise.all([
+        lessonService.getStudentNextLesson(student.id),
+        assignmentService.getActiveAssignments(student.id),
+      ]);
+      setNextLesson(lesson);
+      setAssignments(activeAssignments);
     } catch (err) {
       console.error("load error:", err);
     } finally {
@@ -122,6 +143,25 @@ export default function ThisWeek() {
   }, [student?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function handleCompleteAssignment() {
+    if (!ratingAssignment || !ratingValue) return;
+    setRatingSaving(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await AssignmentService.getInstance(supabase).completeAssignment(
+        ratingAssignment.id, student.id, ratingValue, ratingNote || undefined
+      );
+      setAssignments(prev => prev.filter(a => a.id !== ratingAssignment.id));
+      setRatingAssignment(null);
+      setRatingValue(null);
+      setRatingNote("");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRatingSaving(false);
+    }
+  }
 
   const grouped = groupGoals(goals);
 
@@ -161,6 +201,37 @@ export default function ThisWeek() {
         </Link>
       </div>
 
+      {/* Next Lesson widget */}
+      {nextLesson && (
+        <div style={{ padding: "0 1.5rem 0.75rem" }}>
+          <div style={{
+            background: "var(--white)", border: "1px solid var(--border)",
+            borderRadius: 4, padding: "0.875rem 1.125rem",
+            display: "flex", alignItems: "center", gap: "0.875rem",
+          }}>
+            <span style={{ fontSize: "1.125rem", flexShrink: 0 }}>🎵</span>
+            <div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                Next lesson
+              </div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>
+                {new Date(nextLesson.scheduled_at).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
+                {" at "}
+                {new Date(nextLesson.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {" · "}
+                {(() => {
+                  const diffMs = new Date(nextLesson.scheduled_at).getTime() - Date.now();
+                  const diffDays = Math.ceil(diffMs / 86400000);
+                  if (diffDays <= 0) return "Today";
+                  if (diffDays === 1) return "Tomorrow";
+                  return `in ${diffDays} days`;
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Date divider */}
       <div style={{ padding: "0.5rem 1.5rem 1.25rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -174,6 +245,89 @@ export default function ThisWeek() {
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
         </div>
       </div>
+
+      {/* Assignments this week */}
+      {assignments.length > 0 && (
+        <div style={{ padding: "0 1.5rem 1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.875rem" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--rose)", flexShrink: 0 }} />
+            <span style={{
+              fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem",
+              letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--charcoal)",
+            }}>
+              Assignments this week
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {assignments.map(a => {
+              const TYPE_COLORS: Record<string, string> = {
+                practice: "var(--rose)", listen: "var(--sky)", theory: "var(--butter)",
+                memorize: "var(--lavender)", record: "var(--sage)",
+              };
+              const TYPE_EMOJI: Record<string, string> = {
+                practice: "🎹", listen: "🎧", theory: "📖", memorize: "🧠", record: "🎙",
+              };
+              const color = TYPE_COLORS[a.type] ?? "var(--muted)";
+
+              return (
+                <div key={a.id} style={{
+                  background: "var(--white)", border: "1px solid var(--border)",
+                  borderRadius: 4, padding: "0.875rem 1rem",
+                  display: "flex", alignItems: "flex-start", gap: "0.875rem",
+                }}>
+                  {/* Type badge */}
+                  <span style={{
+                    fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.04em",
+                    textTransform: "uppercase", padding: "0.2rem 0.4rem", borderRadius: 2,
+                    background: color, color: "var(--white)", fontFamily: "Inter, sans-serif",
+                    flexShrink: 0, marginTop: "0.125rem",
+                  }}>
+                    {TYPE_EMOJI[a.type]} {a.type}
+                  </span>
+
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9rem", color: "var(--charcoal)" }}>
+                      {a.title}
+                    </div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.2rem" }}>
+                      {[
+                        a.piece_title,
+                        a.focus,
+                        a.target_minutes_per_day ? `${a.target_minutes_per_day} min/day` : null,
+                        a.due_date ? `Due ${new Date(a.due_date + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}` : null,
+                      ].filter(Boolean).join(" · ")}
+                    </div>
+                    {a.instructions && (
+                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem", fontStyle: "italic" }}>
+                        {a.instructions}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flexShrink: 0, alignItems: "flex-end" }}>
+                    {a.reference_audio_url && (
+                      <audio src={a.reference_audio_url} controls style={{ height: 28, maxWidth: 140 }} />
+                    )}
+                    <button
+                      onClick={() => { setRatingAssignment(a); setRatingValue(null); setRatingNote(""); }}
+                      style={{
+                        padding: "0.375rem 0.75rem", borderRadius: 3, border: "none",
+                        background: "var(--charcoal)", color: "var(--white)",
+                        fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Mark Complete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Notebook sections */}
       <div style={{ padding: "0 1.5rem 3rem", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -277,6 +431,10 @@ export default function ThisWeek() {
                                     marginBottom: "0.375rem",
                                     paddingLeft: "1rem",
                                     borderLeft: `2px solid ${section.color}`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: "0.5rem",
                                   }}>
                                     <div style={{
                                       fontFamily: "Cormorant Garamond, Georgia, serif",
@@ -284,12 +442,24 @@ export default function ThisWeek() {
                                       fontSize: "1rem",
                                       color: "var(--charcoal)",
                                       lineHeight: 1.2,
+                                      minWidth: 0,
                                     }}>
                                       {group.piece.title}
                                       {group.piece.composer && (
                                         <span style={{ fontWeight: 400, fontStyle: "italic" }}> — {group.piece.composer}</span>
                                       )}
                                     </div>
+                                    <button
+                                      onClick={() => router.push(`/student/practice?pieceId=${group.piece!.id}`)}
+                                      style={{
+                                        flexShrink: 0, background: "none", border: "none", cursor: "pointer",
+                                        fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500,
+                                        color: section.color, letterSpacing: "0.06em", textTransform: "uppercase",
+                                        padding: "0.125rem 0", whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      Practice →
+                                    </button>
                                   </div>
                                 )}
 
@@ -407,16 +577,27 @@ export default function ThisWeek() {
                           {bookGroup.pieces.map((group, gi) => (
                             <div key={gi}>
                               {group.piece && (
-                                <div style={{ marginBottom: "0.375rem", paddingLeft: "1rem", borderLeft: `2px solid ${meta.color}` }}>
+                                <div style={{ marginBottom: "0.375rem", paddingLeft: "1rem", borderLeft: `2px solid ${meta.color}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
                                   <div style={{
                                     fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600,
-                                    fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.2,
+                                    fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.2, minWidth: 0,
                                   }}>
                                     {group.piece.title}
                                     {group.piece.composer && (
                                       <span style={{ fontWeight: 400, fontStyle: "italic" }}> — {group.piece.composer}</span>
                                     )}
                                   </div>
+                                  <button
+                                    onClick={() => router.push(`/student/practice?pieceId=${group.piece!.id}`)}
+                                    style={{
+                                      flexShrink: 0, background: "none", border: "none", cursor: "pointer",
+                                      fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500,
+                                      color: meta.color, letterSpacing: "0.06em", textTransform: "uppercase",
+                                      padding: "0.125rem 0", whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    Practice →
+                                  </button>
                                 </div>
                               )}
                               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
@@ -476,6 +657,89 @@ export default function ThisWeek() {
           </>
         )}
       </div>
+
+      {/* Self-rating modal */}
+      {ratingAssignment && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 200, padding: "1rem",
+        }}>
+          <div style={{
+            background: "var(--white)", borderRadius: 8, width: "100%", maxWidth: 400,
+            padding: "1.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          }}>
+            <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "1.25rem", fontWeight: 600, color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
+              How did it go?
+            </h3>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.25rem" }}>
+              {ratingAssignment.title}
+            </p>
+
+            <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1.25rem" }}>
+              {(["struggling", "getting_there", "nailed_it"] as SelfRating[]).map(r => {
+                const config = { struggling: { emoji: "😓", label: "Still struggling" }, getting_there: { emoji: "🙂", label: "Getting there" }, nailed_it: { emoji: "🎉", label: "Nailed it!" } }[r];
+                const selected = ratingValue === r;
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setRatingValue(r)}
+                    style={{
+                      flex: 1, padding: "0.75rem 0.5rem", borderRadius: 4, cursor: "pointer",
+                      border: selected ? "2px solid var(--charcoal)" : "1px solid var(--border-strong)",
+                      background: selected ? "var(--cream)" : "var(--white)",
+                      fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: selected ? 600 : 400,
+                      color: "var(--charcoal)", textAlign: "center", transition: "all 0.12s",
+                    }}
+                  >
+                    <div style={{ fontSize: "1.5rem", marginBottom: "0.25rem" }}>{config.emoji}</div>
+                    {config.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <textarea
+              value={ratingNote}
+              onChange={e => setRatingNote(e.target.value)}
+              placeholder="Optional note for your teacher…"
+              rows={2}
+              style={{
+                width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)",
+                padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
+                background: "var(--white)", color: "var(--charcoal)", outline: "none",
+                boxSizing: "border-box", resize: "none", marginBottom: "1rem",
+              }}
+            />
+
+            <div style={{ display: "flex", gap: "0.625rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setRatingAssignment(null)}
+                style={{
+                  padding: "0.5rem 0.875rem", borderRadius: 3,
+                  border: "1px solid var(--border-strong)", background: "transparent",
+                  color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCompleteAssignment}
+                disabled={!ratingValue || ratingSaving}
+                style={{
+                  padding: "0.5rem 0.875rem", borderRadius: 3, border: "none",
+                  background: ratingValue ? "var(--charcoal)" : "var(--border)",
+                  color: "var(--white)", fontFamily: "Inter, sans-serif",
+                  fontWeight: 500, fontSize: "0.8125rem",
+                  cursor: ratingValue ? "pointer" : "not-allowed",
+                }}
+              >
+                {ratingSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

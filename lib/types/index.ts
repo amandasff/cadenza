@@ -61,6 +61,7 @@ export interface PracticeSessionRow {
   student_id: string;
   studio_id: string;
   goal_id: string | null;
+  piece_id: string | null;
   duration_seconds: number;
   notes: string | null;
   segments_json: PracticeSegment[] | null;
@@ -141,4 +142,78 @@ export interface ProgramRow {
   title: string;
   status: 'active' | 'completed';
   created_at: string;
+}
+
+// ============================================================
+// Lessons & Assignments
+// ============================================================
+
+export type LessonStatus = 'scheduled' | 'completed' | 'cancelled';
+export type AssignmentType = 'practice' | 'listen' | 'theory' | 'memorize' | 'record';
+export type AssignmentStatus = 'active' | 'completed' | 'reviewed';
+export type SelfRating = 'struggling' | 'getting_there' | 'nailed_it';
+
+export interface LessonRow {
+  id: string;
+  studio_id: string;
+  student_id: string;
+  teacher_id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  status: LessonStatus;
+  lesson_notes: string | null;
+  recurrence_id: string | null;
+  created_at: string;
+}
+
+export interface LessonRecurrenceRow {
+  id: string;
+  studio_id: string;
+  student_id: string;
+  teacher_id: string;
+  day_of_week: number;   // 0=Sunday
+  time_of_day: string;   // "HH:MM:SS"
+  duration_minutes: number;
+  active: boolean;
+  created_at: string;
+}
+
+export interface AssignmentRow {
+  id: string;
+  studio_id: string;
+  student_id: string;
+  teacher_id: string;
+  lesson_id: string | null;
+  piece_id: string | null;
+  title: string;
+  instructions: string | null;
+  focus: string | null;
+  type: AssignmentType;
+  target_minutes_per_day: number | null;
+  due_date: string | null;    // "YYYY-MM-DD"
+  status: AssignmentStatus;
+  reference_audio_url: string | null;
+  youtube_id: string | null;
+  created_at: string;
+}
+
+export interface AssignmentCompletionRow {
+  id: string;
+  assignment_id: string;
+  student_id: string;
+  self_rating: SelfRating | null;
+  student_notes: string | null;
+  completed_at: string;
+}
+
+export interface AssignmentWithContext extends AssignmentRow {
+  piece_title?: string | null;
+  completion?: AssignmentCompletionRow | null;
+}
+
+export interface LessonWithAssignments extends LessonRow {
+  student_name?: string;
+  student_avatar?: string | null;
+  assignments: AssignmentRow[];
+  completion_count: number;
 }
