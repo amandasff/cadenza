@@ -231,6 +231,18 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
 
   useEffect(() => { renderPage(); }, [renderPage]);
 
+  // For image-based sheet music: redraw annotations whenever the visible page changes.
+  // onLoad handles fresh downloads; this handles cached images where onLoad may have
+  // already fired before React attached the handler.
+  useEffect(() => {
+    if (sheetType !== "images") return;
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      redrawAnnotations();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageIndex, imageUrls, sheetType]);
+
   // ── Annotations: redraw ─────────────────────────────────────────────────────
 
   function redrawAnnotations() {

@@ -80,6 +80,12 @@ const BADGES = [
   { id: "elite",         icon: "🎹", name: "Elite",              desc: "Earn 5,000 points",               unlocked: (s: BadgeStats) => s.totalPoints >= 5000 },
 ];
 
+// ── Date helpers ──────────────────────────────────────────────────────────────
+// Always use LOCAL dates so the calendar and streak match what the student sees.
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // ── Calendar helpers ──────────────────────────────────────────────────────────
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -172,8 +178,8 @@ export default function Rewards() {
   // Level
   const { current: lvl, next: nextLvl, progress: lvlProgress } = getLevel(totalPoints);
 
-  // Streak multiplier
-  const { mult, label: multLabel } = streakMultiplier(streakDays);
+  // Streak multiplier (based on effective streak)
+  const { mult, label: multLabel } = streakMultiplier(effectiveStreak);
 
   // This week
   const weekAgo = new Date();
@@ -182,11 +188,11 @@ export default function Rewards() {
   const weekMinutes  = weekSessions.reduce((sum, s) => sum + Math.round(s.duration_seconds / 60), 0);
   const weekPtsEst   = Math.round(weekMinutes * mult) + weekSessions.length * 10; // approx (includes daily bonuses)
 
-  // Badges
+  // Badges (use effective streak so badges don't show as earned when streak lapsed)
   const badgeStats: BadgeStats = {
     sessions: sessions.length,
     totalMinutes,
-    streakDays,
+    streakDays: effectiveStreak,
     totalPoints,
     completedGoals: completedGoals.length,
     completedAssignments,
@@ -194,8 +200,18 @@ export default function Rewards() {
   const badges = BADGES.map(b => ({ ...b, earned: b.unlocked(badgeStats) }));
   const earnedCount = badges.filter(b => b.earned).length;
 
-  // Calendar
-  const practicedDays = new Set(sessions.map(s => s.created_at.slice(0, 10)));
+  // Effective streak — the stored streak_days value only changes when a session is logged,
+  // so it can show stale data after a student misses a day. Calculate what the streak
+  // should actually display based on the last session's local date.
+  const lastSessionDate = sessions.length > 0 ? toLocalDateStr(new Date(sessions[0].created_at)) : null;
+  const todayLocal = toLocalDateStr(new Date());
+  const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayLocal = toLocalDateStr(yesterdayDate);
+  const streakIsActive = lastSessionDate === todayLocal || lastSessionDate === yesterdayLocal;
+  const effectiveStreak = streakIsActive ? streakDays : 0;
+
+  // Calendar — use local dates so sessions show on the day the student actually practiced
+  const practicedDays = new Set(sessions.map(s => toLocalDateStr(new Date(s.created_at))));
   const today = new Date();
   const isCurrentMonth =
     calendarDate.getFullYear() === today.getFullYear() &&
@@ -275,10 +291,14 @@ export default function Rewards() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "0.5rem" }}>
           {[
             {
-              value: String(streakDays),
+              value: String(effectiveStreak),
               label: "Day streak",
-              sub: mult > 1 ? `${multLabel} multiplier` : undefined,
-              subColor: "var(--sage)",
+              sub: effectiveStreak > 0 && lastSessionDate === yesterdayLocal
+                ? "Practice today!"
+                : mult > 1 ? `${multLabel} pts bonus` : undefined,
+              subColor: effectiveStreak > 0 && lastSessionDate === yesterdayLocal
+                ? "var(--peach)"
+                : "var(--sage)",
             },
             {
               value: String(sessions.length),
@@ -351,7 +371,7 @@ export default function Rewards() {
             </div>
             {mult > 1 && (
               <div style={{ marginTop: "0.75rem", padding: "0.5rem 0.75rem", background: "var(--cream-deep)", borderRadius: 3, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>
-                🔥 {streakDays}-day streak = <strong>{multLabel} multiplier</strong> — practice points are supercharged right now
+                🔥 {effectiveStreak}-day streak = <strong>{multLabel} multiplier</strong> — practice points are supercharged right now
               </div>
             )}
           </div>

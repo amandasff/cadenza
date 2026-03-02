@@ -41,11 +41,16 @@ export class PracticeService {
 
     if (error) throw error;
 
-    // UTC date strings for streak + daily-bonus logic
-    const todayStr = new Date().toISOString().slice(0, 10);
+    // Local date strings for streak + daily-bonus logic.
+    // Using local dates so "today" and "yesterday" match the student's timezone —
+    // e.g. two sessions at 8pm and 11pm on the same local day count as one day.
+    function toLocalDateStr(d: Date): string {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    const todayStr = toLocalDateStr(new Date());
     const yDate = new Date();
-    yDate.setUTCDate(yDate.getUTCDate() - 1);
-    const yesterdayStr = yDate.toISOString().slice(0, 10);
+    yDate.setDate(yDate.getDate() - 1);
+    const yesterdayStr = toLocalDateStr(yDate);
 
     // Most recent session BEFORE this one
     const { data: prevSessions } = await this.supabase
@@ -56,7 +61,9 @@ export class PracticeService {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    const lastDate = prevSessions?.[0]?.created_at?.slice(0, 10) ?? null;
+    const lastDate = prevSessions?.[0]?.created_at
+      ? toLocalDateStr(new Date(prevSessions[0].created_at))
+      : null;
 
     // Fetch current profile (streak + points)
     const { data: profile, error: profileFetchError } = await this.supabase
