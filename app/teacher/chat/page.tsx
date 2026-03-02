@@ -64,7 +64,7 @@ export default function TeacherChat() {
     const supabase = getSupabaseBrowserClient();
     const service = ChatService.getInstance(supabase);
 
-    const onInsert = (msg: MessageRow) => setMessages(p => [...p, msg]);
+    const onInsert = (msg: MessageRow) => setMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg]);
     const onUpdate = (msg: MessageRow) => setMessages(p => p.map(m => m.id === msg.id ? msg : m));
     const onDelete = (id: string) => setMessages(p => p.filter(m => m.id !== id));
 
@@ -87,7 +87,20 @@ export default function TeacherChat() {
         .catch(() => setLoadingMessages(false));
       unsub = service.subscribeToPrivateThread(teacher.studioId, teacher.id, selectedStudent.id, onInsert, onUpdate, onDelete);
     }
-    return unsub;
+    const pollInterval = setInterval(async () => {
+      try {
+        const fresh = selectedStudent === null
+          ? await service.getAnnouncements(teacher.studioId)
+          : await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id);
+        setMessages(prev => {
+          const ids = new Set(prev.map(m => m.id));
+          const added = (fresh as MessageRow[]).filter(m => !ids.has(m.id));
+          return added.length ? [...prev, ...added] : prev;
+        });
+      } catch { /* ignore */ }
+    }, 3000);
+
+    return () => { unsub(); clearInterval(pollInterval); };
   }, [teacher?.studioId, teacher?.id, selectedStudent]);
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
@@ -100,11 +113,13 @@ export default function TeacherChat() {
     try {
       const supabase = getSupabaseBrowserClient();
       const service = ChatService.getInstance(supabase);
+      let msg: MessageRow;
       if (selectedStudent === null) {
-        await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, text);
+        msg = await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, text);
       } else {
-        await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, text);
+        msg = await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, text);
       }
+      setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
     } catch {
       setInput(text);
     } finally {

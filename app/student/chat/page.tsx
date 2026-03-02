@@ -68,11 +68,21 @@ export default function StudentChat() {
 
     const unsubAnn = chatService.subscribeToAnnouncements(
       student.studioId,
-      msg => setAnnouncements(p => [...p, msg]),
+      msg => setAnnouncements(p => p.some(m => m.id === msg.id) ? p : [...p, msg]),
       msg => setAnnouncements(p => p.map(m => m.id === msg.id ? msg : m)),
       id  => setAnnouncements(p => p.filter(m => m.id !== id))
     );
-    return unsubAnn;
+    const pollAnn = setInterval(async () => {
+      try {
+        const fresh = await chatService.getAnnouncements(student.studioId!);
+        setAnnouncements(prev => {
+          const ids = new Set(prev.map(m => m.id));
+          const added = fresh.filter((m: MessageRow) => !ids.has(m.id));
+          return added.length ? [...prev, ...added] : prev;
+        });
+      } catch { /* ignore */ }
+    }, 3000);
+    return () => { unsubAnn(); clearInterval(pollAnn); };
   }, [student?.studioId, student?.id]);
 
   useEffect(() => {
@@ -81,11 +91,21 @@ export default function StudentChat() {
     const chatService = ChatService.getInstance(supabase);
     const unsubPriv = chatService.subscribeToPrivateThread(
       student.studioId, student.id, teacherId,
-      msg => setPrivateMessages(p => [...p, msg]),
+      msg => setPrivateMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg]),
       msg => setPrivateMessages(p => p.map(m => m.id === msg.id ? msg : m)),
       id  => setPrivateMessages(p => p.filter(m => m.id !== id))
     );
-    return unsubPriv;
+    const pollPriv = setInterval(async () => {
+      try {
+        const fresh = await chatService.getPrivateThread(student.studioId!, student.id, teacherId);
+        setPrivateMessages(prev => {
+          const ids = new Set(prev.map(m => m.id));
+          const added = fresh.filter((m: MessageRow) => !ids.has(m.id));
+          return added.length ? [...prev, ...added] : prev;
+        });
+      } catch { /* ignore */ }
+    }, 3000);
+    return () => { unsubPriv(); clearInterval(pollPriv); };
   }, [student?.studioId, student?.id, teacherId]);
 
   useEffect(() => { scrollToBottom(); }, [announcements, privateMessages, tab, scrollToBottom]);
@@ -97,7 +117,8 @@ export default function StudentChat() {
     setSending(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      await ChatService.getInstance(supabase).sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
+      const msg = await ChatService.getInstance(supabase).sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
+      setPrivateMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg]);
       setTab("private");
     } catch {
       setInput(text);
