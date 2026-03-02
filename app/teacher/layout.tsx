@@ -24,6 +24,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -54,6 +55,35 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         }
       });
   }, [(user as Teacher | null)?.id]);
+
+  // Unread chat badge
+  useEffect(() => {
+    const teacher = user as Teacher | null;
+    if (!teacher?.id || !teacher?.studioId) return;
+
+    if (path.startsWith("/teacher/chat")) {
+      localStorage.setItem(`chat_last_read_${teacher.id}`, new Date().toISOString());
+      setHasUnread(false);
+      return;
+    }
+
+    const checkUnread = async () => {
+      const lastRead = localStorage.getItem(`chat_last_read_${teacher.id}`) ?? new Date(0).toISOString();
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("studio_id", teacher.studioId!)
+        .neq("sender_id", teacher.id)
+        .gt("created_at", lastRead)
+        .limit(1);
+      setHasUnread((data?.length ?? 0) > 0);
+    };
+
+    checkUnread().catch(() => {});
+    const interval = setInterval(() => checkUnread().catch(() => {}), 15000);
+    return () => clearInterval(interval);
+  }, [user, path]);
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -130,6 +160,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         <div className="teacher-nav-tabs">
           {tabs.map(t => {
             const active = t.href === "/teacher" ? path === "/teacher" : path.startsWith(t.href);
+            const showDot = t.href === "/teacher/chat" && hasUnread && !active;
             return (
               <Link key={t.href} href={t.href} style={{
                 padding: "1rem 0.875rem",
@@ -142,8 +173,15 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 transition: "color 0.15s",
                 whiteSpace: "nowrap",
                 letterSpacing: "0.005em",
+                position: "relative",
               }}>
                 {t.label}
+                {showDot && (
+                  <span style={{
+                    position: "absolute", top: "0.625rem", right: "0.125rem",
+                    width: 6, height: 6, borderRadius: "50%", background: "#e85d4a",
+                  }} />
+                )}
               </Link>
             );
           })}

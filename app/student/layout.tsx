@@ -26,6 +26,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,6 +57,35 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         }
       });
   }, [(user as Student | null)?.id]);
+
+  // Unread chat badge
+  useEffect(() => {
+    const student = user as Student | null;
+    if (!student?.id || !student?.studioId) return;
+
+    if (path.startsWith("/student/chat")) {
+      localStorage.setItem(`chat_last_read_${student.id}`, new Date().toISOString());
+      setHasUnread(false);
+      return;
+    }
+
+    const checkUnread = async () => {
+      const lastRead = localStorage.getItem(`chat_last_read_${student.id}`) ?? new Date(0).toISOString();
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("studio_id", student.studioId!)
+        .neq("sender_id", student.id)
+        .gt("created_at", lastRead)
+        .limit(1);
+      setHasUnread((data?.length ?? 0) > 0);
+    };
+
+    checkUnread().catch(() => {});
+    const interval = setInterval(() => checkUnread().catch(() => {}), 15000);
+    return () => clearInterval(interval);
+  }, [user, path]);
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -235,6 +265,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
           {tabs.map(t => {
             const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
+            const showDot = t.href === "/student/chat" && hasUnread && !active;
             return (
               <Link key={t.href} href={t.href} style={{
                 display: "flex", alignItems: "center",
@@ -247,6 +278,12 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 transition: "all 0.15s", letterSpacing: "0.005em",
               }}>
                 {t.label}
+                {showDot && (
+                  <span style={{
+                    marginLeft: "auto", width: 6, height: 6,
+                    borderRadius: "50%", background: "#e85d4a", flexShrink: 0,
+                  }} />
+                )}
               </Link>
             );
           })}
@@ -292,6 +329,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       }}>
         {tabs.map(t => {
           const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
+          const showDot = t.href === "/student/chat" && hasUnread && !active;
           return (
             <Link key={t.href} href={t.href} style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
@@ -309,8 +347,15 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 fontSize: "0.5625rem", fontFamily: "Inter, sans-serif",
                 fontWeight: active ? 600 : 400, letterSpacing: "0.07em",
                 textTransform: "uppercase", marginTop: "0.125rem",
+                position: "relative",
               }}>
                 {t.label}
+                {showDot && (
+                  <span style={{
+                    position: "absolute", top: -2, right: -7,
+                    width: 5, height: 5, borderRadius: "50%", background: "#e85d4a",
+                  }} />
+                )}
               </span>
             </Link>
           );
