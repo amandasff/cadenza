@@ -37,26 +37,21 @@ export default function Home() {
       {/* Content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "6rem 2rem 5rem", maxWidth: 760, margin: "0 auto", width: "100%" }}>
 
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "1.5rem", textAlign: "center" }}>
-          Professional music education
-        </div>
-
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "clamp(2.5rem, 7vw, 4.5rem)", color: "var(--charcoal)", marginBottom: "1.5rem", lineHeight: 1.05, letterSpacing: "-0.015em", textAlign: "center" }}>
-          The platform that connects<br />
-          teachers and students<br />
-          <em style={{ color: "var(--peach)" }}>between lessons.</em>
+          Your studio,<br />
+          <em style={{ color: "var(--peach)" }}>all in one place.</em>
         </h1>
 
         <p style={{ color: "var(--muted)", fontSize: "1rem", maxWidth: 480, marginBottom: "3rem", lineHeight: 1.7, fontFamily: "Inter, sans-serif", fontWeight: 400, textAlign: "center" }}>
-          Cadenza gives music teachers a structured way to set goals, review practice sessions, and stay in touch with students.
+          A friendly space for teachers and students to share goals, track practice, and stay connected between lessons.
         </p>
 
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center", marginBottom: "1rem" }}>
           <Link href="/auth/signup?role=teacher" style={{ background: "var(--charcoal)", color: "var(--white)", padding: "0.875rem 2rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", letterSpacing: "0.01em" }}>
-            For Teachers
+            I&apos;m a Teacher
           </Link>
           <Link href="/auth/signup?role=student" style={{ background: "transparent", color: "var(--charcoal)", padding: "0.875rem 2rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", border: "1px solid var(--border-strong)", letterSpacing: "0.01em" }}>
-            For Students
+            I&apos;m a Student
           </Link>
         </div>
 
@@ -105,14 +100,11 @@ export default function Home() {
         {/* Bottom CTA */}
         <div style={{ marginTop: "5rem", textAlign: "center" }}>
           <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "var(--charcoal)", marginBottom: "1.5rem", letterSpacing: "-0.01em", lineHeight: 1.15 }}>
-            Built for serious teachers<br />and ambitious students.
+            A warm place to grow as a musician.
           </h2>
           <Link href="/auth/signup" style={{ background: "var(--charcoal)", color: "var(--white)", padding: "0.875rem 2.25rem", borderRadius: 3, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", textDecoration: "none", letterSpacing: "0.01em", display: "inline-block" }}>
-            Start for free
+            Get Started
           </Link>
-          <p style={{ marginTop: "1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.02em" }}>
-            Free during beta · No credit card required
-          </p>
         </div>
 
         {/* Footer */}
