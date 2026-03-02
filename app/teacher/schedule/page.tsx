@@ -147,20 +147,14 @@ export default function SchedulePage() {
   const loadData = useCallback(async () => {
     if (!teacher?.studioId) return;
     setLoading(true);
+    const supabase = getSupabaseBrowserClient();
+
+    // Load students + pieces independently — works even if lessons table doesn't exist yet
     try {
-      const supabase = getSupabaseBrowserClient();
-      const lessonService = LessonService.getInstance(supabase);
       const studioService = StudioService.getInstance(supabase);
-
-      const [lessonData, studentData] = await Promise.all([
-        lessonService.getUpcomingLessonsWithContext(teacher.id),
-        studioService.getStudents(teacher.studioId),
-      ]);
-
-      setLessons(lessonData);
+      const studentData = await studioService.getStudents(teacher.studioId!);
       setStudents(studentData);
 
-      // Load all pieces for all students
       const pieceService = PieceService.getInstance(supabase);
       const allPieces: typeof pieces = [];
       for (const s of studentData) {
@@ -168,15 +162,23 @@ export default function SchedulePage() {
         for (const p of sp) allPieces.push({ id: p.id, title: p.title, student_id: p.student_id });
       }
       setPieces(allPieces);
+    } catch (err) {
+      console.error("Failed to load students:", err);
+    }
 
-      // Init note drafts from existing lesson notes
+    // Load lessons separately — requires lessons table to exist in Supabase
+    try {
+      const lessonService = LessonService.getInstance(supabase);
+      const lessonData = await lessonService.getUpcomingLessonsWithContext(teacher.id);
+      setLessons(lessonData);
+
       const noteDraftInit: Record<string, string> = {};
       for (const l of lessonData) {
         if (l.lesson_notes) noteDraftInit[l.id] = l.lesson_notes;
       }
       setNoteDrafts(noteDraftInit);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load lessons — run supabase/lessons.sql in your Supabase dashboard:", err);
     } finally {
       setLoading(false);
     }

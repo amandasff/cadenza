@@ -125,8 +125,15 @@ export default function ThisWeek() {
         ...g,
         piece: g.piece_id ? (piecesMap[g.piece_id] ?? null) : null,
       })));
+    } catch (err) {
+      console.error("load error:", err);
+    } finally {
+      setLoading(false);
+    }
 
-      // Load next lesson + assignments in parallel
+    // Load lessons + assignments separately — requires lessons SQL to be run in Supabase
+    try {
+      const supabase = getSupabaseBrowserClient();
       const lessonService = LessonService.getInstance(supabase);
       const assignmentService = AssignmentService.getInstance(supabase);
       const [lesson, activeAssignments] = await Promise.all([
@@ -135,8 +142,8 @@ export default function ThisWeek() {
       ]);
       setNextLesson(lesson);
       setAssignments(activeAssignments);
-    } catch (err) {
-      console.error("load error:", err);
+    } catch {
+      // Silently ignore — lessons table may not exist yet
     } finally {
       setLoading(false);
     }
