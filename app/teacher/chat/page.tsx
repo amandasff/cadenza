@@ -90,8 +90,8 @@ export default function TeacherChat() {
     const pollInterval = setInterval(async () => {
       try {
         const fresh = selectedStudent === null
-          ? await service.getAnnouncements(teacher.studioId)
-          : await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id);
+          ? await service.getAnnouncements(teacher.studioId!)
+          : await service.getPrivateThread(teacher.studioId!, teacher.id, selectedStudent.id);
         setMessages(prev => {
           const ids = new Set(prev.map(m => m.id));
           const added = (fresh as MessageRow[]).filter(m => !ids.has(m.id));
