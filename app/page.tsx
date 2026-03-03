@@ -1,7 +1,27 @@
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) return;
+      // Already logged in — find their role and go straight to their dashboard
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+      if (profile?.role === "teacher") router.replace("/teacher");
+      else router.replace("/student");
+    });
+  }, [router]);
+
   return (
     <div style={{ minHeight: "100dvh", background: "#FDFCFA", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", color: "#2C2824" }}>
 
