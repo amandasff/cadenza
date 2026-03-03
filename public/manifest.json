@@ -1,0 +1,26 @@
+{
+  "name": "Cadenza",
+  "short_name": "Cadenza",
+  "description": "Make practice fun for music learners",
+  "start_url": "/student",
+  "display": "standalone",
+  "background_color": "#F8F6F2",
+  "theme_color": "#2C2824",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["education", "music"],
+  "lang": "en"
+}
