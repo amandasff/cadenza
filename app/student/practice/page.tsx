@@ -82,6 +82,7 @@ function PracticeInner() {
   const [wentWell, setWentWell] = useState("");
   const [focusNext, setFocusNext] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -286,8 +287,12 @@ function PracticeInner() {
 
   // ── Submit ──
   async function handleSubmit() {
-    if (!student?.studioId) return;
+    if (!student?.studioId) {
+      setSaveError("You're not connected to a studio. Please sign out and rejoin.");
+      return;
+    }
     setSaving(true);
+    setSaveError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const practiceService = PracticeService.getInstance(supabase);
@@ -360,7 +365,9 @@ function PracticeInner() {
 
       router.replace("/student");
     } catch (err) {
-      console.error("handleSubmit error:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("handleSubmit error:", msg);
+      setSaveError(msg);
       setSaving(false);
     }
   }
@@ -746,6 +753,12 @@ function PracticeInner() {
               <textarea value={portfolioDesc} onChange={e => setPortfolioDesc(e.target.value)} placeholder="Notes about this recording… (optional)" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none", minHeight: 52 }} />
             </div>
           )}
+        </div>
+      )}
+
+      {saveError && (
+        <div style={{ width: "100%", maxWidth: 320, marginBottom: "0.75rem", background: "#fff1f0", border: "1px solid #ffccc7", borderRadius: 6, padding: "0.75rem 1rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b", textAlign: "left", lineHeight: 1.5 }}>
+          <strong>Could not save:</strong> {saveError}
         </div>
       )}
 
