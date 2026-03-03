@@ -11,10 +11,7 @@ import { Student } from "../../../lib/models/Student";
 import type { PracticeSegment } from "../../../lib/types";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
-type PracticeStep = "select" | "practice" | "reflect";
+type PracticeStep = "practice" | "reflect";
 type SegmentWithId = PracticeSegment & { id: string };
 
 const AREAS: Record<string, { label: string }> = {
@@ -40,27 +37,28 @@ const CATEGORY_LABELS: Record<string, string> = {
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-// ─────────────────────────────────────────────
-// Inner component (needs useSearchParams)
-// ─────────────────────────────────────────────
 function PracticeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const student = user as Student;
 
-  const [step, setStep] = useState<PracticeStep>("select");
+  const [step, setStep] = useState<PracticeStep>("practice");
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
   const [loadingPieces, setLoadingPieces] = useState(true);
   const [selectedPieceId, setSelectedPieceId] = useState<string>("");
-  const [previewYouTubeId, setPreviewYouTubeId] = useState<string | null>(null);
   const [teacherId, setTeacherId] = useState<string | null>(null);
 
-  // Practice step state
+  // "Working on" bottom sheet
+  const [showWorkingOn, setShowWorkingOn] = useState(false);
+  const [practiceYouTubeId, setPracticeYouTubeId] = useState<string | null>(null);
+  // Metronome panel open
+  const [showMetronome, setShowMetronome] = useState(false);
+
+  // Practice state
   const [recording, setRecording] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [practiceYouTubeId, setPracticeYouTubeId] = useState<string | null>(null);
 
   const [bpm, setBpm] = useState(72);
   const [metronome, setMetronome] = useState(false);
@@ -79,7 +77,7 @@ function PracticeInner() {
   const [portfolioTitle, setPortfolioTitle] = useState("");
   const [portfolioDesc, setPortfolioDesc] = useState("");
 
-  // Reflect step state
+  // Reflect state
   const [mood, setMood] = useState<string>("");
   const [wentWell, setWentWell] = useState("");
   const [focusNext, setFocusNext] = useState("");
@@ -122,10 +120,7 @@ function PracticeInner() {
       if (found) {
         setSelectedPieceId(pid);
         const primary = found.recordings.find(r => r.is_primary) ?? found.recordings[0];
-        setPreviewYouTubeId(primary?.youtube_id ?? null);
-        setStep("practice");
-        setHasStarted(false);
-        setElapsed(0);
+        setPracticeYouTubeId(primary?.youtube_id ?? null);
       }
     }
   }, [searchParams, pieces]);
@@ -311,7 +306,6 @@ function PracticeInner() {
         }
       }
 
-      // Build notes string with mood prefix
       const moodData = MOODS.find(m => m.key === mood);
       const notesParts: string[] = [];
       if (moodData) notesParts.push(`[mood:${mood}]`);
@@ -371,233 +365,50 @@ function PracticeInner() {
   }
 
   const selectedPiece = pieces.find(p => p.id === selectedPieceId) ?? null;
+  const grouped = CATEGORY_ORDER
+    .map(cat => ({ cat, label: CATEGORY_LABELS[cat], items: pieces.filter(p => p.category === cat) }))
+    .filter(g => g.items.length > 0);
 
   // ──────────────────────────────────────────────────────────────────
-  // STEP 1: SELECT PIECE
-  // ──────────────────────────────────────────────────────────────────
-  if (step === "select") {
-    const grouped = CATEGORY_ORDER
-      .map(cat => ({ cat, label: CATEGORY_LABELS[cat], items: pieces.filter(p => p.category === cat) }))
-      .filter(g => g.items.length > 0);
-
-    return (
-      <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", flexDirection: "column" }}>
-        {/* Header */}
-        <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
-          <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", flex: 1 }}>Practice Session</span>
-        </div>
-
-        <div style={{ flex: 1, padding: "1.5rem 1.25rem", display: "flex", flexDirection: "column", gap: "1.25rem", overflowY: "auto" }}>
-          {/* Step label */}
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-            Step 1 of 3 — Select piece
-          </div>
-
-          {/* Piece selector */}
-          <div style={{ background: "var(--white)", borderRadius: 4, border: "1px solid var(--border)", padding: "1rem 1.25rem" }}>
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.75rem" }}>
-              What are you practicing today?
-            </div>
-            {loadingPieces ? (
-              <div className="skeleton" style={{ height: 36, borderRadius: 3 }} />
-            ) : (
-              <select
-                value={selectedPieceId}
-                onChange={e => {
-                  const pid = e.target.value;
-                  setSelectedPieceId(pid);
-                  if (pid) {
-                    const p = pieces.find(x => x.id === pid);
-                    const primary = p?.recordings.find(r => r.is_primary) ?? p?.recordings[0];
-                    setPreviewYouTubeId(primary?.youtube_id ?? null);
-                  } else {
-                    setPreviewYouTubeId(null);
-                  }
-                }}
-                style={{
-                  width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)",
-                  padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
-                  background: "var(--cream)", color: "var(--charcoal)", outline: "none",
-                }}
-              >
-                <option value="">— choose a piece —</option>
-                {grouped.map(g => (
-                  <optgroup key={g.cat} label={g.label}>
-                    {g.items.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}{p.composer ? ` — ${p.composer}` : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Preview recording */}
-          {selectedPiece && (
-            <div style={{ background: "var(--white)", borderRadius: 4, border: "1px solid var(--border)", padding: "1rem 1.25rem" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>
-                Reference Recording
-              </div>
-              {selectedPiece.recordings.length === 0 ? (
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", fontStyle: "italic" }}>
-                  No recordings attached to this piece yet.
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: previewYouTubeId ? "0.75rem" : 0 }}>
-                    {selectedPiece.recordings.map(r => (
-                      <button
-                        key={r.id}
-                        onClick={() => setPreviewYouTubeId(previewYouTubeId === r.youtube_id ? null : r.youtube_id)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: "0.375rem",
-                          padding: "0.3rem 0.625rem", borderRadius: 2, cursor: "pointer",
-                          fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 500,
-                          background: previewYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--cream)",
-                          color: previewYouTubeId === r.youtube_id ? "var(--white)" : "var(--charcoal)",
-                          border: `1px solid ${previewYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--border)"}`,
-                          transition: "all 0.15s",
-                        }}
-                      >
-                        {r.is_primary ? "★ " : ""}{r.title.length > 30 ? r.title.slice(0, 30) + "…" : r.title}
-                      </button>
-                    ))}
-                  </div>
-                  {previewYouTubeId && (
-                    <div style={{ borderRadius: 3, overflow: "hidden", aspectRatio: "16/9" }}>
-                      <iframe
-                        key={previewYouTubeId}
-                        src={`https://www.youtube.com/embed/${previewYouTubeId}?autoplay=1`}
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                        style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* CTA */}
-        <div style={{ padding: "1rem 1.25rem 2rem" }}>
-          <button
-            disabled={!selectedPieceId}
-            onClick={() => { setStep("practice"); setHasStarted(false); setElapsed(0); }}
-            className="btn btn-primary"
-            style={{ width: "100%", padding: "0.875rem", fontSize: "0.9375rem", opacity: selectedPieceId ? 1 : 0.4 }}
-          >
-            Start Practicing →
-          </button>
-          <button
-            onClick={() => { setSelectedPieceId(""); setStep("practice"); setHasStarted(false); setElapsed(0); }}
-            style={{
-              marginTop: "0.625rem", width: "100%", padding: "0.625rem",
-              background: "none", border: "none", cursor: "pointer",
-              fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)",
-            }}
-          >
-            Practice without selecting a piece
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // STEP 2: PRACTICE
+  // PRACTICE
   // ──────────────────────────────────────────────────────────────────
   if (step === "practice") {
     return (
       <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", flexDirection: "column" }}>
+
         {/* Header */}
         <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <button onClick={() => { setStep("select"); setMetronome(false); }} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
+          <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
           <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {selectedPiece ? selectedPiece.title : "Practice Session"}
           </span>
-          <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-            {selectedPiece?.sheet_music_url && (
-              <button
-                onClick={() => window.open(selectedPiece.sheet_music_url!, "_blank")}
-                style={{
-                  background: "none", border: "1px solid var(--border)", borderRadius: 2,
-                  padding: "0.2rem 0.625rem", cursor: "pointer",
-                  fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500,
-                  color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase",
-                }}
-              >
-                📄 Sheet Music
-              </button>
-            )}
-          </div>
+          {selectedPiece?.sheet_music_url && (
+            <button
+              onClick={() => window.open(selectedPiece.sheet_music_url!, "_blank")}
+              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.2rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}
+            >
+              📄 Sheet
+            </button>
+          )}
         </div>
 
-        <div style={{ flex: 1, padding: "1.5rem 1.25rem", display: "flex", flexDirection: "column", gap: "1.25rem", alignItems: "center", overflowY: "auto" }}>
-          {/* Step label */}
-          <div style={{ width: "100%", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-            Step 2 of 3 — Practice
-          </div>
-
-          {/* Inline listen strip */}
-          {selectedPiece && selectedPiece.recordings.length > 0 && (
-            <div style={{ width: "100%", background: "var(--white)", borderRadius: 4, border: "1px solid var(--border)", padding: "0.75rem 1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: practiceYouTubeId ? "0.625rem" : 0 }}>
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, color: "var(--charcoal)" }}>
-                  Reference Recording
-                </span>
-                <div style={{ display: "flex", gap: "0.375rem" }}>
-                  {selectedPiece.recordings.map(r => (
-                    <button
-                      key={r.id}
-                      onClick={() => setPracticeYouTubeId(practiceYouTubeId === r.youtube_id ? null : r.youtube_id)}
-                      style={{
-                        padding: "0.2rem 0.5rem", borderRadius: 2, cursor: "pointer",
-                        fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500,
-                        letterSpacing: "0.04em", textTransform: "uppercase",
-                        background: practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--cream)",
-                        color: practiceYouTubeId === r.youtube_id ? "var(--white)" : "var(--muted)",
-                        border: `1px solid ${practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--border)"}`,
-                        transition: "all 0.12s",
-                      }}
-                    >
-                      {practiceYouTubeId === r.youtube_id ? "▶ Playing" : (r.is_primary ? "★ Listen" : "▶")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {practiceYouTubeId && (
-                <div style={{ borderRadius: 3, overflow: "hidden", aspectRatio: "16/9" }}>
-                  <iframe
-                    key={practiceYouTubeId}
-                    src={`https://www.youtube.com/embed/${practiceYouTubeId}?autoplay=1`}
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                    style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+        {/* Main practice area */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.25rem 1.5rem", gap: "1.5rem" }}>
 
           {/* Timer */}
-          <div style={{ textAlign: "center", paddingTop: "0.25rem" }}>
-            <div className="timer-display" style={{ color: recording ? "var(--charcoal)" : "var(--muted)", transition: "color 0.3s" }}>
+          <div style={{ textAlign: "center" }}>
+            <div className="timer-display" style={{ color: recording ? "var(--charcoal)" : "var(--muted)", transition: "color 0.3s", fontSize: "clamp(3.5rem, 14vw, 5rem)", fontWeight: 200, letterSpacing: "-0.03em", fontFamily: "Inter, sans-serif" }}>
               {fmt(elapsed)}
             </div>
-            <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.375rem", fontFamily: "Inter, sans-serif", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-              {recording ? "Recording" : hasStarted ? "Paused" : "Ready"}
+            <div style={{ fontSize: "0.75rem", color: recording ? "#3D6B55" : "var(--muted)", marginTop: "0.5rem", fontFamily: "Inter, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500 }}>
+              {recording ? "● Recording" : hasStarted ? "Paused" : "Ready to play"}
             </div>
           </div>
 
           {/* Waveform */}
-          <div style={{ width: "100%", height: 64, background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ width: "100%", maxWidth: 360, height: 56, background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
             {recording ? (
-              <canvas ref={canvasRef} width={360} height={64} style={{ width: "100%", height: "100%", display: "block" }} />
+              <canvas ref={canvasRef} width={360} height={56} style={{ width: "100%", height: "100%", display: "block" }} />
             ) : (
               <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", gap: 2, padding: "0 1rem", boxSizing: "border-box" }}>
                 {Array.from({ length: 40 }).map((_, i) => (
@@ -607,134 +418,278 @@ function PracticeInner() {
             )}
           </div>
 
-          {/* Segments */}
-          {hasStarted && (
-            <div style={{ width: "100%", background: "var(--white)", borderRadius: 3, border: "1px solid var(--border)", overflow: "hidden" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 1rem", borderBottom: segments.length > 0 || showAddSeg ? "1px solid var(--border)" : "none" }}>
-                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Segments {segments.length > 0 && `(${segments.length})`}</span>
-                {!showAddSeg && (
-                  <button onClick={() => setShowAddSeg(true)} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.2rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)" }}>
-                    + Add
-                  </button>
+          {/* Controls */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", alignItems: "center" }}>
+            {/* Pause (only while recording) */}
+            {recording && (
+              <button onClick={handlePause} style={{ width: 52, height: 52, borderRadius: "50%", border: "1.5px solid var(--border-strong)", background: "var(--white)", cursor: "pointer", fontSize: "1.125rem", color: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                ⏸
+              </button>
+            )}
+
+            {/* Main record / resume button */}
+            <button
+              onClick={() => {
+                if (recording) handleStopPractice();
+                else if (!hasStarted) handleStartRecording();
+                else handleResume();
+              }}
+              style={{
+                width: 80, height: 80, borderRadius: "50%",
+                background: recording ? "#8A3030" : "var(--charcoal)",
+                border: "none", cursor: "pointer",
+                fontSize: "1.5rem", transition: "background 0.2s",
+                color: "var(--white)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: recording ? "0 0 0 6px rgba(138,48,48,0.15)" : "0 4px 16px rgba(44,40,36,0.2)",
+              }}
+            >
+              {recording ? "⏹" : "⏺"}
+            </button>
+
+            {/* End session (only when paused after starting) */}
+            {hasStarted && !recording && (
+              <button
+                onClick={handleStopPractice}
+                style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.04em", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                Done
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* "What I'm working on" tap strip */}
+        <div style={{ padding: "0 1.25rem 0.75rem" }}>
+          <button
+            onClick={() => setShowWorkingOn(true)}
+            style={{
+              width: "100%", background: "var(--white)", border: "1px solid var(--border)",
+              borderRadius: 8, padding: "0.875rem 1.125rem",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              cursor: "pointer", textAlign: "left",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+              <span style={{ fontSize: "1rem" }}>🎵</span>
+              <div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                  {selectedPiece ? selectedPiece.title : "What are you working on?"}
+                </div>
+                {segments.length > 0 && (
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>
+                    {segments.length} segment{segments.length !== 1 ? "s" : ""} logged
+                  </div>
+                )}
+                {!selectedPiece && segments.length === 0 && (
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>
+                    Tap to add a piece or notes
+                  </div>
                 )}
               </div>
-              {segments.map((s, i) => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 1rem", borderBottom: i < segments.length - 1 ? "1px solid var(--border)" : "none" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>{AREAS[s.practice_area]?.label} · {fmt(s.start_seconds)}</div>
-                  </div>
-                  <button onClick={() => setSegments(prev => prev.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1rem", padding: "0 0.25rem" }}>×</button>
-                </div>
-              ))}
-              {showAddSeg && (
-                <div style={{ padding: "0.75rem 1rem", display: "flex", flexDirection: "column", gap: "0.5rem", borderTop: segments.length > 0 ? "1px solid var(--border)" : "none" }}>
-                  <input
-                    autoFocus
-                    value={newSegTitle}
-                    onChange={e => setNewSegTitle(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") handleAddSegment(); if (e.key === "Escape") setShowAddSeg(false); }}
-                    placeholder="What are you practicing?"
-                    style={{ borderRadius: 3, border: "1px solid var(--border-strong)", padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", width: "100%", boxSizing: "border-box" }}
-                  />
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <select value={newSegArea} onChange={e => setNewSegArea(e.target.value)} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.45rem 0.5rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}>
-                      {Object.entries(AREAS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                    </select>
-                    <button onClick={handleAddSegment} style={{ borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", padding: "0.45rem 0.875rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem" }}>Add</button>
-                    <button onClick={() => setShowAddSeg(false)} style={{ borderRadius: 3, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", padding: "0.45rem 0.625rem", cursor: "pointer" }}>✕</button>
-                  </div>
-                </div>
-              )}
             </div>
-          )}
+            <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>›</span>
+          </button>
+        </div>
 
-          {/* Metronome */}
-          <div style={{ width: "100%", background: "var(--white)", borderRadius: 3, padding: "1rem 1.25rem", border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Metronome</span>
-              <button
-                onClick={() => { if (!metronome && !audioCtxRef.current) audioCtxRef.current = new AudioContext(); setMetronome(m => !m); }}
-                style={{
-                  background: metronome ? "var(--charcoal)" : "transparent",
-                  border: `1px solid ${metronome ? "var(--charcoal)" : "var(--border-strong)"}`,
-                  borderRadius: 2, padding: "0.2rem 0.75rem", cursor: "pointer",
-                  fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem",
-                  color: metronome ? "var(--white)" : "var(--muted)", transition: "all 0.15s",
-                }}
-              >
-                {metronome ? "On" : "Off"}
-              </button>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
-              <button onClick={() => setBpm(b => Math.max(40, b - 5))} style={{ width: 32, height: 32, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>−</button>
-              <div style={{ flex: 1, textAlign: "center", fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.5rem", color: "var(--charcoal)", letterSpacing: "-0.01em" }}>
-                {bpm}<span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)", marginLeft: 4, letterSpacing: "0.04em" }}>BPM</span>
+        {/* Metronome toggle strip */}
+        <div style={{ padding: "0 1.25rem 2rem" }}>
+          <div style={{ background: "var(--white)", borderRadius: 8, border: "1px solid var(--border)", overflow: "hidden" }}>
+            <button
+              onClick={() => setShowMetronome(m => !m)}
+              style={{ width: "100%", background: "none", border: "none", padding: "0.875rem 1.125rem", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                <span style={{ fontSize: "1rem" }}>🎚</span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                  Metronome {metronome && <span style={{ color: "#3D6B55", fontSize: "0.75rem" }}>● {bpm} BPM</span>}
+                </span>
               </div>
-              <button onClick={() => setBpm(b => Math.min(220, b + 5))} style={{ width: 32, height: 32, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>+</button>
-            </div>
-            <div style={{ marginBottom: "0.75rem" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.375rem" }}>Beats per bar</div>
-              <div style={{ display: "flex", gap: "0.375rem" }}>
-                {[2, 3, 4, 5, 6].map(n => (
-                  <button key={n} onClick={() => setBeats(n)} style={{ flex: 1, height: 30, borderRadius: 2, cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: beats === n ? 600 : 400, fontSize: "0.8125rem", background: beats === n ? "var(--charcoal)" : "var(--cream)", border: `1px solid ${beats === n ? "var(--charcoal)" : "var(--border)"}`, color: beats === n ? "var(--white)" : "var(--muted)", transition: "all 0.12s" }}>
-                    {n}
+              <span style={{ color: "var(--muted)", fontSize: "0.875rem", transition: "transform 0.2s", display: "inline-block", transform: showMetronome ? "rotate(90deg)" : "none" }}>›</span>
+            </button>
+
+            {showMetronome && (
+              <div style={{ padding: "0 1.125rem 1rem", borderTop: "1px solid var(--border)" }}>
+                {/* On/off + BPM row */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.875rem", marginBottom: "0.875rem" }}>
+                  <button
+                    onClick={() => { if (!metronome && !audioCtxRef.current) audioCtxRef.current = new AudioContext(); setMetronome(m => !m); }}
+                    style={{ background: metronome ? "var(--charcoal)" : "transparent", border: `1px solid ${metronome ? "var(--charcoal)" : "var(--border-strong)"}`, borderRadius: 2, padding: "0.25rem 0.75rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: metronome ? "var(--white)" : "var(--muted)", transition: "all 0.15s", flexShrink: 0 }}
+                  >
+                    {metronome ? "On" : "Off"}
                   </button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button onClick={() => setAccentOn(a => !a)} style={{ flex: 1, height: 30, borderRadius: 2, cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.02em", background: accentOn ? "var(--sage-bg)" : "var(--cream)", border: `1px solid ${accentOn ? "var(--sage)" : "var(--border)"}`, color: accentOn ? "var(--sage)" : "var(--muted)", transition: "all 0.12s" }}>
-                Accent ↓ 1
-              </button>
-              <div style={{ flex: 1, display: "flex", border: "1px solid var(--border)", borderRadius: 2, overflow: "hidden" }}>
-                {(["click", "voice"] as const).map(mode => (
-                  <button key={mode} onClick={() => setSoundMode(mode)} style={{ flex: 1, height: 28, cursor: "pointer", border: "none", fontFamily: "Inter, sans-serif", fontWeight: soundMode === mode ? 600 : 400, fontSize: "0.6875rem", letterSpacing: "0.02em", background: soundMode === mode ? "var(--charcoal)" : "transparent", color: soundMode === mode ? "var(--white)" : "var(--muted)", transition: "all 0.12s" }}>
-                    {mode === "click" ? "Click" : "Count"}
+                  <button onClick={() => setBpm(b => Math.max(40, b - 5))} style={{ width: 30, height: 30, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>−</button>
+                  <div style={{ flex: 1, textAlign: "center", fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.375rem", color: "var(--charcoal)", letterSpacing: "-0.01em" }}>
+                    {bpm}<span style={{ fontSize: "0.6875rem", fontWeight: 400, color: "var(--muted)", marginLeft: 3, letterSpacing: "0.04em" }}>BPM</span>
+                  </div>
+                  <button onClick={() => setBpm(b => Math.min(220, b + 5))} style={{ width: 30, height: 30, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>+</button>
+                </div>
+                {/* Beats */}
+                <div style={{ marginBottom: "0.625rem" }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.375rem" }}>Beats per bar</div>
+                  <div style={{ display: "flex", gap: "0.375rem" }}>
+                    {[2, 3, 4, 5, 6].map(n => (
+                      <button key={n} onClick={() => setBeats(n)} style={{ flex: 1, height: 28, borderRadius: 2, cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: beats === n ? 600 : 400, fontSize: "0.8125rem", background: beats === n ? "var(--charcoal)" : "var(--cream)", border: `1px solid ${beats === n ? "var(--charcoal)" : "var(--border)"}`, color: beats === n ? "var(--white)" : "var(--muted)", transition: "all 0.12s" }}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Accent + sound mode */}
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button onClick={() => setAccentOn(a => !a)} style={{ flex: 1, height: 28, borderRadius: 2, cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.02em", background: accentOn ? "var(--sage-bg)" : "var(--cream)", border: `1px solid ${accentOn ? "var(--sage)" : "var(--border)"}`, color: accentOn ? "var(--sage)" : "var(--muted)", transition: "all 0.12s" }}>
+                    Accent ↓ 1
                   </button>
-                ))}
-              </div>
-            </div>
-            {soundMode === "voice" && (
-              <div style={{ marginTop: "0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.6rem", color: "var(--muted)", letterSpacing: "0.02em", fontStyle: "italic" }}>
-                Counting uses your browser&apos;s voice — works best at moderate tempos.
+                  <div style={{ flex: 1, display: "flex", border: "1px solid var(--border)", borderRadius: 2, overflow: "hidden" }}>
+                    {(["click", "voice"] as const).map(mode => (
+                      <button key={mode} onClick={() => setSoundMode(mode)} style={{ flex: 1, height: 26, cursor: "pointer", border: "none", fontFamily: "Inter, sans-serif", fontWeight: soundMode === mode ? 600 : 400, fontSize: "0.6875rem", letterSpacing: "0.02em", background: soundMode === mode ? "var(--charcoal)" : "transparent", color: soundMode === mode ? "var(--white)" : "var(--muted)", transition: "all 0.12s" }}>
+                        {mode === "click" ? "Click" : "Count"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Controls */}
-        <div style={{ padding: "1rem 1.25rem 2rem", display: "flex", justifyContent: "center", gap: "1.25rem", alignItems: "center" }}>
-          {recording && (
-            <button onClick={handlePause} style={{ width: 48, height: 48, borderRadius: 3, border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", fontSize: "1rem", color: "var(--charcoal)" }}>
-              ⏸
-            </button>
-          )}
-          <button
-            onClick={() => { if (recording) handleStopPractice(); else if (!hasStarted) handleStartRecording(); else handleResume(); }}
-            style={{ width: 68, height: 68, borderRadius: "50%", background: recording ? "#8A3030" : "var(--charcoal)", border: "none", cursor: "pointer", fontSize: "1.25rem", transition: "background 0.2s", color: "var(--white)" }}
+        {/* ── "Working on" bottom sheet ── */}
+        {showWorkingOn && (
+          <div
+            onClick={() => setShowWorkingOn(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(44,40,36,0.45)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}
           >
-            {recording ? "⏹" : "⏺"}
-          </button>
-          {hasStarted && !recording && (
-            <button
-              onClick={handleStopPractice}
-              style={{
-                padding: "0.5rem 1rem", borderRadius: 3, border: "none",
-                background: "var(--charcoal)", color: "var(--white)",
-                cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
-              }}
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ background: "var(--white)", borderRadius: "14px 14px 0 0", padding: "1.5rem 1.25rem 2.5rem", maxHeight: "80vh", overflowY: "auto" }}
             >
-              Reflect →
-            </button>
-          )}
-        </div>
+              {/* Sheet handle */}
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--border-strong)", margin: "0 auto 1.25rem" }} />
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>What I&apos;m working on</span>
+                <button onClick={() => setShowWorkingOn(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1.25rem", padding: "0 0.25rem" }}>×</button>
+              </div>
+
+              {/* Piece selector */}
+              <div style={{ marginBottom: "1.25rem" }}>
+                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "0.5rem" }}>
+                  Piece
+                </label>
+                {loadingPieces ? (
+                  <div className="skeleton" style={{ height: 40, borderRadius: 3 }} />
+                ) : (
+                  <select
+                    value={selectedPieceId}
+                    onChange={e => {
+                      const pid = e.target.value;
+                      setSelectedPieceId(pid);
+                      if (pid) {
+                        const p = pieces.find(x => x.id === pid);
+                        const primary = p?.recordings.find(r => r.is_primary) ?? p?.recordings[0];
+                        setPracticeYouTubeId(primary?.youtube_id ?? null);
+                      } else {
+                        setPracticeYouTubeId(null);
+                      }
+                    }}
+                    style={{ width: "100%", borderRadius: 6, border: "1.5px solid var(--border-strong)", padding: "0.75rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}
+                  >
+                    <option value="">— no piece selected —</option>
+                    {grouped.map(g => (
+                      <optgroup key={g.cat} label={g.label}>
+                        {g.items.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.title}{p.composer ? ` — ${p.composer}` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Reference recording (if piece has one) */}
+              {selectedPiece && selectedPiece.recordings.length > 0 && (
+                <div style={{ marginBottom: "1.25rem" }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>Reference</div>
+                  <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: practiceYouTubeId ? "0.625rem" : 0 }}>
+                    {selectedPiece.recordings.map(r => (
+                      <button
+                        key={r.id}
+                        onClick={() => setPracticeYouTubeId(practiceYouTubeId === r.youtube_id ? null : r.youtube_id)}
+                        style={{ padding: "0.3rem 0.625rem", borderRadius: 3, cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, background: practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--cream)", color: practiceYouTubeId === r.youtube_id ? "var(--white)" : "var(--charcoal)", border: `1px solid ${practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--border)"}`, transition: "all 0.15s" }}
+                      >
+                        {practiceYouTubeId === r.youtube_id ? "▶ Playing" : (r.is_primary ? "★ Listen" : "▶ " + r.title.slice(0, 20))}
+                      </button>
+                    ))}
+                  </div>
+                  {practiceYouTubeId && (
+                    <div style={{ borderRadius: 6, overflow: "hidden", aspectRatio: "16/9" }}>
+                      <iframe key={practiceYouTubeId} src={`https://www.youtube.com/embed/${practiceYouTubeId}?autoplay=1`} allow="autoplay; encrypted-media" allowFullScreen style={{ width: "100%", height: "100%", border: "none", display: "block" }} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Segments */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    Segments {segments.length > 0 && `(${segments.length})`}
+                  </span>
+                  {!showAddSeg && (
+                    <button onClick={() => setShowAddSeg(true)} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 4, padding: "0.25rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)" }}>
+                      + Add
+                    </button>
+                  )}
+                </div>
+
+                {segments.map((s, i) => (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.625rem 0", borderTop: "1px solid var(--border)" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                      <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>{AREAS[s.practice_area]?.label} · {fmt(s.start_seconds)}</div>
+                    </div>
+                    <button onClick={() => setSegments(prev => prev.filter(x => x.id !== s.id))} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.125rem", padding: "0 0.25rem", lineHeight: 1 }}>×</button>
+                  </div>
+                ))}
+
+                {showAddSeg && (
+                  <div style={{ paddingTop: "0.75rem", borderTop: segments.length > 0 ? "1px solid var(--border)" : "none", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    <input
+                      autoFocus
+                      value={newSegTitle}
+                      onChange={e => setNewSegTitle(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleAddSegment(); if (e.key === "Escape") setShowAddSeg(false); }}
+                      placeholder={`What are you working on? (${fmt(elapsed)})`}
+                      style={{ borderRadius: 6, border: "1.5px solid var(--border-strong)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", width: "100%", boxSizing: "border-box" }}
+                    />
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <select value={newSegArea} onChange={e => setNewSegArea(e.target.value)} style={{ flex: 1, borderRadius: 6, border: "1px solid var(--border)", padding: "0.5rem 0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}>
+                        {Object.entries(AREAS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                      </select>
+                      <button onClick={handleAddSegment} style={{ borderRadius: 6, border: "none", background: "var(--charcoal)", color: "var(--white)", padding: "0.5rem 1rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem" }}>Add</button>
+                      <button onClick={() => setShowAddSeg(false)} style={{ borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", padding: "0.5rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>✕</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setShowWorkingOn(false)}
+                style={{ marginTop: "1.5rem", width: "100%", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 8, padding: "0.875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", cursor: "pointer" }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // STEP 3: REFLECT
+  // REFLECT
   // ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem", textAlign: "center" }}>
@@ -753,13 +708,7 @@ function PracticeInner() {
             <button
               key={m.key}
               onClick={() => setMood(m.key)}
-              style={{
-                flex: 1, padding: "0.5rem 0.25rem", borderRadius: 3, cursor: "pointer",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
-                background: mood === m.key ? "var(--charcoal)" : "var(--cream)",
-                border: `1.5px solid ${mood === m.key ? "var(--charcoal)" : "var(--border)"}`,
-                transition: "all 0.15s",
-              }}
+              style={{ flex: 1, padding: "0.5rem 0.25rem", borderRadius: 3, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", background: mood === m.key ? "var(--charcoal)" : "var(--cream)", border: `1.5px solid ${mood === m.key ? "var(--charcoal)" : "var(--border)"}`, transition: "all 0.15s" }}
             >
               <span style={{ fontSize: "1.375rem", lineHeight: 1 }}>{m.emoji}</span>
               <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500, letterSpacing: "0.04em", color: mood === m.key ? "var(--white)" : "var(--muted)", textTransform: "uppercase" }}>{m.label}</span>
@@ -771,19 +720,9 @@ function PracticeInner() {
       {/* Reflection textareas */}
       <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1.25rem", marginBottom: "1rem", textAlign: "left" }}>
         <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>What went well?</div>
-        <textarea
-          value={wentWell}
-          onChange={e => setWentWell(e.target.value)}
-          placeholder="e.g. The tricky passage in bar 8 is clicking…"
-          style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }}
-        />
+        <textarea value={wentWell} onChange={e => setWentWell(e.target.value)} placeholder="e.g. The tricky passage in bar 8 is clicking…" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
         <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>Focus next time</div>
-        <textarea
-          value={focusNext}
-          onChange={e => setFocusNext(e.target.value)}
-          placeholder="e.g. Work on the dynamics in the second section…"
-          style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }}
-        />
+        <textarea value={focusNext} onChange={e => setFocusNext(e.target.value)} placeholder="e.g. Work on the dynamics in the second section…" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
       </div>
 
       {/* Audio recording review */}
@@ -796,48 +735,26 @@ function PracticeInner() {
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.125rem" }}>Save to Journey</div>
               <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>Add to your portfolio</div>
             </div>
-            <button
-              onClick={() => setPortfolioSave(v => !v)}
-              style={{ width: 40, height: 22, borderRadius: 100, border: "none", flexShrink: 0, background: portfolioSave ? "var(--charcoal)" : "var(--border)", position: "relative", cursor: "pointer", transition: "background 0.15s" }}
-            >
+            <button onClick={() => setPortfolioSave(v => !v)} style={{ width: 40, height: 22, borderRadius: 100, border: "none", flexShrink: 0, background: portfolioSave ? "var(--charcoal)" : "var(--border)", position: "relative", cursor: "pointer", transition: "background 0.15s" }}>
               <div style={{ width: 16, height: 16, borderRadius: "50%", background: "white", position: "absolute", top: 3, left: portfolioSave ? 21 : 3, transition: "left 0.15s", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
             </button>
           </div>
           {portfolioSave && (
             <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <input
-                autoFocus
-                value={portfolioTitle}
-                onChange={e => setPortfolioTitle(e.target.value)}
-                placeholder="Piece name, e.g. Für Elise"
-                style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }}
-              />
-              <textarea
-                value={portfolioDesc}
-                onChange={e => setPortfolioDesc(e.target.value)}
-                placeholder="Notes about this recording… (optional)"
-                style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none", minHeight: 52 }}
-              />
+              <input autoFocus value={portfolioTitle} onChange={e => setPortfolioTitle(e.target.value)} placeholder="Piece name, e.g. Für Elise" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
+              <textarea value={portfolioDesc} onChange={e => setPortfolioDesc(e.target.value)} placeholder="Notes about this recording… (optional)" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none", minHeight: 52 }} />
             </div>
           )}
         </div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={saving || (portfolioSave && !portfolioTitle.trim())}
-        className="btn btn-primary"
-        style={{ width: "100%", maxWidth: 320, padding: "0.875rem", fontSize: "0.9375rem" }}
-      >
+      <button onClick={handleSubmit} disabled={saving || (portfolioSave && !portfolioTitle.trim())} className="btn btn-primary" style={{ width: "100%", maxWidth: 320, padding: "0.875rem", fontSize: "0.9375rem" }}>
         {saving ? "Saving…" : "Save & Send Report"}
       </button>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────
-// Page export — wrapped in Suspense for useSearchParams
-// ─────────────────────────────────────────────
 export default function PracticePage() {
   return (
     <Suspense fallback={<div style={{ minHeight: "100dvh", background: "var(--cream)" }} />}>
