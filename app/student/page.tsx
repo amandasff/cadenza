@@ -180,31 +180,42 @@ export default function ThisWeek() {
   return (
     <div style={{ background: "var(--cream)", minHeight: "100%" }}>
 
-      {/* Begin Practice CTA */}
-      <div style={{ padding: "1.5rem 1.5rem 1rem" }}>
+      {/* ── Practice hero button ── */}
+      <div style={{ padding: "1.5rem 1.5rem 1.125rem" }}>
         <Link href="/student/practice" style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "var(--charcoal)",
-          borderRadius: 4,
-          padding: "1rem 1.25rem",
+          display: "block",
+          background: "linear-gradient(135deg, #3D6B55 0%, #2C5242 100%)",
+          borderRadius: 10,
+          padding: "1.625rem 1.5rem",
           textDecoration: "none",
-          color: "var(--white)",
+          color: "#FDFCFA",
+          boxShadow: "0 4px 24px rgba(44,82,66,0.28)",
+          position: "relative",
+          overflow: "hidden",
         }}>
-          <div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "0.005em" }}>
-              Begin Practice
+          {/* Background accent */}
+          <div style={{ position: "absolute", right: -20, top: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.05)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", right: 20, bottom: -30, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+            <div>
+              <div style={{ fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.375rem" }}>
+                Ready to play?
+              </div>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.875rem", lineHeight: 1, marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>
+                Start practicing
+              </div>
+              <div style={{ fontSize: "0.8125rem", opacity: 0.55, fontFamily: "Inter, sans-serif" }}>
+                {totalAssignments > 0
+                  ? `${totalAssignments} goal${totalAssignments !== 1 ? "s" : ""} to work on`
+                  : "Tap to open the timer"}
+              </div>
             </div>
-            <div style={{ fontSize: "0.75rem", opacity: 0.5, marginTop: "0.2rem", fontFamily: "Inter, sans-serif" }}>
-              {totalAssignments > 0
-                ? `${totalAssignments} assignment${totalAssignments !== 1 ? "s" : ""} this week`
-                : "Log your practice session"}
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, backdropFilter: "blur(4px)" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
             </div>
           </div>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.7, flexShrink: 0 }}>
-            <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
         </Link>
       </div>
 

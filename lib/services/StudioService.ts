@@ -45,6 +45,27 @@ export class StudioService {
     if (error) throw error;
   }
 
+  async listStudios(search?: string): Promise<{ id: string; name: string; teacher_name: string }[]> {
+    let query = this.supabase
+      .from('studios')
+      .select('id, name, profiles!owner_id(display_name)')
+      .order('name', { ascending: true })
+      .limit(50);
+
+    if (search && search.trim()) {
+      query = query.ilike('name', `%${search.trim()}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data ?? []).map((row: { id: string; name: string; profiles: { display_name: string } | null }) => ({
+      id: row.id,
+      name: row.name,
+      teacher_name: row.profiles?.display_name ?? 'Unknown teacher',
+    }));
+  }
+
   async getStudents(studioId: string): Promise<ProfileRow[]> {
     const { data, error } = await this.supabase
       .from('profiles')

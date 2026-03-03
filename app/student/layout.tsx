@@ -10,10 +10,9 @@ import { PlayerProvider } from "../../lib/context/PlayerContext";
 import MiniPlayer from "../../components/MiniPlayer";
 
 const tabs = [
-  { href: "/student",                label: "This Week" },
-  { href: "/student/pieces",         label: "Pieces" },
+  { href: "/student",                label: "Home" },
   { href: "/student/practice",       label: "Practice" },
-  { href: "/student/inspirations",   label: "Inspire" },
+  { href: "/student/pieces",         label: "Pieces" },
   { href: "/student/chat",           label: "Chat" },
   { href: "/student/rewards",        label: "Awards" },
 ];
