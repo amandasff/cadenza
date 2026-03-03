@@ -59,10 +59,11 @@ export class StudioService {
     const { data, error } = await query;
     if (error) throw error;
 
-    return (data ?? []).map((row: { id: string; name: string; profiles: { display_name: string } | null }) => ({
+    type Row = { id: string; name: string; profiles: { display_name: string }[] | null };
+    return (data ?? []).map((row: Row) => ({
       id: row.id,
       name: row.name,
-      teacher_name: row.profiles?.display_name ?? 'Unknown teacher',
+      teacher_name: (Array.isArray(row.profiles) ? row.profiles[0]?.display_name : (row.profiles as { display_name: string } | null)?.display_name) ?? 'Unknown teacher',
     }));
   }
 
