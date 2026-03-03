@@ -365,8 +365,10 @@ function PracticeInner() {
 
       router.replace("/student");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("handleSubmit error:", msg);
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? JSON.stringify(err);
+      console.error("handleSubmit error:", err);
       setSaveError(msg);
       setSaving(false);
     }
