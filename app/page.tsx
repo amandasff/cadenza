@@ -9,7 +9,7 @@ export default function Home() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: import("@supabase/supabase-js").Session | null } }) => {
       if (!session?.user) return;
       // Already logged in — find their role and go straight to their dashboard
       const { data: profile } = await supabase

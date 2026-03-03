@@ -225,9 +225,8 @@ function PracticeInner() {
     setHasStarted(true);
     setRecording(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 },
-      });
+      // Keep constraints minimal — iOS Safari rejects sampleRate and other advanced hints
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream;
       const ctx = audioCtxRef.current!;
       if (ctx.state === "suspended") await ctx.resume();
@@ -257,13 +256,15 @@ function PracticeInner() {
   }
 
   function handlePause() {
-    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.pause();
+    // MediaRecorder.pause() is not supported on iOS Safari — skip gracefully
+    try { if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.pause(); } catch {}
     cancelAnimationFrame(animFrameRef.current);
     setRecording(false);
   }
 
   function handleResume() {
-    if (mediaRecorderRef.current?.state === "paused") mediaRecorderRef.current.resume();
+    // MediaRecorder.resume() is not supported on iOS Safari — skip gracefully
+    try { if (mediaRecorderRef.current?.state === "paused") mediaRecorderRef.current.resume(); } catch {}
     if (analyserRef.current) startWaveform(analyserRef.current);
     setRecording(true);
   }
