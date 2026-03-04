@@ -248,7 +248,23 @@ function PracticeInner() {
         recorder.onstop = () => {
           const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
           setRecordingBlob(blob);
-          setAudioBlobUrl(URL.createObjectURL(blob));
+          const url = URL.createObjectURL(blob);
+          // WebM blobs from MediaRecorder lack duration metadata — the browser
+          // guesses wrong, making the seek bar appear sped up. Seeking to a huge
+          // timestamp forces it to scan the file and compute the real duration.
+          const audio = document.createElement("audio");
+          audio.src = url;
+          audio.addEventListener("loadedmetadata", () => {
+            if (audio.duration === Infinity) {
+              audio.currentTime = 1e101;
+              audio.addEventListener("timeupdate", () => {
+                audio.currentTime = 0;
+                setAudioBlobUrl(url);
+              }, { once: true });
+            } else {
+              setAudioBlobUrl(url);
+            }
+          });
         };
         recorder.start(250);
         mediaRecorderRef.current = recorder;
