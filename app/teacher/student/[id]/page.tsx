@@ -177,8 +177,8 @@ function GoalItem({
 
 function PieceBlock({
   piece, color, addGoalFor, goalForm, addingGoal, completingGoalId, togglingGoalId,
-  uploadingPdf, uploadingScore, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
-  onUploadSheetMusic, onUploadScore, onAddRecording, onRemoveRecording, onSetPrimaryRecording,
+  uploadingPdf, uploadingScore, aiConverting, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
+  onUploadSheetMusic, onUploadScore, onAiConvertScore, onAddRecording, onRemoveRecording, onSetPrimaryRecording,
 }: {
   piece: PieceWithGoals;
   color: string;
@@ -189,6 +189,7 @@ function PieceBlock({
   togglingGoalId: string | null;
   uploadingPdf: boolean;
   uploadingScore: boolean;
+  aiConverting: boolean;
   onSetAddGoalFor: (v: string | "standalone" | null) => void;
   onGoalFormChange: (f: ReturnType<typeof emptyGoalForm>) => void;
   onAddGoal: (e: React.FormEvent) => void;
@@ -196,6 +197,7 @@ function PieceBlock({
   onToggleGoalStatus: (g: GoalRow) => void;
   onUploadSheetMusic: (pieceId: string, files: File[]) => void;
   onUploadScore: (pieceId: string, file: File) => void;
+  onAiConvertScore: (pieceId: string, file: File) => void;
   onAddRecording: (pieceId: string, video: YouTubeResult) => Promise<void>;
   onRemoveRecording: (recordingId: string, pieceId: string) => void;
   onSetPrimaryRecording: (recordingId: string, pieceId: string) => void;
@@ -294,6 +296,21 @@ function PieceBlock({
             accept=".gp,.gpx,.gp3,.gp4,.gp5,.xml,.musicxml,application/xml,text/xml"
             style={{ display: "none" }}
             onChange={e => { const file = e.target.files?.[0]; if (file) onUploadScore(piece.id, file); e.target.value = ""; }}
+          />
+          {/* AI image → MusicXML conversion */}
+          <label
+            htmlFor={`ai-score-${piece.id}`}
+            title="Convert a photo or screenshot of sheet music to a playable score (AI)"
+            style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: aiConverting ? "default" : "pointer", opacity: aiConverting ? 0.5 : 1 }}
+          >
+            {aiConverting ? "⏳" : "🤖"}
+          </label>
+          <input
+            id={`ai-score-${piece.id}`}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={e => { const file = e.target.files?.[0]; if (file) onAiConvertScore(piece.id, file); e.target.value = ""; }}
           />
           <button
             onClick={() => { if (pasteMode) { cancelPaste(); } else { setPasteMode(true); } }}
@@ -445,6 +462,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const sheetInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPdfFor, setUploadingPdfFor] = useState<string | null>(null);
   const [uploadingScoreFor, setUploadingScoreFor] = useState<string | null>(null);
+  const [aiConvertingFor, setAiConvertingFor] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [formPasteReady, setFormPasteReady] = useState(false);
 
@@ -680,6 +698,45 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       setUploadError(`Score upload error: ${(err as Error).message}`);
     } finally {
       setUploadingScoreFor(null);
+    }
+  }
+
+  async function handleAiConvertScore(pieceId: string, file: File) {
+    setAiConvertingFor(pieceId);
+    setUploadError(null);
+    try {
+      // Read the image as base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const mimeType = file.type || "image/png";
+
+      const res = await fetch("/api/score-from-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setUploadError(`AI conversion failed: ${json.error ?? "Unknown error"}`);
+        return;
+      }
+
+      // Upload the returned MusicXML to Supabase
+      const xmlBlob = new Blob([json.musicxml], { type: "application/xml" });
+      const path = `${pieceId}_score.xml`;
+      const { error: uploadErr } = await supabase.storage
+        .from("score-files").upload(path, xmlBlob, { upsert: true, contentType: "application/xml" });
+      if (uploadErr) {
+        setUploadError(`Upload failed: ${uploadErr.message}`);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
+      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
+    } catch (err) {
+      setUploadError(`AI conversion error: ${(err as Error).message}`);
+    } finally {
+      setAiConvertingFor(null);
     }
   }
 
@@ -1004,6 +1061,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                           completingGoalId={completingGoalId} togglingGoalId={togglingGoalId}
                           uploadingPdf={uploadingPdfFor === piece.id}
                           uploadingScore={uploadingScoreFor === piece.id}
+                          aiConverting={aiConvertingFor === piece.id}
                           onSetAddGoalFor={v => { setAddGoalFor(v); setGoalForm(emptyGoalForm()); }}
                           onGoalFormChange={setGoalForm}
                           onAddGoal={handleAddGoal}
@@ -1011,6 +1069,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                           onToggleGoalStatus={handleToggleGoalStatus}
                           onUploadSheetMusic={handleUploadSheetMusic}
                           onUploadScore={handleUploadScore}
+                          onAiConvertScore={handleAiConvertScore}
                           onAddRecording={handleAddRecording}
                           onRemoveRecording={handleRemoveRecording}
                           onSetPrimaryRecording={handleSetPrimaryRecording}
