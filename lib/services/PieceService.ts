@@ -113,7 +113,7 @@ export class PieceService {
 
   async updatePiece(
     pieceId: string,
-    updates: Partial<Pick<PieceRow, 'status' | 'title' | 'composer' | 'book' | 'category' | 'sheet_music_url'>>
+    updates: Partial<Pick<PieceRow, 'status' | 'title' | 'composer' | 'book' | 'category' | 'sheet_music_url' | 'score_url'>>
   ): Promise<void> {
     const { error } = await this.supabase.from('pieces').update(updates).eq('id', pieceId);
     if (error) throw error;

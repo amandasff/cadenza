@@ -295,6 +295,20 @@ export default function MyPieces() {
                                 🔍 Play
                               </button>
                             )}
+                            {piece.score_url && (
+                              <Link
+                                href={`/student/pieces/${piece.id}/score`}
+                                style={{
+                                  fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500,
+                                  letterSpacing: "0.04em", textTransform: "uppercase",
+                                  background: "#3D6B55", color: "var(--white)",
+                                  borderRadius: 2, padding: "0.25rem 0.625rem",
+                                  textDecoration: "none", whiteSpace: "nowrap",
+                                }}
+                              >
+                                🎵 Score
+                              </Link>
+                            )}
                             {piece.sheet_music_url && (
                               <Link
                                 href={`/student/perform/${piece.id}`}

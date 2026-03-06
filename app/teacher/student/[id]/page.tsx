@@ -177,8 +177,8 @@ function GoalItem({
 
 function PieceBlock({
   piece, color, addGoalFor, goalForm, addingGoal, completingGoalId, togglingGoalId,
-  uploadingPdf, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
-  onUploadSheetMusic, onAddRecording, onRemoveRecording, onSetPrimaryRecording,
+  uploadingPdf, uploadingScore, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
+  onUploadSheetMusic, onUploadScore, onAddRecording, onRemoveRecording, onSetPrimaryRecording,
 }: {
   piece: PieceWithGoals;
   color: string;
@@ -188,12 +188,14 @@ function PieceBlock({
   completingGoalId: string | null;
   togglingGoalId: string | null;
   uploadingPdf: boolean;
+  uploadingScore: boolean;
   onSetAddGoalFor: (v: string | "standalone" | null) => void;
   onGoalFormChange: (f: ReturnType<typeof emptyGoalForm>) => void;
   onAddGoal: (e: React.FormEvent) => void;
   onCompleteGoal: (g: GoalRow) => void;
   onToggleGoalStatus: (g: GoalRow) => void;
   onUploadSheetMusic: (pieceId: string, files: File[]) => void;
+  onUploadScore: (pieceId: string, file: File) => void;
   onAddRecording: (pieceId: string, video: YouTubeResult) => Promise<void>;
   onRemoveRecording: (recordingId: string, pieceId: string) => void;
   onSetPrimaryRecording: (recordingId: string, pieceId: string) => void;
@@ -232,6 +234,7 @@ function PieceBlock({
   }
 
   const sheetInputId = `sheet-${piece.id}`;
+  const scoreInputId = `score-${piece.id}`;
   const done = piece.goals.filter(g => g.status === "completed").length;
   const total = piece.goals.length;
 
@@ -276,6 +279,21 @@ function PieceBlock({
             multiple
             style={{ display: "none" }}
             onChange={e => { const files = Array.from(e.target.files ?? []); if (files.length) onUploadSheetMusic(piece.id, files); e.target.value = ""; }}
+          />
+          {/* Score file upload (MusicXML / Guitar Pro) */}
+          <label
+            htmlFor={scoreInputId}
+            title={piece.score_url ? "Replace score file (MusicXML or Guitar Pro)" : "Upload playable score (MusicXML or Guitar Pro .gp)"}
+            style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingScore ? "default" : "pointer", opacity: uploadingScore ? 0.5 : 1 }}
+          >
+            {uploadingScore ? "…" : piece.score_url ? "🎵✓" : "🎵+"}
+          </label>
+          <input
+            id={scoreInputId}
+            type="file"
+            accept=".gp,.gpx,.gp3,.gp4,.gp5,.xml,.musicxml,application/xml,text/xml"
+            style={{ display: "none" }}
+            onChange={e => { const file = e.target.files?.[0]; if (file) onUploadScore(piece.id, file); e.target.value = ""; }}
           />
           <button
             onClick={() => { if (pasteMode) { cancelPaste(); } else { setPasteMode(true); } }}
@@ -426,6 +444,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [sheetFiles, setSheetFiles] = useState<File[]>([]);
   const sheetInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPdfFor, setUploadingPdfFor] = useState<string | null>(null);
+  const [uploadingScoreFor, setUploadingScoreFor] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [formPasteReady, setFormPasteReady] = useState(false);
 
@@ -639,6 +658,28 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       setUploadError(`Upload error: ${(err as Error).message}`);
     } finally {
       setUploadingPdfFor(null);
+    }
+  }
+
+  async function handleUploadScore(pieceId: string, file: File) {
+    setUploadingScoreFor(pieceId);
+    setUploadError(null);
+    try {
+      const ext = file.name.split(".").pop() ?? "gp";
+      const path = `${pieceId}_score.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("score-files").upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+      if (uploadErr) {
+        setUploadError(`Score upload failed: ${uploadErr.message}. Make sure the 'score-files' storage bucket exists in Supabase (public).`);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
+      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
+    } catch (err) {
+      setUploadError(`Score upload error: ${(err as Error).message}`);
+    } finally {
+      setUploadingScoreFor(null);
     }
   }
 
@@ -962,12 +1003,14 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                           addGoalFor={addGoalFor} goalForm={goalForm} addingGoal={addingGoal}
                           completingGoalId={completingGoalId} togglingGoalId={togglingGoalId}
                           uploadingPdf={uploadingPdfFor === piece.id}
+                          uploadingScore={uploadingScoreFor === piece.id}
                           onSetAddGoalFor={v => { setAddGoalFor(v); setGoalForm(emptyGoalForm()); }}
                           onGoalFormChange={setGoalForm}
                           onAddGoal={handleAddGoal}
                           onCompleteGoal={handleCompleteGoal}
                           onToggleGoalStatus={handleToggleGoalStatus}
                           onUploadSheetMusic={handleUploadSheetMusic}
+                          onUploadScore={handleUploadScore}
                           onAddRecording={handleAddRecording}
                           onRemoveRecording={handleRemoveRecording}
                           onSetPrimaryRecording={handleSetPrimaryRecording}

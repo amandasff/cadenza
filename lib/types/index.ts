@@ -90,6 +90,7 @@ export interface PieceRow {
   status: PieceStatus;
   sort_order: number;
   sheet_music_url: string | null;
+  score_url: string | null;
   created_at: string;
 }
 
