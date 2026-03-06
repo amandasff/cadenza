@@ -219,6 +219,26 @@ export default function ThisWeek() {
         </Link>
       </div>
 
+      {/* Tools row */}
+      <div style={{ padding: "0 1.5rem 0.75rem", display: "flex", gap: "0.75rem" }}>
+        <Link href="/student/tuner" style={{
+          flex: 1, display: "flex", alignItems: "center", gap: "0.75rem",
+          background: "var(--white)", border: "1px solid var(--border)",
+          borderRadius: 8, padding: "0.875rem 1rem", textDecoration: "none",
+        }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1C1C1E", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#4CAF84">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#4CAF84" strokeWidth="2" strokeLinecap="round" fill="none" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Tuner</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Guitar · Standard</div>
+          </div>
+        </Link>
+      </div>
+
       {/* Next Lesson widget */}
       {nextLesson && (
         <div style={{ padding: "0 1.5rem 0.75rem" }}>
