@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 
 // ── Pitch detection ──────────────────────────────────────────────────────────
-function autoCorrelate(buffer: Float32Array, sampleRate: number): number {
+function autoCorrelate(buffer: Float32Array<ArrayBuffer>, sampleRate: number): number {
   const SIZE = buffer.length;
 
   // Bail if too quiet
@@ -90,7 +90,7 @@ export default function TunerPage() {
   const analyserRef  = useRef<AnalyserNode | null>(null);
   const streamRef    = useRef<MediaStream | null>(null);
   const rafRef       = useRef<number>(0);
-  const bufferRef    = useRef<Float32Array | null>(null);
+  const bufferRef    = useRef<Float32Array<ArrayBuffer> | null>(null);
 
   const detect = useCallback(() => {
     const analyser = analyserRef.current;
