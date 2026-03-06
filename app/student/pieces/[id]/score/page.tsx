@@ -35,9 +35,9 @@ export default function ScorePage() {
       .select("title, score_url")
       .eq("id", id)
       .single()
-      .then(({ data, error: err }) => {
+      .then(({ data, error: err }: { data: { title: string; score_url: string | null } | null; error: unknown }) => {
         if (err || !data) { setError("Piece not found."); return; }
-        if (!(data as any).score_url) { setError("No score file has been uploaded for this piece yet."); return; }
+        if (!data.score_url) { setError("No score file has been uploaded for this piece yet."); return; }
         setPiece(data as { title: string; score_url: string });
       })
       .finally(() => setLoading(false));
