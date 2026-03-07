@@ -46,25 +46,29 @@ export class StudioService {
   }
 
   async listStudios(search?: string): Promise<{ id: string; name: string; teacher_name: string }[]> {
-    let query = this.supabase
+    // Fetch all studios (up to 100), then filter client-side by both studio name and teacher name
+    const { data, error } = await this.supabase
       .from('studios')
       .select('id, name, profiles!owner_id(display_name)')
       .order('name', { ascending: true })
-      .limit(50);
+      .limit(100);
 
-    if (search && search.trim()) {
-      query = query.ilike('name', `%${search.trim()}%`);
-    }
-
-    const { data, error } = await query;
     if (error) throw error;
 
     type Row = { id: string; name: string; profiles: { display_name: string }[] | null };
-    return (data ?? []).map((row: Row) => ({
+    const mapped = (data ?? []).map((row: Row) => ({
       id: row.id,
       name: row.name,
       teacher_name: (Array.isArray(row.profiles) ? row.profiles[0]?.display_name : (row.profiles as { display_name: string } | null)?.display_name) ?? 'Unknown teacher',
     }));
+
+    if (!search?.trim()) return mapped;
+
+    const term = search.trim().toLowerCase();
+    return mapped.filter(s =>
+      s.name.toLowerCase().includes(term) ||
+      s.teacher_name.toLowerCase().includes(term)
+    );
   }
 
   async getStudents(studioId: string): Promise<ProfileRow[]> {
