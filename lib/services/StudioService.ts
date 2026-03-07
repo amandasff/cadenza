@@ -46,26 +46,38 @@ export class StudioService {
   }
 
   async listStudios(search?: string): Promise<{ id: string; name: string; teacher_name: string }[]> {
-    // Fetch all studios (up to 100), then filter client-side by both studio name and teacher name
-    const { data, error } = await this.supabase
+    // Step 1: fetch all studios
+    const { data: studioData, error: studioError } = await this.supabase
       .from('studios')
-      .select('id, name, profiles!owner_id(display_name)')
+      .select('id, name, owner_id')
       .order('name', { ascending: true })
       .limit(100);
 
-    if (error) throw error;
+    if (studioError) throw studioError;
+    if (!studioData || studioData.length === 0) return [];
 
-    type Row = { id: string; name: string; profiles: { display_name: string }[] | null };
-    const mapped = (data ?? []).map((row: Row) => ({
-      id: row.id,
-      name: row.name,
-      teacher_name: (Array.isArray(row.profiles) ? row.profiles[0]?.display_name : (row.profiles as { display_name: string } | null)?.display_name) ?? 'Unknown teacher',
+    // Step 2: fetch teacher names for all owner_ids
+    const ownerIds = [...new Set(studioData.map((s: { owner_id: string }) => s.owner_id))];
+    const { data: profileData } = await this.supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', ownerIds);
+
+    const nameMap: Record<string, string> = {};
+    for (const p of profileData ?? []) {
+      nameMap[(p as { id: string; display_name: string }).id] = (p as { id: string; display_name: string }).display_name;
+    }
+
+    const mapped = studioData.map((s: { id: string; name: string; owner_id: string }) => ({
+      id: s.id,
+      name: s.name,
+      teacher_name: nameMap[s.owner_id] ?? 'Unknown teacher',
     }));
 
     if (!search?.trim()) return mapped;
 
     const term = search.trim().toLowerCase();
-    return mapped.filter(s =>
+    return mapped.filter((s: { name: string; teacher_name: string }) =>
       s.name.toLowerCase().includes(term) ||
       s.teacher_name.toLowerCase().includes(term)
     );

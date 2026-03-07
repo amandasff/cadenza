@@ -30,16 +30,19 @@ function StudentJoinInner() {
 
   const [joining, setJoining] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
+  const [searchError, setSearchError] = useState("");
 
   // ── Search ───────────────────────────────────────────────────
   const fetchStudios = useCallback(async (term: string) => {
     setLoadingStudios(true);
+    setSearchError("");
     try {
       const supabase = getSupabaseBrowserClient();
       const results = await StudioService.getInstance(supabase).listStudios(term);
       setStudios(results);
-    } catch {
+    } catch (err) {
       setStudios([]);
+      setSearchError(err instanceof Error ? err.message : "Could not load studios.");
     } finally {
       setLoadingStudios(false);
     }
@@ -246,6 +249,11 @@ function StudentJoinInner() {
                 marginBottom: "1rem",
               }}
             />
+            {searchError && (
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b", background: "#fff1f0", padding: "0.625rem 0.875rem", borderRadius: 6, marginBottom: "1rem" }}>
+                {searchError}
+              </p>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
               {loadingStudios && studios.length === 0 && (
                 <p style={{ textAlign: "center", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "2rem 0" }}>
