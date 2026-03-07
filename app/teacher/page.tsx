@@ -81,11 +81,22 @@ export default function TeacherDashboard() {
     loadData();
   }, [loadData]);
 
+  const [copiedLink, setCopiedLink] = useState(false);
+
   function copyInviteCode() {
     if (!teacher?.inviteCode) return;
     navigator.clipboard.writeText(teacher.inviteCode.toUpperCase()).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function copyInviteLink() {
+    if (!teacher?.inviteCode) return;
+    const link = `${window.location.origin}/student/join?code=${teacher.inviteCode.toUpperCase()}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
     });
   }
 
@@ -125,50 +136,72 @@ export default function TeacherDashboard() {
         </p>
       </div>
 
-      {/* Invite code */}
+      {/* Invite */}
       {teacher?.inviteCode && (
         <div style={{
           background: "var(--white)",
           border: "1px solid var(--border)",
           borderRadius: 4,
-          padding: "1.5rem 1.75rem",
+          padding: "1.25rem 1.5rem",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1.5rem",
+          flexDirection: "column",
+          gap: "1rem",
         }}>
-          <div>
+          <div style={{
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 500,
+            fontSize: "0.6875rem",
+            color: "var(--muted)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}>
+            Invite students
+          </div>
+
+          {/* Link row */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <div style={{
+              flex: 1,
               fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              fontSize: "0.6875rem",
-              color: "var(--muted)",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              marginBottom: "0.625rem",
+              fontSize: "0.8125rem",
+              color: "var(--charcoal)",
+              background: "var(--cream)",
+              border: "1px solid var(--border)",
+              borderRadius: 4,
+              padding: "0.5rem 0.75rem",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}>
-              Studio Invite Code
+              {typeof window !== "undefined"
+                ? `${window.location.origin}/student/join?code=${teacher.inviteCode.toUpperCase()}`
+                : `/student/join?code=${teacher.inviteCode.toUpperCase()}`}
             </div>
-            <div className="invite-code">
+            <button
+              onClick={copyInviteLink}
+              className="btn btn-primary"
+              style={{ flexShrink: 0, padding: "0.5rem 1rem", fontSize: "0.8125rem" }}
+            >
+              {copiedLink ? "Copied!" : "Copy link"}
+            </button>
+          </div>
+
+          {/* Code row */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
+              Or share the code:
+            </div>
+            <div className="invite-code" style={{ fontSize: "1rem", letterSpacing: "0.2em" }}>
               {teacher.inviteCode.toUpperCase()}
             </div>
-            <div style={{
-              fontFamily: "Inter, sans-serif",
-              fontSize: "0.75rem",
-              color: "var(--muted)",
-              marginTop: "0.5rem",
-              fontWeight: 400,
-            }}>
-              Share with students to join your studio
-            </div>
+            <button
+              onClick={copyInviteCode}
+              className="btn btn-secondary"
+              style={{ padding: "0.25rem 0.75rem", fontSize: "0.75rem" }}
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
           </div>
-          <button
-            onClick={copyInviteCode}
-            className="btn btn-secondary"
-            style={{ flexShrink: 0 }}
-          >
-            {copied ? "Copied" : "Copy"}
-          </button>
         </div>
       )}
 
