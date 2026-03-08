@@ -3,15 +3,20 @@
 -- Run this in the Supabase SQL Editor
 -- ============================================================
 
--- Family groups (minimal — just an anchor for the foreign key)
+-- 1. Family groups table
 CREATE TABLE IF NOT EXISTS public.families (
   id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 2. Add columns to profiles FIRST (policies below reference these)
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS family_id UUID REFERENCES public.families(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS switch_pin TEXT;   -- SHA-256(pin + user_id)
+
+-- 3. RLS on families
 ALTER TABLE public.families ENABLE ROW LEVEL SECURITY;
 
--- Any family member can see the family row
 CREATE POLICY "family members can read family" ON public.families FOR SELECT
   USING (
     id IN (
@@ -20,12 +25,7 @@ CREATE POLICY "family members can read family" ON public.families FOR SELECT
     )
   );
 
--- Add family_id and switch_pin to profiles
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS family_id UUID REFERENCES public.families(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS switch_pin TEXT;   -- SHA-256(pin + user_id)
-
--- Allow students to read profiles of other family members
+-- 4. Allow students to read profiles of other family members
 -- (existing self-read policy is unchanged; RLS policies are OR-combined)
 CREATE POLICY "students can read family member profiles" ON public.profiles FOR SELECT
   USING (
