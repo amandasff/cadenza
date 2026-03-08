@@ -8,7 +8,31 @@
       "Bash(gh run list --limit 3)",
       "Bash(npx tsc --noEmit)",
       "Bash(npx next build)",
-      "Bash(npm install pdfjs-dist @mediapipe/tasks-vision)"
+      "Bash(npm install pdfjs-dist @mediapipe/tasks-vision)",
+      "Bash(xargs grep -l \"profiles\\\\|total_points\\\\|streak\")",
+      "WebFetch(domain:opennote.com)",
+      "Bash(git -C \"/c/Users/amand/cadenza\" add app/student/tuner/page.tsx app/student/page.tsx)",
+      "Bash(git -C \"/c/Users/amand/cadenza\" commit -m \"Add guitar tuner — real-time pitch detection via Web Audio API\")",
+      "Bash(git -C \"/c/Users/amand/cadenza\" push)",
+      "Bash(git -C \"/c/Users/amand/cadenza\" add app/student/tuner/page.tsx)",
+      "Bash(git -C \"/c/Users/amand/cadenza\" commit -m \"Fix Float32Array TypeScript error in tuner\")",
+      "Bash(git -C \"/c/Users/amand/cadenza\" add supabase/score_files.sql lib/types/index.ts lib/services/PieceService.ts \"app/teacher/student/[id]/page.tsx\" \"app/student/pieces/[id]/score/page.tsx\" app/student/pieces/page.tsx)",
+      "Bash(git -C \"/c/Users/amand/cadenza\" commit -m \"Add sheet music player — alphaTab score viewer with MusicXML/Guitar Pro upload\")",
+      "Bash(git -C \"/c/Users/amand/cadenza\" add \"app/student/pieces/[id]/score/page.tsx\")",
+      "Bash(git -C \"/c/Users/amand/cadenza\" commit -m \"Fix implicit any TypeScript error in score viewer\")",
+      "Skill(claude-developer-platform)",
+      "Skill(claude-developer-platform:*)",
+      "Bash(npm install @anthropic-ai/sdk)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run build)",
+      "Bash(NODE_OPTIONS=\"--stack-trace-limit=50\" npm run build)",
+      "Bash(grep -n \"aiConverting\\\\|onAiConvert\\\\|handleAiConvert\" app/teacher/student/[id]/page.tsx)",
+      "Bash(xargs grep -l \"CREATE TABLE.*studios\")",
+      "Bash(npm install stripe)",
+      "Bash(npx supabase status)",
+      "Bash(xargs grep -l \"practice_sessions\")",
+      "Bash(npm install @google/generative-ai)",
+      "Bash(npm install @daily-co/daily-react @daily-co/daily-js)"
     ]
   }
 }

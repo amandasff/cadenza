@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
+import LessonProviderClient from "@/components/LessonProviderClient";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -44,7 +45,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body suppressHydrationWarning>
         <AuthProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <LessonProviderClient>{children}</LessonProviderClient>
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

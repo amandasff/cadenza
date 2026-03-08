@@ -8,8 +8,7 @@ import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 import { PlayerProvider } from "../../lib/context/PlayerContext";
 import MiniPlayer from "../../components/MiniPlayer";
-import { LessonProvider } from "../../lib/context/LessonContext";
-import LessonPip from "../../components/LessonPip";
+
 
 interface SiblingProfile {
   id: string;
@@ -298,7 +297,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   );
 
   return (
-    <LessonProvider>
     <PlayerProvider>
     <div className="student-shell">
 
@@ -531,7 +529,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         })}
       </nav>
       <MiniPlayer />
-      <LessonPip />
     </div>
 
     {/* Upload error toast */}
@@ -716,6 +713,5 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       </div>
     )}
     </PlayerProvider>
-    </LessonProvider>
   );
 }
