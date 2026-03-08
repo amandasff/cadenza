@@ -77,11 +77,10 @@ export default function AudioPlayer({ src }: { src: string }) {
     setScrubValue(currentTime);
   }
 
-  function onScrubEnd(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = Number(e.target.value);
+  function onScrubEnd() {
     setDragging(false);
-    setCurrentTime(val);
-    if (audioRef.current) audioRef.current.currentTime = val;
+    setCurrentTime(scrubValue);
+    if (audioRef.current) audioRef.current.currentTime = scrubValue;
   }
 
   const progress = duration > 0 ? (dragging ? scrubValue : currentTime) / duration : 0;
@@ -115,7 +114,7 @@ export default function AudioPlayer({ src }: { src: string }) {
           onTouchStart={onScrubStart}
           onChange={onScrubChange}
           onMouseUp={onScrubEnd}
-          onTouchEnd={onScrubEnd as unknown as React.TouchEventHandler}
+          onTouchEnd={onScrubEnd}
           style={{
             position: "absolute", inset: 0, width: "100%", height: "100%",
             opacity: 0, cursor: "pointer", margin: 0,
