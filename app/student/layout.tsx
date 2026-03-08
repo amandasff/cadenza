@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
@@ -8,6 +8,13 @@ import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 import { PlayerProvider } from "../../lib/context/PlayerContext";
 import MiniPlayer from "../../components/MiniPlayer";
+
+interface SiblingProfile {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  hasPin: boolean;
+}
 
 const tabs = [
   { href: "/student",                label: "Home" },
@@ -32,6 +39,24 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sibling / family state
+  const [siblings, setSiblings] = useState<SiblingProfile[]>([]);
+  const [familyCode, setFamilyCode] = useState<string | null>(null);
+  const [hasPin, setHasPin] = useState(false);
+  const [familyModalOpen, setFamilyModalOpen] = useState(false);
+  const [switchTarget, setSwitchTarget] = useState<SiblingProfile | null>(null);
+  const [switchPin, setSwitchPin] = useState("");
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  const [switchLoading, setSwitchLoading] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [newPin, setNewPin] = useState("");
+  const [setPinLoading, setSetPinLoading] = useState(false);
+  const [setPinError, setSetPinError] = useState<string | null>(null);
+  const [setPinSuccess, setSetPinSuccess] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -61,6 +86,24 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         }
       });
   }, [(user as Student | null)?.id]);
+
+  // Load sibling family members
+  const loadSiblings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/family/members");
+      if (!res.ok) return;
+      const json = await res.json() as { members: SiblingProfile[]; familyCode: string | null; hasPin: boolean };
+      setSiblings(json.members ?? []);
+      setFamilyCode(json.familyCode ?? null);
+      setHasPin(json.hasPin ?? false);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const student = user as Student | null;
+    if (!student?.id) return;
+    loadSiblings();
+  }, [(user as Student | null)?.id, loadSiblings]);
 
   // Unread chat badge
   useEffect(() => {
@@ -128,6 +171,65 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     } finally {
       setDeleting(false);
     }
+  }
+
+  async function handleCreateFamily() {
+    const res = await fetch("/api/family/create", { method: "POST" });
+    const json = await res.json() as { familyCode?: string; error?: string };
+    if (json.familyCode) { setFamilyCode(json.familyCode); await loadSiblings(); }
+    else setJoinError(json.error ?? "Failed to create family");
+  }
+
+  async function handleJoinFamily() {
+    if (!joinCode.trim()) return;
+    setJoinLoading(true); setJoinError(null);
+    try {
+      const res = await fetch("/api/family/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: joinCode.trim() }),
+      });
+      const json = await res.json() as { success?: boolean; error?: string };
+      if (json.success) { setJoinCode(""); await loadSiblings(); }
+      else setJoinError(json.error ?? "Failed to join family");
+    } finally { setJoinLoading(false); }
+  }
+
+  async function handleLeaveFamily() {
+    if (!confirm("Leave this family? Your switch PIN will be cleared.")) return;
+    await fetch("/api/family/leave", { method: "POST" });
+    setSiblings([]); setFamilyCode(null); setHasPin(false);
+  }
+
+  async function handleSetPin() {
+    if (!/^\d{4}$/.test(newPin)) { setSetPinError("Enter exactly 4 digits"); return; }
+    setSetPinLoading(true); setSetPinError(null); setSetPinSuccess(false);
+    try {
+      const res = await fetch("/api/family/set-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: newPin }),
+      });
+      const json = await res.json() as { success?: boolean; error?: string };
+      if (json.success) { setHasPin(true); setSetPinSuccess(true); setNewPin(""); }
+      else setSetPinError(json.error ?? "Failed to set PIN");
+    } finally { setSetPinLoading(false); }
+  }
+
+  async function handleSwitch() {
+    if (!switchTarget || !/^\d{4}$/.test(switchPin)) { setSwitchError("Enter 4-digit PIN"); return; }
+    setSwitchLoading(true); setSwitchError(null);
+    try {
+      const res = await fetch("/api/family/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: switchTarget.id, pin: switchPin }),
+      });
+      const json = await res.json() as { actionLink?: string; error?: string };
+      if (json.actionLink) { window.location.href = json.actionLink; }
+      else setSwitchError(json.error ?? "Switch failed");
+    } catch { setSwitchError("Switch failed"); }
+    finally { setSwitchLoading(false); }
   }
 
   if (loading) {
@@ -279,6 +381,40 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
 
+        {/* Sibling switcher */}
+        {(siblings.length > 0 || familyCode) && (
+          <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)" }}>
+                Family
+              </span>
+              <button onClick={() => { setFamilyModalOpen(true); setSetPinSuccess(false); setSetPinError(null); setJoinError(null); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.04em", textTransform: "uppercase", padding: 0 }}>
+                Manage
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              {siblings.map(s => {
+                const initials2 = s.displayName.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+                return (
+                  <button key={s.id} onClick={() => { setSwitchTarget(s); setSwitchPin(""); setSwitchError(null); }} title={`Switch to ${s.displayName}`} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: s.avatarUrl ? "transparent" : "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 600, color: "var(--white)", overflow: "hidden", border: "2px solid var(--border)" }}>
+                      {s.avatarUrl ? <img src={s.avatarUrl} alt={s.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials2}
+                    </div>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", maxWidth: 36, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.displayName.split(" ")[0]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {!familyCode && siblings.length === 0 && (
+          <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+            <button onClick={() => { setFamilyModalOpen(true); setJoinError(null); }} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.3rem 0.625rem", cursor: "pointer", fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s" }}>
+              + Add siblings
+            </button>
+          </div>
+        )}
+
         {/* Nav links */}
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
           {tabs.map(t => {
@@ -403,6 +539,111 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       }}>
         Photo upload failed: {uploadError}
         <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "0.875rem" }}>×</button>
+      </div>
+    )}
+
+    {/* Family manage modal */}
+    {familyModalOpen && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000, padding: "1.5rem" }}
+        onClick={e => { if (e.target === e.currentTarget) setFamilyModalOpen(false); }}>
+        <div style={{ background: "var(--white)", borderRadius: 4, padding: "2rem", width: "100%", maxWidth: 380, boxShadow: "0 8px 40px rgba(0,0,0,0.2)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+            <h2 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", margin: 0 }}>Family</h2>
+            <button onClick={() => setFamilyModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--muted)", lineHeight: 1 }}>×</button>
+          </div>
+
+          {familyCode ? (
+            <>
+              {/* Family code */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 0.5rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>Family code</p>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <code style={{ fontFamily: "monospace", fontSize: "1.25rem", fontWeight: 700, color: "var(--charcoal)", letterSpacing: "0.15em", flex: 1, background: "var(--cream)", padding: "0.5rem 0.75rem", borderRadius: 3 }}>{familyCode}</code>
+                  <button onClick={() => { navigator.clipboard.writeText(familyCode); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000); }} style={{ padding: "0.5rem 0.75rem", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 3, cursor: "pointer", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
+                    {codeCopied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0.5rem 0 0" }}>Share this code with siblings so they can join your family.</p>
+              </div>
+
+              {/* Set/update switch PIN */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 0.5rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{hasPin ? "Update your switch PIN" : "Set a switch PIN"}</p>
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 0.625rem" }}>Siblings enter this 4-digit PIN to switch into your account.</p>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input type="password" inputMode="numeric" maxLength={4} placeholder="1234" value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))} style={{ flex: 1, padding: "0.5rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, fontFamily: "Inter, sans-serif", fontSize: "1rem", letterSpacing: "0.2em", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
+                  <button onClick={handleSetPin} disabled={setPinLoading || newPin.length !== 4} style={{ padding: "0.5rem 1rem", background: newPin.length === 4 ? "var(--charcoal)" : "var(--border)", color: "var(--white)", border: "none", borderRadius: 3, cursor: newPin.length === 4 ? "pointer" : "default", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", transition: "background 0.15s" }}>
+                    {setPinLoading ? "Saving…" : "Save"}
+                  </button>
+                </div>
+                {setPinError && <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#c0392b", margin: "0.375rem 0 0" }}>{setPinError}</p>}
+                {setPinSuccess && <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#4CAF84", margin: "0.375rem 0 0" }}>PIN saved!</p>}
+              </div>
+
+              {/* Leave family */}
+              <button onClick={handleLeaveFamily} style={{ width: "100%", padding: "0.5rem", background: "none", border: "1px solid var(--border)", borderRadius: 3, cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#c0392b", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                Leave family
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Create a family */}
+              <div style={{ marginBottom: "1.25rem" }}>
+                <button onClick={handleCreateFamily} style={{ width: "100%", padding: "0.625rem", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 3, cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500 }}>
+                  Create a new family
+                </button>
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0.5rem 0 0", textAlign: "center" }}>Creates a family and gives you a code to share with siblings.</p>
+              </div>
+
+              <div style={{ textAlign: "center", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0.5rem 0" }}>or</div>
+
+              {/* Join a family */}
+              <div>
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 0.5rem", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>Join with a code</p>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input type="text" placeholder="8-character code" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} maxLength={8} style={{ flex: 1, padding: "0.5rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, fontFamily: "monospace", fontSize: "0.875rem", letterSpacing: "0.1em", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
+                  <button onClick={handleJoinFamily} disabled={joinLoading || joinCode.length < 8} style={{ padding: "0.5rem 1rem", background: joinCode.length >= 8 ? "var(--charcoal)" : "var(--border)", color: "var(--white)", border: "none", borderRadius: 3, cursor: joinCode.length >= 8 ? "pointer" : "default", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", transition: "background 0.15s" }}>
+                    {joinLoading ? "Joining…" : "Join"}
+                  </button>
+                </div>
+                {joinError && <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#c0392b", margin: "0.375rem 0 0" }}>{joinError}</p>}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )}
+
+    {/* Sibling PIN switch modal */}
+    {switchTarget && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000, padding: "1.5rem" }}
+        onClick={e => { if (e.target === e.currentTarget) { setSwitchTarget(null); setSwitchPin(""); setSwitchError(null); } }}>
+        <div style={{ background: "var(--white)", borderRadius: 4, padding: "2rem", width: "100%", maxWidth: 320, boxShadow: "0 8px 40px rgba(0,0,0,0.2)", textAlign: "center" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: switchTarget.avatarUrl ? "transparent" : "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontFamily: "Inter, sans-serif", fontWeight: 600, color: "var(--white)", overflow: "hidden", margin: "0 auto 1rem" }}>
+            {switchTarget.avatarUrl ? <img src={switchTarget.avatarUrl} alt={switchTarget.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : switchTarget.displayName.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase()}
+          </div>
+          <h2 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", margin: "0 0 0.25rem" }}>Switch to {switchTarget.displayName}</h2>
+          {switchTarget.hasPin ? (
+            <>
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.25rem" }}>Enter {switchTarget.displayName.split(" ")[0]}&apos;s 4-digit PIN</p>
+              <input
+                type="password" inputMode="numeric" maxLength={4} placeholder="· · · ·"
+                value={switchPin} onChange={e => { setSwitchPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setSwitchError(null); }}
+                onKeyDown={e => e.key === "Enter" && handleSwitch()}
+                autoFocus
+                style={{ width: "100%", boxSizing: "border-box", padding: "0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, fontFamily: "Inter, sans-serif", fontSize: "1.5rem", letterSpacing: "0.3em", textAlign: "center", background: "var(--cream)", color: "var(--charcoal)", outline: "none", marginBottom: "0.75rem" }}
+              />
+              {switchError && <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#c0392b", margin: "0 0 0.75rem" }}>{switchError}</p>}
+              <button onClick={handleSwitch} disabled={switchLoading || switchPin.length !== 4} style={{ width: "100%", padding: "0.75rem", background: switchPin.length === 4 ? "var(--charcoal)" : "var(--border)", color: "var(--white)", border: "none", borderRadius: 3, cursor: switchPin.length === 4 ? "pointer" : "default", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500, transition: "background 0.15s" }}>
+                {switchLoading ? "Switching…" : "Switch account"}
+              </button>
+            </>
+          ) : (
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
+              {switchTarget.displayName.split(" ")[0]} hasn&apos;t set a switch PIN yet. Ask them to set one in their Family settings.
+            </p>
+          )}
+        </div>
       </div>
     )}
 
