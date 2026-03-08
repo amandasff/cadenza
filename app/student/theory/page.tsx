@@ -1315,9 +1315,195 @@ function ScaleGame({ onBack }: { onBack: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RCM Reference
+// ─────────────────────────────────────────────────────────────────────────────
+
+const RCM_LEVELS = [
+  {
+    level: "Preparatory",
+    pieces: "2 pieces (Lists A & B) + 1 study/etude",
+    technical: "5-finger warm-ups, C/G/D/F major scales HS, primary triads",
+    ear: "Echo clapping, singing back 2–4 note patterns, major vs minor chords",
+    theory: "None required",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 1",
+    pieces: "3 pieces (Lists A, B, C) + 1 study",
+    technical: "C, G, D, F major scales HS (1 octave); A natural minor HS",
+    ear: "Intervals of 2nd–5th, major/minor chord ID, echo clapping",
+    theory: "None required",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 2",
+    pieces: "3 pieces + 1 study",
+    technical: "C, G, D, A, E, F, B♭ major HS; A, D, E natural & harmonic minor HS",
+    ear: "Intervals 2nd–6th, chord quality, melodic echo (3–4 notes)",
+    theory: "None required",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 3",
+    pieces: "3 pieces + 1 study",
+    technical: "8 major scales HT (1–2 octaves); relative harmonic minor HT; arpeggios begin (HS)",
+    ear: "All diatonic intervals, major/minor/diminished chords",
+    theory: "Theory Prep A (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 4",
+    pieces: "4 pieces (A, B, C + optional D) + 1 study",
+    technical: "All 12 major scales HT (2 octaves); natural & harmonic minor HT; melodic minor begins; arpeggios HT",
+    ear: "All intervals through octave, chord progressions I–IV–V",
+    theory: "Theory Prep B (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 5",
+    pieces: "4 pieces + 1 study",
+    technical: "All major + all 3 forms of minor (natural, harmonic, melodic) HT; arpeggios 2 oct HT; chord progressions",
+    ear: "All intervals, all chord qualities (+ augmented), short melodic dictation",
+    theory: "Theory Level 1 (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 6",
+    pieces: "4 pieces + 1 study",
+    technical: "All scales 2 octaves, legato + staccato + rhythmic variations; broken chord patterns",
+    ear: "All intervals, chord quality with inversions, chord progressions, melodic dictation",
+    theory: "Theory Level 2 (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 7",
+    pieces: "4 pieces + 1 study",
+    technical: "4-octave scales begin for select keys; parallel + contrary motion; octave scales; broken chords",
+    ear: "All intervals, all chord qualities, diatonic melody dictation (2 hearings)",
+    theory: "Theory Level 3 (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 8",
+    pieces: "4 pieces + 1 study",
+    technical: "Full 4-octave scales; scales in thirds/sixths (select keys); chromatic scales; double notes",
+    ear: "All intervals, chord quality (with inversions), harmonic progressions, melodic dictation",
+    theory: "Theory Level 4 (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 9",
+    pieces: "4 pieces + 1 study",
+    technical: "Complete battery at advanced tempos; all scale types at speed",
+    ear: "Advanced harmonic dictation, modulation recognition, two-voice elements",
+    theory: "Advanced Rudiments (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "Level 10",
+    pieces: "4 pieces (all 4 Lists required) + 1 study",
+    technical: "Highest technical standard; all scales, arpeggios, technical tests at exam tempo",
+    ear: "Two-voice dictation, modulation, non-chord tones, advanced harmonic analysis",
+    theory: "Advanced Rudiments + Harmony or Counterpoint or History (co-requisite)",
+    marks: "Pieces 64 · Technical 16 · Ear 10 · Sight Reading 10",
+  },
+  {
+    level: "ARCT",
+    pieces: "5+ pieces at concert-level standard (chosen from approved repertoire list)",
+    technical: "Comprehensive technical exam at the highest level",
+    ear: "Advanced: two-voice dictation, modulation, harmonic analysis",
+    theory: "History 1 & 2 + Harmony + Counterpoint (all required)",
+    marks: "Pieces ~70 · Technical ~15 · Ear ~15",
+  },
+];
+
+function RCMReference({ onBack }: { onBack: () => void }) {
+  const [selected, setSelected] = useState(0);
+  const lvl = RCM_LEVELS[selected];
+
+  return (
+    <div style={{ minHeight: "100%", background: "var(--cream)", fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.5rem", flexShrink: 0 }}>
+        <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", alignItems: "center", gap: "1rem" }}>
+          <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--muted)", padding: 0, lineHeight: 1 }}>←</button>
+          <div>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", fontWeight: 500, color: "var(--charcoal)" }}>RCM Exam Requirements</div>
+            <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: 0 }}>Royal Conservatory of Music — Piano syllabus overview</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Level selector */}
+      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", overflowX: "auto", flexShrink: 0 }}>
+        <div style={{ display: "flex", padding: "0 1.5rem", gap: 0, minWidth: "max-content" }}>
+          {RCM_LEVELS.map((l, i) => (
+            <button key={l.level} onClick={() => setSelected(i)} style={{
+              padding: "0.75rem 0.875rem", background: "none", border: "none",
+              borderBottom: selected === i ? "2px solid var(--charcoal)" : "2px solid transparent",
+              color: selected === i ? "var(--charcoal)" : "var(--muted)",
+              fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: selected === i ? 600 : 400,
+              cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
+            }}>
+              {l.level}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, padding: "2rem 1.5rem", overflowY: "auto" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+          <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 500, color: "var(--charcoal)", margin: "0 0 1.5rem", letterSpacing: "-0.01em" }}>
+            {lvl.level}
+          </h2>
+
+          {[
+            { label: "Repertoire", value: lvl.pieces, icon: "🎵" },
+            { label: "Technical Requirements", value: lvl.technical, icon: "🎹" },
+            { label: "Ear Training", value: lvl.ear, icon: "👂" },
+            { label: "Theory Co-requisite", value: lvl.theory, icon: "📚" },
+            { label: "Mark Distribution", value: lvl.marks, icon: "📊" },
+          ].map(row => (
+            <div key={row.label} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.125rem 1.25rem", marginBottom: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+                <span style={{ fontSize: "1.125rem", flexShrink: 0, marginTop: "0.125rem" }}>{row.icon}</span>
+                <div>
+                  <div style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.25rem" }}>{row.label}</div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.6 }}>{row.value}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Passing marks info */}
+          <div style={{ background: "rgba(74,103,185,0.06)", border: "1px solid rgba(74,103,185,0.15)", borderRadius: 8, padding: "1rem 1.25rem", marginTop: "0.5rem" }}>
+            <div style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(74,103,185,0.7)", marginBottom: "0.5rem" }}>Passing Requirements</div>
+            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+              {[["Pass", "60+"], ["Honours", "80+"], ["First Class Honours", "90+"]].map(([label, mark]) => (
+                <div key={label}>
+                  <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "var(--charcoal)" }}>{mark}</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: "1.5rem", padding: "0.875rem 1.125rem", background: "var(--cream-deep)", borderRadius: 6, fontSize: "0.75rem", color: "var(--muted)", lineHeight: 1.6 }}>
+            <strong>Note:</strong> Piece lists and technical requirements are updated annually. Always confirm current requirements at{" "}
+            <a href="https://rcmusic.com" target="_blank" rel="noopener noreferrer" style={{ color: "var(--charcoal)" }}>rcmusic.com</a>.
+            For personalized guidance, ask the AI Tutor.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Menu
 // ─────────────────────────────────────────────────────────────────────────────
-type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale";
+type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm";
 
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   const scores = {
@@ -1357,6 +1543,11 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     {
       view: "scale" as View, icon: "🎶", title: "Scale Ear Training",
       desc: "A scale plays ascending and descending. Is it major, natural minor, harmonic minor, or melodic minor?",
+      badge: null, active: true,
+    },
+    {
+      view: "rcm" as View, icon: "📋", title: "RCM Exam Guide",
+      desc: "Level-by-level breakdown of exam requirements: pieces, technical, ear training, theory co-requisites, and passing marks.",
       badge: null, active: true,
     },
     {
@@ -1411,5 +1602,6 @@ export default function TheoryPage() {
   if (view === "terms")    return <MusicTermsGame onBack={() => setView("menu")} />;
   if (view === "keySig")   return <KeySigGame onBack={() => setView("menu")} />;
   if (view === "scale")    return <ScaleGame onBack={() => setView("menu")} />;
+  if (view === "rcm")      return <RCMReference onBack={() => setView("menu")} />;
   return null;
 }
