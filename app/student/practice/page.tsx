@@ -379,6 +379,7 @@ function PracticeInner() {
           lines.push(`${AREAS[s.practice_area]?.label ?? "Practice"}: ${s.title} · ${fmt(s.start_seconds)}`)
         );
         if (recordingUrl) lines.push(`AUDIO:${recordingUrl}`);
+        if (sessionData?.id) lines.push(`SESSION:${sessionData.id}`);
 
         try {
           await ChatService.getInstance(supabase).postSystemMessage(

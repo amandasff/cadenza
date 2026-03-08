@@ -5,6 +5,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { ChatService } from "../../../lib/services/ChatService";
 import { Student } from "../../../lib/models/Student";
 import type { MessageRow } from "../../../lib/types";
+import AudioPlayer from "../../../components/AudioPlayer";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -34,6 +35,7 @@ export default function StudentChat() {
   const [editText, setEditText] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [hearts, setHearts] = useState<HeartMap>({});
+  const [sessionFeedbacks, setSessionFeedbacks] = useState<Record<string, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -107,6 +109,32 @@ export default function StudentChat() {
     }, 3000);
     return () => { unsubPriv(); clearInterval(pollPriv); };
   }, [student?.studioId, student?.id, teacherId]);
+
+  // Fetch AI feedback for any session system messages
+  useEffect(() => {
+    const allMsgs = [...announcements, ...privateMessages];
+    const sessionIds = allMsgs
+      .filter(m => m.message_type === "system")
+      .map(m => {
+        const match = m.content.split("\n").find(l => l.startsWith("SESSION:"));
+        return match?.slice(8) ?? null;
+      })
+      .filter((id): id is string => !!id && !(id in sessionFeedbacks));
+    if (sessionIds.length === 0) return;
+    const supabase = getSupabaseBrowserClient();
+    supabase
+      .from("practice_sessions")
+      .select("id, ai_feedback")
+      .in("id", sessionIds)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, string> = {};
+        for (const row of data) {
+          if (row.ai_feedback) map[row.id] = row.ai_feedback;
+        }
+        if (Object.keys(map).length > 0) setSessionFeedbacks(prev => ({ ...prev, ...map }));
+      });
+  }, [announcements, privateMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { scrollToBottom(); }, [announcements, privateMessages, tab, scrollToBottom]);
 
@@ -204,12 +232,32 @@ export default function StudentChat() {
             if (msg.message_type === "system") {
               const lines = msg.content.split("\n");
               const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
-              const text = lines.filter(l => !l.startsWith("AUDIO:")).join("\n");
+              const sessionId = lines.find(l => l.startsWith("SESSION:"))?.slice(8);
+              const text = lines
+                .filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:"))
+                .join("\n");
+              const aiFeedback = sessionId ? sessionFeedbacks[sessionId] : undefined;
               return (
-                <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.5rem 0" }}>
-                  <div style={{ padding: "0.5rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "88%", lineHeight: 1.6 }}>
-                    <div style={{ whiteSpace: "pre-line" }}>{text}</div>
-                    {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", marginTop: "0.5rem", height: 32 }} />}
+                <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.625rem 0" }}>
+                  <div style={{
+                    background: "var(--white)", border: "1px solid var(--border)",
+                    borderRadius: 16, padding: "1rem 1.125rem",
+                    maxWidth: "90%", width: "100%",
+                  }}>
+                    <div style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, whiteSpace: "pre-line", marginBottom: audioUrl ? "0.75rem" : 0 }}>
+                      {text}
+                    </div>
+                    {audioUrl && <AudioPlayer src={audioUrl} />}
+                    {aiFeedback && (
+                      <div style={{ marginTop: "0.875rem", paddingTop: "0.875rem", borderTop: "1px solid var(--border)" }}>
+                        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>
+                          AI Coaching
+                        </div>
+                        <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, margin: 0 }}>
+                          {aiFeedback}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
