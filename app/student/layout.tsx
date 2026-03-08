@@ -25,7 +25,11 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [hasUnread, setHasUnread] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -91,23 +95,37 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     const student = user as Student | null;
     if (!file || !student?.id) return;
     setUploading(true);
+    setUploadError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${student.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
+      const filePath = `${student.id}/avatar.${ext}`;
+      const { error: storageError } = await supabase.storage
         .from("avatars")
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+        .upload(filePath, file, { upsert: true });
+      if (storageError) throw storageError;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const url = urlData.publicUrl + "?t=" + Date.now();
-      await supabase.from("profiles").update({ avatar_url: urlData.publicUrl }).eq("id", student.id);
+      const { error: updateError } = await supabase.from("profiles").update({ avatar_url: urlData.publicUrl }).eq("id", student.id);
+      if (updateError) throw updateError;
       setAvatarUrl(url);
     } catch (err) {
+      const msg = (err as { message?: string })?.message ?? "Upload failed";
+      setUploadError(msg);
       console.error("avatar upload error:", err);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      await fetch("/api/account/delete", { method: "DELETE" });
+      await signOut();
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -313,11 +331,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             Sign out
           </button>
           <button
-            onClick={async () => {
-              if (!confirm("Delete your account permanently? This cannot be undone.")) return;
-              await fetch("/api/account/delete", { method: "DELETE" });
-              await signOut();
-            }}
+            onClick={() => { setDeleteModalOpen(true); setDeleteConfirmText(""); }}
             style={{
               width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
               padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
@@ -377,6 +391,83 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       </nav>
       <MiniPlayer />
     </div>
+
+    {/* Upload error toast */}
+    {uploadError && (
+      <div style={{
+        position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+        background: "#c0392b", color: "#fff", padding: "0.625rem 1.125rem",
+        borderRadius: 3, fontSize: "0.8125rem", fontFamily: "Inter, sans-serif",
+        zIndex: 9999, maxWidth: 340, textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+      }}>
+        Photo upload failed: {uploadError}
+        <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "0.875rem" }}>×</button>
+      </div>
+    )}
+
+    {/* Delete account modal */}
+    {deleteModalOpen && (
+      <div style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 10000, padding: "1.5rem",
+      }} onClick={e => { if (e.target === e.currentTarget) { setDeleteModalOpen(false); setDeleteConfirmText(""); } }}>
+        <div style={{
+          background: "var(--white)", borderRadius: 4, padding: "2rem",
+          width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
+        }}>
+          <h2 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", margin: "0 0 0.75rem" }}>
+            Delete account
+          </h2>
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 1.25rem", lineHeight: 1.6 }}>
+            This will permanently delete your account and all your data — practice sessions, recordings, and progress. <strong>This cannot be undone.</strong>
+          </p>
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0 0 0.5rem", fontWeight: 500 }}>
+            Type <strong>DELETE</strong> to confirm
+          </p>
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={e => setDeleteConfirmText(e.target.value)}
+            placeholder="DELETE"
+            autoFocus
+            style={{
+              width: "100%", boxSizing: "border-box",
+              borderRadius: 3, border: "1px solid var(--border-strong)",
+              padding: "0.625rem 0.875rem", fontSize: "0.875rem",
+              fontFamily: "Inter, sans-serif", outline: "none",
+              background: "var(--cream)", color: "var(--charcoal)", marginBottom: "1.25rem",
+            }}
+          />
+          <div style={{ display: "flex", gap: "0.625rem" }}>
+            <button
+              onClick={() => { setDeleteModalOpen(false); setDeleteConfirmText(""); }}
+              style={{
+                flex: 1, padding: "0.625rem", borderRadius: 3,
+                border: "1px solid var(--border-strong)", background: "none",
+                fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
+                color: "var(--muted)", cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmText !== "DELETE" || deleting}
+              style={{
+                flex: 1, padding: "0.625rem", borderRadius: 3, border: "none",
+                background: deleteConfirmText === "DELETE" && !deleting ? "#c0392b" : "var(--border)",
+                fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500,
+                color: "#fff", cursor: deleteConfirmText === "DELETE" && !deleting ? "pointer" : "default",
+                transition: "background 0.15s",
+              }}
+            >
+              {deleting ? "Deleting…" : "Delete forever"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </PlayerProvider>
   );
 }

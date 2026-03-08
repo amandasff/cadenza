@@ -680,6 +680,17 @@ html[data-theme="dark"] .progress-fill {
   }
 }
 
+/* Chat page — full-height containment so input stays above bottom nav */
+.student-shell:has([data-chat-page]) {
+  height: 100dvh;
+}
+.student-scroll-area:has([data-chat-page]) {
+  overflow: hidden;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ── Teacher responsive ── */
 .teacher-nav-tabs {
   display: flex;

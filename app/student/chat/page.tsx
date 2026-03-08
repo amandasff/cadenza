@@ -173,10 +173,10 @@ export default function StudentChat() {
   const activeMessages = tab === "announcements" ? announcements : privateMessages;
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", flexDirection: "column" }}>
+    <div data-chat-page style={{ height: "100%", background: "var(--cream)", display: "flex", flexDirection: "column" }}>
 
       {/* Header */}
-      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem 0" }}>
+      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem 0", flexShrink: 0 }}>
         <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.875rem" }}>Messages</div>
         <div style={{ display: "flex", gap: 0 }}>
           {(["announcements", "private"] as Tab[]).map(t => (
@@ -189,7 +189,7 @@ export default function StudentChat() {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "7rem" }}>
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "1.25rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "1rem" }}>
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", paddingTop: "1rem" }}>
             {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 40, borderRadius: 3, width: i % 2 === 0 ? "58%" : "44%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />)}
@@ -281,12 +281,12 @@ export default function StudentChat() {
                       {heartInfo.count > 0 && <span style={{ fontSize: "0.625rem" }}>{heartInfo.count}</span>}
                     </button>
 
-                    {/* Edit / Delete — own private messages */}
+                    {/* Edit / Delete — own private messages, always visible */}
                     {canAct && (
-                      <span style={{ display: "flex", gap: "0.375rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none" }}>
-                        <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
+                      <span style={{ display: "flex", gap: "0.375rem" }}>
+                        <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0", fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
                         <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                        <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
+                        <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0", fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
                       </span>
                     )}
                   </div>
@@ -306,7 +306,7 @@ export default function StudentChat() {
       </div>
 
       {tab === "private" && (
-        <div style={{ position: "fixed", bottom: 72, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
           <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }} />
           <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s" }}>Send</button>
         </div>
