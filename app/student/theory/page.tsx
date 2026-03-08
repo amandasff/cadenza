@@ -815,9 +815,509 @@ function ChordGame({ onBack }: { onBack: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Game 4: Music Terms
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface Term { term: string; definition: string; category: string; level: "easy" | "medium" | "hard"; }
+
+const TERMS: Term[] = [
+  // Easy
+  { term: "Allegro", definition: "Fast and lively", category: "tempo", level: "easy" },
+  { term: "Andante", definition: "At a walking pace", category: "tempo", level: "easy" },
+  { term: "Forte (f)", definition: "Loud", category: "dynamics", level: "easy" },
+  { term: "Piano (p)", definition: "Soft", category: "dynamics", level: "easy" },
+  { term: "Staccato", definition: "Short and detached", category: "articulation", level: "easy" },
+  { term: "Legato", definition: "Smooth and connected", category: "articulation", level: "easy" },
+  { term: "Crescendo", definition: "Gradually getting louder", category: "dynamics", level: "easy" },
+  { term: "Decrescendo", definition: "Gradually getting softer", category: "dynamics", level: "easy" },
+  { term: "Mezzo Forte (mf)", definition: "Moderately loud", category: "dynamics", level: "easy" },
+  { term: "Mezzo Piano (mp)", definition: "Moderately soft", category: "dynamics", level: "easy" },
+  { term: "Ritardando (rit.)", definition: "Gradually slowing down", category: "tempo", level: "easy" },
+  { term: "Da Capo (D.C.)", definition: "Repeat from the beginning", category: "form", level: "easy" },
+  { term: "Fine", definition: "The end", category: "form", level: "easy" },
+  { term: "Fermata", definition: "Hold the note longer than its value", category: "form", level: "easy" },
+  { term: "Tempo", definition: "The speed of the music", category: "general", level: "easy" },
+  // Medium
+  { term: "Adagio", definition: "Slow and stately", category: "tempo", level: "medium" },
+  { term: "Moderato", definition: "At a moderate pace", category: "tempo", level: "medium" },
+  { term: "Vivace", definition: "Lively and fast", category: "tempo", level: "medium" },
+  { term: "Presto", definition: "Very fast", category: "tempo", level: "medium" },
+  { term: "Pianissimo (pp)", definition: "Very soft", category: "dynamics", level: "medium" },
+  { term: "Fortissimo (ff)", definition: "Very loud", category: "dynamics", level: "medium" },
+  { term: "Dolce", definition: "Sweetly", category: "expression", level: "medium" },
+  { term: "Cantabile", definition: "In a singing style", category: "expression", level: "medium" },
+  { term: "Espressivo", definition: "Expressively", category: "expression", level: "medium" },
+  { term: "Accelerando (accel.)", definition: "Gradually speeding up", category: "tempo", level: "medium" },
+  { term: "A tempo", definition: "Return to the original tempo", category: "tempo", level: "medium" },
+  { term: "Dal Segno (D.S.)", definition: "Repeat from the sign", category: "form", level: "medium" },
+  { term: "Coda", definition: "A concluding section", category: "form", level: "medium" },
+  { term: "Tenuto", definition: "Hold the note for its full value", category: "articulation", level: "medium" },
+  { term: "Sforzando (sfz)", definition: "Sudden, strong accent", category: "dynamics", level: "medium" },
+  { term: "Grazioso", definition: "Gracefully", category: "expression", level: "medium" },
+  { term: "Maestoso", definition: "Majestic and stately", category: "expression", level: "medium" },
+  { term: "Semitone", definition: "The smallest interval on the keyboard", category: "theory", level: "medium" },
+  { term: "Octave", definition: "The interval of 8 notes (e.g. C to C)", category: "theory", level: "medium" },
+  // Hard
+  { term: "Largo", definition: "Very slow and broad", category: "tempo", level: "hard" },
+  { term: "Grave", definition: "Slow and solemn", category: "tempo", level: "hard" },
+  { term: "Prestissimo", definition: "As fast as possible", category: "tempo", level: "hard" },
+  { term: "Allegretto", definition: "Moderately fast (slightly slower than allegro)", category: "tempo", level: "hard" },
+  { term: "Tranquillo", definition: "Quietly and calmly", category: "expression", level: "hard" },
+  { term: "Agitato", definition: "Agitated and restless", category: "expression", level: "hard" },
+  { term: "Con brio", definition: "With vigor", category: "expression", level: "hard" },
+  { term: "Giocoso", definition: "Playfully and humorously", category: "expression", level: "hard" },
+  { term: "Rubato", definition: "With freedom of tempo", category: "tempo", level: "hard" },
+  { term: "Marcato", definition: "Strongly accented", category: "articulation", level: "hard" },
+  { term: "Enharmonic", definition: "Same pitch, different name (e.g. C♯ = D♭)", category: "theory", level: "hard" },
+  { term: "Homophonic", definition: "One melody with harmonic accompaniment", category: "theory", level: "hard" },
+  { term: "Polyphonic", definition: "Multiple independent melodic lines", category: "theory", level: "hard" },
+  { term: "Monophonic", definition: "A single unaccompanied melody", category: "theory", level: "hard" },
+  { term: "Con moto", definition: "With motion", category: "expression", level: "hard" },
+  { term: "Subito", definition: "Suddenly (e.g. subito piano = suddenly soft)", category: "dynamics", level: "hard" },
+  { term: "Ritenuto (riten.)", definition: "Immediately slower", category: "tempo", level: "hard" },
+  { term: "Sostenuto", definition: "Sustained, held back", category: "expression", level: "hard" },
+];
+
+interface TermQ { term: Term; choices: string[]; correct: string; }
+
+function makeTermQ(pool: Term[]): TermQ {
+  const t = pool[Math.floor(Math.random() * pool.length)];
+  const others = pool.filter(x => x.definition !== t.definition);
+  const wrongs = shuffle(others).slice(0, 3).map(x => x.definition);
+  return { term: t, correct: t.definition, choices: shuffle([t.definition, ...wrongs]) };
+}
+
+function MusicTermsGame({ onBack }: { onBack: () => void }) {
+  type Diff = "easy" | "medium" | "hard";
+  const [diff, setDiff] = useState<Diff>("easy");
+  const game = useGameState(`terms_${diff}`);
+  const [q, setQ] = useState<TermQ>(() => makeTermQ(TERMS.filter(t => t.level === "easy")));
+
+  function start() {
+    game.beginCountdown(() => {
+      const p = TERMS.filter(t => t.level === diff || (diff !== "easy" && t.level === "easy") || (diff === "hard" && t.level === "medium"));
+      setQ(makeTermQ(p));
+      game.beginPlay();
+    });
+  }
+
+  function answer(def: string) {
+    const ok = def === q.correct;
+    game.scoreAnswer(ok);
+    game.scheduleNext(ok, () => {
+      const p = TERMS.filter(t => t.level === diff || (diff !== "easy" && t.level === "easy") || (diff === "hard" && t.level === "medium"));
+      setQ(makeTermQ(p));
+    });
+  }
+
+  if (game.gs === "idle") {
+    return (
+      <IdleCard
+        title="Music Terms"
+        hiScore={game.hiScore}
+        description="A term flashes — pick its definition as fast as you can. 30 seconds, streak multipliers."
+        extras={
+          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Difficulty</div>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+              {(["easy", "medium", "hard"] as Diff[]).map(d => (
+                <button key={d} onClick={() => setDiff(d)} style={{ padding: "0.5rem 0.875rem", borderRadius: 20, cursor: "pointer", background: diff === d ? "#4CAF84" : "transparent", border: `1.5px solid ${diff === d ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: diff === d ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: diff === d ? 600 : 400, transition: "all 0.15s" }}>
+                  {d.charAt(0).toUpperCase() + d.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+        onStart={start}
+      />
+    );
+  }
+  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
+  if (game.gs === "results") {
+    return <ResultsScreen score={game.score} correct={game.correct} total={game.total} topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore} gameLabel={`terms · ${diff}`} onPlayAgain={start} onMenu={onBack} />;
+  }
+
+  const isCorrect = game.selected === q.correct;
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
+        <Popups entries={game.popups} />
+        <div style={{ maxWidth: 400, width: "100%" }}>
+          <div style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>{q.term.category}</div>
+          <div style={{ textAlign: "center", marginBottom: "2rem", fontSize: "1.75rem", fontWeight: 700, color: "#FDFCFA", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{q.term.term}</div>
+
+          {game.selected && (
+            <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
+              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `"${q.correct}"`}
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            {q.choices.map(c => {
+              const isSelected = game.selected === c;
+              const isRight = c === q.correct;
+              let bg = "rgba(255,255,255,0.06)", border = "1px solid rgba(255,255,255,0.1)", color = "#FDFCFA";
+              if (game.selected) {
+                if (isRight) { bg = "rgba(76,175,132,0.2)"; border = "1.5px solid #4CAF84"; color = "#4CAF84"; }
+                else if (isSelected) { bg = "rgba(224,82,82,0.2)"; border = "1.5px solid #E05252"; color = "#E05252"; }
+                else { bg = "rgba(255,255,255,0.03)"; border = "1px solid rgba(255,255,255,0.05)"; color = "rgba(255,255,255,0.25)"; }
+              }
+              return (
+                <button key={c} onClick={() => answer(c)} disabled={!!game.selected}
+                  style={{ padding: "0.875rem 1rem", borderRadius: 10, border, background: bg, color, fontFamily: "Inter, sans-serif", fontSize: "0.875rem", cursor: game.selected ? "default" : "pointer", transition: "all 0.1s", textAlign: "left", lineHeight: 1.4 }}>
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Game 5: Key Signatures
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface KeySig { name: string; sharps: number; flats: number; relativeMajor?: string; }
+
+const KEY_SIGS: KeySig[] = [
+  { name: "C major",  sharps: 0, flats: 0 },
+  { name: "G major",  sharps: 1, flats: 0 },
+  { name: "D major",  sharps: 2, flats: 0 },
+  { name: "A major",  sharps: 3, flats: 0 },
+  { name: "E major",  sharps: 4, flats: 0 },
+  { name: "B major",  sharps: 5, flats: 0 },
+  { name: "F♯ major", sharps: 6, flats: 0 },
+  { name: "C♯ major", sharps: 7, flats: 0 },
+  { name: "F major",  sharps: 0, flats: 1 },
+  { name: "B♭ major", sharps: 0, flats: 2 },
+  { name: "E♭ major", sharps: 0, flats: 3 },
+  { name: "A♭ major", sharps: 0, flats: 4 },
+  { name: "D♭ major", sharps: 0, flats: 5 },
+  { name: "G♭ major", sharps: 0, flats: 6 },
+  { name: "C♭ major", sharps: 0, flats: 7 },
+];
+
+// Relative minor names (parallel to KEY_SIGS)
+const RELATIVE_MINORS = ["A minor","E minor","B minor","F♯ minor","C♯ minor","G♯ minor","D♯ minor","A♯ minor","D minor","G minor","C minor","F minor","B♭ minor","E♭ minor","A♭ minor"];
+
+interface KeySigQ { key: KeySig; relMinor: string; choices: string[]; correct: string; askRelative: boolean; }
+
+function makeKeySigQ(pool: KeySig[], askRelative: boolean): KeySigQ {
+  const key = pool[Math.floor(Math.random() * pool.length)];
+  const idx = KEY_SIGS.findIndex(k => k.name === key.name);
+  const relMinor = RELATIVE_MINORS[idx];
+  const correct = askRelative ? relMinor : key.name;
+  const allOptions = askRelative ? RELATIVE_MINORS : KEY_SIGS.map(k => k.name);
+  const wrongs = shuffle(allOptions.filter(n => n !== correct)).slice(0, 3);
+  return { key, relMinor, choices: shuffle([correct, ...wrongs]), correct, askRelative };
+}
+
+function KeySigVisual({ sharps, flats }: { sharps: number; flats: number }) {
+  if (sharps === 0 && flats === 0) {
+    return (
+      <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
+        <div style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>NO SHARPS OR FLATS</div>
+        <div style={{ fontSize: "3rem", color: "#FDFCFA", letterSpacing: "0.1em" }}>♩</div>
+      </div>
+    );
+  }
+  const symbol = sharps > 0 ? "♯" : "♭";
+  const count = sharps > 0 ? sharps : flats;
+  return (
+    <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
+      <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.75rem" }}>
+        {count} {sharps > 0 ? "SHARP" : "FLAT"}{count > 1 ? "S" : ""}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: "0.125rem" }}>
+        {Array.from({ length: count }).map((_, i) => (
+          <span key={i} style={{ fontSize: "3rem", color: "#FDFCFA", fontFamily: "'Times New Roman', Georgia, serif", lineHeight: 1 }}>{symbol}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KeySigGame({ onBack }: { onBack: () => void }) {
+  type Mode = "major" | "relative";
+  type KSDiff = "beginner" | "advanced";
+  const [mode, setMode] = useState<Mode>("major");
+  const [ksDiff, setKsDiff] = useState<KSDiff>("beginner");
+  const pool = ksDiff === "beginner" ? KEY_SIGS.filter(k => k.sharps <= 4 && k.flats <= 4) : KEY_SIGS;
+  const askRelative = mode === "relative";
+  const game = useGameState(`keysig_${mode}_${ksDiff}`);
+  const [q, setQ] = useState<KeySigQ>(() => makeKeySigQ(KEY_SIGS.filter(k => k.sharps <= 4 && k.flats <= 4), false));
+
+  function start() {
+    game.beginCountdown(() => {
+      setQ(makeKeySigQ(pool, askRelative));
+      game.beginPlay();
+    });
+  }
+
+  function answer(choice: string) {
+    const ok = choice === q.correct;
+    game.scoreAnswer(ok);
+    game.scheduleNext(ok, () => setQ(makeKeySigQ(pool, askRelative)));
+  }
+
+  if (game.gs === "idle") {
+    return (
+      <IdleCard
+        title="Key Signatures"
+        hiScore={game.hiScore}
+        description="See a key signature — identify the major key (or its relative minor). Essential for RCM exams."
+        extras={
+          <>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Question type</div>
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+                {(["major", "relative"] as Mode[]).map(m => (
+                  <button key={m} onClick={() => setMode(m)} style={{ padding: "0.5rem 1rem", borderRadius: 20, cursor: "pointer", background: mode === m ? "#4CAF84" : "transparent", border: `1.5px solid ${mode === m ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: mode === m ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: mode === m ? 600 : 400, transition: "all 0.15s" }}>
+                    {m === "major" ? "Major key" : "Relative minor"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Range</div>
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+                {(["beginner", "advanced"] as KSDiff[]).map(d => (
+                  <button key={d} onClick={() => setKsDiff(d)} style={{ padding: "0.5rem 1rem", borderRadius: 20, cursor: "pointer", background: ksDiff === d ? "#4CAF84" : "transparent", border: `1.5px solid ${ksDiff === d ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: ksDiff === d ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: ksDiff === d ? 600 : 400, transition: "all 0.15s" }}>
+                    {d === "beginner" ? "Up to 4 ♯/♭" : "All 15 keys"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        }
+        onStart={start}
+      />
+    );
+  }
+  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
+  if (game.gs === "results") {
+    return <ResultsScreen score={game.score} correct={game.correct} total={game.total} topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore} gameLabel={`key signatures · ${mode}`} onPlayAgain={start} onMenu={onBack} />;
+  }
+
+  const isCorrect = game.selected === q.correct;
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
+        <Popups entries={game.popups} />
+        <div style={{ maxWidth: 400, width: "100%" }}>
+          <div style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            {q.askRelative ? "What is the relative minor?" : "What major key is this?"}
+          </div>
+          <KeySigVisual sharps={q.key.sharps} flats={q.key.flats} />
+
+          {game.selected && (
+            <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
+              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `It's ${q.correct}`}
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem" }}>
+            {q.choices.map(c => {
+              const isSelected = game.selected === c;
+              const isRight = c === q.correct;
+              let bg = "rgba(255,255,255,0.06)", border = "1px solid rgba(255,255,255,0.1)", color = "#FDFCFA";
+              if (game.selected) {
+                if (isRight) { bg = "rgba(76,175,132,0.2)"; border = "1.5px solid #4CAF84"; color = "#4CAF84"; }
+                else if (isSelected) { bg = "rgba(224,82,82,0.2)"; border = "1.5px solid #E05252"; color = "#E05252"; }
+                else { bg = "rgba(255,255,255,0.03)"; border = "1px solid rgba(255,255,255,0.05)"; color = "rgba(255,255,255,0.25)"; }
+              }
+              return (
+                <button key={c} onClick={() => answer(c)} disabled={!!game.selected}
+                  style={{ padding: "1rem 0.5rem", borderRadius: 10, border, background: bg, color, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", cursor: game.selected ? "default" : "pointer", transition: "all 0.1s", textAlign: "center" }}>
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Game 6: Scale Ear Training
+// ─────────────────────────────────────────────────────────────────────────────
+
+type ScaleType = "Major" | "Natural Minor" | "Harmonic Minor" | "Melodic Minor";
+
+const SCALE_INTERVALS: Record<ScaleType, number[]> = {
+  "Major":          [0, 2, 4, 5, 7, 9, 11, 12],
+  "Natural Minor":  [0, 2, 3, 5, 7, 8, 10, 12],
+  "Harmonic Minor": [0, 2, 3, 5, 7, 8, 11, 12],
+  "Melodic Minor":  [0, 2, 3, 5, 7, 9, 11, 12],
+};
+
+const SCALE_ICONS: Record<ScaleType, string> = {
+  "Major": "☀", "Natural Minor": "🌙", "Harmonic Minor": "✦", "Melodic Minor": "♪",
+};
+
+const MIDI_TO_HZ = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
+
+function playScale(scaleType: ScaleType, ctx: AudioContext) {
+  const root = 60 + Math.floor(Math.random() * 5); // C4–E4
+  const intervals = SCALE_INTERVALS[scaleType];
+  // ascending
+  intervals.forEach((semi, i) => {
+    playTone(MIDI_TO_HZ(root + semi), ctx, ctx.currentTime + i * 0.28, 0.5);
+  });
+  // then descending
+  const descStart = intervals.length * 0.28 + 0.15;
+  [...intervals].reverse().forEach((semi, i) => {
+    playTone(MIDI_TO_HZ(root + semi), ctx, ctx.currentTime + descStart + i * 0.28, 0.5);
+  });
+}
+
+interface ScaleQ { scaleType: ScaleType; choices: ScaleType[]; }
+
+function makeScaleQ(pool: ScaleType[]): ScaleQ {
+  const scaleType = pool[Math.floor(Math.random() * pool.length)];
+  const wrongs = shuffle(pool.filter(s => s !== scaleType)).slice(0, 3) as ScaleType[];
+  return { scaleType, choices: shuffle([scaleType, ...wrongs]) as ScaleType[] };
+}
+
+function ScaleGame({ onBack }: { onBack: () => void }) {
+  type SDiff = "easy" | "medium" | "hard";
+  const POOL_BY_DIFF: Record<SDiff, ScaleType[]> = {
+    easy:   ["Major", "Natural Minor"],
+    medium: ["Major", "Natural Minor", "Harmonic Minor"],
+    hard:   ["Major", "Natural Minor", "Harmonic Minor", "Melodic Minor"],
+  };
+  const [diff, setDiff] = useState<SDiff>("easy");
+  const game = useGameState(`scale_${diff}`);
+  const [q, setQ] = useState<ScaleQ>(() => makeScaleQ(["Major", "Natural Minor"]));
+  const [played, setPlayed] = useState(false);
+  const audioRef = useRef<AudioContext | null>(null);
+
+  function getCtx() {
+    if (!audioRef.current || audioRef.current.state === "closed") {
+      audioRef.current = new AudioContext();
+    }
+    return audioRef.current;
+  }
+
+  function play(st: ScaleType) {
+    const ctx = getCtx();
+    if (ctx.state === "suspended") ctx.resume();
+    playScale(st, ctx);
+    setPlayed(true);
+  }
+
+  function start() {
+    game.beginCountdown(() => {
+      const newQ = makeScaleQ(POOL_BY_DIFF[diff]);
+      setQ(newQ);
+      setPlayed(false);
+      game.beginPlay();
+      // auto-play after short delay
+      setTimeout(() => {
+        try { const ctx = getCtx(); if (ctx.state === "suspended") ctx.resume(); playScale(newQ.scaleType, ctx); setPlayed(true); } catch { /* ignore */ }
+      }, 400);
+    });
+  }
+
+  function answer(st: ScaleType) {
+    if (!played) return;
+    const ok = st === q.scaleType;
+    game.scoreAnswer(ok);
+    game.scheduleNext(ok, () => {
+      const newQ = makeScaleQ(POOL_BY_DIFF[diff]);
+      setQ(newQ);
+      setPlayed(false);
+      setTimeout(() => {
+        try { const ctx = getCtx(); if (ctx.state === "suspended") ctx.resume(); playScale(newQ.scaleType, ctx); setPlayed(true); } catch { /* ignore */ }
+      }, 600);
+    });
+  }
+
+  if (game.gs === "idle") {
+    return (
+      <IdleCard
+        title="Scale Ear Training"
+        hiScore={game.hiScore}
+        description="A scale plays ascending and descending — identify whether it's major, natural minor, harmonic minor, or melodic minor."
+        extras={
+          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Difficulty · RCM level</div>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+              {(["easy", "medium", "hard"] as SDiff[]).map(d => (
+                <button key={d} onClick={() => setDiff(d)} style={{ padding: "0.5rem 0.875rem", borderRadius: 20, cursor: "pointer", background: diff === d ? "#4CAF84" : "transparent", border: `1.5px solid ${diff === d ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: diff === d ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: diff === d ? 600 : 400, transition: "all 0.15s" }}>
+                  {d === "easy" ? "Major & Minor" : d === "medium" ? "+ Harmonic" : "All 4 Types"}<br/>
+                  <span style={{ fontSize: "0.5625rem", opacity: 0.7 }}>{d === "easy" ? "Prep–Gr.3" : d === "medium" ? "Gr.4–6" : "Gr.7–8"}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+        onStart={start}
+      />
+    );
+  }
+  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
+  if (game.gs === "results") {
+    return <ResultsScreen score={game.score} correct={game.correct} total={game.total} topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore} gameLabel={`scales · ${diff}`} onPlayAgain={start} onMenu={onBack} />;
+  }
+
+  const isCorrect = game.selected === q.scaleType;
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
+        <Popups entries={game.popups} />
+        <div style={{ maxWidth: 380, width: "100%" }}>
+          <div style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>What type of scale is this?</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
+            <button onClick={() => play(q.scaleType)} style={{ width: 80, height: 80, borderRadius: "50%", border: "none", background: played ? "rgba(255,255,255,0.08)" : "#2980b9", color: "#fff", fontSize: "1.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: played ? "none" : "0 0 28px #2980b950", transition: "all 0.2s" }}>
+              {played ? "↻" : "▶"}
+            </button>
+          </div>
+          {played && !game.selected && <div style={{ textAlign: "center", marginBottom: "1rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>Tap to replay ↑</div>}
+
+          {game.selected && (
+            <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
+              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `It was ${q.scaleType}`}
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem" }}>
+            {q.choices.map(c => {
+              const isSelected = game.selected === c;
+              const isRight = c === q.scaleType;
+              let bg = "rgba(255,255,255,0.06)", border = "1px solid rgba(255,255,255,0.1)", color = "#FDFCFA";
+              if (game.selected) {
+                if (isRight) { bg = "rgba(76,175,132,0.2)"; border = "1.5px solid #4CAF84"; color = "#4CAF84"; }
+                else if (isSelected) { bg = "rgba(224,82,82,0.2)"; border = "1.5px solid #E05252"; color = "#E05252"; }
+                else { bg = "rgba(255,255,255,0.03)"; border = "1px solid rgba(255,255,255,0.05)"; color = "rgba(255,255,255,0.25)"; }
+              }
+              return (
+                <button key={c} onClick={() => !played ? undefined : answer(c)} disabled={!!game.selected || !played}
+                  style={{ padding: "1rem 0.5rem", borderRadius: 10, border, background: bg, color: !played ? "rgba(255,255,255,0.2)" : color, fontFamily: "Inter, sans-serif", fontWeight: 600, cursor: (game.selected || !played) ? "default" : "pointer", transition: "all 0.1s", textAlign: "center", opacity: !played ? 0.5 : 1 }}>
+                  <div style={{ fontSize: "1.25rem", lineHeight: 1 }}>{SCALE_ICONS[c as ScaleType]}</div>
+                  <div style={{ fontSize: "0.75rem", marginTop: "0.25rem" }}>{c}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Menu
 // ─────────────────────────────────────────────────────────────────────────────
-type View = "menu" | "noteId" | "interval" | "chord";
+type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale";
 
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   const scores = {
@@ -842,6 +1342,21 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     {
       view: "chord" as View, icon: "🎼", title: "Chord Quality",
       desc: "A chord plays. Major, minor, diminished, or augmented — train your ear to tell them apart.",
+      badge: null, active: true,
+    },
+    {
+      view: "terms" as View, icon: "🗣", title: "Music Terms",
+      desc: "A term flashes — pick its definition. Covers all RCM vocabulary: tempo, dynamics, articulation, expression, form.",
+      badge: null, active: true,
+    },
+    {
+      view: "keySig" as View, icon: "🔑", title: "Key Signatures",
+      desc: "See a key signature and identify the major key or its relative minor. All 15 major keys.",
+      badge: null, active: true,
+    },
+    {
+      view: "scale" as View, icon: "🎶", title: "Scale Ear Training",
+      desc: "A scale plays ascending and descending. Is it major, natural minor, harmonic minor, or melodic minor?",
       badge: null, active: true,
     },
     {
@@ -889,9 +1404,12 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function TheoryPage() {
   const [view, setView] = useState<View>("menu");
-  if (view === "menu")    return <Menu onSelect={setView} />;
-  if (view === "noteId")  return <NoteIdGame onBack={() => setView("menu")} />;
+  if (view === "menu")     return <Menu onSelect={setView} />;
+  if (view === "noteId")   return <NoteIdGame onBack={() => setView("menu")} />;
   if (view === "interval") return <IntervalGame onBack={() => setView("menu")} />;
-  if (view === "chord")   return <ChordGame onBack={() => setView("menu")} />;
+  if (view === "chord")    return <ChordGame onBack={() => setView("menu")} />;
+  if (view === "terms")    return <MusicTermsGame onBack={() => setView("menu")} />;
+  if (view === "keySig")   return <KeySigGame onBack={() => setView("menu")} />;
+  if (view === "scale")    return <ScaleGame onBack={() => setView("menu")} />;
   return null;
 }
