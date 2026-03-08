@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSupabaseServerClient } from "../../../../lib/supabase/server";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const { sessionId } = await request.json() as { sessionId: string };
     if (!sessionId) return Response.json({ error: "sessionId required" }, { status: 400 });
 
-    // Fetch the session (with joined piece title)
+    // Fetch the session
     const { data: session, error: sessionErr } = await supabase
       .from("practice_sessions")
       .select("*, pieces(title)")
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "No recording" }, { status: 400 });
     }
 
-    // Fetch student profile for name + grade
+    // Fetch student profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("display_name, grade_level")
@@ -44,7 +44,15 @@ export async function POST(request: Request) {
       goalTitle = goal?.title ?? "";
     }
 
-    // Build rich context for Claude
+    // Fetch audio from Supabase storage
+    const audioRes = await fetch(session.recording_url);
+    if (!audioRes.ok) {
+      return Response.json({ error: "Could not fetch audio" }, { status: 500 });
+    }
+    const audioBuffer = await audioRes.arrayBuffer();
+    const base64Audio = Buffer.from(audioBuffer).toString("base64");
+
+    // Build context for the prompt
     const studentName = profile?.display_name ?? "the student";
     const grade = profile?.grade_level ?? "";
     const pieceTitle = (session.pieces as { title?: string } | null)?.title ?? "";
@@ -52,39 +60,39 @@ export async function POST(request: Request) {
     const durationMins = Math.max(1, Math.round((session.duration_seconds ?? 0) / 60));
     const segments: Array<{ title: string; practice_area: string }> = session.segments_json ?? [];
 
-    const lines: string[] = [];
-    lines.push(`Student: ${studentName}${grade ? ` (${grade})` : ""}`);
-    lines.push(`Practice duration: ${durationMins} minute${durationMins !== 1 ? "s" : ""}`);
-    if (pieceTitle) lines.push(`Piece being practiced: ${pieceTitle}`);
-    if (goalTitle) lines.push(`Current goal: ${goalTitle}`);
+    const contextLines: string[] = [];
+    contextLines.push(`Student: ${studentName}${grade ? ` (${grade})` : ""}`);
+    contextLines.push(`Session length: ${durationMins} minute${durationMins !== 1 ? "s" : ""}`);
+    if (pieceTitle) contextLines.push(`Piece: ${pieceTitle}`);
+    if (goalTitle) contextLines.push(`Goal: ${goalTitle}`);
     if (segments.length > 0) {
-      lines.push(`Sections practiced: ${segments.map(s => s.title || s.practice_area).join(", ")}`);
+      contextLines.push(`Sections practiced: ${segments.map(s => s.title || s.practice_area).join(", ")}`);
     }
-    if (notes) lines.push(`Student's own notes: ${notes}`);
+    if (notes) contextLines.push(`Student's notes: ${notes}`);
 
-    const contextBlock = lines.join("\n");
+    const prompt = `You are Cadenza AI — a warm, encouraging music teacher reviewing a student's practice recording.
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 500,
-      system: `You are Cadenza AI, an encouraging and knowledgeable music teacher inside a practice app.
-You are reviewing a student's practice session log (not the audio itself — you don't have access to the audio).
-Based on the session information provided, give warm, specific, and actionable coaching feedback.
-Write 2-3 short paragraphs. No bullet lists, no headers. Keep it under 180 words.
-Be encouraging and personal — use the student's name. Reference what they practiced specifically.
-Give at least one concrete technique tip and one motivational next step.`,
-      messages: [
-        {
-          role: "user",
-          content: `Here is a student's practice session log:\n\n${contextBlock}\n\nPlease give encouraging, specific coaching feedback for this session.`,
+Context about this session:
+${contextLines.join("\n")}
+
+Please listen to the recording and give specific, personalized coaching feedback in 2–3 short paragraphs (no bullet points, no headers).
+Cover what you actually hear: rhythm and timing, technical execution, and practice quality.
+End with one or two concrete, encouraging next steps.
+Keep it under 200 words. Use the student's name.`;
+
+    // Call Gemini with audio
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: base64Audio,
+          mimeType: "audio/webm",
         },
-      ],
-    });
+      },
+      prompt,
+    ]);
 
-    const feedback = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as Anthropic.TextBlock).text)
-      .join("");
+    const feedback = result.response.text();
 
     // Store feedback in DB
     await supabase
