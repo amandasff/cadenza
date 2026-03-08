@@ -1,13 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
-import dynamic from "next/dynamic";
 import type { DailyCall } from "@daily-co/daily-js";
-
-// Load DailyProvider only client-side — it uses browser APIs that break SSR
-const DailyProvider = dynamic(
-  () => import("@daily-co/daily-react").then((m) => m.DailyProvider),
-  { ssr: false }
-);
 
 type LessonStatus = "idle" | "joining" | "live" | "ended";
 
@@ -44,44 +37,34 @@ export function LessonProvider({ children }: { children: React.ReactNode }) {
   const callRef = useRef<DailyCall | null>(null);
   const [callVersion, setCallVersion] = useState(0);
 
-  const joinLesson = useCallback(
-    async ({
-      roomId,
-      roomUrl,
-      token,
-      studentName,
-    }: {
-      roomId: string;
-      roomUrl: string;
-      token: string;
-      studentName: string;
-    }) => {
-      if (callRef.current) {
-        await callRef.current.leave().catch(() => {});
-        callRef.current.destroy();
-        callRef.current = null;
-      }
+  const joinLesson = useCallback(async ({
+    roomId, roomUrl, token, studentName,
+  }: {
+    roomId: string; roomUrl: string; token: string; studentName: string;
+  }) => {
+    if (callRef.current) {
+      await callRef.current.leave().catch(() => {});
+      callRef.current.destroy();
+      callRef.current = null;
+    }
 
-      setState({ roomId, roomUrl, token, studentName, status: "joining" });
+    setState({ roomId, roomUrl, token, studentName, status: "joining" });
 
-      const DailyIframe = (await import("@daily-co/daily-js")).default;
-      const co = DailyIframe.createCallObject();
-      callRef.current = co;
-      setCallVersion((v) => v + 1);
+    // Dynamic import — avoids any SSR issues with daily-js
+    const DailyIframe = (await import("@daily-co/daily-js")).default;
+    const co = DailyIframe.createCallObject();
+    callRef.current = co;
+    setCallVersion((v) => v + 1);
 
-      await co.join({ url: roomUrl, token });
+    await co.join({ url: roomUrl, token });
 
-      // Music mode — disable noise cancellation
-      try {
-        await co.updateInputSettings({
-          audio: { processor: { type: "none" } },
-        });
-      } catch { /* ignore if not supported */ }
+    // Music mode — disable noise cancellation
+    try {
+      await co.updateInputSettings({ audio: { processor: { type: "none" } } });
+    } catch { /* ignore */ }
 
-      setState((s) => ({ ...s, status: "live" }));
-    },
-    []
-  );
+    setState((s) => ({ ...s, status: "live" }));
+  }, []);
 
   const leaveLesson = useCallback(async () => {
     if (callRef.current) {
@@ -93,24 +76,16 @@ export function LessonProvider({ children }: { children: React.ReactNode }) {
     setState({ roomId: null, roomUrl: null, token: null, studentName: null, status: "idle" });
   }, []);
 
-  const value: LessonContextValue = {
-    ...state,
-    callObject: callRef.current,
-    joinLesson,
-    leaveLesson,
-  };
-
   void callVersion;
 
   return (
-    <LessonContext.Provider value={value}>
-      {callRef.current ? (
-        <DailyProvider callObject={callRef.current}>
-          {children}
-        </DailyProvider>
-      ) : (
-        children
-      )}
+    <LessonContext.Provider value={{
+      ...state,
+      callObject: callRef.current,
+      joinLesson,
+      leaveLesson,
+    }}>
+      {children}
     </LessonContext.Provider>
   );
 }
