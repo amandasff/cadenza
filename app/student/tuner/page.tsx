@@ -5,13 +5,11 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 function autoCorrelate(buffer: Float32Array<ArrayBuffer>, sampleRate: number): number {
   const SIZE = buffer.length;
 
-  // Bail if too quiet
   let rms = 0;
   for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
   rms = Math.sqrt(rms / SIZE);
   if (rms < 0.015) return -1;
 
-  // Trim to zero-crossings for accuracy
   let r1 = 0, r2 = SIZE - 1;
   const thres = 0.2;
   for (let i = 0; i < SIZE / 2; i++) {
@@ -28,11 +26,9 @@ function autoCorrelate(buffer: Float32Array<ArrayBuffer>, sampleRate: number): n
     for (let j = 0; j < len - i; j++) c[i] += buf2[j] * buf2[j + i];
   }
 
-  // First minimum
   let d = 0;
   while (d < len - 1 && c[d] > c[d + 1]) d++;
 
-  // Highest peak after first minimum
   let maxval = -1, maxpos = -1;
   for (let i = d; i < len; i++) {
     if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
@@ -40,7 +36,6 @@ function autoCorrelate(buffer: Float32Array<ArrayBuffer>, sampleRate: number): n
 
   if (maxpos < 1 || maxpos >= len - 1) return -1;
 
-  // Parabolic interpolation for sub-sample accuracy
   let T0 = maxpos;
   const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
   const a = (x1 + x3 - 2 * x2) / 2;
@@ -62,17 +57,108 @@ function frequencyToNoteInfo(freq: number) {
   return { note: NOTE_NAMES[noteIndex], octave, cents };
 }
 
-// ── Guitar string reference ──────────────────────────────────────────────────
-const STRINGS = [
-  { label: "E2", freq: 82.41,  string: 6 },
-  { label: "A2", freq: 110.0,  string: 5 },
-  { label: "D3", freq: 146.83, string: 4 },
-  { label: "G3", freq: 196.0,  string: 3 },
-  { label: "B3", freq: 246.94, string: 2 },
-  { label: "E4", freq: 329.63, string: 1 },
-];
+// ── Instrument definitions ───────────────────────────────────────────────────
+interface StringDef {
+  label: string;   // e.g. "E2"
+  freq: number;
+  stringNum: number;
+}
 
-// ── Tuning status ────────────────────────────────────────────────────────────
+interface Instrument {
+  name: string;
+  strings: StringDef[];
+  columns: number;
+}
+
+const INSTRUMENTS: Record<string, Instrument> = {
+  guitar: {
+    name: "Guitar",
+    strings: [
+      { label: "E2", freq: 82.41,  stringNum: 6 },
+      { label: "A2", freq: 110.0,  stringNum: 5 },
+      { label: "D3", freq: 146.83, stringNum: 4 },
+      { label: "G3", freq: 196.0,  stringNum: 3 },
+      { label: "B3", freq: 246.94, stringNum: 2 },
+      { label: "E4", freq: 329.63, stringNum: 1 },
+    ],
+    columns: 6,
+  },
+  ukulele: {
+    name: "Ukulele",
+    strings: [
+      { label: "G4", freq: 392.0,  stringNum: 4 },
+      { label: "C4", freq: 261.63, stringNum: 3 },
+      { label: "E4", freq: 329.63, stringNum: 2 },
+      { label: "A4", freq: 440.0,  stringNum: 1 },
+    ],
+    columns: 4,
+  },
+  violin: {
+    name: "Violin",
+    strings: [
+      { label: "G3", freq: 196.0,  stringNum: 4 },
+      { label: "D4", freq: 293.66, stringNum: 3 },
+      { label: "A4", freq: 440.0,  stringNum: 2 },
+      { label: "E5", freq: 659.25, stringNum: 1 },
+    ],
+    columns: 4,
+  },
+  viola: {
+    name: "Viola",
+    strings: [
+      { label: "C3", freq: 130.81, stringNum: 4 },
+      { label: "G3", freq: 196.0,  stringNum: 3 },
+      { label: "D4", freq: 293.66, stringNum: 2 },
+      { label: "A4", freq: 440.0,  stringNum: 1 },
+    ],
+    columns: 4,
+  },
+  cello: {
+    name: "Cello",
+    strings: [
+      { label: "C2", freq: 65.41,  stringNum: 4 },
+      { label: "G2", freq: 98.0,   stringNum: 3 },
+      { label: "D3", freq: 146.83, stringNum: 2 },
+      { label: "A3", freq: 220.0,  stringNum: 1 },
+    ],
+    columns: 4,
+  },
+  bass: {
+    name: "Bass",
+    strings: [
+      { label: "E1", freq: 41.20,  stringNum: 4 },
+      { label: "A1", freq: 55.0,   stringNum: 3 },
+      { label: "D2", freq: 73.42,  stringNum: 2 },
+      { label: "G2", freq: 98.0,   stringNum: 1 },
+    ],
+    columns: 4,
+  },
+  mandolin: {
+    name: "Mandolin",
+    strings: [
+      { label: "G3", freq: 196.0,  stringNum: 4 },
+      { label: "D4", freq: 293.66, stringNum: 3 },
+      { label: "A4", freq: 440.0,  stringNum: 2 },
+      { label: "E5", freq: 659.25, stringNum: 1 },
+    ],
+    columns: 4,
+  },
+  banjo: {
+    name: "Banjo (5-str)",
+    strings: [
+      { label: "G4", freq: 392.0,  stringNum: 5 },
+      { label: "D3", freq: 146.83, stringNum: 4 },
+      { label: "G3", freq: 196.0,  stringNum: 3 },
+      { label: "B3", freq: 246.94, stringNum: 2 },
+      { label: "D4", freq: 293.66, stringNum: 1 },
+    ],
+    columns: 5,
+  },
+};
+
+const INSTRUMENT_ORDER = ["guitar", "ukulele", "violin", "viola", "cello", "bass", "mandolin", "banjo"];
+
+// ── Tuning status ─────────────────────────────────────────────────────────────
 function getTuningStatus(cents: number): { label: string; color: string } {
   const abs = Math.abs(cents);
   if (abs <= 5)  return { label: "In tune", color: "#4CAF84" };
@@ -85,6 +171,7 @@ export default function TunerPage() {
   const [listening, setListening] = useState(false);
   const [noteInfo, setNoteInfo] = useState<{ note: string; octave: number; cents: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [instrumentKey, setInstrumentKey] = useState("guitar");
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef  = useRef<AnalyserNode | null>(null);
@@ -140,9 +227,21 @@ export default function TunerPage() {
 
   useEffect(() => () => { stopListening(); }, []); // cleanup on unmount
 
+  const instrument = INSTRUMENTS[instrumentKey];
   const status = noteInfo ? getTuningStatus(noteInfo.cents) : null;
-  // Needle position: cents clamped -50..+50, mapped to 0..100%
   const needlePct = noteInfo ? Math.min(100, Math.max(0, ((noteInfo.cents + 50) / 100) * 100)) : 50;
+
+  // Find closest string to current note
+  function getClosestString() {
+    if (!noteInfo) return null;
+    const { note, octave } = noteInfo;
+    return instrument.strings.find(s => {
+      const sNote = s.label.replace(/\d+/, "");
+      const sOctave = parseInt(s.label.match(/\d+/)![0]);
+      return sNote === note && sOctave === octave;
+    }) ?? null;
+  }
+  const closestString = getClosestString();
 
   return (
     <div style={{
@@ -156,18 +255,47 @@ export default function TunerPage() {
     }}>
 
       {/* Header */}
-      <div style={{ width: "100%", maxWidth: 360, marginBottom: "2.5rem" }}>
+      <div style={{ width: "100%", maxWidth: 380, marginBottom: "1.75rem" }}>
         <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "0.25rem" }}>
           Cadenza
         </div>
         <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 500, color: "#FDFCFA", letterSpacing: "-0.01em" }}>
-          Guitar Tuner
+          Tuner
+        </div>
+      </div>
+
+      {/* Instrument selector */}
+      <div style={{ width: "100%", maxWidth: 380, marginBottom: "1.5rem" }}>
+        <div style={{
+          display: "flex", flexWrap: "wrap", gap: "0.375rem",
+        }}>
+          {INSTRUMENT_ORDER.map(key => (
+            <button
+              key={key}
+              onClick={() => { setNoteInfo(null); setInstrumentKey(key); }}
+              style={{
+                padding: "0.375rem 0.75rem",
+                borderRadius: 20,
+                border: `1px solid ${instrumentKey === key ? "#4CAF84" : "rgba(255,255,255,0.12)"}`,
+                background: instrumentKey === key ? "#4CAF8422" : "transparent",
+                color: instrumentKey === key ? "#4CAF84" : "rgba(255,255,255,0.45)",
+                fontSize: "0.75rem",
+                fontFamily: "Inter, sans-serif",
+                fontWeight: instrumentKey === key ? 600 : 400,
+                cursor: "pointer",
+                transition: "all 0.15s",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {INSTRUMENTS[key].name}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Main display */}
       <div style={{
-        width: "100%", maxWidth: 360,
+        width: "100%", maxWidth: 380,
         background: "#2C2C2E",
         borderRadius: 16,
         padding: "2.5rem 2rem",
@@ -175,6 +303,13 @@ export default function TunerPage() {
         textAlign: "center",
         boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
       }}>
+
+        {/* Closest string hint */}
+        {closestString && (
+          <div style={{ marginBottom: "0.75rem", fontSize: "0.6875rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            String {closestString.stringNum} · {closestString.label}
+          </div>
+        )}
 
         {/* Note display */}
         <div style={{ marginBottom: "2rem" }}>
@@ -203,39 +338,24 @@ export default function TunerPage() {
 
         {/* Cents gauge */}
         <div style={{ marginBottom: "1rem" }}>
-          {/* Labels */}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
             <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>FLAT</span>
             <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>SHARP</span>
           </div>
 
-          {/* Track */}
           <div style={{
-            position: "relative",
-            height: 6,
-            background: "rgba(255,255,255,0.08)",
-            borderRadius: 3,
-            overflow: "visible",
+            position: "relative", height: 6,
+            background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "visible",
           }}>
-            {/* Center mark */}
             <div style={{
-              position: "absolute",
-              left: "50%",
-              top: -4,
-              transform: "translateX(-50%)",
-              width: 2,
-              height: 14,
-              background: "rgba(255,255,255,0.15)",
-              borderRadius: 1,
+              position: "absolute", left: "50%", top: -4,
+              transform: "translateX(-50%)", width: 2, height: 14,
+              background: "rgba(255,255,255,0.15)", borderRadius: 1,
             }} />
-
-            {/* Needle */}
             <div style={{
-              position: "absolute",
-              top: -5,
+              position: "absolute", top: -5,
               left: `calc(${needlePct}% - 6px)`,
-              width: 12,
-              height: 16,
+              width: 12, height: 16,
               background: status?.color ?? "rgba(255,255,255,0.2)",
               borderRadius: 2,
               transition: "left 0.1s ease-out, background 0.2s",
@@ -243,7 +363,6 @@ export default function TunerPage() {
             }} />
           </div>
 
-          {/* Cents value */}
           <div style={{ marginTop: "0.875rem", fontSize: "0.8125rem", color: status?.color ?? "rgba(255,255,255,0.2)", fontWeight: 500, transition: "color 0.2s" }}>
             {noteInfo ? (
               <>{noteInfo.cents > 0 ? "+" : ""}{noteInfo.cents} cents &nbsp;·&nbsp; {status?.label}</>
@@ -256,7 +375,7 @@ export default function TunerPage() {
 
       {/* Error */}
       {error && (
-        <div style={{ width: "100%", maxWidth: 360, background: "#3A1A1A", border: "1px solid #E05252", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8125rem", color: "#E05252" }}>
+        <div style={{ width: "100%", maxWidth: 380, background: "#3A1A1A", border: "1px solid #E05252", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8125rem", color: "#E05252" }}>
           {error}
         </div>
       )}
@@ -274,12 +393,10 @@ export default function TunerPage() {
         }}
       >
         {listening ? (
-          /* Stop icon */
           <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
             <rect x="5" y="5" width="14" height="14" rx="2" />
           </svg>
         ) : (
-          /* Mic icon */
           <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
             <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none" />
@@ -290,18 +407,24 @@ export default function TunerPage() {
       </button>
 
       {/* String reference */}
-      <div style={{ width: "100%", maxWidth: 360 }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.875rem", textAlign: "center" }}>
-          Standard Tuning
+          {instrument.name} · Standard Tuning
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.5rem" }}>
-          {STRINGS.map(s => {
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${instrument.columns}, 1fr)`,
+          gap: "0.5rem",
+        }}>
+          {instrument.strings.map(s => {
+            const sNote = s.label.replace(/\d+/, "");
+            const sOctave = parseInt(s.label.match(/\d+/)![0]);
             const isActive = noteInfo
-              ? noteInfo.note === s.label.replace(/\d/, "") && noteInfo.octave === parseInt(s.label.match(/\d/)![0])
+              ? noteInfo.note === sNote && noteInfo.octave === sOctave
               : false;
             return (
               <div
-                key={s.label}
+                key={`${s.label}-${s.stringNum}`}
                 style={{
                   background: isActive ? "#4CAF8422" : "#2C2C2E",
                   border: `1px solid ${isActive ? "#4CAF84" : "rgba(255,255,255,0.08)"}`,
@@ -312,10 +435,10 @@ export default function TunerPage() {
                 }}
               >
                 <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: isActive ? "#4CAF84" : "#FDFCFA", marginBottom: "0.125rem" }}>
-                  {s.label.replace(/\d/, "")}
+                  {sNote}
                 </div>
                 <div style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>
-                  {s.label.match(/\d/)![0]} · str {s.string}
+                  {sOctave} · str {s.stringNum}
                 </div>
               </div>
             );

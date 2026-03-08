@@ -13,6 +13,7 @@ const tabs = [
   { href: "/student",                label: "Home" },
   { href: "/student/practice",       label: "Practice" },
   { href: "/student/pieces",         label: "Pieces" },
+  { href: "/student/theory",         label: "Theory" },
   { href: "/student/chat",           label: "Chat" },
   { href: "/student/rewards",        label: "Awards" },
 ];
