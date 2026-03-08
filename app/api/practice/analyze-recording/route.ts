@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const { sessionId } = await request.json() as { sessionId: string };
     if (!sessionId) return Response.json({ error: "sessionId required" }, { status: 400 });
 
-    // Fetch the session
+    // Fetch the session (with joined piece title)
     const { data: session, error: sessionErr } = await supabase
       .from("practice_sessions")
       .select("*, pieces(title)")
@@ -44,55 +44,39 @@ export async function POST(request: Request) {
       goalTitle = goal?.title ?? "";
     }
 
-    // Fetch audio from Supabase storage
-    const audioRes = await fetch(session.recording_url);
-    if (!audioRes.ok) {
-      return Response.json({ error: "Could not fetch audio" }, { status: 500 });
-    }
-    const audioBuffer = await audioRes.arrayBuffer();
-    const base64Audio = Buffer.from(audioBuffer).toString("base64");
-
-    // Build context string
+    // Build rich context for Claude
     const studentName = profile?.display_name ?? "the student";
     const grade = profile?.grade_level ?? "";
     const pieceTitle = (session.pieces as { title?: string } | null)?.title ?? "";
     const notes = session.notes ?? "";
+    const durationMins = Math.max(1, Math.round((session.duration_seconds ?? 0) / 60));
+    const segments: Array<{ title: string; practice_area: string }> = session.segments_json ?? [];
 
-    const contextParts: string[] = [];
-    if (studentName) contextParts.push(`Student: ${studentName}`);
-    if (grade) contextParts.push(`Level: ${grade}`);
-    if (pieceTitle) contextParts.push(`Piece: ${pieceTitle}`);
-    if (goalTitle) contextParts.push(`Goal: ${goalTitle}`);
-    const contextLine = contextParts.join(" | ");
+    const lines: string[] = [];
+    lines.push(`Student: ${studentName}${grade ? ` (${grade})` : ""}`);
+    lines.push(`Practice duration: ${durationMins} minute${durationMins !== 1 ? "s" : ""}`);
+    if (pieceTitle) lines.push(`Piece being practiced: ${pieceTitle}`);
+    if (goalTitle) lines.push(`Current goal: ${goalTitle}`);
+    if (segments.length > 0) {
+      lines.push(`Sections practiced: ${segments.map(s => s.title || s.practice_area).join(", ")}`);
+    }
+    if (notes) lines.push(`Student's own notes: ${notes}`);
 
-    // Call Claude with audio
+    const contextBlock = lines.join("\n");
+
     const response = await client.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 600,
-      system: `You are Cadenza AI, a warm and encouraging music teacher reviewing a student's practice recording.
-Be specific, positive, and practical. Keep your response under 200 words total.
-Use short paragraphs — no bullet lists, no headers.
-If the audio is unclear or background noise makes it hard to assess, acknowledge this warmly and still give useful encouragement based on the context provided.
-Focus on what you can actually hear.`,
+      max_tokens: 500,
+      system: `You are Cadenza AI, an encouraging and knowledgeable music teacher inside a practice app.
+You are reviewing a student's practice session log (not the audio itself — you don't have access to the audio).
+Based on the session information provided, give warm, specific, and actionable coaching feedback.
+Write 2-3 short paragraphs. No bullet lists, no headers. Keep it under 180 words.
+Be encouraging and personal — use the student's name. Reference what they practiced specifically.
+Give at least one concrete technique tip and one motivational next step.`,
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "audio" as const,
-              source: {
-                type: "base64" as const,
-                media_type: "audio/webm",
-                data: base64Audio,
-              },
-            },
-            {
-              type: "text",
-              text: `${contextLine}${notes ? `\nStudent's practice notes: ${notes}` : ""}
-
-Please listen to this practice recording and give warm, specific feedback covering: rhythm & timing, technical execution, practice quality, and one or two encouraging next steps.`,
-            },
-          ],
+          content: `Here is a student's practice session log:\n\n${contextBlock}\n\nPlease give encouraging, specific coaching feedback for this session.`,
         },
       ],
     });

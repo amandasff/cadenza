@@ -305,7 +305,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                 </p>
               ) : (
                 <div style={{ color: "var(--muted)", fontSize: "0.8125rem", fontFamily: "DM Sans, sans-serif" }}>
-                  Analyzing recording… check back shortly.
+                  Generating coaching notes… check back shortly.
                 </div>
               )}
             </div>
