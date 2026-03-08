@@ -68,6 +68,7 @@ export interface PracticeSessionRow {
   notes: string | null;
   segments_json: PracticeSegment[] | null;
   recording_url: string | null;
+  ai_feedback: string | null;
   status: string;
   created_at: string;
 }

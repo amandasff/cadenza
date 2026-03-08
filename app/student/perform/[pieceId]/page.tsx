@@ -536,11 +536,19 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         .from("practice-recordings").upload(path, recBlob, { contentType: "audio/webm", upsert: false });
       if (!uploadErr) {
         const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
-        await PracticeService.getInstance(supabase).logSession({
+        const sessionData = await PracticeService.getInstance(supabase).logSession({
           studentId: student.id, studioId: student.studioId,
           durationSeconds: elapsed, recordingUrl: urlData.publicUrl,
           notes: `Performance recording — ${piece?.title ?? "piece"}`,
         });
+        // Fire AI analysis in background
+        if (sessionData?.id) {
+          fetch("/api/practice/analyze-recording", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId: sessionData.id }),
+          }).catch(() => {});
+        }
         setRecSaved(true);
       }
     } catch (err) {

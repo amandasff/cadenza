@@ -293,6 +293,24 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
             )}
           </div>
 
+          {/* AI Analysis */}
+          {session.recording_url && (
+            <div style={{ background: "var(--cream)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
+              <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
+                AI Analysis
+              </div>
+              {session.ai_feedback ? (
+                <p style={{ fontSize: "0.875rem", lineHeight: 1.75, color: "var(--charcoal)", fontFamily: "DM Sans, sans-serif", margin: 0, whiteSpace: "pre-wrap" }}>
+                  {session.ai_feedback}
+                </p>
+              ) : (
+                <div style={{ color: "var(--muted)", fontSize: "0.8125rem", fontFamily: "DM Sans, sans-serif" }}>
+                  Analyzing recording… check back shortly.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Segments */}
           {segments.length > 0 && (
             <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>

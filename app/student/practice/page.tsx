@@ -346,6 +346,15 @@ function PracticeInner() {
         recordingUrl,
       });
 
+      // Fire AI analysis in background — don't block submit flow
+      if (recordingUrl && sessionData?.id) {
+        fetch("/api/practice/analyze-recording", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: sessionData.id }),
+        }).catch(() => {});
+      }
+
       const selectedPiece = pieces.find(p => p.id === selectedPieceId);
 
       if (portfolioSave && portfolioTitle.trim()) {
