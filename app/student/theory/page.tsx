@@ -517,20 +517,21 @@ function NoteIdGame({ onBack }: { onBack: () => void }) {
         hiScore={game.hiScore}
         description={`30 seconds · name each note as fast as you can\nstreaks multiply your score up to 3×`}
         extras={
-          <div style={{ background: "#252537", borderRadius: 14, padding: "0.75rem 0.5rem", marginBottom: "1.5rem", display: "flex", justifyContent: "center" }}>
-            <Staff clef={clef} notePos={clef === "treble" ? 2 : 4} noteColor="rgba(255,255,255,0.3)" />
-          </div>
+          <>
+            <div style={{ background: "#252537", borderRadius: 14, padding: "0.75rem 0.5rem", marginBottom: "1.5rem", display: "flex", justifyContent: "center" }}>
+              <Staff clef={clef} notePos={clef === "treble" ? 2 : 4} noteColor="rgba(255,255,255,0.3)" />
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginBottom: "1.25rem" }}>
+              {(["treble", "bass"] as const).map(c => (
+                <button key={c} onClick={() => setClef(c)} style={{ padding: "0.5rem 1.25rem", borderRadius: 20, cursor: "pointer", background: clef === c ? "#4CAF84" : "transparent", border: `1.5px solid ${clef === c ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: clef === c ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", fontWeight: clef === c ? 600 : 400, transition: "all 0.15s" }}>
+                  {c === "treble" ? "Treble Clef" : "Bass Clef"}
+                </button>
+              ))}
+            </div>
+          </>
         }
         onStart={start}
-      >
-        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginBottom: "1.25rem" }}>
-          {(["treble", "bass"] as const).map(c => (
-            <button key={c} onClick={() => setClef(c)} style={{ padding: "0.5rem 1.25rem", borderRadius: 20, cursor: "pointer", background: clef === c ? "#4CAF84" : "transparent", border: `1.5px solid ${clef === c ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: clef === c ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", fontWeight: clef === c ? 600 : 400, transition: "all 0.15s" }}>
-              {c === "treble" ? "Treble Clef" : "Bass Clef"}
-            </button>
-          ))}
-        </div>
-      </IdleCard>
+      />
     );
   }
   if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
