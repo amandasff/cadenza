@@ -15,7 +15,6 @@ const tabs = [
   { href: "/student/pieces",         label: "Pieces" },
   { href: "/student/chat",           label: "Chat" },
   { href: "/student/rewards",        label: "Awards" },
-  { href: "/student/upgrade",        label: "Upgrade" },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -312,6 +311,21 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             }}
           >
             Sign out
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm("Delete your account permanently? This cannot be undone.")) return;
+              await fetch("/api/account/delete", { method: "DELETE" });
+              await signOut();
+            }}
+            style={{
+              width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
+              padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "#c0392b",
+              textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
+            }}
+          >
+            Delete account
           </button>
         </div>
       </aside>

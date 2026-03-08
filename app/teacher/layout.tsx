@@ -275,6 +275,23 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         >
           Sign out
         </button>
+        <button
+          onClick={async () => {
+            if (!confirm("Delete your account permanently? This cannot be undone.")) return;
+            await fetch("/api/account/delete", { method: "DELETE" });
+            await signOut();
+          }}
+          style={{
+            flexShrink: 0,
+            marginLeft: "0.5rem",
+            background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+            padding: "0.25rem 0.625rem", cursor: "pointer", fontSize: "0.6875rem",
+            fontFamily: "Inter, sans-serif", fontWeight: 500, color: "#c0392b",
+            letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
+          }}
+        >
+          Delete account
+        </button>
       </nav>
       <main className="teacher-main">{children}</main>
     </div>
