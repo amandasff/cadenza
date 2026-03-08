@@ -1,7 +1,13 @@
 "use client";
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
-import { DailyProvider } from "@daily-co/daily-react";
+import dynamic from "next/dynamic";
 import type { DailyCall } from "@daily-co/daily-js";
+
+// Load DailyProvider only client-side — it uses browser APIs that break SSR
+const DailyProvider = dynamic(
+  () => import("@daily-co/daily-react").then((m) => m.DailyProvider),
+  { ssr: false }
+);
 
 type LessonStatus = "idle" | "joining" | "live" | "ended";
 
@@ -35,9 +41,7 @@ export function LessonProvider({ children }: { children: React.ReactNode }) {
     status: "idle",
   });
 
-  // Keep callObject in a ref so it doesn't cause re-renders on its own
   const callRef = useRef<DailyCall | null>(null);
-  // Force re-render when call object changes
   const [callVersion, setCallVersion] = useState(0);
 
   const joinLesson = useCallback(
@@ -52,7 +56,6 @@ export function LessonProvider({ children }: { children: React.ReactNode }) {
       token: string;
       studentName: string;
     }) => {
-      // Destroy any existing call
       if (callRef.current) {
         await callRef.current.leave().catch(() => {});
         callRef.current.destroy();
@@ -97,8 +100,7 @@ export function LessonProvider({ children }: { children: React.ReactNode }) {
     leaveLesson,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  void callVersion; // referenced to suppress lint warning — triggers re-render
+  void callVersion;
 
   return (
     <LessonContext.Provider value={value}>
