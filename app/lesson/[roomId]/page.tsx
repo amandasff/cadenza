@@ -27,7 +27,7 @@ function LessonControls({ onLeave }: { onLeave: () => void }) {
   };
   const toggleScreen = async () => {
     if (!sharing) {
-      await callObject?.startScreenShare().catch(() => {});
+      try { callObject?.startScreenShare(); } catch { /* ignore */ }
       setSharing(true);
     } else {
       callObject?.stopScreenShare();
