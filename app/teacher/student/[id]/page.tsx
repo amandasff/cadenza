@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, use, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
 import { GoalService } from "../../../../lib/services/GoalService";
@@ -13,6 +14,7 @@ import { AssignmentService } from "../../../../lib/services/AssignmentService";
 import { Teacher } from "../../../../lib/models/Teacher";
 import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeResult, LessonRow, AssignmentWithContext } from "../../../../lib/types";
 import YouTubeSearch from "../../../../components/YouTubeSearch";
+import { useLesson } from "../../../../lib/context/LessonContext";
 
 const CATEGORIES: { value: string; label: string; color: string }[] = [
   { value: "technique",    label: "Technique",    color: "var(--sage)" },
@@ -441,6 +443,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const router = useRouter();
+  const { joinLesson } = useLesson();
+  const [startingLesson, setStartingLesson] = useState(false);
 
   const [student, setStudent] = useState<ProfileRow | null>(null);
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
@@ -815,6 +820,50 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     }
   }
 
+  async function handleStartLesson() {
+    if (!student || !teacher?.studioId || startingLesson) return;
+    setStartingLesson(true);
+    try {
+      const res = await fetch("/api/lesson/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: student.id,
+          studioId: teacher.studioId,
+          studentName: student.display_name,
+        }),
+      });
+      const data = await res.json() as { roomId?: string; roomUrl?: string; error?: string };
+      if (!data.roomId || !data.roomUrl) {
+        alert(data.error ?? "Could not start lesson");
+        return;
+      }
+      // Get token for teacher
+      const tokenRes = await fetch("/api/lesson/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId: data.roomId }),
+      });
+      const tokenData = await tokenRes.json() as { token?: string; error?: string };
+      if (!tokenData.token) {
+        alert(tokenData.error ?? "Could not get lesson token");
+        return;
+      }
+      await joinLesson({
+        roomId: data.roomId,
+        roomUrl: data.roomUrl,
+        token: tokenData.token,
+        studentName: student.display_name,
+      });
+      router.push(`/lesson/${data.roomId}`);
+    } catch (err) {
+      console.error("Start lesson error:", err);
+      alert("Could not start lesson. Please try again.");
+    } finally {
+      setStartingLesson(false);
+    }
+  }
+
   const allGoals = [...pieces.flatMap(p => p.goals), ...standaloneGoals];
   const completedCount = allGoals.filter(g => g.status === "completed").length;
   const pct = allGoals.length > 0 ? Math.round((completedCount / allGoals.length) * 100) : 0;
@@ -865,6 +914,19 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             </p>
           </div>
         </div>
+        <button
+          onClick={handleStartLesson}
+          disabled={startingLesson}
+          style={{
+            padding: "0.5rem 0.875rem", borderRadius: 3, border: "none",
+            background: "var(--charcoal)", color: "var(--white)",
+            fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
+            cursor: startingLesson ? "default" : "pointer", opacity: startingLesson ? 0.6 : 1,
+            whiteSpace: "nowrap", letterSpacing: "0.01em", flexShrink: 0,
+          }}
+        >
+          {startingLesson ? "Starting…" : "📹 Start lesson"}
+        </button>
       </div>
 
       {/* Stats */}

@@ -6,6 +6,8 @@ import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Teacher } from "../../lib/models/Teacher";
+import { LessonProvider } from "../../lib/context/LessonContext";
+import LessonPip from "../../components/LessonPip";
 
 const tabs = [
   { href: "/teacher",                label: "Students" },
@@ -144,6 +146,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const initials = teacher.displayName.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
   return (
+    <LessonProvider>
     <div style={{ minHeight: "100dvh", background: "var(--cream)" }}>
       <nav style={{
         background: "var(--white)",
@@ -308,6 +311,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         </button>
       </nav>
       <main className="teacher-main">{children}</main>
+      <LessonPip />
 
       {/* Upload error toast */}
       {uploadError && (
@@ -386,5 +390,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         </div>
       )}
     </div>
+    </LessonProvider>
   );
 }

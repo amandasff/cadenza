@@ -221,3 +221,20 @@ export interface LessonWithAssignments extends LessonRow {
   assignments: AssignmentRow[];
   completion_count: number;
 }
+
+// ============================================================
+// Video Rooms (Daily.co)
+// ============================================================
+
+export interface VideoRoomRow {
+  id: string;
+  studio_id: string;
+  teacher_id: string;
+  student_id: string;
+  daily_room_name: string;
+  daily_room_url: string;
+  status: 'waiting' | 'live' | 'ended';
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+}
