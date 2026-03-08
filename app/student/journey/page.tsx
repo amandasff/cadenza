@@ -4,6 +4,7 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PortfolioService, type PortfolioItemRow } from "../../../lib/services/PortfolioService";
 import { Student } from "../../../lib/models/Student";
+import AudioPlayer from "../../../components/AudioPlayer";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" });
@@ -215,7 +216,7 @@ create policy "Teachers read studio portfolio"
                         <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.6, margin: "0 0 0.75rem", fontFamily: "Inter, sans-serif" }}>{item.description}</p>
                       )}
                       {item.recording_url && (
-                        <audio controls src={item.recording_url} style={{ width: "100%", borderRadius: 3, marginTop: item.description ? 0 : "0.375rem" }} />
+                        <div style={{ marginTop: item.description ? 0 : "0.375rem" }}><AudioPlayer src={item.recording_url} /></div>
                       )}
                     </>
                   )}

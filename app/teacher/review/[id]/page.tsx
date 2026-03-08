@@ -7,6 +7,7 @@ import { GoalService } from "../../../../lib/services/GoalService";
 import { ChatService } from "../../../../lib/services/ChatService";
 import { Teacher } from "../../../../lib/models/Teacher";
 import type { PracticeSessionRow, GoalRow, ProfileRow, PracticeSegment } from "../../../../lib/types";
+import AudioPlayer from "../../../../components/AudioPlayer";
 
 const AREAS: Record<string, { label: string; color: string; icon: string }> = {
   technique:    { label: "Technique",    color: "var(--sage)",   icon: "🌿" },
@@ -284,7 +285,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
               Student Recording
             </div>
             {session.recording_url ? (
-              <audio controls src={session.recording_url} style={{ width: "100%", borderRadius: 8 }} />
+              <AudioPlayer src={session.recording_url} />
             ) : (
               <div style={{ background: "var(--cream)", borderRadius: 12, padding: "1.25rem", textAlign: "center", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem" }}>
                 No recording for this session
@@ -375,7 +376,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                <audio controls src={recordingUrl ?? undefined} style={{ width: "100%", borderRadius: 8 }} />
+                {recordingUrl && <AudioPlayer src={recordingUrl} />}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
                   <button
                     onClick={discardRecording}

@@ -9,6 +9,7 @@ import { ChatService } from "../../../lib/services/ChatService";
 import { PortfolioService } from "../../../lib/services/PortfolioService";
 import { Student } from "../../../lib/models/Student";
 import type { PracticeSegment } from "../../../lib/types";
+import AudioPlayer from "../../../components/AudioPlayer";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 
 type PracticeStep = "practice" | "reflect";
@@ -755,7 +756,7 @@ function PracticeInner() {
       {audioBlobUrl && (
         <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1rem 1.25rem", marginBottom: "1rem", textAlign: "left" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>Your recording</div>
-          <audio controls src={audioBlobUrl} style={{ width: "100%" }} />
+          <AudioPlayer src={audioBlobUrl} />
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.875rem" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.125rem" }}>Save to Journey</div>
