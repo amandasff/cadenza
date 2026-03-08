@@ -126,7 +126,7 @@ export default function StudentChat() {
       .from("practice_sessions")
       .select("id, ai_feedback")
       .in("id", sessionIds)
-      .then(({ data }) => {
+      .then(({ data }: { data: Array<{ id: string; ai_feedback: string | null }> | null }) => {
         if (!data) return;
         const map: Record<string, string> = {};
         for (const row of data) {
