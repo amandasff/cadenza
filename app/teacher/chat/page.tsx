@@ -297,8 +297,8 @@ export default function TeacherChat() {
                     <div style={{
                       maxWidth: "66%", padding: "0.5rem 0.875rem", fontSize: "0.875rem", lineHeight: 1.55,
                       background: isMe ? (isAnnouncements ? "var(--peach-bg)" : "var(--charcoal)") : "var(--white)",
-                      color: isMe ? (isAnnouncements ? "var(--charcoal)" : "var(--white)") : "var(--charcoal)",
-                      border: isMe ? (isAnnouncements ? "1px solid var(--peach-light)" : "none") : "1px solid var(--border)",
+                      color: isMe ? (isAnnouncements ? "var(--charcoal)" : "var(--cream)") : "var(--charcoal)",
+                      border: isMe ? (isAnnouncements ? "1px solid var(--peach-light)" : "none") : "1px solid var(--border-strong)",
                       borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                       overflowWrap: "break-word", wordBreak: "break-word",
                     }}>

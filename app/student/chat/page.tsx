@@ -307,9 +307,9 @@ export default function StudentChat() {
                   <div style={{
                     maxWidth: "78%", padding: "0.5rem 0.875rem",
                     background: isMe ? "var(--charcoal)" : "var(--white)",
-                    color: isMe ? "var(--white)" : "var(--charcoal)",
+                    color: isMe ? "var(--cream)" : "var(--charcoal)",
                     borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                    border: isMe ? "none" : "1px solid var(--border)",
+                    border: isMe ? "none" : "1px solid var(--border-strong)",
                     fontSize: "0.875rem", lineHeight: 1.55,
                     overflowWrap: "break-word", wordBreak: "break-word",
                   }}>

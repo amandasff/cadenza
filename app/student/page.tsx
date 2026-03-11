@@ -317,12 +317,12 @@ export default function ThisWeek() {
                       maxWidth: "80%",
                       padding: "0.5rem 0.75rem",
                       borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
-                      background: isMe ? "var(--charcoal)" : "var(--cream)",
-                      color: isMe ? "#fff" : "var(--charcoal)",
+                      background: isMe ? "var(--charcoal)" : "var(--white)",
+                      color: isMe ? "var(--cream)" : "var(--charcoal)",
                       fontSize: "0.8125rem",
                       fontFamily: "Inter, sans-serif",
                       lineHeight: 1.45,
-                      border: isMe ? "none" : "1px solid var(--border)",
+                      border: isMe ? "none" : "1px solid var(--border-strong)",
                       overflowWrap: "break-word", wordBreak: "break-word",
                     }}>
                       {text}
@@ -337,8 +337,8 @@ export default function ThisWeek() {
                 <div style={{
                   padding: "0.5rem 0.75rem",
                   borderRadius: "12px 12px 12px 4px",
-                  background: "var(--cream)",
-                  border: "1px solid var(--border)",
+                  background: "var(--white)",
+                  border: "1px solid var(--border-strong)",
                   fontSize: "0.8125rem",
                   fontFamily: "Inter, sans-serif",
                   color: "var(--muted)",
