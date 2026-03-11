@@ -23,7 +23,7 @@ export default function StudentChat() {
   const { user } = useAuth();
   const student = user as Student;
 
-  const [tab, setTab] = useState<Tab>("announcements");
+  const [tab, setTab] = useState<Tab>("private");
   const [announcements, setAnnouncements] = useState<MessageRow[]>([]);
   const [privateMessages, setPrivateMessages] = useState<MessageRow[]>([]);
   const [teacherId, setTeacherId] = useState<string | null>(null);

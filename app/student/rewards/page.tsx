@@ -35,13 +35,6 @@ function getLevel(points: number) {
   return { current, next, progress, idx };
 }
 
-function streakMultiplier(streak: number): { mult: number; label: string } {
-  if (streak >= 30) return { mult: 3,   label: "3×" };
-  if (streak >= 14) return { mult: 2,   label: "2×" };
-  if (streak >= 7)  return { mult: 1.5, label: "1.5×" };
-  return               { mult: 1,   label: "1×" };
-}
-
 // ── Badge definitions ─────────────────────────────────────────────────────────
 // Inspired by Tonara's achievement system + behavioral psychology:
 //  • Early badges are easy wins (hook the habit loop)
@@ -63,9 +56,9 @@ const BADGES = [
   { id: "on_a_roll",     icon: "🔥", name: "On a Roll",         desc: "3-day practice streak",            unlocked: (s: BadgeStats) => s.streakDays >= 3 },
   { id: "daily_ten",     icon: "📅", name: "10 Sessions",       desc: "Complete 10 practice sessions",    unlocked: (s: BadgeStats) => s.sessions >= 10 },
   // ── Streak milestones (loss aversion loop) ──
-  { id: "week_warrior",  icon: "⚡", name: "Week Warrior",      desc: "7-day streak — 1.5× pts bonus!",  unlocked: (s: BadgeStats) => s.streakDays >= 7 },
-  { id: "fortnight",     icon: "💫", name: "Fortnight Fire",    desc: "14-day streak — 2× pts bonus!",   unlocked: (s: BadgeStats) => s.streakDays >= 14 },
-  { id: "monthly",       icon: "👑", name: "Monthly Maestro",   desc: "30-day streak — 3× pts bonus!",   unlocked: (s: BadgeStats) => s.streakDays >= 30 },
+  { id: "week_warrior",  icon: "⚡", name: "Week Warrior",      desc: "7-day streak — +500 bonus!",      unlocked: (s: BadgeStats) => s.streakDays >= 7 },
+  { id: "fortnight",     icon: "💫", name: "Fortnight Fire",    desc: "14-day streak — +500 bonus!",     unlocked: (s: BadgeStats) => s.streakDays >= 14 },
+  { id: "monthly",       icon: "👑", name: "Monthly Maestro",   desc: "30-day streak — +500 bonus!",     unlocked: (s: BadgeStats) => s.streakDays >= 30 },
   // ── Practice time ──
   { id: "hour_power",    icon: "⏱", name: "Hour Power",        desc: "Practice 60 minutes total",       unlocked: (s: BadgeStats) => s.totalMinutes >= 60 },
   { id: "ten_hours",     icon: "⌛", name: "Ten Hours",          desc: "Practice 10 hours total",         unlocked: (s: BadgeStats) => s.totalMinutes >= 600 },
@@ -188,15 +181,12 @@ export default function Rewards() {
   const streakIsActive = lastSessionDate === todayLocal || lastSessionDate === yesterdayLocal;
   const effectiveStreak = streakIsActive ? streakDays : 0;
 
-  // Streak multiplier (based on effective streak)
-  const { mult, label: multLabel } = streakMultiplier(effectiveStreak);
-
   // This week
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
   const weekSessions = sessions.filter(s => new Date(s.created_at) >= weekAgo);
   const weekMinutes  = weekSessions.reduce((sum, s) => sum + Math.round(s.duration_seconds / 60), 0);
-  const weekPtsEst   = Math.round(weekMinutes * mult) + weekSessions.length * 10; // approx (includes daily bonuses)
+  const weekPtsEst   = weekSessions.length * 100; // 100 pts per session
 
   // Badges (use effective streak so badges don't show as earned when streak lapsed)
   const badgeStats: BadgeStats = {
@@ -295,7 +285,7 @@ export default function Rewards() {
               label: "Day streak",
               sub: effectiveStreak > 0 && lastSessionDate === yesterdayLocal
                 ? "Practice today!"
-                : mult > 1 ? `${multLabel} pts bonus` : undefined,
+                : effectiveStreak > 0 && effectiveStreak % 7 === 0 ? "+500 this week!" : undefined,
               subColor: effectiveStreak > 0 && lastSessionDate === yesterdayLocal
                 ? "var(--peach)"
                 : "var(--sage)",
@@ -369,9 +359,9 @@ export default function Rewards() {
                 </div>
               </div>
             </div>
-            {mult > 1 && (
+            {effectiveStreak > 0 && effectiveStreak % 7 === 0 && (
               <div style={{ marginTop: "0.75rem", padding: "0.5rem 0.75rem", background: "var(--cream-deep)", borderRadius: 3, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>
-                🔥 {effectiveStreak}-day streak = <strong>{multLabel} multiplier</strong> — practice points are supercharged right now
+                🔥 {effectiveStreak}-day streak — <strong>+500 bonus</strong> awarded this week!
               </div>
             )}
           </div>
@@ -384,11 +374,10 @@ export default function Rewards() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {[
-              { label: "Practice",             value: "1 pt / min  ·  +10 first session each day" },
-              { label: "7-day streak",          value: "1.5× multiplier on all practice" },
-              { label: "14-day streak",         value: "2× multiplier on all practice" },
-              { label: "30-day streak",         value: "3× multiplier on all practice" },
-              { label: "Complete assignment",   value: "+50 pts" },
+              { label: "Practice session",      value: "+100 pts" },
+              { label: "7-day streak",          value: "+500 bonus" },
+              { label: "14-day streak",         value: "+500 bonus" },
+              { label: "21-day streak",         value: "+500 bonus" },
               { label: "Complete goal",         value: "Points set by your teacher" },
             ].map(({ label, value }) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "1rem" }}>

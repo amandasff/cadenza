@@ -89,25 +89,13 @@ export class PracticeService {
     }
 
     // ── Points calculation ──────────────────────────────────────────────
-    // 1 pt per minute practiced, scaled by streak multiplier
-    // Streak multipliers (inspired by Tonara / Practice Space):
-    //   7-day  → 1.5×   (one week of consistency)
-    //   14-day → 2×     (two weeks)
-    //   30-day → 3×     (one month — significant reward)
-    const minutesPracticed = Math.floor(input.durationSeconds / 60);
-
-    let multiplier = 1;
-    if (newStreak >= 30) multiplier = 3;
-    else if (newStreak >= 14) multiplier = 2;
-    else if (newStreak >= 7) multiplier = 1.5;
-
-    // +10 bonus for the first session of each day (daily habit reward)
+    // 100 pts per practice session
+    // +500 bonus every time the streak hits a multiple of 7 (weekly streak bonus)
     const isFirstSessionToday = lastDate !== todayStr; // null also qualifies
-    const dailyBonus = isFirstSessionToday && minutesPracticed > 0 ? 10 : 0;
+    const sessionBonus = isFirstSessionToday ? 100 : 0;
+    const weekStreakBonus = (newStreak > 0 && newStreak % 7 === 0) ? 500 : 0;
 
-    const pointsEarned = minutesPracticed > 0
-      ? Math.round(minutesPracticed * multiplier) + dailyBonus
-      : 0;
+    const pointsEarned = sessionBonus + weekStreakBonus;
 
     // ── Write profile update ────────────────────────────────────────────
     const updates: Record<string, number> = {};
