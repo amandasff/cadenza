@@ -243,71 +243,123 @@ export default function ThisWeek() {
         </Link>
       </div>
 
-      {/* ── Chat preview ── */}
+      {/* ── Chat with teacher ── */}
       <div style={{ padding: "0 1.5rem 1rem" }}>
-        <Link href="/student/chat" style={{ textDecoration: "none", display: "block" }}>
-          <div style={{
+        <div
+          onClick={() => router.push("/student/chat")}
+          style={{
             background: "var(--white)", border: "1px solid var(--border)",
-            borderRadius: 10, overflow: "hidden",
+            borderRadius: 14, overflow: "hidden", cursor: "pointer",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+          }}
+        >
+          {/* Chat header — looks like a conversation thread */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.625rem",
+            padding: "0.75rem 1rem",
+            background: "var(--cream)",
+            borderBottom: "1px solid var(--border)",
           }}>
-            {/* Header */}
+            {/* Teacher avatar circle */}
             <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "0.75rem 1rem", borderBottom: recentMessages.length > 0 ? "1px solid var(--border)" : "none",
+              width: 32, height: 32, borderRadius: "50%",
+              background: "linear-gradient(135deg, var(--sage) 0%, #5a9a7a 100%)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontSize: "0.8125rem", fontWeight: 600,
+              fontFamily: "Inter, sans-serif", flexShrink: 0,
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>
-                  {teacherName ?? "Messages"}
-                </span>
-              </div>
-              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
-                View all →
-              </span>
+              {teacherName ? teacherName.charAt(0).toUpperCase() : "T"}
             </div>
-
-            {/* Messages preview */}
-            {recentMessages.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                {recentMessages.map((msg, i) => {
-                  const isMe = msg.sender_id === student?.id;
-                  const isSystem = msg.message_type === "system";
-                  const text = isSystem
-                    ? msg.content.split("\n").filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:")).join(" ").slice(0, 80)
-                    : msg.content;
-                  return (
-                    <div key={msg.id} style={{
-                      padding: "0.625rem 1rem",
-                      borderTop: i > 0 ? "1px solid var(--border)" : "none",
-                      display: "flex", gap: "0.625rem", alignItems: "flex-start",
-                    }}>
-                      <span style={{
-                        fontSize: "0.625rem", fontWeight: 600, color: isMe ? "var(--charcoal)" : "var(--sage)",
-                        fontFamily: "Inter, sans-serif", flexShrink: 0, paddingTop: "0.125rem", minWidth: 28,
-                      }}>
-                        {isMe ? "You" : isSystem ? "📢" : (teacherName?.split(" ")[0] ?? "Teacher")}
-                      </span>
-                      <span style={{
-                        fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
-                      }}>
-                        {text}
-                      </span>
-                    </div>
-                  );
-                })}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                {teacherName ?? "Your Teacher"}
               </div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>
+                Tap to open chat
+              </div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+
+          {/* Chat bubbles */}
+          <div style={{ padding: "0.75rem 0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem", minHeight: 60 }}>
+            {recentMessages.length > 0 ? (
+              recentMessages.map((msg) => {
+                const isMe = msg.sender_id === student?.id;
+                const isSystem = msg.message_type === "system";
+                const text = isSystem
+                  ? msg.content.split("\n").filter((l: string) => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:")).join(" ").slice(0, 100)
+                  : msg.content.length > 100 ? msg.content.slice(0, 100) + "..." : msg.content;
+                return (
+                  <div key={msg.id} style={{
+                    display: "flex", justifyContent: isMe ? "flex-end" : "flex-start",
+                  }}>
+                    <div style={{
+                      maxWidth: "80%",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
+                      background: isMe ? "var(--charcoal)" : "var(--cream)",
+                      color: isMe ? "#fff" : "var(--charcoal)",
+                      fontSize: "0.8125rem",
+                      fontFamily: "Inter, sans-serif",
+                      lineHeight: 1.45,
+                      border: isMe ? "none" : "1px solid var(--border)",
+                    }}>
+                      {text}
+                    </div>
+                  </div>
+                );
+              })
             ) : (
-              <div style={{ padding: "0.875rem 1rem" }}>
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", fontStyle: "italic" }}>
-                  No messages yet — say hi!
-                </span>
+              <div style={{
+                display: "flex", justifyContent: "flex-start",
+              }}>
+                <div style={{
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: "12px 12px 12px 4px",
+                  background: "var(--cream)",
+                  border: "1px solid var(--border)",
+                  fontSize: "0.8125rem",
+                  fontFamily: "Inter, sans-serif",
+                  color: "var(--muted)",
+                  fontStyle: "italic",
+                }}>
+                  Say hi to {teacherName ?? "your teacher"}!
+                </div>
               </div>
             )}
           </div>
-        </Link>
+
+          {/* Fake reply bar */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.5rem",
+            padding: "0.5rem 0.875rem 0.625rem",
+            borderTop: "1px solid var(--border)",
+          }}>
+            <div style={{
+              flex: 1, borderRadius: 20, border: "1px solid var(--border)",
+              padding: "0.4rem 0.875rem",
+              fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
+              color: "var(--border-strong)",
+              background: "var(--cream)",
+            }}>
+              Type a message...
+            </div>
+            <div style={{
+              width: 30, height: 30, borderRadius: "50%",
+              background: "var(--charcoal)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tools row */}
