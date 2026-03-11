@@ -41,19 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for auth state changes (sign in / sign out from other tabs, token refresh, etc.)
-    // Do NOT await refresh() here — auth pages handle their own redirect after sign-in.
-    // Awaiting here was causing a multi-second block before setLoading(false) was called.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
         if (session?.user) {
-          // Fire and don't await — the auth page already has the user and is redirecting.
-          // This call keeps the context in sync for subsequent page loads.
-          refresh().catch(() => {});
+          // Keep loading=true until the profile is fetched. Without this, layouts
+          // see loading=false && user=null and immediately redirect back to /auth/login
+          // before the profile fetch completes.
+          setLoading(true);
+          refresh().finally(() => setLoading(false));
         } else {
           setUser(null);
+          setLoading(false);
         }
-        // Unblock loading immediately — never wait on the profile fetch here.
-        setLoading(false);
       }
     );
 
