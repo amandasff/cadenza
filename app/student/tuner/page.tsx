@@ -172,12 +172,16 @@ export default function TunerPage() {
   const [noteInfo, setNoteInfo] = useState<{ note: string; octave: number; cents: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [instrumentKey, setInstrumentKey] = useState("guitar");
+  const [playingString, setPlayingString] = useState<string | null>(null);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef  = useRef<AnalyserNode | null>(null);
   const streamRef    = useRef<MediaStream | null>(null);
   const rafRef       = useRef<number>(0);
   const bufferRef    = useRef<Float32Array<ArrayBuffer> | null>(null);
+  const toneCtxRef   = useRef<AudioContext | null>(null);
+  const toneOscRef   = useRef<OscillatorNode | null>(null);
+  const toneGainRef  = useRef<GainNode | null>(null);
 
   const detect = useCallback(() => {
     const analyser = analyserRef.current;
@@ -225,7 +229,60 @@ export default function TunerPage() {
     setNoteInfo(null);
   }
 
-  useEffect(() => () => { stopListening(); }, []); // cleanup on unmount
+  // ── Reference tone playback ──────────────────────────────────────────────
+  function playTone(freq: number, label: string) {
+    // If already playing this string, stop it (toggle)
+    if (playingString === label) {
+      stopTone();
+      return;
+    }
+    // Stop any existing tone first
+    stopTone();
+
+    const ctx = toneCtxRef.current ?? new AudioContext();
+    toneCtxRef.current = ctx;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+    gain.connect(ctx.destination);
+    toneGainRef.current = gain;
+
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    osc.connect(gain);
+    osc.start();
+    toneOscRef.current = osc;
+
+    setPlayingString(label);
+
+    // Auto-stop after 3 seconds
+    setTimeout(() => {
+      if (toneOscRef.current === osc) stopTone();
+    }, 3000);
+  }
+
+  function stopTone() {
+    const gain = toneGainRef.current;
+    const osc = toneOscRef.current;
+    const ctx = toneCtxRef.current;
+    if (osc && gain && ctx) {
+      try {
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+        osc.stop(ctx.currentTime + 0.06);
+      } catch {}
+    }
+    toneOscRef.current = null;
+    toneGainRef.current = null;
+    setPlayingString(null);
+  }
+
+  useEffect(() => () => {                // cleanup on unmount
+    stopListening();
+    stopTone();
+    toneCtxRef.current?.close().catch(() => {});
+  }, []);
 
   const instrument = INSTRUMENTS[instrumentKey];
   const status = noteInfo ? getTuningStatus(noteInfo.cents) : null;
@@ -422,25 +479,34 @@ export default function TunerPage() {
             const isActive = noteInfo
               ? noteInfo.note === sNote && noteInfo.octave === sOctave
               : false;
+            const isPlaying = playingString === s.label;
             return (
-              <div
+              <button
                 key={`${s.label}-${s.stringNum}`}
+                onClick={() => playTone(s.freq, s.label)}
                 style={{
-                  background: isActive ? "#4CAF8422" : "#2C2C2E",
-                  border: `1px solid ${isActive ? "#4CAF84" : "rgba(255,255,255,0.08)"}`,
+                  background: isPlaying ? "#E6A81733" : isActive ? "#4CAF8422" : "#2C2C2E",
+                  border: `1px solid ${isPlaying ? "#E6A817" : isActive ? "#4CAF84" : "rgba(255,255,255,0.08)"}`,
                   borderRadius: 8,
                   padding: "0.625rem 0.25rem",
                   textAlign: "center",
                   transition: "all 0.2s",
+                  cursor: "pointer",
+                  fontFamily: "Inter, sans-serif",
                 }}
               >
-                <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: isActive ? "#4CAF84" : "#FDFCFA", marginBottom: "0.125rem" }}>
+                <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: isPlaying ? "#E6A817" : isActive ? "#4CAF84" : "#FDFCFA", marginBottom: "0.125rem" }}>
                   {sNote}
+                  {isPlaying && (
+                    <span style={{ marginLeft: 4, fontSize: "0.625rem", verticalAlign: "middle" }}>
+                      ♪
+                    </span>
+                  )}
                 </div>
-                <div style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>
-                  {sOctave} · str {s.stringNum}
+                <div style={{ fontSize: "0.5625rem", color: isPlaying ? "#E6A81788" : "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>
+                  {isPlaying ? "tap to stop" : `${sOctave} · str ${s.stringNum}`}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
