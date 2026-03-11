@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -19,14 +18,165 @@ const SUGGESTED = [
   "What are the mark requirements to pass vs honours?",
 ];
 
+const DAILY_LIMIT = 20;
+
+// ── Simple markdown → React renderer ─────────────────────────────────────────
+function renderMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split("\n");
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+  let key = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Blank line → skip
+    if (line.trim() === "") { i++; continue; }
+
+    // Horizontal rule
+    if (/^---+$/.test(line.trim())) {
+      elements.push(<hr key={key++} />);
+      i++; continue;
+    }
+
+    // Headers
+    const hMatch = line.match(/^(#{1,3})\s+(.+)/);
+    if (hMatch) {
+      const level = hMatch[1].length;
+      const Tag = `h${level}` as "h1" | "h2" | "h3";
+      elements.push(<Tag key={key++}>{inlineFormat(hMatch[2])}</Tag>);
+      i++; continue;
+    }
+
+    // Unordered list
+    if (/^[-•*]\s/.test(line.trim())) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length && /^[-•*]\s/.test(lines[i].trim())) {
+        items.push(<li key={key++}>{inlineFormat(lines[i].trim().replace(/^[-•*]\s+/, ""))}</li>);
+        i++;
+      }
+      elements.push(<ul key={key++}>{items}</ul>);
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+[.)]\s/.test(line.trim())) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length && /^\d+[.)]\s/.test(lines[i].trim())) {
+        items.push(<li key={key++}>{inlineFormat(lines[i].trim().replace(/^\d+[.)]\s+/, ""))}</li>);
+        i++;
+      }
+      elements.push(<ol key={key++}>{items}</ol>);
+      continue;
+    }
+
+    // Blockquote
+    if (line.trimStart().startsWith(">")) {
+      const bqLines: string[] = [];
+      while (i < lines.length && lines[i].trimStart().startsWith(">")) {
+        bqLines.push(lines[i].trimStart().replace(/^>\s?/, ""));
+        i++;
+      }
+      elements.push(<blockquote key={key++}>{inlineFormat(bqLines.join(" "))}</blockquote>);
+      continue;
+    }
+
+    // Regular paragraph
+    elements.push(<p key={key++}>{inlineFormat(line)}</p>);
+    i++;
+  }
+
+  return elements;
+}
+
+function inlineFormat(text: string): React.ReactNode {
+  // Process bold, italic, and inline code
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let k = 0;
+
+  while (remaining.length > 0) {
+    // Bold: **text**
+    const boldMatch = remaining.match(/^(.*?)\*\*(.+?)\*\*(.*)/s);
+    // Italic: *text*
+    const italicMatch = remaining.match(/^(.*?)\*(.+?)\*(.*)/s);
+    // Inline code: `text`
+    const codeMatch = remaining.match(/^(.*?)`(.+?)`(.*)/s);
+
+    // Find the earliest match
+    let earliest: { type: string; before: string; content: string; after: string; index: number } | null = null;
+
+    if (boldMatch && boldMatch[1] !== undefined) {
+      const idx = boldMatch[1].length;
+      if (!earliest || idx < earliest.index) {
+        earliest = { type: "bold", before: boldMatch[1], content: boldMatch[2], after: boldMatch[3], index: idx };
+      }
+    }
+    if (codeMatch && codeMatch[1] !== undefined) {
+      const idx = codeMatch[1].length;
+      if (!earliest || idx < earliest.index) {
+        earliest = { type: "code", before: codeMatch[1], content: codeMatch[2], after: codeMatch[3], index: idx };
+      }
+    }
+    if (italicMatch && italicMatch[1] !== undefined && (!earliest || italicMatch[1].length < earliest.index)) {
+      // Only match italic if it's not actually a bold marker
+      const idx = italicMatch[1].length;
+      if (!earliest || idx < earliest.index) {
+        if (!(boldMatch && boldMatch[1] !== undefined && boldMatch[1].length === idx)) {
+          earliest = { type: "italic", before: italicMatch[1], content: italicMatch[2], after: italicMatch[3], index: idx };
+        }
+      }
+    }
+
+    if (earliest) {
+      if (earliest.before) parts.push(earliest.before);
+      if (earliest.type === "bold") parts.push(<strong key={k++}>{earliest.content}</strong>);
+      else if (earliest.type === "italic") parts.push(<em key={k++}>{earliest.content}</em>);
+      else if (earliest.type === "code") parts.push(<code key={k++}>{earliest.content}</code>);
+      remaining = earliest.after;
+    } else {
+      parts.push(remaining);
+      remaining = "";
+    }
+  }
+
+  return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
+
 export default function AITutorPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [msgCount, setMsgCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Load daily message count from localStorage
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const stored = localStorage.getItem("ai-tutor-usage");
+    if (stored) {
+      try {
+        const { date, count } = JSON.parse(stored);
+        if (date === today) {
+          setMsgCount(count);
+        } else {
+          localStorage.setItem("ai-tutor-usage", JSON.stringify({ date: today, count: 0 }));
+        }
+      } catch {
+        localStorage.setItem("ai-tutor-usage", JSON.stringify({ date: today, count: 0 }));
+      }
+    }
+  }, []);
+
+  function incrementCount() {
+    const today = new Date().toISOString().slice(0, 10);
+    const newCount = msgCount + 1;
+    setMsgCount(newCount);
+    localStorage.setItem("ai-tutor-usage", JSON.stringify({ date: today, count: newCount }));
+  }
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,6 +189,11 @@ export default function AITutorPage() {
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || streaming) return;
+
+    if (msgCount >= DAILY_LIMIT) {
+      setError(`You've reached your daily limit of ${DAILY_LIMIT} messages. Come back tomorrow!`);
+      return;
+    }
 
     setError(null);
     const userMsg: Message = { id: Date.now().toString(), role: "user", content: trimmed };
@@ -84,6 +239,8 @@ export default function AITutorPage() {
           );
         }
       }
+
+      incrementCount();
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       setError((err as Error).message ?? "Something went wrong");
@@ -101,6 +258,8 @@ export default function AITutorPage() {
   }
 
   const isEmpty = messages.length === 0;
+  const atLimit = msgCount >= DAILY_LIMIT;
+  const remaining = DAILY_LIMIT - msgCount;
 
   return (
     <div style={{
@@ -114,13 +273,23 @@ export default function AITutorPage() {
         background: "var(--white)",
         flexShrink: 0,
       }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.5rem", fontWeight: 500, color: "var(--charcoal)", letterSpacing: "-0.01em", marginBottom: "0.125rem" }}>
-            AI Music Tutor
+        <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.5rem", fontWeight: 500, color: "var(--charcoal)", letterSpacing: "-0.01em", marginBottom: "0.125rem" }}>
+              AI Music Tutor
+            </div>
+            <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
+              Ask anything — RCM exam prep, music theory, technique, practice strategies.
+            </p>
           </div>
-          <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-            Ask anything — RCM exam prep, music theory, technique, practice strategies.
-          </p>
+          <div style={{
+            fontSize: "0.6875rem", color: remaining <= 5 ? "#E05252" : "var(--muted)",
+            background: remaining <= 5 ? "#E0525215" : "var(--cream)",
+            padding: "0.25rem 0.625rem", borderRadius: 12,
+            fontWeight: 500, whiteSpace: "nowrap", marginTop: "0.25rem",
+          }}>
+            {remaining}/{DAILY_LIMIT} left today
+          </div>
         </div>
       </div>
 
@@ -145,14 +314,16 @@ export default function AITutorPage() {
                   <button
                     key={q}
                     onClick={() => send(q)}
+                    disabled={atLimit}
                     style={{
                       background: "var(--white)", border: "1px solid var(--border)",
                       borderRadius: 8, padding: "0.875rem 1rem",
                       fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
-                      color: "var(--charcoal)", cursor: "pointer", textAlign: "left",
+                      color: "var(--charcoal)", cursor: atLimit ? "default" : "pointer", textAlign: "left",
                       lineHeight: 1.5, transition: "all 0.15s",
+                      opacity: atLimit ? 0.5 : 1,
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--charcoal)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--cream-deep)"; }}
+                    onMouseEnter={e => { if (!atLimit) { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--charcoal)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--cream-deep)"; } }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--white)"; }}
                   >
                     {q}
@@ -194,7 +365,7 @@ export default function AITutorPage() {
                 {m.content ? (
                   m.role === "assistant" ? (
                     <div className="ai-markdown">
-                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                      {renderMarkdown(m.content)}
                     </div>
                   ) : m.content
                 ) : (streaming && m.role === "assistant" ? (
@@ -236,9 +407,9 @@ export default function AITutorPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about RCM levels, theory, practice tips…"
+            placeholder={atLimit ? "Daily limit reached — come back tomorrow!" : "Ask about RCM levels, theory, practice tips…"}
             rows={1}
-            disabled={streaming}
+            disabled={streaming || atLimit}
             style={{
               flex: 1, resize: "none", border: "1px solid var(--border-strong)",
               borderRadius: 12, padding: "0.75rem 1rem",
@@ -247,6 +418,7 @@ export default function AITutorPage() {
               outline: "none", lineHeight: 1.5,
               maxHeight: 160, overflowY: "auto",
               transition: "border-color 0.15s",
+              opacity: atLimit ? 0.5 : 1,
             }}
             onFocus={e => { e.currentTarget.style.borderColor = "var(--charcoal)"; }}
             onBlur={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; }}
@@ -258,11 +430,11 @@ export default function AITutorPage() {
           />
           <button
             onClick={() => send(input)}
-            disabled={!input.trim() || streaming}
+            disabled={!input.trim() || streaming || atLimit}
             style={{
               width: 40, height: 40, borderRadius: "50%", border: "none", flexShrink: 0,
-              background: input.trim() && !streaming ? "var(--charcoal)" : "var(--border)",
-              color: "var(--white)", cursor: input.trim() && !streaming ? "pointer" : "default",
+              background: input.trim() && !streaming && !atLimit ? "var(--charcoal)" : "var(--border)",
+              color: "var(--white)", cursor: input.trim() && !streaming && !atLimit ? "pointer" : "default",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "1rem", transition: "background 0.15s",
             }}
@@ -291,6 +463,7 @@ export default function AITutorPage() {
         .ai-markdown p { margin: 0.5rem 0; }
         .ai-markdown ul, .ai-markdown ol { margin: 0.5rem 0; padding-left: 1.25rem; }
         .ai-markdown li { margin: 0.25rem 0; }
+        .ai-markdown li::marker { color: var(--muted); }
         .ai-markdown blockquote {
           margin: 0.5rem 0; padding: 0.375rem 0.75rem;
           border-left: 3px solid var(--muted); opacity: 0.85;
@@ -300,12 +473,8 @@ export default function AITutorPage() {
           background: rgba(0,0,0,0.06); padding: 0.125rem 0.375rem;
           border-radius: 4px; font-size: 0.8125rem;
         }
-        .ai-markdown pre { margin: 0.5rem 0; overflow-x: auto; }
-        .ai-markdown pre code { background: rgba(0,0,0,0.06); display: block; padding: 0.625rem; border-radius: 6px; }
         .ai-markdown hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
         .ai-markdown strong { font-weight: 700; }
-        .ai-markdown table { border-collapse: collapse; margin: 0.5rem 0; font-size: 0.8125rem; }
-        .ai-markdown th, .ai-markdown td { border: 1px solid var(--border); padding: 0.375rem 0.625rem; text-align: left; }
       `}</style>
     </div>
   );
