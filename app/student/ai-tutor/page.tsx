@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -188,9 +189,15 @@ export default function AITutorPage() {
                 fontSize: "0.875rem",
                 lineHeight: 1.65,
                 border: m.role === "assistant" ? "1px solid var(--border)" : "none",
-                whiteSpace: "pre-wrap",
+                whiteSpace: m.role === "user" ? "pre-wrap" : undefined,
               }}>
-                {m.content || (streaming && m.role === "assistant" ? (
+                {m.content ? (
+                  m.role === "assistant" ? (
+                    <div className="ai-markdown">
+                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                    </div>
+                  ) : m.content
+                ) : (streaming && m.role === "assistant" ? (
                   <span style={{ opacity: 0.4 }}>Thinking…</span>
                 ) : "")}
                 {streaming && m.role === "assistant" && m.content && (
@@ -275,6 +282,30 @@ export default function AITutorPage() {
 
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .ai-markdown { overflow-wrap: break-word; word-break: break-word; }
+        .ai-markdown > :first-child { margin-top: 0; }
+        .ai-markdown > :last-child { margin-bottom: 0; }
+        .ai-markdown h1 { font-size: 1.125rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+        .ai-markdown h2 { font-size: 1rem; font-weight: 700; margin: 0.875rem 0 0.375rem; }
+        .ai-markdown h3 { font-size: 0.9375rem; font-weight: 600; margin: 0.75rem 0 0.375rem; }
+        .ai-markdown p { margin: 0.5rem 0; }
+        .ai-markdown ul, .ai-markdown ol { margin: 0.5rem 0; padding-left: 1.25rem; }
+        .ai-markdown li { margin: 0.25rem 0; }
+        .ai-markdown blockquote {
+          margin: 0.5rem 0; padding: 0.375rem 0.75rem;
+          border-left: 3px solid var(--muted); opacity: 0.85;
+          font-style: italic;
+        }
+        .ai-markdown code {
+          background: rgba(0,0,0,0.06); padding: 0.125rem 0.375rem;
+          border-radius: 4px; font-size: 0.8125rem;
+        }
+        .ai-markdown pre { margin: 0.5rem 0; overflow-x: auto; }
+        .ai-markdown pre code { background: rgba(0,0,0,0.06); display: block; padding: 0.625rem; border-radius: 6px; }
+        .ai-markdown hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+        .ai-markdown strong { font-weight: 700; }
+        .ai-markdown table { border-collapse: collapse; margin: 0.5rem 0; font-size: 0.8125rem; }
+        .ai-markdown th, .ai-markdown td { border: 1px solid var(--border); padding: 0.375rem 0.625rem; text-align: left; }
       `}</style>
     </div>
   );

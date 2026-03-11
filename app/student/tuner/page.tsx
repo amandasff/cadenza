@@ -249,11 +249,28 @@ export default function TunerPage() {
     toneGainRef.current = gain;
 
     const osc = ctx.createOscillator();
-    osc.type = "sine";
+    osc.type = "triangle";
     osc.frequency.setValueAtTime(freq, ctx.currentTime);
     osc.connect(gain);
     osc.start();
     toneOscRef.current = osc;
+
+    // Add octave-up overtone so low notes are audible on small speakers
+    if (freq < 200) {
+      const overtoneGain = ctx.createGain();
+      overtoneGain.gain.setValueAtTime(0, ctx.currentTime);
+      overtoneGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
+      overtoneGain.connect(ctx.destination);
+      const overtone = ctx.createOscillator();
+      overtone.type = "sine";
+      overtone.frequency.setValueAtTime(freq * 2, ctx.currentTime);
+      overtone.connect(overtoneGain);
+      overtone.start();
+      // Stop overtone when main oscillator stops
+      osc.addEventListener("ended", () => {
+        try { overtone.stop(); overtoneGain.disconnect(); } catch {}
+      });
+    }
 
     setPlayingString(label);
 
