@@ -10,6 +10,7 @@ import { PortfolioService } from "../../../lib/services/PortfolioService";
 import { Student } from "../../../lib/models/Student";
 import type { PracticeSegment } from "../../../lib/types";
 import AudioPlayer from "../../../components/AudioPlayer";
+import { usePractice } from "../../../lib/context/PracticeContext";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 
 type PracticeStep = "practice" | "reflect";
@@ -43,6 +44,9 @@ function PracticeInner() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const student = user as Student;
+  const practice = usePractice();
+  const { isActive, recording, elapsed, analyserNode } = practice;
+  const hasStarted = isActive;
 
   const [step, setStep] = useState<PracticeStep>("practice");
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
@@ -55,11 +59,6 @@ function PracticeInner() {
   const [practiceYouTubeId, setPracticeYouTubeId] = useState<string | null>(null);
   // Metronome panel open
   const [showMetronome, setShowMetronome] = useState(false);
-
-  // Practice state
-  const [recording, setRecording] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
 
   const [bpm, setBpm] = useState(72);
   const [metronome, setMetronome] = useState(false);
@@ -74,6 +73,7 @@ function PracticeInner() {
 
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+  const [finalElapsed, setFinalElapsed] = useState(0);
   const [portfolioSave, setPortfolioSave] = useState(false);
   const [portfolioTitle, setPortfolioTitle] = useState("");
   const [portfolioDesc, setPortfolioDesc] = useState("");
@@ -85,11 +85,7 @@ function PracticeInner() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const micStreamRef = useRef<MediaStream | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
+  const metronomeCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -127,12 +123,12 @@ function PracticeInner() {
     }
   }, [searchParams, pieces]);
 
-  // ── Timer ──
+  // ── Waveform from context analyser ──
   useEffect(() => {
-    if (!recording) return;
-    const id = setInterval(() => setElapsed(e => e + 1), 1000);
-    return () => clearInterval(id);
-  }, [recording]);
+    if (!recording || !analyserNode) { cancelAnimationFrame(animFrameRef.current); return; }
+    startWaveform(analyserNode);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [recording, analyserNode]);
 
   // ── Metronome ──
   useEffect(() => {
@@ -141,8 +137,8 @@ function PracticeInner() {
     let beat = 0;
 
     if (soundMode === "click") {
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-      const ctx = audioCtxRef.current;
+      if (!metronomeCtxRef.current) metronomeCtxRef.current = new AudioContext();
+      const ctx = metronomeCtxRef.current;
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
 
       function playTick(isAccent: boolean) {
@@ -180,13 +176,11 @@ function PracticeInner() {
     }
   }, [metronome, bpm, beats, accentOn, soundMode]);
 
-  // ── Cleanup on unmount ──
+  // ── Cleanup on unmount (metronome only — recording persists in context) ──
   useEffect(() => {
     return () => {
-      micStreamRef.current?.getTracks().forEach(t => t.stop());
       cancelAnimationFrame(animFrameRef.current);
-      if (mediaRecorderRef.current?.state !== "inactive") mediaRecorderRef.current?.stop();
-      audioCtxRef.current?.close().catch(() => {});
+      metronomeCtxRef.current?.close().catch(() => {});
     };
   }, []);
 
@@ -221,77 +215,31 @@ function PracticeInner() {
     draw();
   }
 
-  // ── Recording controls ──
+  // ── Recording controls (delegated to PracticeContext) ──
   async function handleStartRecording() {
-    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-    setHasStarted(true);
-    setRecording(true);
     try {
-      // Keep constraints minimal — iOS Safari rejects sampleRate and other advanced hints
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStreamRef.current = stream;
-      const ctx = audioCtxRef.current!;
-      if (ctx.state === "suspended") await ctx.resume();
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-      startWaveform(analyser);
-      if (typeof MediaRecorder !== "undefined") {
-        const preferredTypes = ["audio/webm;codecs=opus","audio/ogg;codecs=opus","audio/mp4;codecs=aac","audio/webm"];
-        const mimeType = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) ?? "";
-        const recorderOpts: MediaRecorderOptions = { audioBitsPerSecond: 128000 };
-        if (mimeType) recorderOpts.mimeType = mimeType;
-        const recorder = new MediaRecorder(stream, recorderOpts);
-        chunksRef.current = [];
-        recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-        recorder.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
-          setRecordingBlob(blob);
-          const url = URL.createObjectURL(blob);
-          // WebM blobs from MediaRecorder lack duration metadata — the browser
-          // guesses wrong, making the seek bar appear sped up. Seeking to a huge
-          // timestamp forces it to scan the file and compute the real duration.
-          const audio = document.createElement("audio");
-          audio.src = url;
-          audio.addEventListener("loadedmetadata", () => {
-            if (audio.duration === Infinity) {
-              audio.currentTime = 1e101;
-              audio.addEventListener("timeupdate", () => {
-                audio.currentTime = 0;
-                setAudioBlobUrl(url);
-              }, { once: true });
-            } else {
-              setAudioBlobUrl(url);
-            }
-          });
-        };
-        recorder.start(250);
-        mediaRecorderRef.current = recorder;
-      }
+      await practice.startPractice();
     } catch (err) { console.error("mic error:", err); }
   }
 
   function handlePause() {
-    // MediaRecorder.pause() is not supported on iOS Safari — skip gracefully
-    try { if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.pause(); } catch {}
+    practice.pausePractice();
     cancelAnimationFrame(animFrameRef.current);
-    setRecording(false);
   }
 
   function handleResume() {
-    // MediaRecorder.resume() is not supported on iOS Safari — skip gracefully
-    try { if (mediaRecorderRef.current?.state === "paused") mediaRecorderRef.current.resume(); } catch {}
-    if (analyserRef.current) startWaveform(analyserRef.current);
-    setRecording(true);
+    practice.resumePractice();
   }
 
-  function handleStopPractice() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
+  async function handleStopPractice() {
     cancelAnimationFrame(animFrameRef.current);
-    micStreamRef.current?.getTracks().forEach(t => t.stop());
-    setRecording(false);
+    const { blob, elapsed: finalElapsed } = await practice.finishPractice();
+    if (blob) {
+      setRecordingBlob(blob);
+      const url = URL.createObjectURL(blob);
+      setAudioBlobUrl(url);
+    }
+    setFinalElapsed(finalElapsed);
     setStep("reflect");
   }
 
@@ -341,7 +289,7 @@ function PracticeInner() {
         studentId: student.id,
         studioId: student.studioId,
         pieceId: selectedPieceId || undefined,
-        durationSeconds: elapsed,
+        durationSeconds: finalElapsed,
         notes: notesStr,
         segments: sessionSegments.length > 0 ? sessionSegments : undefined,
         recordingUrl,
@@ -370,7 +318,7 @@ function PracticeInner() {
       }
 
       if (teacherId) {
-        const mins = Math.max(1, Math.round(elapsed / 60));
+        const mins = Math.max(1, Math.round(finalElapsed / 60));
         const lines: string[] = [];
         if (selectedPiece) lines.push(`🎵 Practiced: ${selectedPiece.title}${selectedPiece.composer ? ` — ${selectedPiece.composer}` : ""}`);
         lines.push(`⏱ ${mins} min${moodData ? `  |  Mood: ${moodData.emoji} ${moodData.label}` : ""}${sessionSegments.length > 0 ? `  |  ${sessionSegments.length} segment${sessionSegments.length !== 1 ? "s" : ""}` : ""}`);
@@ -416,7 +364,7 @@ function PracticeInner() {
 
         {/* Header */}
         <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
+          <button onClick={() => router.push("/student")} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
           <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {selectedPiece ? selectedPiece.title : "Practice Session"}
           </span>
@@ -551,7 +499,7 @@ function PracticeInner() {
                 {/* On/off + BPM row */}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.875rem", marginBottom: "0.875rem" }}>
                   <button
-                    onClick={() => { if (!metronome && !audioCtxRef.current) audioCtxRef.current = new AudioContext(); setMetronome(m => !m); }}
+                    onClick={() => { if (!metronome && !metronomeCtxRef.current) metronomeCtxRef.current = new AudioContext(); setMetronome(m => !m); }}
                     style={{ background: metronome ? "var(--charcoal)" : "transparent", border: `1px solid ${metronome ? "var(--charcoal)" : "var(--border-strong)"}`, borderRadius: 2, padding: "0.25rem 0.75rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: metronome ? "var(--white)" : "var(--muted)", transition: "all 0.15s", flexShrink: 0 }}
                   >
                     {metronome ? "On" : "Off"}
@@ -735,7 +683,7 @@ function PracticeInner() {
         Session complete.
       </h2>
       <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.75rem", fontFamily: "Inter, sans-serif" }}>
-        {fmt(elapsed)}{selectedPiece ? ` · ${selectedPiece.title}` : ""}
+        {fmt(finalElapsed)}{selectedPiece ? ` · ${selectedPiece.title}` : ""}
       </p>
 
       {/* Mood picker */}

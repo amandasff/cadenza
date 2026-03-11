@@ -7,7 +7,9 @@ import { useTheme } from "../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 import { PlayerProvider } from "../../lib/context/PlayerContext";
+import { PracticeProvider } from "../../lib/context/PracticeContext";
 import MiniPlayer from "../../components/MiniPlayer";
+import PracticePip from "../../components/PracticePip";
 
 
 interface SiblingProfile {
@@ -297,6 +299,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   );
 
   return (
+    <PracticeProvider>
     <PlayerProvider>
     <div className="student-shell">
 
@@ -529,6 +532,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         })}
       </nav>
       <MiniPlayer />
+      <PracticePip />
     </div>
 
     {/* Upload error toast */}
@@ -713,5 +717,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       </div>
     )}
     </PlayerProvider>
+    </PracticeProvider>
   );
 }

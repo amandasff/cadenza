@@ -90,56 +90,35 @@ function renderMarkdown(text: string): React.ReactNode[] {
 }
 
 function inlineFormat(text: string): React.ReactNode {
-  // Process bold, italic, and inline code
+  // Split on bold (**), inline code (`), then italic (*) using a single pass
   const parts: React.ReactNode[] = [];
-  let remaining = text;
+  // Match **bold**, `code`, or *italic* — bold checked before italic
+  const regex = /\*\*(.+?)\*\*|`(.+?)`|\*(.+?)\*/g;
+  let lastIndex = 0;
   let k = 0;
+  let match: RegExpExecArray | null;
 
-  while (remaining.length > 0) {
-    // Bold: **text**
-    const boldMatch = remaining.match(/^(.*?)\*\*(.+?)\*\*(.*)/s);
-    // Italic: *text*
-    const italicMatch = remaining.match(/^(.*?)\*(.+?)\*(.*)/s);
-    // Inline code: `text`
-    const codeMatch = remaining.match(/^(.*?)`(.+?)`(.*)/s);
-
-    // Find the earliest match
-    let earliest: { type: string; before: string; content: string; after: string; index: number } | null = null;
-
-    if (boldMatch && boldMatch[1] !== undefined) {
-      const idx = boldMatch[1].length;
-      if (!earliest || idx < earliest.index) {
-        earliest = { type: "bold", before: boldMatch[1], content: boldMatch[2], after: boldMatch[3], index: idx };
-      }
+  while ((match = regex.exec(text)) !== null) {
+    // Push text before this match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
     }
-    if (codeMatch && codeMatch[1] !== undefined) {
-      const idx = codeMatch[1].length;
-      if (!earliest || idx < earliest.index) {
-        earliest = { type: "code", before: codeMatch[1], content: codeMatch[2], after: codeMatch[3], index: idx };
-      }
+    if (match[1] !== undefined) {
+      parts.push(<strong key={k++}>{match[1]}</strong>);
+    } else if (match[2] !== undefined) {
+      parts.push(<code key={k++}>{match[2]}</code>);
+    } else if (match[3] !== undefined) {
+      parts.push(<em key={k++}>{match[3]}</em>);
     }
-    if (italicMatch && italicMatch[1] !== undefined && (!earliest || italicMatch[1].length < earliest.index)) {
-      // Only match italic if it's not actually a bold marker
-      const idx = italicMatch[1].length;
-      if (!earliest || idx < earliest.index) {
-        if (!(boldMatch && boldMatch[1] !== undefined && boldMatch[1].length === idx)) {
-          earliest = { type: "italic", before: italicMatch[1], content: italicMatch[2], after: italicMatch[3], index: idx };
-        }
-      }
-    }
-
-    if (earliest) {
-      if (earliest.before) parts.push(earliest.before);
-      if (earliest.type === "bold") parts.push(<strong key={k++}>{earliest.content}</strong>);
-      else if (earliest.type === "italic") parts.push(<em key={k++}>{earliest.content}</em>);
-      else if (earliest.type === "code") parts.push(<code key={k++}>{earliest.content}</code>);
-      remaining = earliest.after;
-    } else {
-      parts.push(remaining);
-      remaining = "";
-    }
+    lastIndex = regex.lastIndex;
   }
 
+  // Remaining text after last match
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  if (parts.length === 0) return text;
   return parts.length === 1 ? parts[0] : <>{parts}</>;
 }
 
