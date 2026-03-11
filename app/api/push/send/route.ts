@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
-import webpush from 'web-push';
-
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
+import { getWebPush } from '@/lib/webpush';
 
 export async function POST(request: Request) {
   const supabase = await getSupabaseServerClient();
@@ -55,10 +49,13 @@ export async function POST(request: Request) {
     url: '/student',
   });
 
+  const wp = getWebPush();
+  if (!wp) return NextResponse.json({ ok: true, sent: 0 });
+
   let sent = 0;
   for (const row of subs) {
     try {
-      await webpush.sendNotification(row.subscription as webpush.PushSubscription, payload);
+      await wp.sendNotification(row.subscription as Parameters<typeof wp.sendNotification>[0], payload);
       sent++;
     } catch (err) {
       // Remove expired or invalid subscriptions

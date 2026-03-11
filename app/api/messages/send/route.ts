@@ -1,15 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
-import webpush from 'web-push';
-
-if (process.env.VAPID_EMAIL && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    process.env.VAPID_EMAIL,
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY,
-  );
-}
+import { getWebPush } from '@/lib/webpush';
 
 /**
  * POST /api/messages/send
@@ -80,7 +72,8 @@ async function sendPushNotifications({
   content: string;
   recipientId: string | null;
 }) {
-  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) return;
+  const wp = getWebPush();
+  if (!wp) return;
 
   // Determine which user IDs to notify
   let recipientUserIds: string[];
@@ -117,7 +110,7 @@ async function sendPushNotifications({
 
   for (const row of subs) {
     try {
-      await webpush.sendNotification(row.subscription as webpush.PushSubscription, payload);
+      await wp.sendNotification(row.subscription as Parameters<typeof wp.sendNotification>[0], payload);
     } catch (err) {
       const status = (err as { statusCode?: number })?.statusCode;
       if (status === 410 || status === 404) {
