@@ -14,6 +14,9 @@ const tabs = [
   { href: "/teacher/goals",          label: "Goals" },
   { href: "/teacher/review",         label: "Review" },
   { href: "/teacher/chat",           label: "Chat" },
+  { href: "/teacher/billing",        label: "Billing" },
+  { href: "/teacher/contacts",       label: "Contacts" },
+  { href: "/teacher/reports",        label: "Reports" },
   { href: "/teacher/inspirations",   label: "Inspire" },
   { href: "/teacher/studio",         label: "Studio" },
 ];
