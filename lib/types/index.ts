@@ -271,58 +271,6 @@ export interface LessonWithAssignments extends LessonRow {
 }
 
 // ============================================================
-// Studio Admin: Contacts, Invoices, Attendance
-// ============================================================
-
-export interface StudentContactRow {
-  id: string;
-  student_id: string;
-  studio_id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  relationship: string | null;
-  is_primary: boolean;
-  notes: string | null;
-  created_at: string;
-}
-
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'void';
-
-export interface InvoiceRow {
-  id: string;
-  studio_id: string;
-  student_id: string;
-  teacher_id: string;
-  invoice_number: string;
-  description: string | null;
-  amount_cents: number;
-  currency: string;
-  status: InvoiceStatus;
-  due_date: string | null;
-  paid_at: string | null;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface InvoiceLineItemRow {
-  id: string;
-  invoice_id: string;
-  description: string;
-  quantity: number;
-  unit_price_cents: number;
-  total_cents: number;
-  created_at: string;
-}
-
-export interface InvoiceWithStudent extends InvoiceRow {
-  student_name: string;
-  line_items?: InvoiceLineItemRow[];
-}
-
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'cancelled' | 'makeup';
-
-// ============================================================
 // Video Rooms (Daily.co)
 // ============================================================
 
