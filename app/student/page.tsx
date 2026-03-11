@@ -8,6 +8,7 @@ import { LessonService } from "../../lib/services/LessonService";
 import { AssignmentService } from "../../lib/services/AssignmentService";
 import type { GoalRow, PieceRow, LessonRow, AssignmentWithContext, SelfRating } from "../../lib/types";
 import { useRouter } from "next/navigation";
+import PushSubscribeButton from "../../components/PushSubscribeButton";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -179,6 +180,9 @@ export default function ThisWeek() {
 
   return (
     <div style={{ background: "var(--cream)", minHeight: "100%" }}>
+
+      {/* ── Practice reminders opt-in (hidden once subscribed) ── */}
+      <PushSubscribeButton />
 
       {/* ── Practice hero button ── */}
       <div style={{ padding: "1.5rem 1.5rem 1.125rem" }}>

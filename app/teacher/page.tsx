@@ -43,6 +43,24 @@ export default function TeacherDashboard() {
   const [studentMap, setStudentMap] = useState<Record<string, ProfileRow>>({});
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
+
+  async function sendReminder(studentId: string) {
+    if (sendingReminderId) return;
+    setSendingReminderId(studentId);
+    try {
+      await fetch("/api/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId }),
+      });
+      setSentReminderIds(prev => new Set(prev).add(studentId));
+      setTimeout(() => setSentReminderIds(prev => { const next = new Set(prev); next.delete(studentId); return next; }), 3000);
+    } catch { /* ignore */ } finally {
+      setSendingReminderId(null);
+    }
+  }
 
   const loadData = useCallback(async () => {
     if (!teacher?.studioId) return;
@@ -263,13 +281,13 @@ export default function TeacherDashboard() {
                 const initials = profile.display_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
                 return (
+                  <div key={profile.id} style={{ position: "relative" }}>
                   <Link
-                    key={profile.id}
                     href={`/teacher/student/${profile.id}`}
                     className="card-base card-interactive"
                     style={{ padding: "1.25rem", textDecoration: "none", display: "block" }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", paddingRight: "2rem" }}>
                       <div style={{
                         width: 36,
                         height: 36,
@@ -384,6 +402,27 @@ export default function TeacherDashboard() {
                       </div>
                     </div>
                   </Link>
+                  {/* Remind button — outside Link to avoid nested interactive elements */}
+                  <button
+                    onClick={() => sendReminder(profile.id)}
+                    disabled={sendingReminderId === profile.id}
+                    title="Send practice reminder"
+                    style={{
+                      position: "absolute", top: 10, right: 10,
+                      width: 28, height: 28,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: sentReminderIds.has(profile.id) ? "var(--sage)" : "var(--cream)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      cursor: sendingReminderId === profile.id ? "default" : "pointer",
+                      fontSize: "0.75rem",
+                      zIndex: 1,
+                      transition: "background 0.2s",
+                    }}
+                  >
+                    {sentReminderIds.has(profile.id) ? "✓" : sendingReminderId === profile.id ? "…" : "🔔"}
+                  </button>
+                  </div>
                 );
               })}
             </div>
