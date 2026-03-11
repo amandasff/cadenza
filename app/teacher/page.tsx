@@ -43,22 +43,35 @@ export default function TeacherDashboard() {
   const [studentMap, setStudentMap] = useState<Record<string, ProfileRow>>({});
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  // Encouragement modal state
+  const [encourageTarget, setEncourageTarget] = useState<ProfileRow | null>(null);
+  const [encourageMsg, setEncourageMsg] = useState("");
+  const [encourageSending, setEncourageSending] = useState(false);
   const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
 
-  async function sendReminder(studentId: string) {
-    if (sendingReminderId) return;
-    setSendingReminderId(studentId);
+  function openEncourage(profile: ProfileRow) {
+    setEncourageTarget(profile);
+    setEncourageMsg(`Keep it up, ${profile.display_name.split(" ")[0]}! Time to practice today 🎵`);
+  }
+
+  async function sendEncouragement() {
+    if (!encourageTarget || !teacher?.studioId || encourageSending) return;
+    setEncourageSending(true);
     try {
-      await fetch("/api/push/send", {
+      await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId }),
+        body: JSON.stringify({
+          studioId: teacher.studioId,
+          content: encourageMsg.trim(),
+          recipientId: encourageTarget.id,
+        }),
       });
-      setSentReminderIds(prev => new Set(prev).add(studentId));
-      setTimeout(() => setSentReminderIds(prev => { const next = new Set(prev); next.delete(studentId); return next; }), 3000);
+      setSentReminderIds(prev => new Set(prev).add(encourageTarget.id));
+      setTimeout(() => setSentReminderIds(prev => { const next = new Set(prev); next.delete(encourageTarget!.id); return next; }), 3000);
+      setEncourageTarget(null);
     } catch { /* ignore */ } finally {
-      setSendingReminderId(null);
+      setEncourageSending(false);
     }
   }
 
@@ -124,6 +137,7 @@ export default function TeacherDashboard() {
   );
 
   return (
+    <>
     <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
 
       {/* Header */}
@@ -402,11 +416,10 @@ export default function TeacherDashboard() {
                       </div>
                     </div>
                   </Link>
-                  {/* Remind button — outside Link to avoid nested interactive elements */}
+                  {/* Encourage button — outside Link to avoid nested interactive elements */}
                   <button
-                    onClick={() => sendReminder(profile.id)}
-                    disabled={sendingReminderId === profile.id}
-                    title="Send practice reminder"
+                    onClick={() => openEncourage(profile)}
+                    title="Send encouragement"
                     style={{
                       position: "absolute", top: 10, right: 10,
                       width: 28, height: 28,
@@ -414,13 +427,13 @@ export default function TeacherDashboard() {
                       background: sentReminderIds.has(profile.id) ? "var(--sage)" : "var(--cream)",
                       border: "1px solid var(--border)",
                       borderRadius: 4,
-                      cursor: sendingReminderId === profile.id ? "default" : "pointer",
+                      cursor: "pointer",
                       fontSize: "0.75rem",
                       zIndex: 1,
                       transition: "background 0.2s",
                     }}
                   >
-                    {sentReminderIds.has(profile.id) ? "✓" : sendingReminderId === profile.id ? "…" : "🔔"}
+                    {sentReminderIds.has(profile.id) ? "✓" : "🔔"}
                   </button>
                   </div>
                 );
@@ -565,5 +578,51 @@ export default function TeacherDashboard() {
         </div>
       </div>
     </div>
+
+    {/* Encouragement modal */}
+    {encourageTarget && (
+      <div
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000, padding: "1.5rem" }}
+        onClick={e => { if (e.target === e.currentTarget) setEncourageTarget(null); }}
+      >
+        <div style={{ background: "var(--white)", borderRadius: 6, padding: "1.75rem", width: "100%", maxWidth: 380, boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
+          <h2 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
+            Encourage {encourageTarget.display_name.split(" ")[0]}
+          </h2>
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.25rem" }}>
+            Sends as a private message in chat + a push notification if they've enabled it.
+          </p>
+          <textarea
+            value={encourageMsg}
+            onChange={e => setEncourageMsg(e.target.value)}
+            rows={3}
+            style={{
+              width: "100%", boxSizing: "border-box", borderRadius: 4,
+              border: "1px solid var(--border-strong)", padding: "0.625rem 0.875rem",
+              fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)",
+              background: "var(--cream)", outline: "none", resize: "none", lineHeight: 1.5,
+              marginBottom: "1rem",
+            }}
+            autoFocus
+          />
+          <div style={{ display: "flex", gap: "0.625rem" }}>
+            <button
+              onClick={() => setEncourageTarget(null)}
+              style={{ flex: 1, padding: "0.625rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: "none", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={sendEncouragement}
+              disabled={encourageSending || !encourageMsg.trim()}
+              style={{ flex: 1, padding: "0.625rem", borderRadius: 3, border: "none", background: encourageMsg.trim() && !encourageSending ? "var(--charcoal)" : "var(--border)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500, color: "var(--white)", cursor: encourageMsg.trim() && !encourageSending ? "pointer" : "default", transition: "background 0.15s" }}
+            >
+              {encourageSending ? "Sending…" : "Send 🔔"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

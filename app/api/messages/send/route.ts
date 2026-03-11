@@ -1,0 +1,128 @@
+import { NextResponse } from 'next/server';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { getSupabaseAdminClient } from '@/lib/supabase/admin';
+import webpush from 'web-push';
+
+if (process.env.VAPID_EMAIL && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY,
+  );
+}
+
+/**
+ * POST /api/messages/send
+ * Inserts a chat message and fires push notifications to recipients.
+ * Body: { studioId, content, recipientId? }
+ *   - recipientId null/omitted → announcement (visible to all studio members)
+ *   - recipientId set → private DM
+ */
+export async function POST(request: Request) {
+  const supabase = await getSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { studioId, content, recipientId = null } = await request.json() as {
+    studioId: string;
+    content: string;
+    recipientId?: string | null;
+  };
+
+  if (!studioId || !content?.trim()) {
+    return NextResponse.json({ error: 'studioId and content are required' }, { status: 400 });
+  }
+
+  const admin = getSupabaseAdminClient();
+
+  // Get sender display name
+  const { data: senderProfile } = await admin
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single();
+
+  const senderName = senderProfile?.display_name ?? 'Someone';
+
+  // Insert the message
+  const { data: message, error: insertError } = await admin
+    .from('messages')
+    .insert({
+      studio_id: studioId,
+      sender_id: user.id,
+      sender_name: senderName,
+      recipient_id: recipientId,
+      content: content.trim(),
+    })
+    .select()
+    .single();
+
+  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+
+  // Fire push notifications (best-effort, don't block the response)
+  sendPushNotifications({ admin, studioId, senderId: user.id, senderName, content: content.trim(), recipientId }).catch(() => {});
+
+  return NextResponse.json({ message });
+}
+
+async function sendPushNotifications({
+  admin,
+  studioId,
+  senderId,
+  senderName,
+  content,
+  recipientId,
+}: {
+  admin: ReturnType<typeof getSupabaseAdminClient>;
+  studioId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  recipientId: string | null;
+}) {
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) return;
+
+  // Determine which user IDs to notify
+  let recipientUserIds: string[];
+
+  if (recipientId) {
+    // Private DM — only notify the recipient
+    recipientUserIds = [recipientId];
+  } else {
+    // Announcement — notify all studio members except the sender
+    const { data: profiles } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('studio_id', studioId)
+      .neq('id', senderId);
+    recipientUserIds = (profiles ?? []).map((p: { id: string }) => p.id);
+  }
+
+  if (!recipientUserIds.length) return;
+
+  // Get push subscriptions for all recipients
+  const { data: subs } = await admin
+    .from('push_subscriptions')
+    .select('user_id, subscription, endpoint')
+    .in('user_id', recipientUserIds);
+
+  if (!subs?.length) return;
+
+  const preview = content.length > 80 ? content.slice(0, 77) + '…' : content;
+  const payload = JSON.stringify({
+    title: senderName,
+    body: preview,
+    url: recipientId ? '/student/chat' : '/student/chat',
+  });
+
+  for (const row of subs) {
+    try {
+      await webpush.sendNotification(row.subscription as webpush.PushSubscription, payload);
+    } catch (err) {
+      const status = (err as { statusCode?: number })?.statusCode;
+      if (status === 410 || status === 404) {
+        await admin.from('push_subscriptions').delete().eq('endpoint', row.endpoint);
+      }
+    }
+  }
+}

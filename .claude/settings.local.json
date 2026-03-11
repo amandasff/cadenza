@@ -32,7 +32,10 @@
       "Bash(npx supabase status)",
       "Bash(xargs grep -l \"practice_sessions\")",
       "Bash(npm install @google/generative-ai)",
-      "Bash(npm install @daily-co/daily-react @daily-co/daily-js)"
+      "Bash(npm install @daily-co/daily-react @daily-co/daily-js)",
+      "Bash(xargs grep -l \"registerServiceWorker\\\\|navigator.serviceWorker\")",
+      "Bash(npm install web-push)",
+      "Bash(npm install --save-dev @types/web-push)"
     ]
   }
 }

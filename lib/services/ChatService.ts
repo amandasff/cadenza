@@ -50,35 +50,41 @@ export class ChatService {
 
   async postAnnouncement(
     studioId: string,
-    senderId: string,
-    senderName: string,
+    _senderId: string,
+    _senderName: string,
     content: string
   ): Promise<MessageRow> {
-    const { data, error } = await this.supabase
-      .from('messages')
-      .insert({ studio_id: studioId, sender_id: senderId, sender_name: senderName, recipient_id: null, content })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as MessageRow;
+    const res = await fetch('/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studioId, content, recipientId: null }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? 'Failed to send message');
+    }
+    const { message } = await res.json() as { message: MessageRow };
+    return message;
   }
 
   async sendPrivateMessage(
     studioId: string,
-    senderId: string,
-    senderName: string,
+    _senderId: string,
+    _senderName: string,
     recipientId: string,
     content: string
   ): Promise<MessageRow> {
-    const { data, error } = await this.supabase
-      .from('messages')
-      .insert({ studio_id: studioId, sender_id: senderId, sender_name: senderName, recipient_id: recipientId, content })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as MessageRow;
+    const res = await fetch('/api/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studioId, content, recipientId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? 'Failed to send message');
+    }
+    const { message } = await res.json() as { message: MessageRow };
+    return message;
   }
 
   async updateMessage(messageId: string, content: string): Promise<MessageRow> {
