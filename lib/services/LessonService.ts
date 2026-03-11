@@ -217,8 +217,7 @@ export class LessonService {
   private nextDayOfWeek(dayOfWeek: number, weeksAhead: number): Date {
     const now = new Date();
     const currentDay = now.getDay();
-    let daysUntil = (dayOfWeek - currentDay + 7) % 7;
-    if (daysUntil === 0 && weeksAhead === 0) daysUntil = 0;
+    const daysUntil = (dayOfWeek - currentDay + 7) % 7;
     const result = new Date(now);
     result.setDate(now.getDate() + daysUntil + weeksAhead * 7);
     return result;

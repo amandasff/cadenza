@@ -47,15 +47,17 @@ export default function LessonCallView({ studentName }: { studentName: string | 
   useEffect(() => {
     if (!callObject) return;
     const update = () => setParticipants({ ...(callObject as DailyCall).participants() });
+    const handleLeftMeeting = () => router.push("/");
     callObject.on("participant-joined", update);
     callObject.on("participant-updated", update);
     callObject.on("participant-left", update);
-    callObject.on("left-meeting", () => router.push("/"));
+    callObject.on("left-meeting", handleLeftMeeting);
     update();
     return () => {
       callObject.off("participant-joined", update);
       callObject.off("participant-updated", update);
       callObject.off("participant-left", update);
+      callObject.off("left-meeting", handleLeftMeeting);
     };
   }, [callObject, router]);
 
@@ -64,8 +66,7 @@ export default function LessonCallView({ studentName }: { studentName: string | 
   const toggleCam = () => { callObject?.setLocalVideo(!camOff); setCamOff((c) => !c); };
   const toggleScreen = () => {
     if (!sharing) {
-      try { callObject?.startScreenShare(); } catch { /* ignore */ }
-      setSharing(true);
+      try { callObject?.startScreenShare(); setSharing(true); } catch { /* ignore */ }
     } else {
       callObject?.stopScreenShare();
       setSharing(false);

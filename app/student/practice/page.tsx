@@ -317,10 +317,11 @@ function PracticeInner() {
 
       let recordingUrl: string | undefined;
       if (recordingBlob) {
-        const path = `${student.id}/${Date.now()}.webm`;
+        const ext = recordingBlob.type.includes("ogg") ? "ogg" : recordingBlob.type.includes("mp4") ? "mp4" : "webm";
+        const path = `${student.id}/${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage
           .from("practice-recordings")
-          .upload(path, recordingBlob, { contentType: "audio/webm", upsert: false });
+          .upload(path, recordingBlob, { contentType: recordingBlob.type || "audio/webm", upsert: false });
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
           recordingUrl = urlData.publicUrl;

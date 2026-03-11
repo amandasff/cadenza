@@ -38,7 +38,8 @@ export class PieceService {
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true });
 
-      if (error || !pieces?.length) return [];
+      if (error) throw error;
+      if (!pieces?.length) return [];
 
       const pieceIds = (pieces as PieceRow[]).map(p => p.id);
 

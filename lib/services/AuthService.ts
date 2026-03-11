@@ -41,19 +41,20 @@ export class AuthService {
       throw new Error('Check your email to confirm your account, then sign in.');
     }
 
-    // Explicitly upsert the profile — do not rely solely on the DB trigger.
-    const { error: upsertError } = await this.supabase
-      .from('profiles')
-      .upsert(
-        { id: data.user.id, role, display_name: displayName },
-        { onConflict: 'id' },
-      );
+    // Create the profile via the server API route which uses the admin client
+    // and bypasses RLS — avoids "violates row-level security" errors on signup.
+    const res = await fetch('/api/profile/ensure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, display_name: displayName }),
+    });
 
-    if (upsertError) {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
       throw new Error(
-        upsertError.message.includes('relation')
-          ? 'Database schema not found. Run the SQL setup in Supabase SQL Editor first.'
-          : `Could not create profile: ${upsertError.message}`,
+        (body as { error?: string }).error
+          ? `Could not create profile: ${(body as { error: string }).error}`
+          : 'Could not create profile. Please try again.',
       );
     }
 
