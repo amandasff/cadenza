@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
@@ -98,6 +98,7 @@ export default function ThisWeek() {
   const [ratingValue, setRatingValue] = useState<SelfRating | null>(null);
   const [ratingNote, setRatingNote] = useState("");
   const [ratingSaving, setRatingSaving] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!student?.id) return;
@@ -163,7 +164,7 @@ export default function ThisWeek() {
         setChatTeacherId(tId);
         const chatService = ChatService.getInstance(supabase);
         const msgs = await chatService.getPrivateThread(student.studioId!, student.id, tId);
-        setRecentMessages(msgs.slice(-3));
+        setRecentMessages(msgs.slice(-15));
         const { data: tp } = await supabase.from("profiles").select("display_name").eq("id", tId).single();
         setTeacherName((tp as { display_name: string } | null)?.display_name ?? "Your teacher");
       }
@@ -171,6 +172,13 @@ export default function ThisWeek() {
   }, [student?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-scroll chat preview to bottom so latest messages are visible
+  useEffect(() => {
+    if (chatScrollRef.current && recentMessages.length > 0) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [recentMessages]);
 
   async function handleCompleteAssignment() {
     if (!ratingAssignment || !ratingValue) return;
@@ -283,8 +291,17 @@ export default function ThisWeek() {
             </svg>
           </div>
 
-          {/* Chat bubbles */}
-          <div style={{ padding: "0.75rem 0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem", minHeight: 60 }}>
+          {/* Chat bubbles — scrollable */}
+          <div
+            ref={chatScrollRef}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              padding: "0.75rem 0.875rem",
+              display: "flex", flexDirection: "column", gap: "0.5rem",
+              minHeight: 60, maxHeight: 200,
+              overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
+            }}>
             {recentMessages.length > 0 ? (
               recentMessages.map((msg) => {
                 const isMe = msg.sender_id === student?.id;
