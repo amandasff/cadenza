@@ -18,6 +18,54 @@ export interface StudioRow {
   name: string;
   owner_id: string;
   invite_code: string;
+  slug: string | null;
+  teacher_invite_code: string | null;
+  created_at: string;
+}
+
+// ============================================================
+// Multi-teacher
+// ============================================================
+
+export type StudioTeacherRole = 'director' | 'teacher';
+
+export interface StudioTeacherRow {
+  id: string;
+  studio_id: string;
+  teacher_id: string;
+  role: StudioTeacherRole;
+  invited_by: string | null;
+  joined_at: string;
+}
+
+export interface TeacherStudentAssignmentRow {
+  id: string;
+  studio_id: string;
+  teacher_id: string;
+  student_id: string;
+  started_at: string;
+  ended_at: string | null;
+}
+
+export type EnrollmentStatus = 'pending' | 'approved' | 'waitlisted' | 'denied';
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
+
+export interface EnrollmentApplicationRow {
+  id: string;
+  studio_id: string;
+  student_name: string;
+  parent_name: string | null;
+  contact_email: string;
+  contact_phone: string | null;
+  instrument: string | null;
+  age: number | null;
+  experience_level: ExperienceLevel | null;
+  preferred_teacher_id: string | null;
+  preferred_days: string[] | null;
+  notes: string | null;
+  status: EnrollmentStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   created_at: string;
 }
 
