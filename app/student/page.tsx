@@ -10,6 +10,7 @@ import { ChatService } from "../../lib/services/ChatService";
 import type { GoalRow, PieceRow, LessonRow, AssignmentWithContext, SelfRating, MessageRow } from "../../lib/types";
 import { useRouter } from "next/navigation";
 import PushSubscribeButton from "../../components/PushSubscribeButton";
+import { usePractice } from "../../lib/context/PracticeContext";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -85,6 +86,7 @@ export default function ThisWeek() {
   const { user } = useAuth();
   const student = user as Student;
   const router = useRouter();
+  const practice = usePractice();
 
   const [goals, setGoals] = useState<GoalWithPiece[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,41 +216,61 @@ export default function ThisWeek() {
 
       {/* ── Practice hero button ── */}
       <div style={{ padding: "1.5rem 1.5rem 1.125rem" }}>
-        <Link href="/student/practice" style={{
-          display: "block",
-          background: "linear-gradient(135deg, #3D6B55 0%, #2C5242 100%)",
-          borderRadius: 10,
-          padding: "1.625rem 1.5rem",
-          textDecoration: "none",
-          color: "#FDFCFA",
-          boxShadow: "0 4px 24px rgba(44,82,66,0.28)",
-          position: "relative",
-          overflow: "hidden",
-        }}>
+        <button
+          onClick={async () => {
+            if (!practice.isActive) {
+              try { await practice.startPractice(); } catch {}
+            }
+            router.push("/student/practice");
+          }}
+          style={{
+            display: "block", width: "100%", textAlign: "left",
+            background: practice.isActive
+              ? "linear-gradient(135deg, #8A3030 0%, #6B2424 100%)"
+              : "linear-gradient(135deg, #3D6B55 0%, #2C5242 100%)",
+            borderRadius: 10, border: "none",
+            padding: "1.625rem 1.5rem",
+            color: "#FDFCFA",
+            boxShadow: practice.isActive
+              ? "0 4px 24px rgba(138,48,48,0.28)"
+              : "0 4px 24px rgba(44,82,66,0.28)",
+            position: "relative",
+            overflow: "hidden",
+            cursor: "pointer",
+            transition: "all 0.3s",
+          }}
+        >
           {/* Background accent */}
           <div style={{ position: "absolute", right: -20, top: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.05)", pointerEvents: "none" }} />
           <div style={{ position: "absolute", right: 20, bottom: -30, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
             <div>
               <div style={{ fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.375rem" }}>
-                Ready to play?
+                {practice.isActive ? "Session in progress" : "Ready to play?"}
               </div>
               <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.875rem", lineHeight: 1, marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>
-                Start practicing
+                {practice.isActive ? "Continue practicing" : "Start practicing"}
               </div>
               <div style={{ fontSize: "0.8125rem", opacity: 0.55, fontFamily: "Inter, sans-serif" }}>
-                {totalAssignments > 0
-                  ? `${totalAssignments} goal${totalAssignments !== 1 ? "s" : ""} to work on`
-                  : "Tap to open the timer"}
+                {practice.isActive
+                  ? `${String(Math.floor(practice.elapsed / 60)).padStart(2, "0")}:${String(practice.elapsed % 60).padStart(2, "0")} · ${practice.recording ? "Recording" : "Paused"}`
+                  : totalAssignments > 0
+                    ? `${totalAssignments} goal${totalAssignments !== 1 ? "s" : ""} to work on`
+                    : "Tap to start recording"}
               </div>
             </div>
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, backdropFilter: "blur(4px)" }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
+              {practice.isActive ? (
+                <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#E05252", boxShadow: "0 0 10px #E05252", animation: practice.recording ? "pip-pulse 1.5s ease-in-out infinite" : undefined }} />
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
             </div>
           </div>
-        </Link>
+        </button>
+        <style>{`@keyframes pip-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }`}</style>
       </div>
 
       {/* ── Chat with teacher ── */}
@@ -395,7 +417,26 @@ export default function ThisWeek() {
           </div>
           <div>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Tuner</div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Guitar · Standard</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Tune by ear</div>
+          </div>
+        </Link>
+        <Link href="/student/practice" style={{
+          flex: 1, display: "flex", alignItems: "center", gap: "0.75rem",
+          background: "var(--white)", border: "1px solid var(--border)",
+          borderRadius: 8, padding: "0.875rem 1rem", textDecoration: "none",
+        }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1C1C1E", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6A817" strokeWidth="2" strokeLinecap="round">
+              <line x1="12" y1="2" x2="12" y2="22" />
+              <line x1="4" y1="6" x2="4" y2="18" />
+              <line x1="20" y1="6" x2="20" y2="18" />
+              <line x1="8" y1="4" x2="8" y2="20" />
+              <line x1="16" y1="4" x2="16" y2="20" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Metronome</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Keep the beat</div>
           </div>
         </Link>
       </div>
