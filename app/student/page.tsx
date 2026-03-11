@@ -323,6 +323,7 @@ export default function ThisWeek() {
                       fontFamily: "Inter, sans-serif",
                       lineHeight: 1.45,
                       border: isMe ? "none" : "1px solid var(--border)",
+                      overflowWrap: "break-word", wordBreak: "break-word",
                     }}>
                       {text}
                     </div>

@@ -246,7 +246,7 @@ export default function TeacherChat() {
                 const text = lines.filter(l => !l.startsWith("AUDIO:")).join("\n");
                 return (
                   <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.5rem 0" }}>
-                    <div style={{ padding: "0.5rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "80%", lineHeight: 1.6 }}>
+                    <div style={{ padding: "0.5rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "80%", lineHeight: 1.6, overflowWrap: "break-word", wordBreak: "break-word" }}>
                       <div style={{ whiteSpace: "pre-line" }}>{text}</div>
                       {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", marginTop: "0.5rem", height: 32 }} />}
                     </div>
@@ -300,6 +300,7 @@ export default function TeacherChat() {
                       color: isMe ? (isAnnouncements ? "var(--charcoal)" : "var(--white)") : "var(--charcoal)",
                       border: isMe ? (isAnnouncements ? "1px solid var(--peach-light)" : "none") : "1px solid var(--border)",
                       borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                      overflowWrap: "break-word", wordBreak: "break-word",
                     }}>
                       {msg.content}
                     </div>

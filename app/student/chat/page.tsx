@@ -244,7 +244,7 @@ export default function StudentChat() {
                     borderRadius: 16, padding: "1rem 1.125rem",
                     maxWidth: "90%", width: "100%",
                   }}>
-                    <div style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, whiteSpace: "pre-line", marginBottom: audioUrl ? "0.75rem" : 0 }}>
+                    <div style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, whiteSpace: "pre-line", marginBottom: audioUrl ? "0.75rem" : 0, overflowWrap: "break-word", wordBreak: "break-word" }}>
                       {text}
                     </div>
                     {audioUrl && <AudioPlayer src={audioUrl} />}
@@ -311,6 +311,7 @@ export default function StudentChat() {
                     borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                     border: isMe ? "none" : "1px solid var(--border)",
                     fontSize: "0.875rem", lineHeight: 1.55,
+                    overflowWrap: "break-word", wordBreak: "break-word",
                   }}>
                     {msg.content}
                   </div>
