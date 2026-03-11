@@ -18,16 +18,29 @@ export async function POST(request: Request) {
   const { role, display_name } = await request.json();
 
   const admin = getSupabaseAdminClient();
-  const { error } = await admin
+
+  // Upsert — only sets role/display_name on INSERT; leaves existing rows untouched
+  const { error: upsertError } = await admin
     .from('profiles')
     .upsert(
       { id: user.id, role: role ?? 'student', display_name: display_name ?? user.email?.split('@')[0] ?? 'User' },
-      { onConflict: 'id' }
+      { onConflict: 'id', ignoreDuplicates: true }
     );
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (upsertError) {
+    return NextResponse.json({ error: upsertError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Return the full profile so callers can bypass a second RLS-blocked read
+  const { data: profile, error: fetchError } = await admin
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (fetchError || !profile) {
+    return NextResponse.json({ error: 'Profile not found after upsert' }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, profile });
 }

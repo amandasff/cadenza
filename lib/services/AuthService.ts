@@ -83,8 +83,8 @@ export class AuthService {
     try {
       return await this.fetchUser(data.user.id, email);
     } catch {
-      // Profile missing — happens when email confirmation is enabled and the profile
-      // upsert during signUp() was skipped. Use the server API route which bypasses RLS.
+      // Profile missing or unreadable (broken RLS SELECT policy) — use the server
+      // API which runs with the admin client and bypasses RLS entirely.
       const role = (data.user.user_metadata?.role ?? 'student') as UserRole;
       const displayName =
         data.user.user_metadata?.display_name ??
@@ -96,9 +96,16 @@ export class AuthService {
         body: JSON.stringify({ role, display_name: displayName }),
       });
 
+      const body = await res.json() as { ok?: boolean; profile?: ProfileRow; error?: string };
+
       if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(`Could not create profile: ${error}`);
+        throw new Error(`Could not load profile: ${body.error ?? 'unknown error'}`);
+      }
+
+      // Use the profile returned by the server (fetched via admin client, bypasses RLS)
+      // instead of calling fetchUser() again — avoids a second RLS-blocked read.
+      if (body.profile) {
+        return this.buildUser(body.profile, email);
       }
 
       return this.fetchUser(data.user.id, email);
