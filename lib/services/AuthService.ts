@@ -79,7 +79,24 @@ export class AuthService {
     if (error) throw new Error(error.message);
     if (!data.user) throw new Error('Sign in failed');
 
-    return this.fetchUser(data.user.id, email);
+    try {
+      return await this.fetchUser(data.user.id, email);
+    } catch {
+      // Profile missing — happens when email confirmation is enabled and the profile
+      // upsert during signUp() was skipped. Recreate it from auth metadata.
+      const role = (data.user.user_metadata?.role ?? 'student') as UserRole;
+      const displayName =
+        data.user.user_metadata?.display_name ??
+        email.split('@')[0];
+
+      const { error: upsertError } = await this.supabase
+        .from('profiles')
+        .upsert({ id: data.user.id, role, display_name: displayName }, { onConflict: 'id' });
+
+      if (upsertError) throw new Error(`Could not create profile: ${upsertError.message}`);
+
+      return this.fetchUser(data.user.id, email);
+    }
   }
 
   async signOut(): Promise<void> {
