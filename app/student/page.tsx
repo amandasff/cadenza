@@ -6,7 +6,8 @@ import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 import { LessonService } from "../../lib/services/LessonService";
 import { AssignmentService } from "../../lib/services/AssignmentService";
-import type { GoalRow, PieceRow, LessonRow, AssignmentWithContext, SelfRating } from "../../lib/types";
+import { ChatService } from "../../lib/services/ChatService";
+import type { GoalRow, PieceRow, LessonRow, AssignmentWithContext, SelfRating, MessageRow } from "../../lib/types";
 import { useRouter } from "next/navigation";
 import PushSubscribeButton from "../../components/PushSubscribeButton";
 
@@ -89,6 +90,9 @@ export default function ThisWeek() {
   const [loading, setLoading] = useState(true);
   const [nextLesson, setNextLesson] = useState<LessonRow | null>(null);
   const [assignments, setAssignments] = useState<AssignmentWithContext[]>([]);
+  const [recentMessages, setRecentMessages] = useState<MessageRow[]>([]);
+  const [teacherName, setTeacherName] = useState<string | null>(null);
+  const [chatTeacherId, setChatTeacherId] = useState<string | null>(null);
   // Self-rating modal
   const [ratingAssignment, setRatingAssignment] = useState<AssignmentWithContext | null>(null);
   const [ratingValue, setRatingValue] = useState<SelfRating | null>(null);
@@ -148,6 +152,22 @@ export default function ThisWeek() {
     } finally {
       setLoading(false);
     }
+
+    // Load chat preview
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: studioData } = await supabase
+        .from("studios").select("owner_id").eq("id", student.studioId!).single();
+      const tId = studioData?.owner_id ?? null;
+      if (tId) {
+        setChatTeacherId(tId);
+        const chatService = ChatService.getInstance(supabase);
+        const msgs = await chatService.getPrivateThread(student.studioId!, student.id, tId);
+        setRecentMessages(msgs.slice(-3));
+        const { data: tp } = await supabase.from("profiles").select("display_name").eq("id", tId).single();
+        setTeacherName((tp as { display_name: string } | null)?.display_name ?? "Your teacher");
+      }
+    } catch { /* ignore */ }
   }, [student?.id]);
 
   useEffect(() => { load(); }, [load]);
@@ -219,6 +239,73 @@ export default function ThisWeek() {
                 <path d="M8 5v14l11-7z" />
               </svg>
             </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* ── Chat preview ── */}
+      <div style={{ padding: "0 1.5rem 1rem" }}>
+        <Link href="/student/chat" style={{ textDecoration: "none", display: "block" }}>
+          <div style={{
+            background: "var(--white)", border: "1px solid var(--border)",
+            borderRadius: 10, overflow: "hidden",
+          }}>
+            {/* Header */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "0.75rem 1rem", borderBottom: recentMessages.length > 0 ? "1px solid var(--border)" : "none",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--charcoal)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>
+                  {teacherName ?? "Messages"}
+                </span>
+              </div>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                View all →
+              </span>
+            </div>
+
+            {/* Messages preview */}
+            {recentMessages.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {recentMessages.map((msg, i) => {
+                  const isMe = msg.sender_id === student?.id;
+                  const isSystem = msg.message_type === "system";
+                  const text = isSystem
+                    ? msg.content.split("\n").filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:")).join(" ").slice(0, 80)
+                    : msg.content;
+                  return (
+                    <div key={msg.id} style={{
+                      padding: "0.625rem 1rem",
+                      borderTop: i > 0 ? "1px solid var(--border)" : "none",
+                      display: "flex", gap: "0.625rem", alignItems: "flex-start",
+                    }}>
+                      <span style={{
+                        fontSize: "0.625rem", fontWeight: 600, color: isMe ? "var(--charcoal)" : "var(--sage)",
+                        fontFamily: "Inter, sans-serif", flexShrink: 0, paddingTop: "0.125rem", minWidth: 28,
+                      }}>
+                        {isMe ? "You" : isSystem ? "📢" : (teacherName?.split(" ")[0] ?? "Teacher")}
+                      </span>
+                      <span style={{
+                        fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                      }}>
+                        {text}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ padding: "0.875rem 1rem" }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", fontStyle: "italic" }}>
+                  No messages yet — say hi!
+                </span>
+              </div>
+            )}
           </div>
         </Link>
       </div>
