@@ -83,17 +83,22 @@ export class AuthService {
       return await this.fetchUser(data.user.id, email);
     } catch {
       // Profile missing — happens when email confirmation is enabled and the profile
-      // upsert during signUp() was skipped. Recreate it from auth metadata.
+      // upsert during signUp() was skipped. Use the server API route which bypasses RLS.
       const role = (data.user.user_metadata?.role ?? 'student') as UserRole;
       const displayName =
         data.user.user_metadata?.display_name ??
         email.split('@')[0];
 
-      const { error: upsertError } = await this.supabase
-        .from('profiles')
-        .upsert({ id: data.user.id, role, display_name: displayName }, { onConflict: 'id' });
+      const res = await fetch('/api/profile/ensure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, display_name: displayName }),
+      });
 
-      if (upsertError) throw new Error(`Could not create profile: ${upsertError.message}`);
+      if (!res.ok) {
+        const { error } = await res.json();
+        throw new Error(`Could not create profile: ${error}`);
+      }
 
       return this.fetchUser(data.user.id, email);
     }
