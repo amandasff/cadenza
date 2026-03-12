@@ -12,6 +12,7 @@ import type { PracticeSegment } from "../../../lib/types";
 import AudioPlayer from "../../../components/AudioPlayer";
 import { usePractice } from "../../../lib/context/PracticeContext";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
+import Metronome from "../../../components/Metronome";
 
 type PracticeStep = "practice" | "reflect";
 type SegmentWithId = PracticeSegment & { id: string };
@@ -60,12 +61,6 @@ function PracticeInner() {
   // Metronome panel open
   const [showMetronome, setShowMetronome] = useState(false);
 
-  const [bpm, setBpm] = useState(72);
-  const [metronome, setMetronome] = useState(false);
-  const [beats, setBeats] = useState(4);
-  const [accentOn, setAccentOn] = useState(true);
-  const [soundMode, setSoundMode] = useState<"click" | "voice">("click");
-
   const [segments, setSegments] = useState<SegmentWithId[]>([]);
   const [showAddSeg, setShowAddSeg] = useState(false);
   const [newSegTitle, setNewSegTitle] = useState("");
@@ -85,7 +80,6 @@ function PracticeInner() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const metronomeCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number>(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -130,57 +124,10 @@ function PracticeInner() {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [recording, analyserNode]);
 
-  // ── Metronome ──
-  useEffect(() => {
-    if (!metronome) return;
-    const intervalMs = Math.round((60 / bpm) * 1000);
-    let beat = 0;
-
-    if (soundMode === "click") {
-      if (!metronomeCtxRef.current) metronomeCtxRef.current = new AudioContext();
-      const ctx = metronomeCtxRef.current;
-      if (ctx.state === "suspended") ctx.resume().catch(() => {});
-
-      function playTick(isAccent: boolean) {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = isAccent ? 1100 : 800;
-        gain.gain.setValueAtTime(isAccent ? 0.8 : 0.45, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.12);
-      }
-      playTick(accentOn);
-      const id = setInterval(() => {
-        beat = (beat + 1) % beats;
-        playTick(accentOn && beat === 0);
-      }, intervalMs);
-      return () => clearInterval(id);
-    } else {
-      const synth = typeof window !== "undefined" ? window.speechSynthesis : null;
-      if (!synth) return;
-      function speak(n: number, isAccent: boolean) {
-        synth!.cancel();
-        const u = new SpeechSynthesisUtterance(String(n));
-        u.rate = 3.5; u.volume = 1; u.pitch = isAccent ? 1.4 : 1.0;
-        synth!.speak(u);
-      }
-      speak(1, accentOn);
-      const id = setInterval(() => {
-        beat = (beat + 1) % beats;
-        speak(beat + 1, accentOn && beat === 0);
-      }, intervalMs);
-      return () => { clearInterval(id); synth.cancel(); };
-    }
-  }, [metronome, bpm, beats, accentOn, soundMode]);
-
-  // ── Cleanup on unmount (metronome only — recording persists in context) ──
+  // ── Cleanup on unmount ──
   useEffect(() => {
     return () => {
       cancelAnimationFrame(animFrameRef.current);
-      metronomeCtxRef.current?.close().catch(() => {});
     };
   }, []);
 
@@ -488,52 +435,15 @@ function PracticeInner() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
                 <span style={{ fontSize: "1rem" }}>🎚</span>
                 <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                  Metronome {metronome && <span style={{ color: "#3D6B55", fontSize: "0.75rem" }}>● {bpm} BPM</span>}
+                  Metronome
                 </span>
               </div>
               <span style={{ color: "var(--muted)", fontSize: "0.875rem", transition: "transform 0.2s", display: "inline-block", transform: showMetronome ? "rotate(90deg)" : "none" }}>›</span>
             </button>
 
             {showMetronome && (
-              <div style={{ padding: "0 1.125rem 1rem", borderTop: "1px solid var(--border)" }}>
-                {/* On/off + BPM row */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.875rem", marginBottom: "0.875rem" }}>
-                  <button
-                    onClick={() => { if (!metronome && !metronomeCtxRef.current) metronomeCtxRef.current = new AudioContext(); setMetronome(m => !m); }}
-                    style={{ background: metronome ? "var(--charcoal)" : "transparent", border: `1px solid ${metronome ? "var(--charcoal)" : "var(--border-strong)"}`, borderRadius: 2, padding: "0.25rem 0.75rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: metronome ? "var(--white)" : "var(--muted)", transition: "all 0.15s", flexShrink: 0 }}
-                  >
-                    {metronome ? "On" : "Off"}
-                  </button>
-                  <button onClick={() => setBpm(b => Math.max(40, b - 5))} style={{ width: 30, height: 30, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>−</button>
-                  <div style={{ flex: 1, textAlign: "center", fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.375rem", color: "var(--charcoal)", letterSpacing: "-0.01em" }}>
-                    {bpm}<span style={{ fontSize: "0.6875rem", fontWeight: 400, color: "var(--muted)", marginLeft: 3, letterSpacing: "0.04em" }}>BPM</span>
-                  </div>
-                  <button onClick={() => setBpm(b => Math.min(220, b + 5))} style={{ width: 30, height: 30, borderRadius: 2, border: "1px solid var(--border)", background: "var(--cream)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "1rem" }}>+</button>
-                </div>
-                {/* Beats */}
-                <div style={{ marginBottom: "0.625rem" }}>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.375rem" }}>Beats per bar</div>
-                  <div style={{ display: "flex", gap: "0.375rem" }}>
-                    {[2, 3, 4, 5, 6].map(n => (
-                      <button key={n} onClick={() => setBeats(n)} style={{ flex: 1, height: 28, borderRadius: 2, cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: beats === n ? 600 : 400, fontSize: "0.8125rem", background: beats === n ? "var(--charcoal)" : "var(--cream)", border: `1px solid ${beats === n ? "var(--charcoal)" : "var(--border)"}`, color: beats === n ? "var(--white)" : "var(--muted)", transition: "all 0.12s" }}>
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {/* Accent + sound mode */}
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button onClick={() => setAccentOn(a => !a)} style={{ flex: 1, height: 28, borderRadius: 2, cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.02em", background: accentOn ? "var(--sage-bg)" : "var(--cream)", border: `1px solid ${accentOn ? "var(--sage)" : "var(--border)"}`, color: accentOn ? "var(--sage)" : "var(--muted)", transition: "all 0.12s" }}>
-                    Accent ↓ 1
-                  </button>
-                  <div style={{ flex: 1, display: "flex", border: "1px solid var(--border)", borderRadius: 2, overflow: "hidden" }}>
-                    {(["click", "voice"] as const).map(mode => (
-                      <button key={mode} onClick={() => setSoundMode(mode)} style={{ flex: 1, height: 26, cursor: "pointer", border: "none", fontFamily: "Inter, sans-serif", fontWeight: soundMode === mode ? 600 : 400, fontSize: "0.6875rem", letterSpacing: "0.02em", background: soundMode === mode ? "var(--charcoal)" : "transparent", color: soundMode === mode ? "var(--white)" : "var(--muted)", transition: "all 0.12s" }}>
-                        {mode === "click" ? "Click" : "Count"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div style={{ padding: "0 0.5rem 1rem", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "center" }}>
+                <Metronome />
               </div>
             )}
           </div>

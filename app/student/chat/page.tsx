@@ -233,8 +233,9 @@ export default function StudentChat() {
               const lines = msg.content.split("\n");
               const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
               const sessionId = lines.find(l => l.startsWith("SESSION:"))?.slice(8);
+              const lessonRoom = lines.find(l => l.startsWith("LESSON_ROOM:"))?.slice(12);
               const text = lines
-                .filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:"))
+                .filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:"))
                 .join("\n");
               const aiFeedback = sessionId ? sessionFeedbacks[sessionId] : undefined;
               return (
@@ -244,9 +245,24 @@ export default function StudentChat() {
                     borderRadius: 16, padding: "1rem 1.125rem",
                     maxWidth: "90%", width: "100%",
                   }}>
-                    <div style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, whiteSpace: "pre-line", marginBottom: audioUrl ? "0.75rem" : 0, overflowWrap: "break-word", wordBreak: "break-word" }}>
+                    <div style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, whiteSpace: "pre-line", marginBottom: (audioUrl || lessonRoom) ? "0.75rem" : 0, overflowWrap: "break-word", wordBreak: "break-word" }}>
                       {text}
                     </div>
+                    {lessonRoom && (
+                      <a
+                        href={`/lesson/${lessonRoom}`}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: "0.4rem",
+                          padding: "0.5rem 1rem", borderRadius: 6,
+                          background: "var(--charcoal)", color: "var(--white)",
+                          fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem",
+                          textDecoration: "none", marginBottom: audioUrl ? "0.75rem" : 0,
+                          transition: "opacity 0.15s",
+                        }}
+                      >
+                        Join Lesson
+                      </a>
+                    )}
                     {audioUrl && <AudioPlayer src={audioUrl} />}
                     {aiFeedback && (
                       <div style={{ marginTop: "0.875rem", paddingTop: "0.875rem", borderTop: "1px solid var(--border)" }}>

@@ -13,7 +13,7 @@ export default function MiniPlayer() {
 
   const btnStyle: React.CSSProperties = {
     background: "none", border: "none", cursor: "pointer",
-    color: "var(--white)", padding: "0 0.375rem", fontSize: "0.875rem",
+    color: "#F0EDE7", padding: "0 0.375rem", fontSize: "0.875rem",
     opacity: 0.85, lineHeight: 1,
   };
   const dimBtnStyle: React.CSSProperties = { ...btnStyle, opacity: 0.4, cursor: "default" };
@@ -34,7 +34,7 @@ export default function MiniPlayer() {
         position: "fixed",
         bottom: "calc(env(safe-area-inset-bottom, 0px) + 56px)", // above mobile bottom nav
         left: 0, right: 0,
-        background: "var(--charcoal)",
+        background: "#1C1916",
         borderTop: "1px solid rgba(255,255,255,0.1)",
         zIndex: 200,
         display: "flex",
@@ -72,7 +72,7 @@ export default function MiniPlayer() {
             style={{
               flex: 1, minWidth: 0, cursor: "pointer",
               fontFamily: "Inter, sans-serif", fontSize: "0.6875rem",
-              color: "var(--white)", overflow: "hidden",
+              color: "#F0EDE7", overflow: "hidden",
               textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}
           >
@@ -110,7 +110,7 @@ export default function MiniPlayer() {
                   border: "none", borderRadius: 2, cursor: "pointer",
                   padding: "0.25rem 0.5rem",
                   fontFamily: "Inter, sans-serif", fontSize: "0.5625rem",
-                  color: "var(--white)", maxWidth: 120,
+                  color: "#F0EDE7", maxWidth: 120,
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}
               >

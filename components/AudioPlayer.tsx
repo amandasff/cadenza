@@ -134,12 +134,12 @@ export default function AudioPlayer({ src }: { src: string }) {
           }}
         >
           {playing ? (
-            <svg width="10" height="12" viewBox="0 0 10 12" fill="white">
+            <svg width="10" height="12" viewBox="0 0 10 12" fill="var(--white)">
               <rect x="0" y="0" width="3.5" height="12" rx="1" />
               <rect x="6.5" y="0" width="3.5" height="12" rx="1" />
             </svg>
           ) : (
-            <svg width="10" height="12" viewBox="0 0 10 12" fill="white">
+            <svg width="10" height="12" viewBox="0 0 10 12" fill="var(--white)">
               <path d="M1 0.5L9.5 6L1 11.5V0.5Z" />
             </svg>
           )}

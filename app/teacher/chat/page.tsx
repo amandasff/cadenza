@@ -243,7 +243,7 @@ export default function TeacherChat() {
               if (msg.message_type === "system") {
                 const lines = msg.content.split("\n");
                 const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
-                const text = lines.filter(l => !l.startsWith("AUDIO:")).join("\n");
+                const text = lines.filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:")).join("\n");
                 return (
                   <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.5rem 0" }}>
                     <div style={{ padding: "0.5rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "80%", lineHeight: 1.6, overflowWrap: "break-word", wordBreak: "break-word" }}>
