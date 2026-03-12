@@ -129,6 +129,7 @@ export default function DiscoverPage() {
   const [profileInfo, setProfileInfo]           = useState<ProfileInfo | null>(null);
   const [profileItems, setProfileItems]         = useState<PublicItem[]>([]);
   const [followLoading, setFollowLoading]       = useState(false);
+  const [followError, setFollowError]           = useState<string | null>(null);
   const [editingBio, setEditingBio]             = useState(false);
   const [bioText, setBioText]                   = useState("");
   const [savingBio, setSavingBio]               = useState(false);
@@ -245,7 +246,7 @@ export default function DiscoverPage() {
     setSuppressMiniPlayer(false);
   }
 
-  // ── Reactions ("Inspiring") ─────────────────────────────────────────────────
+  // ── Reactions ("Love") ─────────────────────────────────────────────────
 
   async function toggleLike(item: PublicItem) {
     if (!currentUserId) { setLikeError("Sign in to react"); setTimeout(() => setLikeError(null), 3000); return; }
@@ -327,12 +328,15 @@ export default function DiscoverPage() {
         setFollowingLoaded(false);
         setFollowingItems([]);
       }
-    } catch {
+    } catch (err) {
       // Revert
       setMyFollows(prev => { const n = new Set(prev); isFollowing ? n.add(userId) : n.delete(userId); return n; });
       if (profileInfo?.id === userId) {
         setProfileInfo(prev => prev ? { ...prev, follower_count: prev.follower_count + (isFollowing ? 1 : -1) } : prev);
       }
+      const msg = (err as { message?: string })?.message ?? "Could not follow";
+      setFollowError(msg);
+      setTimeout(() => setFollowError(null), 4000);
     } finally { setFollowLoading(false); }
   }
 
@@ -563,20 +567,23 @@ export default function DiscoverPage() {
                 </div>
                 {/* Follow button or close */}
                 {currentUserId && currentUserId !== profileInfo.id ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem", flexShrink: 0 }}>
                   <button
                     onClick={() => toggleFollow(profileInfo.id)}
                     disabled={followLoading}
                     style={{
                       padding: "0.5rem 1.125rem", borderRadius: 20, fontFamily: "Inter, sans-serif",
-                      fontWeight: 600, fontSize: "0.8125rem", cursor: "pointer", transition: "all 0.15s",
+                      fontWeight: 600, fontSize: "0.8125rem", cursor: followLoading ? "default" : "pointer", transition: "all 0.15s",
                       border: myFollows.has(profileInfo.id) ? "1.5px solid var(--border-strong)" : "none",
                       background: myFollows.has(profileInfo.id) ? "transparent" : "var(--charcoal)",
                       color: myFollows.has(profileInfo.id) ? "var(--charcoal)" : "var(--white)",
-                      flexShrink: 0,
+                      opacity: followLoading ? 0.6 : 1,
                     }}
                   >
-                    {myFollows.has(profileInfo.id) ? "Following" : "Follow"}
+                    {followLoading ? "…" : myFollows.has(profileInfo.id) ? "Following" : "Follow"}
                   </button>
+                  {followError && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "#c0392b", maxWidth: 120, textAlign: "right", lineHeight: 1.3 }}>{followError}</span>}
+                  </div>
                 ) : (
                   <button onClick={() => { setProfileInfo(null); setProfileItems([]); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
                 )}
@@ -710,7 +717,7 @@ export default function DiscoverPage() {
                     }}
                   >
                     <span style={{ fontSize: "0.875rem" }}>{expandedItem.user_liked ? "✦" : "✧"}</span>
-                    {expandedItem.like_count > 0 ? `${expandedItem.like_count} inspiring` : "Inspiring"}
+                    {expandedItem.like_count > 0 ? `${expandedItem.like_count} love` : "Love"}
                   </button>
 
                   <button
