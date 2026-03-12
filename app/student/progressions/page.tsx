@@ -120,9 +120,37 @@ function shuffle<T>(arr: T[]): T[] {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type GameTab   = "progressions" | "key";
+type GameTab   = "progressions" | "key" | "songs";
 type Phase     = "idle" | "active" | "answered";
 type Difficulty = "easy" | "medium" | "hard";
+
+// ── Real Songs data ───────────────────────────────────────────────────────────
+
+type SongEntry = {
+  title: string;
+  artist: string;
+  label: string;     // progression label shown after answer
+  numerals: string[]; // correct progression
+  style: string;
+  youtubeSearch: string;
+};
+
+const REAL_SONGS: SongEntry[] = [
+  { title: "Let It Be",            artist: "The Beatles",    label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Pop/Rock",    youtubeSearch: "Let+It+Be+Beatles+official" },
+  { title: "With or Without You",  artist: "U2",             label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Rock",        youtubeSearch: "With+Or+Without+You+U2+official" },
+  { title: "No Woman No Cry",      artist: "Bob Marley",     label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Reggae",      youtubeSearch: "No+Woman+No+Cry+Bob+Marley" },
+  { title: "Don't Stop Believin'", artist: "Journey",        label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Rock",        youtubeSearch: "Don't+Stop+Believin+Journey+official" },
+  { title: "Stand By Me",          artist: "Ben E. King",    label: "I – vi – IV – V", numerals: ["I","vi","IV","V"], style: "50s Soul",    youtubeSearch: "Stand+By+Me+Ben+E+King+official" },
+  { title: "Earth Angel",          artist: "The Penguins",   label: "I – vi – IV – V", numerals: ["I","vi","IV","V"], style: "Doo-wop",     youtubeSearch: "Earth+Angel+Penguins+official" },
+  { title: "La Bamba",             artist: "Ritchie Valens", label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock/Folk",   youtubeSearch: "La+Bamba+Ritchie+Valens+official" },
+  { title: "Wild Thing",           artist: "The Troggs",     label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock",        youtubeSearch: "Wild+Thing+Troggs+official" },
+  { title: "Twist and Shout",      artist: "The Beatles",    label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock/R&B",    youtubeSearch: "Twist+And+Shout+Beatles+official" },
+  { title: "Despacito",            artist: "Luis Fonsi",     label: "vi – IV – I – V", numerals: ["vi","IV","I","V"], style: "Latin Pop",   youtubeSearch: "Despacito+Luis+Fonsi+official" },
+  { title: "Royals",               artist: "Lorde",          label: "vi – IV – I – V", numerals: ["vi","IV","I","V"], style: "Indie Pop",   youtubeSearch: "Royals+Lorde+official" },
+  { title: "All of Me",            artist: "John Legend",    label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Pop/Soul",    youtubeSearch: "All+Of+Me+John+Legend+official" },
+  { title: "Autumn Leaves",        artist: "Jazz Standard",  label: "ii – V – I – I",  numerals: ["ii","V","I","I"],  style: "Jazz",        youtubeSearch: "Autumn+Leaves+jazz+standard" },
+  { title: "Fly Me to the Moon",   artist: "Frank Sinatra",  label: "I – vi – ii – V", numerals: ["I","vi","ii","V"], style: "Jazz",        youtubeSearch: "Fly+Me+To+The+Moon+Sinatra+official" },
+];
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
@@ -145,23 +173,23 @@ export default function ProgressionsPage() {
         </p>
         {/* Tabs */}
         <div style={{ display: "flex" }}>
-          {(["progressions", "key"] as const).map(t => (
+          {(["progressions", "key", "songs"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               background: "none", border: "none", cursor: "pointer",
-              padding: "0.4rem 1rem 0.625rem", fontFamily: "Inter, sans-serif",
-              fontWeight: tab === t ? 600 : 400, fontSize: "0.875rem",
+              padding: "0.4rem 0.875rem 0.625rem", fontFamily: "Inter, sans-serif",
+              fontWeight: tab === t ? 600 : 400, fontSize: "0.8125rem",
               color: tab === t ? "var(--charcoal)" : "var(--muted)",
               borderBottom: `2px solid ${tab === t ? "var(--charcoal)" : "transparent"}`,
-              transition: "all 0.15s",
+              transition: "all 0.15s", whiteSpace: "nowrap",
             }}>
-              {t === "progressions" ? "Chord Progressions" : "Key ID"}
+              {t === "progressions" ? "Progressions" : t === "key" ? "Key ID" : "Real Songs"}
             </button>
           ))}
         </div>
       </div>
 
       <div style={{ padding: "1rem" }}>
-        {tab === "progressions" ? <ProgressionGame /> : <KeyIdGame />}
+        {tab === "progressions" ? <ProgressionGame /> : tab === "key" ? <KeyIdGame /> : <RealSongsGame />}
       </div>
     </div>
   );
@@ -182,16 +210,20 @@ function ProgressionGame() {
   const [bestStreak, setBestStreak] = useState(0);
   const [round, setRound]           = useState(0);
   const [prevProg, setPrevProg]     = useState<Progression | undefined>(undefined);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   function clearTimer() { if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; } }
-  useEffect(() => () => clearTimer(), []);
+  function stopAudio() { if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; } }
+  useEffect(() => () => { clearTimer(); stopAudio(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const CHORD_DUR = 1.1;   // seconds per chord
+  const CHORD_DUR = 1.1;
   const CHORD_GAP = 0.05;
 
   function playProgression(prog: Progression, onDone: () => void) {
+    stopAudio();
     const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
     prog.numerals.forEach((numeral, i) => {
       const chords = TRIADS[numeral];
       if (!chords) return;
@@ -202,7 +234,7 @@ function ProgressionGame() {
     const totalMs = prog.numerals.length * (CHORD_DUR + CHORD_GAP) * 1000;
     timeoutRef.current = setTimeout(() => {
       setActiveChord(-1);
-      ctx.close();
+      if (audioCtxRef.current === ctx) { try { ctx.close(); } catch {} audioCtxRef.current = null; }
       onDone();
     }, totalMs);
   }
@@ -419,20 +451,24 @@ function KeyIdGame() {
   const [bestStreak, setBestStreak] = useState(0);
   const [round, setRound]           = useState(0);
   const [prevKey, setPrevKey]       = useState<KeyEntry | undefined>(undefined);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   function clearTimer() { if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; } }
-  useEffect(() => () => clearTimer(), []);
+  function stopAudio() { if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; } }
+  useEffect(() => () => { clearTimer(); stopAudio(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function playKey(key: KeyEntry) {
+    stopAudio();
     const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
     const chords = cadenceChords(key.rootMidi);
     const dur = 0.9;
     const gap = 0.08;
     chords.forEach((chord, i) => {
       scheduleChord(ctx, chord, ctx.currentTime + i * (dur + gap), dur, 0.11);
     });
-    setTimeout(() => ctx.close(), (chords.length * (dur + gap) + 0.5) * 1000);
+    setTimeout(() => { if (audioCtxRef.current === ctx) { try { ctx.close(); } catch {} audioCtxRef.current = null; } }, (chords.length * (dur + gap) + 0.5) * 1000);
   }
 
   function buildKeyChoices(correct: KeyEntry, pool: KeyEntry[]): KeyEntry[] {
@@ -600,6 +636,147 @@ function KeyIdGame() {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+// ── Real Songs game ───────────────────────────────────────────────────────────
+
+function RealSongsGame() {
+  const [songIndex, setSongIndex] = useState(() => Math.floor(Math.random() * REAL_SONGS.length));
+  const [phase, setPhase]         = useState<"active" | "answered">("active");
+  const [guess, setGuess]         = useState<string | null>(null);
+  const [choices, setChoices]     = useState<string[]>(() => buildSongChoices(REAL_SONGS[Math.floor(Math.random() * REAL_SONGS.length)].label));
+  const [score, setScore]         = useState(0);
+  const [streak, setStreak]       = useState(0);
+  const [round, setRound]         = useState(1);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function clearTimer() { if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; } }
+  useEffect(() => () => clearTimer(), []);
+
+  const song = REAL_SONGS[songIndex];
+
+  function buildSongChoices(correctLabel: string): string[] {
+    const allLabels = [...new Set(REAL_SONGS.map(s => s.label))];
+    const others = shuffle(allLabels.filter(l => l !== correctLabel)).slice(0, 3);
+    return shuffle([correctLabel, ...others]);
+  }
+
+  function nextSong(currentIdx: number) {
+    clearTimer();
+    const next = (currentIdx + 1) % REAL_SONGS.length;
+    setSongIndex(next);
+    setGuess(null);
+    setPhase("active");
+    setRound(r => r + 1);
+    setChoices(buildSongChoices(REAL_SONGS[next].label));
+  }
+
+  function handleGuess(label: string) {
+    if (phase === "answered") return;
+    setGuess(label);
+    setPhase("answered");
+    if (label === song.label) {
+      setScore(s => s + 1);
+      setStreak(s => s + 1);
+    } else {
+      setStreak(0);
+    }
+    timeoutRef.current = setTimeout(() => nextSong(songIndex), 2500);
+  }
+
+  const ytUrl = `https://www.youtube.com/results?search_query=${song.youtubeSearch}`;
+
+  return (
+    <>
+      {/* Stats */}
+      <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
+        {[{ l: "Score", v: score }, { l: "Streak", v: `${streak}🔥` }, { l: "Round", v: round }].map(({ l, v }) => (
+          <div key={l} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{v}</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1.25rem", marginBottom: "1rem" }}>
+        {/* Song card */}
+        <div style={{ marginBottom: "1rem", padding: "1rem", background: "var(--cream)", borderRadius: 10, textAlign: "center" }}>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.375rem", fontWeight: 500, color: "var(--charcoal)", lineHeight: 1.2, marginBottom: "0.25rem" }}>
+            {song.title}
+          </div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
+            {song.artist} · <span style={{ textTransform: "uppercase", fontSize: "0.625rem", letterSpacing: "0.05em" }}>{song.style}</span>
+          </div>
+          <a
+            href={ytUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "0.375rem",
+              padding: "0.5rem 1.25rem", borderRadius: 20, textDecoration: "none",
+              background: "#FF0000", color: "#fff",
+              fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+            Listen on YouTube
+          </a>
+        </div>
+
+        {/* Feedback */}
+        {phase === "answered" && (
+          <div style={{ textAlign: "center", marginBottom: "0.875rem", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: guess === song.label ? "#27ae60" : "#c0392b" }}>
+            {guess === song.label
+              ? (streak >= 3 ? `${streak} in a row!` : "Correct!")
+              : `It was ${song.label}`}
+          </div>
+        )}
+
+        {phase === "active" && (
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textAlign: "center", margin: "0 0 0.875rem", fontStyle: "italic" }}>
+            Listen to the song, then identify the main chord progression:
+          </p>
+        )}
+
+        {/* Choices */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+          {choices.map(label => {
+            const isCorrect = phase === "answered" && label === song.label;
+            const isWrong   = phase === "answered" && label === guess && label !== song.label;
+            return (
+              <button
+                key={label}
+                onClick={() => handleGuess(label)}
+                disabled={phase === "answered"}
+                style={{
+                  padding: "0.75rem 0.5rem", borderRadius: 10, textAlign: "center",
+                  cursor: phase === "active" ? "pointer" : "default",
+                  fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem",
+                  transition: "all 0.12s",
+                  border: isCorrect ? "2px solid #27ae60" : isWrong ? "2px solid #c0392b" : "1.5px solid var(--border)",
+                  background: isCorrect ? "rgba(39,174,96,0.1)" : isWrong ? "rgba(192,57,43,0.08)" : "var(--cream)",
+                  color: isCorrect ? "#27ae60" : isWrong ? "#c0392b" : "var(--charcoal)",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <button onClick={() => nextSong(songIndex)} style={{ marginTop: "1rem", width: "100%", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "underline" }}>
+          Skip →
+        </button>
+      </div>
+
+      <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1rem 1.125rem" }}>
+        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>How to use this</div>
+        <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
+          Open the song on YouTube, listen for the repeating chord pattern, then pick the progression. Most pop songs repeat the same 4-chord loop throughout — once you hear it in one chorus you&apos;ll hear it everywhere.
+        </p>
+      </div>
     </>
   );
 }

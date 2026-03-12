@@ -31,10 +31,10 @@ const KEY_ORDER: NoteName[] = ["C","C#","D","D#","E","F","F#","G","G#","A","A#",
 
 // ── Audio synthesis ───────────────────────────────────────────────────────────
 
-function playNote(freq: number, duration = 1.8) {
+// Returns the AudioContext so the caller can close it on unmount/navigation
+function playNote(freq: number, duration = 1.8): AudioContext {
   const ctx = new AudioContext();
 
-  // Piano-ish: fundamental + harmonics
   const harmonics = [
     { ratio: 1,   gain: 0.6  },
     { ratio: 2,   gain: 0.25 },
@@ -51,7 +51,6 @@ function playNote(freq: number, duration = 1.8) {
   for (const { ratio, gain } of harmonics) {
     const osc = ctx.createOscillator();
     const g   = ctx.createGain();
-    osc.type = ratio === 1 ? "sine" : "sine";
     osc.frequency.value = freq * ratio;
     g.gain.value = gain;
     osc.connect(g);
@@ -60,8 +59,7 @@ function playNote(freq: number, duration = 1.8) {
     osc.stop(ctx.currentTime + duration);
   }
 
-  // Close context after note finishes
-  setTimeout(() => ctx.close(), (duration + 0.2) * 1000);
+  return ctx;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,12 +84,22 @@ export default function PitchTrainerPage() {
   const [round, setRound]           = useState(0);
   const [started, setStarted]       = useState(false);
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const notes = DIFFICULTY_NOTES[difficulty];
 
   function clearTimer() {
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+  }
+  function stopAudio() {
+    if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; }
+  }
+  function playNoteTracked(freq: number) {
+    stopAudio();
+    audioCtxRef.current = playNote(freq);
+    // Auto-close after note finishes
+    setTimeout(() => { if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch {} audioCtxRef.current = null; } }, 2200);
   }
 
   const nextRound = useCallback((prevNote?: NoteName) => {
@@ -100,8 +108,8 @@ export default function PitchTrainerPage() {
     setGuess(null);
     setPhase("listening");
     setRound(r => r + 1);
-    playNote(FREQ[note]);
-  }, [difficulty]);
+    playNoteTracked(FREQ[note]);
+  }, [difficulty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function startGame() {
     setScore(0); setStreak(0); setRound(0); setStarted(true);
@@ -109,7 +117,7 @@ export default function PitchTrainerPage() {
   }
 
   function replayNote() {
-    if (currentNote && phase === "listening") playNote(FREQ[currentNote]);
+    if (currentNote && phase === "listening") playNoteTracked(FREQ[currentNote]);
   }
 
   function handleGuess(note: NoteName) {
@@ -134,8 +142,8 @@ export default function PitchTrainerPage() {
     }, 1400);
   }
 
-  // Cleanup on unmount
-  useEffect(() => () => clearTimer(), []);
+  // Cleanup on unmount — stop any in-flight audio
+  useEffect(() => () => { clearTimer(); stopAudio(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
