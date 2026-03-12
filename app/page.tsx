@@ -16,20 +16,21 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [dashboardUrl, setDashboardUrl] = useState<string | null>(null);
 
   function switchMode(m: "signup" | "signin") {
     setMode(m); setError(""); setDisplayName(""); setEmail(""); setPassword("");
   }
 
+  // Check if already logged in — just show a dashboard link, don't auto-redirect
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: import("@supabase/supabase-js").Session | null } }) => {
       if (!session?.user) return;
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
-      if (profile?.role === "teacher") router.replace("/teacher");
-      else router.replace("/student");
+      setDashboardUrl(profile?.role === "teacher" ? "/teacher" : "/student");
     });
-  }, [router]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setError(""); setLoading(true);
@@ -85,12 +86,21 @@ export default function Home() {
         </span>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
           <a href="#pricing" style={{ fontSize: "0.8125rem", color: "#8A8580", textDecoration: "none", fontWeight: 500 }}>Pricing</a>
-          <button
-            onClick={() => { switchMode("signin"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
-            style={{ padding: "0.375rem 0.875rem", borderRadius: 3, color: "#2C2824", fontWeight: 500, fontSize: "0.8125rem", border: "1px solid #D8D2C8", background: "none", cursor: "pointer" }}
-          >
-            Sign in
-          </button>
+          {dashboardUrl ? (
+            <a
+              href={dashboardUrl}
+              style={{ padding: "0.375rem 0.875rem", borderRadius: 3, color: "#FDFCFA", fontWeight: 500, fontSize: "0.8125rem", background: "#2C2824", textDecoration: "none", cursor: "pointer" }}
+            >
+              Go to dashboard →
+            </a>
+          ) : (
+            <button
+              onClick={() => { switchMode("signin"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
+              style={{ padding: "0.375rem 0.875rem", borderRadius: 3, color: "#2C2824", fontWeight: 500, fontSize: "0.8125rem", border: "1px solid #D8D2C8", background: "none", cursor: "pointer" }}
+            >
+              Sign in
+            </button>
+          )}
         </div>
       </nav>
 

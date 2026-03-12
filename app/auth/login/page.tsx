@@ -49,9 +49,9 @@ export default function LoginPage() {
 
         {/* Wordmark */}
         <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>
+          <Link href="/" style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem", textDecoration: "none", display: "block" }}>
             Cadenza
-          </div>
+          </Link>
           <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 400, fontSize: "2rem", color: "var(--charcoal)", margin: 0, letterSpacing: "-0.01em" }}>
             Welcome back.
           </h1>
