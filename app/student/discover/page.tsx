@@ -347,25 +347,35 @@ export default function DiscoverPage() {
     setProfileItems([]);
     setEditingBio(false);
 
-    const [profileRes, followerRes, followingRes, itemsRes] = await Promise.all([
-      supabase.from("profiles").select("id, display_name, avatar_url, bio, streak_days").eq("id", studentId).single(),
+    // Fetch profile — try with bio first, fall back without (bio column may not exist yet)
+    type PData = { id: string; display_name: string; avatar_url: string | null; bio?: string | null; streak_days: number };
+    let profileData: PData | null = null;
+    const withBio = await supabase.from("profiles").select("id, display_name, avatar_url, bio, streak_days").eq("id", studentId).single();
+    if (withBio.data) {
+      profileData = withBio.data as PData;
+    } else {
+      const withoutBio = await supabase.from("profiles").select("id, display_name, avatar_url, streak_days").eq("id", studentId).single();
+      if (withoutBio.data) profileData = withoutBio.data as PData;
+    }
+
+    // Follower/following counts — may fail if follows table doesn't exist yet
+    const [followerRes, followingRes, itemsRes] = await Promise.all([
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", studentId),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", studentId),
       supabase.from("portfolio_items").select("*").eq("student_id", studentId).eq("is_public", true).order("created_at", { ascending: false }),
     ]);
 
-    const p = profileRes.data as { id: string; display_name: string; avatar_url: string | null; bio: string | null; streak_days: number } | null;
-    if (p) {
+    if (profileData) {
       setProfileInfo({
-        id: p.id,
-        name: p.display_name,
-        bio: p.bio,
-        avatar_url: p.avatar_url,
+        id: profileData.id,
+        name: profileData.display_name,
+        bio: profileData.bio ?? null,
+        avatar_url: profileData.avatar_url,
         follower_count: followerRes.count ?? 0,
         following_count: followingRes.count ?? 0,
-        streak_days: p.streak_days,
+        streak_days: profileData.streak_days,
       });
-      setBioText(p.bio ?? "");
+      setBioText(profileData.bio ?? "");
     }
 
     const rows = (itemsRes.data ?? []) as PortfolioItemRow[];

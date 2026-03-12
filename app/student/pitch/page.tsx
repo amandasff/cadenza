@@ -316,6 +316,29 @@ export default function PitchTrainerPage() {
 }
 
 // ── Piano keyboard component ──────────────────────────────────────────────────
+// Fixed pixel layout so keys always have correct piano proportions
+
+const WK = 40;   // white key width px
+const WH = 112;  // white key height px
+const BW = 26;   // black key width px
+const BH = 68;   // black key height px
+const WG = 3;    // gap between white keys px
+
+// White keys in order, left x position
+const WHITE_KEY_ORDER: NoteName[] = ["C", "D", "E", "F", "G", "A", "B"];
+const WHITE_KEY_X: Record<NoteName, number> = {} as Record<NoteName, number>;
+WHITE_KEY_ORDER.forEach((n, i) => { WHITE_KEY_X[n] = i * (WK + WG); });
+
+// Black keys: left edge = right edge of left neighbor - BW/2
+const BLACK_KEY_X: Partial<Record<NoteName, number>> = {
+  "C#": WHITE_KEY_X["C"] + WK - BW / 2,
+  "D#": WHITE_KEY_X["D"] + WK - BW / 2,
+  "F#": WHITE_KEY_X["F"] + WK - BW / 2,
+  "G#": WHITE_KEY_X["G"] + WK - BW / 2,
+  "A#": WHITE_KEY_X["A"] + WK - BW / 2,
+};
+
+const PIANO_WIDTH = 7 * WK + 6 * WG; // 298px
 
 function PianoKeyboard({
   activeNotes, phase, guess, answer, onGuess,
@@ -326,68 +349,87 @@ function PianoKeyboard({
   answer: NoteName | null;
   onGuess: (n: NoteName) => void;
 }) {
-  // Lay out keys: white keys form the base, sharps overlap
-  const whiteKeys: NoteName[] = KEY_ORDER.filter(n => !IS_SHARP[n]);
-  const sharpKeys: NoteName[] = KEY_ORDER.filter(n => IS_SHARP[n]);
-
-  // X position of each white key (0-indexed)
-  const whiteWidth = 100 / whiteKeys.length; // percentage
-
-  // For each sharp, compute its approximate % left position
-  // Sharps sit between white keys. Map: sharp → fraction of keyboard width
-  const sharpPositions: Record<NoteName, number> = {
-    "C#": 1,   // between C (0) and D (1)
-    "D#": 2,   // between D (1) and E (2)
-    "F#": 4,   // between F (3) and G (4)
-    "G#": 5,   // between G (4) and A (5)
-    "A#": 6,   // between A (5) and B (6)
-  } as Record<NoteName, number>;
-
-  function keyColor(note: NoteName) {
-    const isActive = activeNotes.has(note);
-    if (!isActive) return IS_SHARP[note] ? "#888" : "#ccc";
-    if (phase === "correct" && note === answer) return "#27ae60";
-    if (phase === "wrong" && note === answer) return "#27ae60"; // show correct in green
-    if (phase === "wrong" && note === guess)  return "#e74c3c"; // show wrong guess in red
-    return IS_SHARP[note] ? "var(--charcoal)" : "var(--white)";
-  }
-
-  function textColor(note: NoteName) {
-    const isActive = activeNotes.has(note);
-    if (!isActive) return "#999";
-    if ((phase === "correct" || phase === "wrong") && note === answer) return "#fff";
-    if (phase === "wrong" && note === guess) return "#fff";
-    return IS_SHARP[note] ? "#fff" : "var(--charcoal)";
-  }
-
   const disabled = phase !== "listening";
 
+  function whiteKeyBg(note: NoteName) {
+    const isActive = activeNotes.has(note);
+    if (phase === "correct" && note === answer) return "#27ae60";
+    if (phase === "wrong"   && note === answer) return "#27ae60";
+    if (phase === "wrong"   && note === guess)  return "#e74c3c";
+    return isActive ? "#FDFCFA" : "#e0ddd8";
+  }
+
+  function blackKeyBg(note: NoteName) {
+    const isActive = activeNotes.has(note);
+    if (phase === "correct" && note === answer) return "#27ae60";
+    if (phase === "wrong"   && note === answer) return "#27ae60";
+    if (phase === "wrong"   && note === guess)  return "#e74c3c";
+    return isActive ? "#2C2824" : "#888";
+  }
+
+  function labelColor(note: NoteName, isBlack: boolean) {
+    if ((phase === "correct" || phase === "wrong") && (note === answer || note === guess)) return "#fff";
+    return isBlack ? "rgba(255,255,255,0.75)" : "#7a6e65";
+  }
+
   return (
-    <div style={{ position: "relative", height: 120, userSelect: "none" }}>
-      {/* White keys */}
-      <div style={{ display: "flex", height: "100%", gap: 2 }}>
-        {whiteKeys.map((note, i) => {
+    <div style={{ overflowX: "auto", paddingBottom: "0.25rem" }}>
+      <div style={{ position: "relative", width: PIANO_WIDTH, height: WH, margin: "0 auto", userSelect: "none", flexShrink: 0 }}>
+        {/* White keys */}
+        {WHITE_KEY_ORDER.map(note => {
           const isActive = activeNotes.has(note);
+          const x = WHITE_KEY_X[note];
           return (
             <button
               key={note}
               onClick={() => isActive && !disabled && onGuess(note)}
               style={{
-                flex: 1,
+                position: "absolute",
+                left: x, top: 0,
+                width: WK, height: WH,
+                background: whiteKeyBg(note),
+                border: "1px solid #c8c2bb",
                 borderRadius: "0 0 6px 6px",
-                border: "1.5px solid var(--border)",
-                background: keyColor(note),
                 cursor: isActive && !disabled ? "pointer" : "default",
-                display: "flex", alignItems: "flex-end", justifyContent: "center",
-                paddingBottom: "0.375rem",
-                fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.625rem",
-                color: textColor(note),
-                transition: "background 0.12s, transform 0.06s",
-                opacity: isActive ? 1 : 0.35,
-                transform: "none",
-                outline: "none",
-                position: "relative",
                 zIndex: 1,
+                display: "flex", alignItems: "flex-end", justifyContent: "center",
+                paddingBottom: 6,
+                fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.625rem",
+                color: labelColor(note, false),
+                transition: "background 0.1s",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            >
+              {note}
+            </button>
+          );
+        })}
+
+        {/* Black keys */}
+        {(["C#","D#","F#","G#","A#"] as NoteName[]).map(note => {
+          const isActive = activeNotes.has(note);
+          const x = BLACK_KEY_X[note]!;
+          return (
+            <button
+              key={note}
+              onClick={() => isActive && !disabled && onGuess(note)}
+              style={{
+                position: "absolute",
+                left: x, top: 0,
+                width: BW, height: BH,
+                background: blackKeyBg(note),
+                border: "none",
+                borderRadius: "0 0 4px 4px",
+                cursor: isActive && !disabled ? "pointer" : "default",
+                zIndex: 2,
+                display: "flex", alignItems: "flex-end", justifyContent: "center",
+                paddingBottom: 5,
+                fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.5rem",
+                color: labelColor(note, true),
+                transition: "background 0.1s",
+                outline: "none",
+                boxShadow: "0 3px 8px rgba(0,0,0,0.45)",
               }}
             >
               {note}
@@ -395,43 +437,6 @@ function PianoKeyboard({
           );
         })}
       </div>
-
-      {/* Sharp/flat keys — absolute positioned */}
-      {sharpKeys.map(note => {
-        const whiteIndex = sharpPositions[note];
-        const isActive = activeNotes.has(note);
-        // Position: center over gap between white keys whiteIndex-1 and whiteIndex
-        // Each white key is whiteWidth% wide
-        const leftPct = (whiteIndex * whiteWidth) - (whiteWidth * 0.3);
-        return (
-          <button
-            key={note}
-            onClick={() => isActive && !disabled && onGuess(note)}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: `${leftPct}%`,
-              width: `${whiteWidth * 0.6}%`,
-              height: "62%",
-              borderRadius: "0 0 4px 4px",
-              border: "none",
-              background: keyColor(note),
-              cursor: isActive && !disabled ? "pointer" : "default",
-              display: "flex", alignItems: "flex-end", justifyContent: "center",
-              paddingBottom: "0.25rem",
-              fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.5rem",
-              color: textColor(note),
-              transition: "background 0.12s",
-              opacity: isActive ? 1 : 0.35,
-              zIndex: 2,
-              outline: "none",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-            }}
-          >
-            {note}
-          </button>
-        );
-      })}
     </div>
   );
 }
