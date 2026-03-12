@@ -52,20 +52,42 @@ export default function DiscoverPage() {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUserId(user?.id ?? null);
 
-        const { data, error } = await supabase
+        // Try full query with likes + comments; fall back if those tables don't exist yet
+        let data: Record<string, unknown>[] = [];
+        let hasLikesTable = true;
+
+        const full = await supabase
           .from("portfolio_items")
           .select("*, profiles(display_name), portfolio_likes(user_id), portfolio_comments(id)")
           .eq("is_public", true)
           .order("created_at", { ascending: false });
 
-        if (error) throw error;
+        if (full.error) {
+          const code = full.error.code;
+          const msg = full.error.message ?? "";
+          // Missing likes/comments tables — fall back to basic query
+          if (code === "42P01" && (msg.includes("portfolio_likes") || msg.includes("portfolio_comments"))) {
+            hasLikesTable = false;
+            const fallback = await supabase
+              .from("portfolio_items")
+              .select("*, profiles(display_name)")
+              .eq("is_public", true)
+              .order("created_at", { ascending: false });
+            if (fallback.error) throw fallback.error;
+            data = (fallback.data ?? []) as Record<string, unknown>[];
+          } else {
+            throw full.error;
+          }
+        } else {
+          data = (full.data ?? []) as Record<string, unknown>[];
+        }
 
-        const mapped: PublicItem[] = ((data ?? []) as Record<string, unknown>[]).map(row => ({
+        const mapped: PublicItem[] = data.map(row => ({
           ...(row as unknown as PortfolioItemRow),
           display_name: (row.profiles as { display_name?: string } | null)?.display_name,
-          like_count: Array.isArray(row.portfolio_likes) ? row.portfolio_likes.length : 0,
-          comment_count: Array.isArray(row.portfolio_comments) ? row.portfolio_comments.length : 0,
-          user_liked: Array.isArray(row.portfolio_likes)
+          like_count: hasLikesTable && Array.isArray(row.portfolio_likes) ? (row.portfolio_likes as unknown[]).length : 0,
+          comment_count: hasLikesTable && Array.isArray(row.portfolio_comments) ? (row.portfolio_comments as unknown[]).length : 0,
+          user_liked: hasLikesTable && Array.isArray(row.portfolio_likes)
             ? (row.portfolio_likes as { user_id: string }[]).some(l => l.user_id === user?.id)
             : false,
         }));
