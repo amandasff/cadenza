@@ -616,8 +616,9 @@ html[data-theme="dark"] .progress-fill {
 
 /* ═══════════════════════════════════════════════════════════════
    FUN THEME  — northern lights / aurora borealis
-   Toggle by setting html[data-theme="fun"]
-   Deep dark background, flowing aurora colours, glassy surfaces
+   Strategy: vivid dark aurora background, all surfaces become
+   frosted-glass white — so dark text still reads perfectly and
+   no inline colours need to change.
    ═══════════════════════════════════════════════════════════════ */
 
 @keyframes aurora-shift {
@@ -627,78 +628,83 @@ html[data-theme="dark"] .progress-fill {
 }
 
 html[data-theme="fun"] {
-  /* Aurora borealis gradient — deep dark base with flowing teal, violet, magenta */
+  /*
+   * Rich dark aurora — near-black base with deep teal, violet,
+   * magenta, and green flowing through it.
+   */
   background: linear-gradient(
     -45deg,
-    #04091c,   /* deep navy */
-    #0a2d3f,   /* dark teal */
-    #160530,   /* deep violet */
-    #04201a,   /* dark emerald */
-    #220530,   /* deep magenta-violet */
-    #062838,   /* teal-navy */
-    #04091c
+    #06030f,   /* near-black */
+    #0c1e42,   /* deep ocean navy */
+    #130438,   /* deep violet */
+    #041e26,   /* dark teal-jade */
+    #200336,   /* deep magenta-violet */
+    #031820,   /* midnight teal */
+    #06030f
   );
   background-size: 400% 400%;
-  animation: aurora-shift 16s ease infinite;
+  animation: aurora-shift 14s ease infinite;
 
-  /* ── Palette — light text on dark aurora background ── */
-  --cream:         rgba(8,  12, 30, 0.55);   /* dark glass for page sections */
-  --cream-deep:    rgba(14, 18, 42, 0.72);   /* darker active state */
-  --white:         rgba(12, 16, 36, 0.78);   /* dark glass card surface */
-  --charcoal:      #D8F0EC;                  /* near-white teal for body text */
-  --muted:         #6ECFC4;                  /* aurora teal for muted text */
-  --border:        rgba(80, 200, 180, 0.18); /* teal border */
-  --border-strong: rgba(100, 220, 200, 0.36);
+  /*
+   * Keep charcoal DARK — all existing inline color="#2C2824"
+   * and color=var(--charcoal) references stay readable on white glass.
+   * Only raise muted slightly purple to complement the aurora.
+   */
+  --charcoal:      #160D2E;                    /* deep purple-black, still very dark */
+  --muted:         #7A6AAC;                    /* dusty purple, readable on white */
 
-  /* Category colours — vivid aurora variants */
-  --sage:     #3DFFC0;
-  --rose:     #FF6B9D;
-  --sky:      #4DD0FF;
-  --butter:   #FFD166;
-  --peach:    #FF8C6B;
-  --lavender: #C77DFF;
+  /* Surfaces: translucent white glass — aurora glows through */
+  --white:         rgba(255, 255, 255, 0.88);  /* cards, modals */
+  --cream:         rgba(255, 255, 255, 0.58);  /* page-level sections */
+  --cream-deep:    rgba(255, 255, 255, 0.22);  /* active-state tint */
+
+  /* Borders: soft aurora purple */
+  --border:        rgba(155, 110, 255, 0.22);
+  --border-strong: rgba(155, 110, 255, 0.44);
+
+  /* Category accents — vivid but not garish */
+  --sage:     #1B8A5A;
+  --rose:     #C2185B;
+  --sky:      #1565C0;
+  --butter:   #E65100;
+  --peach:    #BF360C;
+  --lavender: #6A1B9A;
 }
 
-/* Shell transparent so aurora bleeds through */
+/* Shell transparent — aurora shows through everything */
 html[data-theme="fun"] .student-shell {
   background: transparent;
 }
 
-/* Sidebar — glassy dark panel */
+/* Sidebar — frosted white glass (dark text reads fine) */
 html[data-theme="fun"] .student-sidebar {
-  background: rgba(8, 14, 36, 0.72) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-right-color: rgba(80, 200, 180, 0.20) !important;
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right-color: rgba(155, 110, 255, 0.20) !important;
 }
 
-/* Mobile header + bottom nav — glassy dark */
+/* Mobile header + bottom nav — frosted white glass */
 html[data-theme="fun"] .student-mobile-header {
-  background: rgba(8, 14, 36, 0.76) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom-color: rgba(80, 200, 180, 0.18) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom-color: rgba(155, 110, 255, 0.18) !important;
 }
 
 html[data-theme="fun"] .student-bottom-nav {
-  background: rgba(8, 14, 36, 0.80) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top-color: rgba(80, 200, 180, 0.18) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top-color: rgba(155, 110, 255, 0.18) !important;
 }
 
-/* Active nav indicator — teal glow instead of charcoal */
-html[data-theme="fun"] .student-sidebar a[style*="2px solid var(--charcoal)"],
-html[data-theme="fun"] .student-sidebar a[style*="borderLeft"] {
-  border-left-color: #3DFFC0 !important;
-}
-
-/* Skeleton shimmer — aurora teal shimmer */
+/* Skeleton shimmer — aurora purple glow */
 html[data-theme="fun"] .skeleton {
   background: linear-gradient(90deg,
-    rgba(60, 180, 160, 0.15) 25%,
-    rgba(100, 220, 200, 0.28) 50%,
-    rgba(60, 180, 160, 0.15) 75%
+    rgba(180, 140, 255, 0.18) 25%,
+    rgba(220, 200, 255, 0.35) 50%,
+    rgba(180, 140, 255, 0.18) 75%
   ) !important;
   background-size: 200% 100% !important;
 }
