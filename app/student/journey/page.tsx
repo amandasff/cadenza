@@ -168,14 +168,41 @@ export default function JourneyPage() {
     setRecordedBlob(null);
     setRecordedUrl(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: "user" } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 48000,
+          channelCount: 2,
+        },
+        video: {
+          facingMode: "user",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+        },
+      });
       recordStreamRef.current = stream;
       if (liveVideoRef.current) { liveVideoRef.current.srcObject = stream; }
-      const recorder = new MediaRecorder(stream);
+
+      // Pick best available codec — VP9/Opus gives the best quality
+      const mimeType = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
+        "video/mp4",
+      ].find(m => MediaRecorder.isTypeSupported(m)) ?? "";
+
+      const recorder = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: 256000,
+        videoBitsPerSecond: 8000000,
+      });
       chunksRef.current = [];
       recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
+        const blob = new Blob(chunksRef.current, { type: mimeType || "video/webm" });
         setRecordedBlob(blob);
         const url = URL.createObjectURL(blob);
         setRecordedUrl(url);
