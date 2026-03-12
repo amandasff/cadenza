@@ -116,6 +116,8 @@ export default function DiscoverPage() {
   const [queryError, setQueryError]             = useState<string | null>(null);
 
   const [currentUserId, setCurrentUserId]       = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName]   = useState<string | null>(null);
+  const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
   const [myFollows, setMyFollows]               = useState<Set<string>>(new Set()); // IDs I follow
 
   const [expandedItem, setExpandedItem]         = useState<PublicItem | null>(null);
@@ -174,8 +176,14 @@ export default function DiscoverPage() {
       const uid = user?.id ?? null;
       setCurrentUserId(uid);
 
-      // Load who we follow
       if (uid) {
+        // Load profile info for current user
+        const { data: me } = await supabase.from("profiles").select("display_name, avatar_url").eq("id", uid).single();
+        if (me) {
+          setCurrentUserName((me as { display_name?: string | null }).display_name ?? null);
+          setCurrentUserAvatar((me as { avatar_url?: string | null }).avatar_url ?? null);
+        }
+        // Load who we follow
         const { data: followData } = await supabase
           .from("follows").select("following_id").eq("follower_id", uid);
         setMyFollows(new Set((followData ?? []).map((f: { following_id: string }) => f.following_id)));
@@ -426,13 +434,24 @@ export default function DiscoverPage() {
 
       {/* ── Header + tabs ── */}
       <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ padding: "1.25rem 1rem 0" }}>
-          <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.625rem", color: "var(--charcoal)", letterSpacing: "-0.01em", margin: 0 }}>
-            Discover
-          </h1>
-          <p style={{ color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", margin: "0.125rem 0 0.75rem" }}>
-            Raw, unedited practice — real musicians, real progress
-          </p>
+        <div style={{ padding: "1.25rem 1rem 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <div>
+            <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.625rem", color: "var(--charcoal)", letterSpacing: "-0.01em", margin: 0 }}>
+              Discover
+            </h1>
+            <p style={{ color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", margin: "0.125rem 0 0.75rem" }}>
+              Raw, unedited practice — real musicians, real progress
+            </p>
+          </div>
+          {currentUserId && (
+            <button
+              onClick={() => openProfile(currentUserId)}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem" }}
+            >
+              <Avatar url={currentUserAvatar} name={currentUserName} size={32} />
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>My profile</span>
+            </button>
+          )}
         </div>
         {/* Tabs */}
         <div style={{ display: "flex", padding: "0 1rem" }}>
