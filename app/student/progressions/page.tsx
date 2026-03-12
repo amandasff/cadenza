@@ -420,19 +420,9 @@ function ProgressionGame() {
       )}
 
       {/* Cheat sheet */}
-      {!started && (
-        <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1rem 1.125rem", marginTop: "1rem" }}>
-          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>Chords in C major</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.375rem" }}>
-            {Object.entries({ "I": "C", "ii": "Dm", "iii": "Em", "IV": "F", "V": "G", "vi": "Am", "vii°": "B°" }).map(([rn, name]) => (
-              <div key={rn} style={{ background: "var(--cream)", borderRadius: 6, padding: "0.3rem 0.25rem", textAlign: "center" }}>
-                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--charcoal)" }}>{rn}</div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <div style={{ marginTop: "1rem" }}>
+        <RomanNumeralCheatSheet />
+      </div>
     </>
   );
 }
@@ -650,6 +640,7 @@ function RealSongsGame() {
   const [score, setScore]         = useState(0);
   const [streak, setStreak]       = useState(0);
   const [round, setRound]         = useState(1);
+  const [playerKey, setPlayerKey] = useState(0); // remount iframe on song change
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function clearTimer() { if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; } }
@@ -671,6 +662,7 @@ function RealSongsGame() {
     setPhase("active");
     setRound(r => r + 1);
     setChoices(buildSongChoices(REAL_SONGS[next].label));
+    setPlayerKey(k => k + 1);
   }
 
   function handleGuess(label: string) {
@@ -683,10 +675,11 @@ function RealSongsGame() {
     } else {
       setStreak(0);
     }
-    timeoutRef.current = setTimeout(() => nextSong(songIndex), 2500);
+    timeoutRef.current = setTimeout(() => nextSong(songIndex), 2800);
   }
 
-  const ytUrl = `https://www.youtube.com/results?search_query=${song.youtubeSearch}`;
+  // YouTube embed — search playlist shows top result for the song
+  const embedSrc = `https://www.youtube.com/embed?listType=search&list=${song.youtubeSearch}&autoplay=0`;
 
   return (
     <>
@@ -700,57 +693,49 @@ function RealSongsGame() {
         ))}
       </div>
 
-      <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1.25rem", marginBottom: "1rem" }}>
-        {/* Song card */}
-        <div style={{ marginBottom: "1rem", padding: "1rem", background: "var(--cream)", borderRadius: 10, textAlign: "center" }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.375rem", fontWeight: 500, color: "var(--charcoal)", lineHeight: 1.2, marginBottom: "0.25rem" }}>
-            {song.title}
-          </div>
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
-            {song.artist} · <span style={{ textTransform: "uppercase", fontSize: "0.625rem", letterSpacing: "0.05em" }}>{song.style}</span>
-          </div>
-          <a
-            href={ytUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: "0.375rem",
-              padding: "0.5rem 1.25rem", borderRadius: 20, textDecoration: "none",
-              background: "#FF0000", color: "#fff",
-              fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem",
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
-            Listen on YouTube
-          </a>
+      <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", overflow: "hidden", marginBottom: "1rem" }}>
+        {/* Inline YouTube player */}
+        <div style={{ position: "relative", paddingBottom: "56.25%", background: "#000" }}>
+          <iframe
+            key={playerKey}
+            src={embedSrc}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+            title={`${song.title} – ${song.artist}`}
+          />
         </div>
 
-        {/* Feedback */}
-        {phase === "answered" && (
-          <div style={{ textAlign: "center", marginBottom: "0.875rem", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: guess === song.label ? "#27ae60" : "#c0392b" }}>
-            {guess === song.label
-              ? (streak >= 3 ? `${streak} in a row!` : "Correct!")
-              : `It was ${song.label}`}
+        <div style={{ padding: "1rem 1.25rem" }}>
+          {/* Song info */}
+          <div style={{ marginBottom: "0.875rem" }}>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", fontWeight: 500, color: "var(--charcoal)", lineHeight: 1.2 }}>
+              {song.title}
+            </div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>
+              {song.artist} · <span style={{ textTransform: "uppercase", fontSize: "0.625rem", letterSpacing: "0.05em" }}>{song.style}</span>
+            </div>
           </div>
-        )}
 
-        {phase === "active" && (
-          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textAlign: "center", margin: "0 0 0.875rem", fontStyle: "italic" }}>
-            Listen to the song, then identify the main chord progression:
-          </p>
-        )}
+          {/* Feedback */}
+          {phase === "answered" && (
+            <div style={{ textAlign: "center", marginBottom: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: guess === song.label ? "#27ae60" : "#c0392b" }}>
+              {guess === song.label ? (streak >= 3 ? `${streak} in a row!` : "Correct!") : `It was ${song.label}`}
+            </div>
+          )}
+          {phase === "active" && (
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textAlign: "center", margin: "0 0 0.75rem", fontStyle: "italic" }}>
+              Listen, then identify the main chord progression:
+            </p>
+          )}
 
-        {/* Choices */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-          {choices.map(label => {
-            const isCorrect = phase === "answered" && label === song.label;
-            const isWrong   = phase === "answered" && label === guess && label !== song.label;
-            return (
-              <button
-                key={label}
-                onClick={() => handleGuess(label)}
-                disabled={phase === "answered"}
-                style={{
+          {/* Choices */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+            {choices.map(label => {
+              const isCorrect = phase === "answered" && label === song.label;
+              const isWrong   = phase === "answered" && label === guess && label !== song.label;
+              return (
+                <button key={label} onClick={() => handleGuess(label)} disabled={phase === "answered"} style={{
                   padding: "0.75rem 0.5rem", borderRadius: 10, textAlign: "center",
                   cursor: phase === "active" ? "pointer" : "default",
                   fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem",
@@ -758,25 +743,75 @@ function RealSongsGame() {
                   border: isCorrect ? "2px solid #27ae60" : isWrong ? "2px solid #c0392b" : "1.5px solid var(--border)",
                   background: isCorrect ? "rgba(39,174,96,0.1)" : isWrong ? "rgba(192,57,43,0.08)" : "var(--cream)",
                   color: isCorrect ? "#27ae60" : isWrong ? "#c0392b" : "var(--charcoal)",
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
+                }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          <button onClick={() => nextSong(songIndex)} style={{ marginTop: "0.875rem", width: "100%", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "underline" }}>
+            Skip →
+          </button>
         </div>
-
-        <button onClick={() => nextSong(songIndex)} style={{ marginTop: "1rem", width: "100%", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "underline" }}>
-          Skip →
-        </button>
       </div>
 
-      <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1rem 1.125rem" }}>
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>How to use this</div>
-        <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
-          Open the song on YouTube, listen for the repeating chord pattern, then pick the progression. Most pop songs repeat the same 4-chord loop throughout — once you hear it in one chorus you&apos;ll hear it everywhere.
-        </p>
-      </div>
+      {/* Roman numeral cheat sheet */}
+      <RomanNumeralCheatSheet />
     </>
+  );
+}
+
+// ── Shared cheat sheet ────────────────────────────────────────────────────────
+
+function RomanNumeralCheatSheet() {
+  const [open, setOpen] = useState(false);
+  const DIATONIC = [
+    { rn: "I",    quality: "major", example: "C",  degree: "1st" },
+    { rn: "ii",   quality: "minor", example: "Dm", degree: "2nd" },
+    { rn: "iii",  quality: "minor", example: "Em", degree: "3rd" },
+    { rn: "IV",   quality: "major", example: "F",  degree: "4th" },
+    { rn: "V",    quality: "major", example: "G",  degree: "5th" },
+    { rn: "vi",   quality: "minor", example: "Am", degree: "6th" },
+    { rn: "vii°", quality: "dim",   example: "B°", degree: "7th" },
+  ];
+  return (
+    <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", overflow: "hidden" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: "100%", background: "none", border: "none", cursor: "pointer", padding: "0.875rem 1.125rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Roman numeral guide</span>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", background: "var(--cream)", borderRadius: 99, padding: "0.1rem 0.5rem" }}>for beginners</span>
+        </div>
+        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", transition: "transform 0.15s", display: "inline-block", transform: open ? "rotate(180deg)" : "none" }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ padding: "0 1.125rem 1rem", borderTop: "1px solid var(--border)" }}>
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0.75rem 0 0.625rem", lineHeight: 1.5 }}>
+            Roman numerals describe chords by their position in a scale. The example below uses <strong>C major</strong> — the same pattern works in any key.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "auto auto 1fr auto", gap: "0.375rem 0.75rem", alignItems: "center" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Numeral</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>In C major</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Quality</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>Degree</div>
+            {DIATONIC.map(({ rn, quality, example, degree }) => (
+              <React.Fragment key={rn}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.875rem", color: "var(--charcoal)" }}>{rn}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: quality === "major" ? "#4267b2" : quality === "minor" ? "#7a5c9e" : "#888" }}>{example}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", textTransform: "capitalize" }}>{quality}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{degree}</div>
+              </React.Fragment>
+            ))}
+          </div>
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", margin: "0.75rem 0 0", lineHeight: 1.55 }}>
+            Uppercase = major chord. Lowercase = minor chord. The numbers stay the same in any key — I is always the home chord, V always wants to resolve back to I.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
