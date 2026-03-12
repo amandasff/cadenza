@@ -434,14 +434,14 @@ export default function JourneyPage() {
                                   onClick={() => togglePublic(item)}
                                   disabled={togglingPublicId === item.id}
                                   style={{
-                                    background: "none", border: `1px solid ${isPublic ? "#5B4FCF" : "var(--border)"}`,
+                                    background: isPublic ? "rgba(91,79,207,0.07)" : "transparent",
+                                    border: `1px solid ${isPublic ? "#5B4FCF" : "var(--border)"}`,
                                     borderRadius: 4, cursor: "pointer", padding: "0.2rem 0.5rem",
                                     color: isPublic ? "#5B4FCF" : "var(--muted)",
                                     fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 500,
                                     display: "flex", alignItems: "center", gap: "0.25rem",
                                     opacity: togglingPublicId === item.id ? 0.5 : 1,
-                                    background: isPublic ? "rgba(91,79,207,0.07)" : "transparent" as string,
-                                  } as React.CSSProperties}
+                                  }}
                                 >
                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                     {isPublic
