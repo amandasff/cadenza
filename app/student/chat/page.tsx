@@ -39,8 +39,11 @@ export default function StudentChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  const initialScrollDone = useRef(false);
+  const scrollToBottom = useCallback((instant?: boolean) => {
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
+    });
   }, []);
 
   useEffect(() => {
@@ -136,7 +139,11 @@ export default function StudentChat() {
       });
   }, [announcements, privateMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { scrollToBottom(); }, [announcements, privateMessages, tab, scrollToBottom]);
+  useEffect(() => {
+    const instant = !initialScrollDone.current;
+    if (instant) initialScrollDone.current = true;
+    scrollToBottom(instant);
+  }, [announcements, privateMessages, tab, scrollToBottom]);
 
   async function handleSend() {
     const text = input.trim();

@@ -9,6 +9,8 @@ export interface PortfolioItemRow {
   recording_url: string | null;
   session_id: string | null;
   created_at: string;
+  media_type: 'audio' | 'video' | null;
+  is_public: boolean | null;
 }
 
 interface AddItemInput {
@@ -18,6 +20,8 @@ interface AddItemInput {
   description?: string;
   recordingUrl?: string;
   sessionId?: string;
+  mediaType?: 'audio' | 'video';
+  isPublic?: boolean;
 }
 
 export class PortfolioService {
@@ -38,6 +42,21 @@ export class PortfolioService {
     return (data ?? []) as PortfolioItemRow[];
   }
 
+  async getPublicItems(studioId: string): Promise<(PortfolioItemRow & { display_name?: string })[]> {
+    const { data, error } = await this.supabase
+      .from('portfolio_items')
+      .select('*, profiles(display_name)')
+      .eq('studio_id', studioId)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return ((data ?? []) as unknown as (PortfolioItemRow & { profiles?: { display_name: string } })[]).map(row => ({
+      ...row,
+      display_name: row.profiles?.display_name,
+    }));
+  }
+
   async addItem(input: AddItemInput): Promise<PortfolioItemRow> {
     const { data, error } = await this.supabase
       .from('portfolio_items')
@@ -48,6 +67,8 @@ export class PortfolioService {
         description: input.description ?? null,
         recording_url: input.recordingUrl ?? null,
         session_id: input.sessionId ?? null,
+        media_type: input.mediaType ?? 'audio',
+        is_public: input.isPublic ?? false,
       })
       .select()
       .single();
@@ -56,7 +77,7 @@ export class PortfolioService {
     return data as PortfolioItemRow;
   }
 
-  async updateItem(id: string, updates: { title?: string; description?: string }): Promise<void> {
+  async updateItem(id: string, updates: { title?: string; description?: string; is_public?: boolean }): Promise<void> {
     const { error } = await this.supabase
       .from('portfolio_items')
       .update(updates)

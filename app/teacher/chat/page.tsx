@@ -41,8 +41,11 @@ export default function TeacherChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  const initialScrollDone = useRef(false);
+  const scrollToBottom = useCallback((instant?: boolean) => {
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
+    });
   }, []);
 
   useEffect(() => {
@@ -103,7 +106,11 @@ export default function TeacherChat() {
     return () => { unsub(); clearInterval(pollInterval); };
   }, [teacher?.studioId, teacher?.id, selectedStudent]);
 
-  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
+  useEffect(() => {
+    const instant = !initialScrollDone.current;
+    if (instant) initialScrollDone.current = true;
+    scrollToBottom(instant);
+  }, [messages, scrollToBottom]);
 
   async function handleSend() {
     const text = input.trim();
