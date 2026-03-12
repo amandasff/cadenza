@@ -11,6 +11,7 @@ import type { GoalRow, PieceRow, LessonRow, AssignmentWithContext, SelfRating, M
 import { useRouter } from "next/navigation";
 import PushSubscribeButton from "../../components/PushSubscribeButton";
 import { usePractice } from "../../lib/context/PracticeContext";
+import Metronome from "../../components/Metronome";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -101,6 +102,7 @@ export default function ThisWeek() {
   const [ratingNote, setRatingNote] = useState("");
   const [ratingSaving, setRatingSaving] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const [showMetronome, setShowMetronome] = useState(false);
 
   const load = useCallback(async () => {
     if (!student?.id) return;
@@ -420,11 +422,16 @@ export default function ThisWeek() {
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Tune by ear</div>
           </div>
         </Link>
-        <Link href="/student/practice" style={{
-          flex: 1, display: "flex", alignItems: "center", gap: "0.75rem",
-          background: "var(--white)", border: "1px solid var(--border)",
-          borderRadius: 8, padding: "0.875rem 1rem", textDecoration: "none",
-        }}>
+        <button
+          onClick={() => setShowMetronome(m => !m)}
+          style={{
+            flex: 1, display: "flex", alignItems: "center", gap: "0.75rem",
+            background: showMetronome ? "rgba(76,175,132,0.08)" : "var(--white)",
+            border: `1px solid ${showMetronome ? "#4CAF84" : "var(--border)"}`,
+            borderRadius: 8, padding: "0.875rem 1rem", textDecoration: "none",
+            cursor: "pointer", textAlign: "left",
+          }}
+        >
           <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1C1C1E", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6A817" strokeWidth="2" strokeLinecap="round">
               <line x1="12" y1="2" x2="12" y2="22" />
@@ -438,8 +445,15 @@ export default function ThisWeek() {
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Metronome</div>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Keep the beat</div>
           </div>
-        </Link>
+        </button>
       </div>
+
+      {/* Inline metronome */}
+      {showMetronome && (
+        <div style={{ padding: "0 1.5rem 0.75rem", display: "flex", justifyContent: "center" }}>
+          <Metronome onClose={() => setShowMetronome(false)} />
+        </div>
+      )}
 
       {/* Next Lesson widget */}
       {nextLesson && (
