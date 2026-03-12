@@ -82,10 +82,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (loading) return;
-    if (!user || user.role !== "student") {
-      router.replace("/auth/login");
-      return;
-    }
+    if (!user) { router.replace("/auth/login"); return; }
+    // Teachers can enter practice mode — only block unauthenticated users
+    if (user.role === "teacher") return;
+    if (user.role !== "student") { router.replace("/auth/login"); return; }
     const student = user as Student;
     if (!student.studioId && path !== "/student/join") {
       router.replace("/student/join");
@@ -264,9 +264,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  if (!user || user.role !== "student") return null;
+  if (!user || (user.role !== "student" && user.role !== "teacher")) return null;
 
-  const student = user as Student;
+  const isTeacherPracticing = user.role === "teacher";
+  const student = isTeacherPracticing ? { displayName: user.displayName, studioId: null } as unknown as Student : user as Student;
   const initials = student.displayName
     .split(" ")
     .map((w: string) => w[0] ?? "")
@@ -320,6 +321,21 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     <PracticeProvider>
     <PlayerProvider>
     <div className="student-shell">
+
+      {/* ── Practice mode banner (teachers only) ── */}
+      {isTeacherPracticing && (
+        <div style={{
+          background: "var(--charcoal)", color: "var(--white)",
+          padding: "0.5rem 1rem", textAlign: "center",
+          fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem",
+        }}>
+          <span style={{ opacity: 0.7 }}>Practice mode</span>
+          <Link href="/teacher" style={{ color: "var(--white)", fontWeight: 600, textDecoration: "none", fontSize: "0.75rem" }}>
+            ← Back to studio
+          </Link>
+        </div>
+      )}
 
       {/* ── Mobile header (hidden ≥700px) ── */}
       <div className="student-mobile-header" style={{
