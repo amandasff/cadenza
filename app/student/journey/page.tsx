@@ -386,25 +386,25 @@ export default function JourneyPage() {
       <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1.25rem 1rem 1rem" }}>
 
         {/* Avatar + name row */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "0.875rem" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem", marginBottom: "1rem" }}>
           {/* Avatar */}
           <div style={{ position: "relative", flexShrink: 0 }}>
             <div
               onClick={() => avatarInputRef.current?.click()}
               style={{
-                width: 64, height: 64, borderRadius: "50%",
+                width: 56, height: 56, borderRadius: "50%",
                 background: avatarUrl ? "transparent" : "var(--charcoal)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "1.375rem", fontWeight: 700, color: "var(--white)",
+                fontSize: "1.125rem", fontWeight: 600, color: "var(--white)",
                 fontFamily: "Inter, sans-serif", cursor: "pointer", overflow: "hidden",
-                border: "2px solid var(--border)",
+                border: "1.5px solid var(--border)",
               }}
             >
               {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
             </div>
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "2px solid var(--white)" }}
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 18, height: 18, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "1.5px solid var(--white)" }}
               onClick={() => avatarInputRef.current?.click()}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             </div>
             <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }}
               onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarChange(f); }} />
@@ -412,38 +412,38 @@ export default function JourneyPage() {
 
           {/* Name + tags */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--charcoal)", lineHeight: 1.2, marginBottom: "0.25rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", letterSpacing: "-0.01em", lineHeight: 1.25, marginBottom: "0.3rem" }}>
               {profile?.display_name ?? student?.displayName}
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "0.375rem" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: profile?.bio ? "0.4rem" : 0 }}>
               {profile?.instrument && (
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 99, padding: "0.15rem 0.625rem", color: "var(--charcoal)", fontWeight: 500 }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", background: "var(--cream-deep)", borderRadius: 4, padding: "0.15rem 0.5rem", color: "var(--charcoal)", fontWeight: 500, letterSpacing: "0.01em" }}>
                   {profile.instrument}
                 </span>
               )}
               {profile?.music_since && (
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 99, padding: "0.15rem 0.625rem", color: "var(--muted)" }}>
-                  Practicing since {profile.music_since}
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", background: "transparent", color: "var(--muted)", letterSpacing: "0.01em" }}>
+                  since {profile.music_since}
                 </span>
               )}
             </div>
             {profile?.bio && (
-              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>{profile.bio}</p>
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: 0, lineHeight: 1.55 }}>{profile.bio}</p>
             )}
           </div>
         </div>
 
         {/* Stats row */}
-        <div style={{ display: "flex", gap: "0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", margin: "0 -1rem", padding: "0.625rem 1rem" }}>
+        <div style={{ display: "flex", gap: "0", borderTop: "1px solid var(--border)", margin: "0 -1rem", padding: "0.5rem 1rem 0" }}>
           {[
-            { label: "Followers", value: followerCount },
-            { label: "Following", value: followingCount },
-            { label: "Streak", value: `${profile?.streak_days ?? 0}🔥` },
-            { label: "Public clips", value: publicClipCount },
+            { label: "followers", value: followerCount },
+            { label: "following", value: followingCount },
+            { label: "streak", value: `${profile?.streak_days ?? 0}🔥` },
+            { label: "clips", value: publicClipCount },
           ].map(({ label, value }, i, arr) => (
-            <div key={label} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.25rem 0" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.0625rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{value}</div>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{label}</div>
+            <div key={label} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.375rem 0" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -451,11 +451,11 @@ export default function JourneyPage() {
         {/* Action buttons */}
         {!editingProfile ? (
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.875rem" }}>
-            <button onClick={() => { setEditName(profile?.display_name ?? student?.displayName ?? ""); setEditBio(profile?.bio ?? ""); setEditInstrument(profile?.instrument ?? ""); setEditSince(profile?.music_since ?? ""); setEditingProfile(true); }} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "1.5px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", cursor: "pointer" }}>
+            <button onClick={() => { setEditName(profile?.display_name ?? student?.displayName ?? ""); setEditBio(profile?.bio ?? ""); setEditInstrument(profile?.instrument ?? ""); setEditSince(profile?.music_since ?? ""); setEditingProfile(true); }} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", cursor: "pointer", letterSpacing: "0.005em" }}>
               Edit Profile
             </button>
-            <button onClick={() => setShowUploadModal(true)} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <button onClick={() => setShowUploadModal(true)} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem", letterSpacing: "0.005em" }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
               Add Clip
             </button>
           </div>
@@ -463,27 +463,27 @@ export default function JourneyPage() {
           <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
               <div>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Name</label>
-                <input value={editName} onChange={e => setEditName(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Name</label>
+                <input value={editName} onChange={e => setEditName(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
               </div>
               <div>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Instrument</label>
-                <input value={editInstrument} onChange={e => setEditInstrument(e.target.value)} placeholder="Piano, Guitar…" style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Instrument</label>
+                <input value={editInstrument} onChange={e => setEditInstrument(e.target.value)} placeholder="Piano, Guitar…" style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
               </div>
             </div>
             <div>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Bio</label>
-              <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Tell your musical story…" maxLength={160} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", resize: "none", lineHeight: 1.5 }} />
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Bio</label>
+              <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Tell your musical story…" maxLength={160} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", resize: "none", lineHeight: 1.5 }} />
             </div>
             <div>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Practicing since</label>
-              <input value={editSince} onChange={e => setEditSince(e.target.value)} placeholder="e.g. 2019, age 6, last year…" style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Practicing since</label>
+              <input value={editSince} onChange={e => setEditSince(e.target.value)} placeholder="e.g. 2019, age 6, last year…" style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button onClick={saveProfile} disabled={savingProfile} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--white)", cursor: "pointer" }}>
+              <button onClick={saveProfile} disabled={savingProfile} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--white)", cursor: "pointer" }}>
                 {savingProfile ? "Saving…" : "Save"}
               </button>
-              <button onClick={() => setEditingProfile(false)} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}>
+              <button onClick={() => setEditingProfile(false)} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}>
                 Cancel
               </button>
             </div>
@@ -491,8 +491,8 @@ export default function JourneyPage() {
         )}
 
         {/* Privacy hint */}
-        <div style={{ marginTop: "0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div style={{ marginTop: "0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "0.3rem", letterSpacing: "0.01em" }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Toggle each clip public or private below. Public clips appear on Discover.
         </div>
       </div>

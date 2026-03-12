@@ -437,21 +437,21 @@ export default function Rewards() {
         </div>
 
         {/* ── Practice calendar ── */}
-        <div className="card-base" style={{ padding: "1.25rem 1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+        <div className="card-base" style={{ padding: "1rem 1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
             <button
               onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, width: 28, height: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "0.875rem" }}
+              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, width: 22, height: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: "0.75rem" }}
             >
               ‹
             </button>
 
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", letterSpacing: "0.005em" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.01em" }}>
                 {calendarDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
               </div>
               {!loading && monthSessionCount > 0 && (
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--sage)", marginTop: "0.125rem", letterSpacing: "0.04em" }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--sage)", marginTop: "0.1rem", letterSpacing: "0.04em" }}>
                   {monthSessionCount} session{monthSessionCount !== 1 ? "s" : ""}
                 </div>
               )}
@@ -460,23 +460,23 @@ export default function Rewards() {
             <button
               onClick={() => { if (!isCurrentMonth) setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1)); }}
               disabled={isCurrentMonth}
-              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, width: 28, height: 28, cursor: isCurrentMonth ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: isCurrentMonth ? "var(--border)" : "var(--muted)", fontSize: "0.875rem" }}
+              style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, width: 22, height: 22, cursor: isCurrentMonth ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: isCurrentMonth ? "var(--border)" : "var(--muted)", fontSize: "0.75rem" }}
             >
               ›
             </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.125rem", marginBottom: "0.25rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 30px)", justifyContent: "center", gap: "0.125rem", marginBottom: "0.2rem" }}>
             {DAY_LABELS.map((d, i) => (
-              <div key={i} style={{ textAlign: "center", fontSize: "0.5625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", paddingBottom: "0.25rem", letterSpacing: "0.02em" }}>
+              <div key={i} style={{ textAlign: "center", fontSize: "0.4375rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", paddingBottom: "0.2rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>
                 {d}
               </div>
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.1875rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 30px)", justifyContent: "center", gap: "0.125rem" }}>
             {monthCells.map((day, i) => {
-              if (day === null) return <div key={i} />;
+              if (day === null) return <div key={i} style={{ width: 30, height: 26 }} />;
               const dateStr = toDateStr(calendarDate.getFullYear(), calendarDate.getMonth(), day);
               const practiced = practicedDays.has(dateStr);
               const isToday =
@@ -486,16 +486,16 @@ export default function Rewards() {
               const isFuture = isCurrentMonth && day > today.getDate();
               return (
                 <div key={i} style={{
-                  aspectRatio: "1",
+                  width: 30, height: 26,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: 3,
                   background: practiced ? "var(--sage)" : isToday ? "var(--cream-deep)" : "transparent",
                   border: isToday && !practiced ? "1px solid var(--border-strong)" : "1px solid transparent",
-                  fontSize: "0.625rem",
+                  fontSize: "0.5625rem",
                   fontFamily: "Inter, sans-serif",
                   fontWeight: isToday ? 600 : 400,
-                  color: practiced ? "white" : isFuture ? "var(--border-strong)" : "var(--muted)",
-                  opacity: isFuture ? 0.4 : 1,
+                  color: practiced ? "white" : isFuture ? "var(--border-strong)" : "var(--charcoal)",
+                  opacity: isFuture ? 0.3 : 1,
                 }}>
                   {day}
                 </div>
@@ -503,10 +503,10 @@ export default function Rewards() {
             })}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.875rem", justifyContent: "flex-end" }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--sage)" }} />
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", letterSpacing: "0.03em" }}>
-              Practice day
+          <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.75rem", justifyContent: "flex-end" }}>
+            <div style={{ width: 7, height: 7, borderRadius: 2, background: "var(--sage)" }} />
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.04em" }}>
+              Practiced
             </span>
           </div>
         </div>
