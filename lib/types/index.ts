@@ -8,6 +8,7 @@ export interface ProfileRow {
   total_points: number;
   studio_id: string | null;
   avatar_url?: string | null;
+  bio?: string | null;
   stripe_customer_id?: string | null;
   subscription_status?: 'free' | 'active' | 'canceled' | 'past_due';
   created_at: string;
