@@ -225,12 +225,23 @@ export default function DiscoverPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "0" }}>
+      <div style={{ background: "var(--cream)", minHeight: "100%" }}>
         <div style={{ padding: "1.25rem 1rem 0.75rem", background: "var(--white)", borderBottom: "1px solid var(--border)" }}>
           <div className="skeleton" style={{ height: 28, width: 120, borderRadius: 4 }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5, padding: "1.5px" }}>
-          {[1,2,3,4,5,6,7,8,9].map(i => <div key={i} className="skeleton" style={{ aspectRatio: "9/12", width: "100%" }} />)}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", padding: "0.75rem" }}>
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i}>
+              <div className="skeleton" style={{ aspectRatio: "16/9", width: "100%", borderRadius: 8 }} />
+              <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 0.25rem 0" }}>
+                <div className="skeleton" style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton" style={{ height: 11, borderRadius: 3, marginBottom: 5 }} />
+                  <div className="skeleton" style={{ height: 10, width: "60%", borderRadius: 3 }} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -239,7 +250,7 @@ export default function DiscoverPage() {
   const initials = (name?: string) => (name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <div style={{ minHeight: "100%", background: "#000" }}>
+    <div style={{ minHeight: "100%", background: "var(--cream)" }}>
       {/* Header */}
       <div style={{ padding: "1.25rem 1rem 0.75rem", background: "var(--white)", borderBottom: "1px solid var(--border)" }}>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.625rem", color: "var(--charcoal)", letterSpacing: "-0.01em", margin: 0 }}>
@@ -265,7 +276,7 @@ export default function DiscoverPage() {
           </div>
         </div>
       ) : items.length === 0 ? (
-        <div style={{ padding: "3rem 1.5rem", textAlign: "center", background: "var(--cream)" }}>
+        <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--white)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem", fontSize: "1.75rem" }}>🎸</div>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>Nothing shared yet</div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 280, margin: "0 auto" }}>
@@ -274,39 +285,47 @@ export default function DiscoverPage() {
         </div>
       ) : (
         /* ── Grid browse view ── */
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5, background: "#111", paddingBottom: "5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", padding: "0.75rem", paddingBottom: "5.5rem" }}>
           {items.map(item => {
             const isVideo = item.media_type === "video";
             return (
-              <div key={item.id} onClick={() => openItem(item)} style={{ cursor: "pointer", position: "relative", background: "#1a1a1a", overflow: "hidden" }}>
+              <div key={item.id} onClick={() => openItem(item)} style={{ cursor: "pointer" }}>
                 {/* Thumbnail */}
-                <div style={{ aspectRatio: "9/12", position: "relative", overflow: "hidden" }}>
+                <div style={{ aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", background: "#1a1a1a", position: "relative" }}>
                   {isVideo && item.recording_url ? (
                     <VideoThumbnail src={item.recording_url} />
                   ) : (
-                    /* Audio placeholder */
-                    <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #2C2824 0%, #4a3f38 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                    <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #2C2824 0%, #4a3f38 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
                     </div>
                   )}
-                  {/* Gradient overlay at bottom */}
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "55%", background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)", pointerEvents: "none" }} />
-                  {/* Title + author overlay */}
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.35rem 0.375rem 0.3rem" }}>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.5625rem", color: "#fff", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, marginBottom: "0.1rem" }}>
+                </div>
+                {/* Metadata below thumbnail */}
+                <div style={{ display: "flex", gap: "0.4rem", padding: "0.4rem 0.1rem 0" }}>
+                  {/* Author avatar */}
+                  <div
+                    onClick={e => { e.stopPropagation(); openProfile(item.student_id, item.display_name ?? "Musician"); }}
+                    style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.45rem", fontWeight: 700, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif", cursor: "pointer" }}
+                  >
+                    {initials(item.display_name)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Title */}
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem", color: "var(--charcoal)", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, marginBottom: "0.15rem" }}>
                       {item.title}
                     </div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.4375rem", color: "rgba(255,255,255,0.6)", lineHeight: 1 }}>
+                    {/* Author + date */}
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", lineHeight: 1.3 }}>
                       {item.display_name ?? "Musician"}
                     </div>
-                  </div>
-                  {/* Like + comment counts always visible */}
-                  <div style={{ position: "absolute", top: "0.3rem", right: "0.3rem", display: "flex", alignItems: "center", gap: "0.2rem", background: "rgba(0,0,0,0.55)", borderRadius: 20, padding: "0.15rem 0.35rem" }}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill={item.like_count > 0 ? "#e85d4a" : "none"} stroke={item.like_count > 0 ? "#e85d4a" : "rgba(255,255,255,0.6)"} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: item.like_count > 0 ? "#fff" : "rgba(255,255,255,0.6)", fontWeight: 600 }}>{item.like_count}</span>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "rgba(255,255,255,0.35)" }}>·</span>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={item.comment_count > 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)"} strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: item.comment_count > 0 ? "#fff" : "rgba(255,255,255,0.5)", fontWeight: 600 }}>{item.comment_count}</span>
+                    {/* Like + comment row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.2rem" }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill={item.like_count > 0 ? "#e85d4a" : "none"} stroke={item.like_count > 0 ? "#e85d4a" : "var(--muted)"} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>{item.like_count}</span>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>{item.comment_count}</span>
+                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", marginLeft: "auto" }}>{formatRelative(item.created_at)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
