@@ -57,9 +57,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       .eq("id", teacher.id)
       .single()
       .then(({ data }: { data: { avatar_url?: string | null } | null }) => {
-        if (data) {
-          if (data.avatar_url) setAvatarUrl(data.avatar_url);
-        }
+        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
       });
   }, [(user as Teacher | null)?.id]);
 
@@ -114,7 +112,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     } catch (err) {
       const msg = (err as { message?: string })?.message ?? "Upload failed";
       setUploadError(msg);
-      console.error("avatar upload error:", err);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -134,9 +131,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   if (loading) {
     return (
       <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream)" }}>
-        <div style={{ textAlign: "center" }}>
-          <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>Loading</p>
-        </div>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>Loading</p>
       </div>
     );
   }
@@ -146,171 +141,201 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const teacher = user as Teacher;
   const initials = teacher.displayName.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
+  const avatarCircle = (size: number, fontSize: string) => (
+    <>
+      <label
+        htmlFor="teacher-avatar-upload"
+        className="avatar-upload-label"
+        style={{
+          width: size, height: size,
+          background: avatarUrl ? "transparent" : "var(--charcoal)",
+          borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize, fontFamily: "Inter, sans-serif", fontWeight: 600,
+          color: "var(--white)", flexShrink: 0, letterSpacing: "0.02em",
+          cursor: uploading ? "default" : "pointer",
+          overflow: "hidden", position: "relative",
+        }}
+        title="Click to change photo"
+      >
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={teacher.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          uploading ? "…" : initials
+        )}
+        {!uploading && (
+          <span className="avatar-camera-overlay" style={{
+            position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: size > 30 ? "0.875rem" : "0.5rem",
+            opacity: 0, transition: "opacity 0.15s", borderRadius: "50%",
+          }}>📷</span>
+        )}
+      </label>
+      <input
+        id="teacher-avatar-upload"
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleAvatarUpload}
+        style={{ display: "none" }}
+      />
+    </>
+  );
+
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--cream)" }}>
-      <nav style={{
+    <div className="student-shell">
+
+      {/* ── Mobile header (hidden ≥700px) ── */}
+      <div className="student-mobile-header" style={{
         background: "var(--white)",
         borderBottom: "1px solid var(--border)",
-        padding: "0 1.5rem",
+        padding: "0.75rem 1.25rem",
         display: "flex",
         alignItems: "center",
-        gap: 0,
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
+        justifyContent: "space-between",
       }}>
-        {/* Wordmark → landing page */}
         <Link href="/" style={{
-          fontFamily: "Inter, sans-serif",
-          fontWeight: 600,
-          fontSize: "0.8125rem",
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "var(--charcoal)",
-          padding: "1rem 1.5rem 1rem 0",
-          borderRight: "1px solid var(--border)",
-          marginRight: "1rem",
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-          textDecoration: "none",
+          fontFamily: "Inter, sans-serif", fontWeight: 600,
+          fontSize: "0.875rem", letterSpacing: "0.08em",
+          textTransform: "uppercase", color: "var(--charcoal)", textDecoration: "none",
+        }}>
+          Cadenza
+        </Link>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {avatarCircle(28, "0.625rem")}
+          <button
+            onClick={toggleTheme}
+            style={{
+              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+              padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.625rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              letterSpacing: "0.04em", transition: "all 0.15s",
+            }}
+          >
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
+          <button
+            onClick={() => signOut()}
+            style={{
+              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+              padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.625rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
+            }}
+          >
+            Out
+          </button>
+        </div>
+      </div>
+
+      {/* ── Desktop sidebar (hidden <700px) ── */}
+      <aside className="student-sidebar">
+        {/* Wordmark */}
+        <Link href="/" style={{
+          fontFamily: "Inter, sans-serif", fontWeight: 600,
+          fontSize: "0.8125rem", letterSpacing: "0.1em",
+          textTransform: "uppercase", color: "var(--charcoal)",
+          marginBottom: "2rem", paddingBottom: "1.25rem",
+          borderBottom: "1px solid var(--border)",
+          textDecoration: "none", display: "block",
         }}>
           Cadenza
         </Link>
 
-        {/* Tab links */}
-        <div className="teacher-nav-tabs">
+        {/* Teacher profile */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
+          {avatarCircle(36, "0.75rem")}
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
+              color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {teacher.displayName}
+            </div>
+            {teacher.hasStudio() && (
+              <div style={{
+                fontFamily: "Inter, sans-serif", fontSize: "0.5625rem",
+                color: "var(--muted)", letterSpacing: "0.03em",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                marginTop: "0.125rem",
+              }}>
+                {teacher.studioName}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Nav links */}
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)" }}>
           {tabs.map(t => {
             const active = t.href === "/teacher" ? path === "/teacher" : path.startsWith(t.href);
             const showDot = t.href === "/teacher/chat" && hasUnread && !active;
             return (
               <Link key={t.href} href={t.href} style={{
-                padding: "1rem 0.875rem",
-                fontFamily: "Inter, sans-serif",
-                fontWeight: active ? 500 : 400,
+                display: "flex", alignItems: "center",
+                padding: "0.5rem 0.75rem",
+                borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
+                background: active ? "var(--cream-deep)" : "transparent",
                 color: active ? "var(--charcoal)" : "var(--muted)",
-                textDecoration: "none",
-                fontSize: "0.875rem",
-                borderBottom: active ? "1.5px solid var(--charcoal)" : "1.5px solid transparent",
-                transition: "color 0.15s",
-                whiteSpace: "nowrap",
-                letterSpacing: "0.005em",
-                position: "relative",
+                fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
+                fontSize: "0.875rem", textDecoration: "none",
+                transition: "all 0.15s", letterSpacing: "0.005em",
               }}>
                 {t.label}
                 {showDot && (
                   <span style={{
-                    position: "absolute", top: "0.625rem", right: "0.125rem",
-                    width: 6, height: 6, borderRadius: "50%", background: "#e85d4a",
+                    marginLeft: "auto", width: 6, height: 6,
+                    borderRadius: "50%", background: "#e85d4a", flexShrink: 0,
                   }} />
                 )}
               </Link>
             );
           })}
-        </div>
+        </nav>
 
-        {/* Right side: studio name + avatar + name + theme (hidden on mobile) */}
-        <div className="teacher-nav-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          {teacher.hasStudio() && (
-            <span className="teacher-nav-studio" style={{
-              fontFamily: "Inter, sans-serif",
-              fontSize: "0.6875rem",
-              color: "var(--muted)",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              whiteSpace: "nowrap",
-            }}>
-              {teacher.studioName}
-            </span>
-          )}
-
-          {/* Clickable avatar */}
-          <label
-            htmlFor="teacher-avatar-upload"
-            className="avatar-upload-label"
-            style={{
-              width: 28, height: 28,
-              background: avatarUrl ? "transparent" : "var(--charcoal)",
-              borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 600,
-              color: "var(--white)", flexShrink: 0, letterSpacing: "0.02em",
-              cursor: uploading ? "default" : "pointer",
-              overflow: "hidden", position: "relative",
-            }}
-            title="Click to change photo"
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={teacher.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              uploading ? "…" : initials
-            )}
-            {!uploading && (
-              <span className="avatar-camera-overlay" style={{
-                position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "0.5rem", opacity: 0, transition: "opacity 0.15s", borderRadius: "50%",
-              }}>📷</span>
-            )}
-          </label>
-          <input
-            id="teacher-avatar-upload"
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarUpload}
-            style={{ display: "none" }}
-          />
-
-          <span style={{
-            fontFamily: "Inter, sans-serif", fontWeight: 500,
-            fontSize: "0.8125rem", color: "var(--charcoal)", whiteSpace: "nowrap",
-          }}>
-            {teacher.displayName}
-          </span>
-
+        {/* Footer */}
+        <div style={{ paddingTop: "1.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
           <button
             onClick={toggleTheme}
             style={{
-              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
-              padding: "0.25rem 0.625rem", cursor: "pointer", fontSize: "0.6875rem",
+              width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
+              padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
               fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
-              letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
-              marginLeft: "0.25rem",
+              textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            {theme === "dark" ? "Light" : "Dark"}
+            {theme === "dark" ? "Dark mode" : "Light mode"}
+          </button>
+          <button
+            onClick={() => signOut()}
+            style={{
+              width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
+              padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
+            }}
+          >
+            Sign out
+          </button>
+          <button
+            onClick={() => { setDeleteModalOpen(true); setDeleteConfirmText(""); }}
+            style={{
+              width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
+              padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "#c0392b",
+              textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
+            }}
+          >
+            Delete account
           </button>
         </div>
+      </aside>
 
-        {/* Sign out — outside teacher-nav-right so it's always visible on all screen sizes */}
-        <button
-          onClick={() => signOut()}
-          style={{
-            flexShrink: 0,
-            marginLeft: "0.75rem",
-            background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
-            padding: "0.25rem 0.625rem", cursor: "pointer", fontSize: "0.6875rem",
-            fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
-            letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
-          }}
-        >
-          Sign out
-        </button>
-        <button
-          onClick={() => { setDeleteModalOpen(true); setDeleteConfirmText(""); }}
-          style={{
-            flexShrink: 0,
-            marginLeft: "0.5rem",
-            background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
-            padding: "0.25rem 0.625rem", cursor: "pointer", fontSize: "0.6875rem",
-            fontFamily: "Inter, sans-serif", fontWeight: 500, color: "#c0392b",
-            letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
-          }}
-        >
-          Delete account
-        </button>
-      </nav>
-      <main className="teacher-main">{children}</main>
+      {/* ── Scrollable content area ── */}
+      <div className="student-scroll-area">
+        <main className="teacher-main">{children}</main>
+      </div>
 
       {/* Upload error toast */}
       {uploadError && (

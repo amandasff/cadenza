@@ -32,6 +32,20 @@ export default function Home() {
     });
   }, []);
 
+  // Pre-fill email when switching accounts
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const switchEmail = localStorage.getItem("cadenza-switch-email");
+    if (switchEmail) {
+      localStorage.removeItem("cadenza-switch-email");
+      setEmail(switchEmail);
+      setMode("signin");
+      setTimeout(() => {
+        document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 200);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setError(""); setLoading(true);
     try {

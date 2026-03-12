@@ -95,6 +95,7 @@ export default function ThisWeek() {
   const [assignments, setAssignments] = useState<AssignmentWithContext[]>([]);
   const [recentMessages, setRecentMessages] = useState<MessageRow[]>([]);
   const [teacherName, setTeacherName] = useState<string | null>(null);
+  const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
   const [chatTeacherId, setChatTeacherId] = useState<string | null>(null);
   // Self-rating modal
   const [ratingAssignment, setRatingAssignment] = useState<AssignmentWithContext | null>(null);
@@ -169,8 +170,10 @@ export default function ThisWeek() {
         const chatService = ChatService.getInstance(supabase);
         const msgs = await chatService.getPrivateThread(student.studioId!, student.id, tId);
         setRecentMessages(msgs.slice(-15));
-        const { data: tp } = await supabase.from("profiles").select("display_name").eq("id", tId).single();
-        setTeacherName((tp as { display_name: string } | null)?.display_name ?? "Your teacher");
+        const { data: tp } = await supabase.from("profiles").select("display_name, avatar_url").eq("id", tId).single();
+        const tpd = tp as { display_name: string; avatar_url?: string | null } | null;
+        setTeacherName(tpd?.display_name ?? "Your teacher");
+        setTeacherAvatarUrl(tpd?.avatar_url ?? null);
       }
     } catch { /* ignore */ }
   }, [student?.id]);
@@ -295,16 +298,18 @@ export default function ThisWeek() {
             {/* Teacher avatar circle */}
             <div style={{
               width: 32, height: 32, borderRadius: "50%",
-              background: "linear-gradient(135deg, var(--sage) 0%, #5a9a7a 100%)",
+              background: teacherAvatarUrl ? "transparent" : "linear-gradient(135deg, var(--sage) 0%, #5a9a7a 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
               color: "#fff", fontSize: "0.8125rem", fontWeight: 600,
-              fontFamily: "Inter, sans-serif", flexShrink: 0,
+              fontFamily: "Inter, sans-serif", flexShrink: 0, overflow: "hidden",
             }}>
-              {teacherName ? teacherName.charAt(0).toUpperCase() : "T"}
+              {teacherAvatarUrl
+                ? <img src={teacherAvatarUrl} alt={teacherName ?? "Teacher"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : (teacherName ? teacherName.charAt(0).toUpperCase() : "T")}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                {teacherName ?? "Your Teacher"}
+                {teacherName ?? "Your teacher"}
               </div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>
                 Tap to open chat
