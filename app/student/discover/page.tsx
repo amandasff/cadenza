@@ -229,8 +229,8 @@ export default function DiscoverPage() {
         <div style={{ padding: "1.25rem 1rem 0.75rem", background: "var(--white)", borderBottom: "1px solid var(--border)" }}>
           <div className="skeleton" style={{ height: 28, width: 120, borderRadius: 4 }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: "2px" }}>
-          {[1,2,3,4,5,6].map(i => <div key={i} className="skeleton" style={{ aspectRatio: "9/14", width: "100%" }} />)}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5, padding: "1.5px" }}>
+          {[1,2,3,4,5,6,7,8,9].map(i => <div key={i} className="skeleton" style={{ aspectRatio: "9/12", width: "100%" }} />)}
         </div>
       </div>
     );
@@ -274,13 +274,13 @@ export default function DiscoverPage() {
         </div>
       ) : (
         /* ── Grid browse view ── */
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, background: "#111", paddingBottom: "5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1.5, background: "#111", paddingBottom: "5rem" }}>
           {items.map(item => {
             const isVideo = item.media_type === "video";
             return (
               <div key={item.id} onClick={() => openItem(item)} style={{ cursor: "pointer", position: "relative", background: "#1a1a1a", overflow: "hidden" }}>
                 {/* Thumbnail */}
-                <div style={{ aspectRatio: "9/14", position: "relative", overflow: "hidden" }}>
+                <div style={{ aspectRatio: "9/12", position: "relative", overflow: "hidden" }}>
                   {isVideo && item.recording_url ? (
                     <VideoThumbnail src={item.recording_url} />
                   ) : (
@@ -292,16 +292,16 @@ export default function DiscoverPage() {
                   {/* Gradient overlay at bottom */}
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "55%", background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)", pointerEvents: "none" }} />
                   {/* Title + author overlay */}
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.5rem 0.5rem 0.4rem" }}>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "#fff", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, marginBottom: "0.2rem" }}>
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.35rem 0.375rem 0.3rem" }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.5625rem", color: "#fff", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, marginBottom: "0.1rem" }}>
                       {item.title}
                     </div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "rgba(255,255,255,0.65)", lineHeight: 1 }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.4375rem", color: "rgba(255,255,255,0.6)", lineHeight: 1 }}>
                       {item.display_name ?? "Musician"}
                     </div>
                   </div>
                   {/* Like + comment counts always visible */}
-                  <div style={{ position: "absolute", top: "0.4rem", right: "0.4rem", display: "flex", alignItems: "center", gap: "0.3rem", background: "rgba(0,0,0,0.55)", borderRadius: 20, padding: "0.2rem 0.45rem" }}>
+                  <div style={{ position: "absolute", top: "0.3rem", right: "0.3rem", display: "flex", alignItems: "center", gap: "0.2rem", background: "rgba(0,0,0,0.55)", borderRadius: 20, padding: "0.15rem 0.35rem" }}>
                     <svg width="9" height="9" viewBox="0 0 24 24" fill={item.like_count > 0 ? "#e85d4a" : "none"} stroke={item.like_count > 0 ? "#e85d4a" : "rgba(255,255,255,0.6)"} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
                     <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: item.like_count > 0 ? "#fff" : "rgba(255,255,255,0.6)", fontWeight: 600 }}>{item.like_count}</span>
                     <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "rgba(255,255,255,0.35)" }}>·</span>
