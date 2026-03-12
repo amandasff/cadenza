@@ -2468,12 +2468,12 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       badge: null, active: true,
     },
     {
-      view: "sightRead" as View, icon: "📖", title: "Sight Reading",
-      desc: "Four notes appear on the staff — name them left to right. Three levels: beginner to full treble + bass.", badge: null, active: true,
+      view: "menu" as View, icon: "📖", title: "Sight Reading",
+      desc: "Four notes appear on the staff — name them left to right. Three levels: beginner to full treble + bass.", badge: null, active: false,
     },
     {
-      view: "rhythmEcho" as View, icon: "🥁", title: "Rhythm Echo",
-      desc: "Listen to a rhythm, then tap it back. 5 rounds scored on accuracy. Three difficulty levels.", badge: null, active: true,
+      view: "menu" as View, icon: "🥁", title: "Rhythm Echo",
+      desc: "Listen to a rhythm, then tap it back. 5 rounds scored on accuracy. Three difficulty levels.", badge: null, active: false,
     },
     {
       view: "fretboard" as View, icon: "🎸", title: "Fretboard Notes",
