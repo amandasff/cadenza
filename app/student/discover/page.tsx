@@ -202,7 +202,7 @@ export default function DiscoverPage() {
   return (
     <div style={{ minHeight: "100%", background: "var(--cream)" }}>
       {/* Header */}
-      <div style={{ padding: "2rem 1.5rem 1.5rem", background: "linear-gradient(180deg, var(--white) 0%, var(--cream) 100%)" }}>
+      <div style={{ padding: "2rem 1rem 1rem", background: "var(--white)", borderBottom: "1px solid var(--border)" }}>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "2rem", color: "var(--charcoal)", letterSpacing: "-0.01em", marginBottom: "0.25rem" }}>
           Discover
         </h1>
@@ -247,124 +247,173 @@ export default function DiscoverPage() {
           </p>
         </div>
       ) : (
-        <div style={{ padding: "0 1.25rem 3rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div style={{ paddingBottom: "5rem", display: "flex", flexDirection: "column", gap: "0" }}>
           {items.map(item => {
             const isVideo = item.media_type === "video";
             const isPlaying = playingId === item.id;
             const commentsOpen = expandedComments === item.id;
             const itemComments = commentsMap[item.id] ?? [];
+            const initials = (item.display_name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
             return (
-              <div key={item.id} style={{ background: "var(--white)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
-                {/* Video thumbnail */}
+              <div key={item.id} style={{ background: "var(--white)", borderBottom: "8px solid var(--cream)" }}>
+
+                {/* Full-bleed video */}
                 {isVideo && item.recording_url && (
-                  <div style={{ position: "relative", background: "#111", aspectRatio: "16/9" }}>
+                  <div style={{ position: "relative", background: "#0d0d0d", aspectRatio: "16/9", width: "100%" }}>
                     {isPlaying ? (
                       <video src={item.recording_url} autoPlay controls playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     ) : (
-                      <div onClick={() => setPlayingId(item.id)} style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "absolute", inset: 0 }}>
-                        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.3)" }}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1C1916"><path d="M5 3l14 9-14 9V3z" /></svg>
+                      <div onClick={() => setPlayingId(item.id)} style={{ position: "absolute", inset: 0, cursor: "pointer" }}>
+                        {/* Dark gradient for readability */}
+                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)" }} />
+                        {/* Play button */}
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", border: "2px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 3 }}><path d="M5 3l14 9-14 9V3z" /></svg>
+                          </div>
+                        </div>
+                        {/* Duration / title hint at bottom */}
+                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.75rem 0.875rem" }}>
+                          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.6)", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                            {item.title}
+                          </div>
                         </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Card body */}
-                <div style={{ padding: "0.875rem 1rem 0" }}>
-                  {/* Author row */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
-                      {(item.display_name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                {/* Audio card header (for non-video) */}
+                {!isVideo && (
+                  <div style={{ background: "linear-gradient(135deg, #2C2824 0%, #4a3f38 100%)", padding: "1.25rem 1rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 8, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{item.display_name ?? "Musician"}</div>
-                      <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>{formatRelative(item.created_at)}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "#fff", lineHeight: 1.3 }}>{item.title}</div>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "rgba(255,255,255,0.6)", marginTop: "0.2rem" }}>{item.display_name ?? "Musician"}</div>
                     </div>
-                    {isVideo && (
-                      <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "rgba(91,79,207,0.08)", color: "#5B4FCF", fontFamily: "Inter, sans-serif" }}>
-                        Cover
-                      </span>
-                    )}
                   </div>
+                )}
 
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>{item.title}</div>
+                {/* Card body */}
+                <div style={{ padding: "0.75rem 0.875rem 0" }}>
+                  {/* YouTube-style: avatar left, title+meta right */}
+                  {isVideo && !isPlaying && (
+                    <div style={{ display: "flex", gap: "0.625rem", marginBottom: "0.5rem" }}>
+                      <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 700, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif", letterSpacing: "0.03em" }}>
+                        {initials}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, paddingTop: "0.1rem" }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)", lineHeight: 1.35, marginBottom: "0.2rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                          {item.title}
+                        </div>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
+                          {item.display_name ?? "Musician"} · {formatRelative(item.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
+                  {/* When video is playing, show compact author below */}
+                  {isVideo && isPlaying && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", fontWeight: 700, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
+                        {initials}
+                      </div>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
+                        {item.display_name ?? "Musician"} · {formatRelative(item.created_at)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Audio player + meta for non-video */}
+                  {!isVideo && (
+                    <div style={{ marginBottom: "0.25rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", fontWeight: 700, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
+                          {initials}
+                        </div>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
+                          {item.display_name ?? "Musician"} · {formatRelative(item.created_at)}
+                        </div>
+                      </div>
+                      {item.recording_url && <AudioPlayer src={item.recording_url} />}
+                    </div>
+                  )}
+
+                  {/* Description */}
                   {item.description && (
-                    <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.6, margin: "0 0 0.75rem", fontStyle: "italic" }}>
+                    <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.55, margin: "0 0 0.5rem", fontStyle: "italic" }}>
                       &ldquo;{item.description}&rdquo;
                     </p>
                   )}
 
-                  {!isVideo && item.recording_url && (
-                    <div style={{ marginTop: "0.625rem", marginBottom: "0.125rem" }}>
-                      <AudioPlayer src={item.recording_url} />
-                    </div>
-                  )}
-
-                  {/* Like + comment bar */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", borderTop: "1px solid var(--border)", marginTop: "0.75rem", padding: "0.375rem 0" }}>
+                  {/* Action bar */}
+                  <div style={{ display: "flex", alignItems: "center", paddingTop: "0.25rem", paddingBottom: "0.625rem", gap: "0.125rem" }}>
                     <button
                       onClick={() => toggleLike(item)}
-                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.625rem", borderRadius: 7, border: "none", background: "none", cursor: currentUserId ? "pointer" : "default", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: item.user_liked ? "#e85d4a" : "var(--muted)", fontWeight: item.user_liked ? 600 : 400, transition: "all 0.15s" }}
+                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.4rem 0.75rem 0.4rem 0", border: "none", background: "none", cursor: currentUserId ? "pointer" : "default", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: item.user_liked ? "#e85d4a" : "var(--muted)", fontWeight: 500, transition: "color 0.15s" }}
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill={item.user_liked ? "#e85d4a" : "none"} stroke={item.user_liked ? "#e85d4a" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={item.user_liked ? "#e85d4a" : "none"} stroke={item.user_liked ? "#e85d4a" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                       </svg>
-                      <span>{item.like_count > 0 ? item.like_count : ""}</span>
+                      <span>{item.like_count > 0 ? item.like_count : "Like"}</span>
                     </button>
 
                     <button
                       onClick={() => toggleComments(item.id)}
-                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.625rem", borderRadius: 7, border: "none", background: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: commentsOpen ? "var(--charcoal)" : "var(--muted)", fontWeight: commentsOpen ? 600 : 400, transition: "all 0.15s" }}
+                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.4rem 0.75rem", border: "none", background: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: commentsOpen ? "var(--charcoal)" : "var(--muted)", fontWeight: commentsOpen ? 600 : 500, transition: "color 0.15s" }}
                     >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                       </svg>
-                      <span>{item.comment_count > 0 ? item.comment_count : ""} {item.comment_count === 1 ? "comment" : item.comment_count > 1 ? "comments" : "comment"}</span>
+                      <span>{item.comment_count > 0 ? `${item.comment_count} comment${item.comment_count > 1 ? "s" : ""}` : "Comment"}</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Comments section */}
                 {commentsOpen && (
-                  <div style={{ borderTop: "1px solid var(--border)", background: "var(--cream)", padding: "0.875rem 1rem" }}>
+                  <div style={{ borderTop: "1px solid var(--border)", background: "var(--cream)", padding: "1rem 0.875rem" }}>
                     {itemComments.length === 0 && (
-                      <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center", margin: "0 0 0.75rem", fontStyle: "italic" }}>
+                      <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 0.875rem", fontStyle: "italic" }}>
                         No comments yet — be the first!
                       </p>
                     )}
 
-                    {itemComments.map(c => (
-                      <div key={c.id} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", fontWeight: 600, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif", marginTop: 2 }}>
-                          {(c.display_name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", gap: "0.4rem", alignItems: "baseline" }}>
-                            <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "var(--charcoal)" }}>{c.display_name ?? "Musician"}</span>
-                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{formatRelative(c.created_at)}</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem", marginBottom: itemComments.length > 0 ? "0.875rem" : 0 }}>
+                      {itemComments.map(c => (
+                        <div key={c.id} style={{ display: "flex", gap: "0.625rem" }}>
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", fontWeight: 700, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif", marginTop: 1 }}>
+                            {(c.display_name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
-                          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.1rem 0 0", lineHeight: 1.5 }}>{c.content}</p>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", gap: "0.4rem", alignItems: "baseline", marginBottom: "0.15rem" }}>
+                              <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{c.display_name ?? "Musician"}</span>
+                              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{formatRelative(c.created_at)}</span>
+                            </div>
+                            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", margin: 0, lineHeight: 1.5 }}>{c.content}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
 
                     {currentUserId && (
-                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
                         <input
                           type="text"
                           placeholder="Add a comment…"
                           value={commentText}
                           onChange={e => setCommentText(e.target.value)}
                           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(item.id); } }}
-                          style={{ flex: 1, borderRadius: 7, border: "1px solid var(--border)", padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--white)", color: "var(--charcoal)", outline: "none" }}
+                          style={{ flex: 1, borderRadius: 20, border: "1px solid var(--border)", padding: "0.5rem 1rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--white)", color: "var(--charcoal)", outline: "none" }}
                         />
                         <button
                           onClick={() => postComment(item.id)}
                           disabled={!commentText.trim() || commentPosting}
-                          style={{ padding: "0.5rem 0.875rem", borderRadius: 7, border: "none", background: commentText.trim() ? "var(--charcoal)" : "var(--border)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", cursor: commentText.trim() ? "pointer" : "default", transition: "background 0.15s", flexShrink: 0 }}
+                          style={{ padding: "0.5rem 1rem", borderRadius: 20, border: "none", background: commentText.trim() ? "var(--charcoal)" : "var(--border)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", cursor: commentText.trim() ? "pointer" : "default", transition: "background 0.15s", flexShrink: 0 }}
                         >
                           Post
                         </button>
