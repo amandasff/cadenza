@@ -2432,58 +2432,67 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
 
   const games = [
     {
-      view: "noteId" as View, icon: "🎵", title: "Note Identification",
+      view: "noteId" as View, icon: "🎵", title: "Note Identification", category: "Piano",
       desc: "A note flashes on the staff — name it as fast as you can. 30s rounds, streak multipliers.",
       badge: scores.noteId_treble > 0 ? `🏆 ${Math.max(scores.noteId_treble, scores.noteId_bass).toLocaleString()}` : null,
       active: true,
     },
     {
-      view: "interval" as View, icon: "👂", title: "Interval Ear Training",
+      view: "interval" as View, icon: "👂", title: "Interval Ear Training", category: "Ear Training",
       desc: "Two notes play in sequence. Identify the interval. RCM-graded difficulty: Prep → Grade 8.",
       badge: null, active: true,
     },
     {
-      view: "chord" as View, icon: "🎼", title: "Chord Quality",
+      view: "chord" as View, icon: "🎼", title: "Chord Quality", category: "Ear Training",
       desc: "A chord plays. Major, minor, diminished, or augmented — train your ear to tell them apart.",
       badge: null, active: true,
     },
     {
-      view: "terms" as View, icon: "🗣", title: "Music Terms",
+      view: "terms" as View, icon: "🗣", title: "Music Terms", category: "Theory",
       desc: "A term flashes — pick its definition. Covers all RCM vocabulary: tempo, dynamics, articulation, expression, form.",
       badge: null, active: true,
     },
     {
-      view: "keySig" as View, icon: "🔑", title: "Key Signatures",
+      view: "keySig" as View, icon: "🔑", title: "Key Signatures", category: "Theory",
       desc: "See a key signature and identify the major key or its relative minor. All 15 major keys.",
       badge: null, active: true,
     },
     {
-      view: "scale" as View, icon: "🎶", title: "Scale Ear Training",
+      view: "scale" as View, icon: "🎶", title: "Scale Ear Training", category: "Ear Training",
       desc: "A scale plays ascending and descending. Is it major, natural minor, harmonic minor, or melodic minor?",
       badge: null, active: true,
     },
     {
-      view: "rcm" as View, icon: "📋", title: "RCM Exam Guide",
+      view: "rcm" as View, icon: "📋", title: "RCM Exam Guide", category: "Reference",
       desc: "Level-by-level breakdown of exam requirements: pieces, technical, ear training, theory co-requisites, and passing marks.",
       badge: null, active: true,
     },
     {
-      view: "menu" as View, icon: "📖", title: "Sight Reading",
+      view: "menu" as View, icon: "📖", title: "Sight Reading", category: "Piano",
       desc: "Four notes appear on the staff — name them left to right. Three levels: beginner to full treble + bass.", badge: null, active: false,
     },
     {
-      view: "menu" as View, icon: "🥁", title: "Rhythm Echo",
+      view: "menu" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm",
       desc: "Listen to a rhythm, then tap it back. 5 rounds scored on accuracy. Three difficulty levels.", badge: null, active: false,
     },
     {
-      view: "fretboard" as View, icon: "🎸", title: "Fretboard Notes",
+      view: "fretboard" as View, icon: "🎸", title: "Fretboard Notes", category: "Guitar",
       desc: "A fret position lights up on the guitar neck — name the note. Three levels: open position to full neck.", badge: null, active: true,
     },
     {
-      view: "guitarChord" as View, icon: "🤘", title: "Guitar Chord Finder",
+      view: "guitarChord" as View, icon: "🤘", title: "Guitar Chord Finder", category: "Guitar",
       desc: "See a chord diagram and identify the chord name. Covers open chords, barre chords, and extended voicings.", badge: null, active: true,
     },
   ];
+
+  const categoryColors: Record<string, { bg: string; text: string }> = {
+    "Piano":        { bg: "rgba(99,102,241,0.1)",  text: "#6366f1" },
+    "Guitar":       { bg: "rgba(234,88,12,0.1)",   text: "#ea580c" },
+    "Ear Training": { bg: "rgba(20,184,166,0.1)",  text: "#0d9488" },
+    "Theory":       { bg: "rgba(168,85,247,0.1)",  text: "#9333ea" },
+    "Rhythm":       { bg: "rgba(234,179,8,0.1)",   text: "#ca8a04" },
+    "Reference":    { bg: "rgba(100,116,139,0.1)", text: "#64748b" },
+  };
 
   return (
     <div style={{ minHeight: "100%", background: "var(--cream)", padding: "2.5rem 1.5rem", fontFamily: "Inter, sans-serif" }}>
@@ -2500,6 +2509,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>{g.title}</span>
+                    {(() => { const c = categoryColors[g.category]; return c ? <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: c.bg, color: c.text, borderRadius: 4, padding: "0.15rem 0.4rem" }}>{g.category}</span> : null; })()}
                     {!g.active && <span style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--muted)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.125rem 0.375rem" }}>Soon</span>}
                     {g.badge && <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{g.badge}</span>}
                   </div>
