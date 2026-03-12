@@ -12,6 +12,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Pre-fill email if switching accounts
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const switchEmail = localStorage.getItem("cadenza-switch-email");
+      if (switchEmail) { setEmail(switchEmail); localStorage.removeItem("cadenza-switch-email"); }
+    }
+  }, []);
+
   // Skip login page if already authenticated
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();

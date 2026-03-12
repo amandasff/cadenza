@@ -92,7 +92,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     }
   }, [user, loading, path, router]);
 
-  // Load avatar from DB on mount
+  // Load avatar from DB on mount + save account to localStorage for switcher
   useEffect(() => {
     const student = user as Student | null;
     if (!student?.id) return;
@@ -106,8 +106,18 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         if (data) {
           if (data.avatar_url) setAvatarUrl(data.avatar_url);
         }
+        // Save this account to the switcher store
+        if (typeof window !== "undefined" && user?.email) {
+          try {
+            const stored = JSON.parse(localStorage.getItem("cadenza-accounts") ?? "[]") as Array<{email: string; name: string; avatar: string | null}>;
+            const idx = stored.findIndex(a => a.email === user.email);
+            const entry = { email: user.email, name: student.displayName, avatar: data?.avatar_url ?? null };
+            if (idx >= 0) stored[idx] = entry; else stored.unshift(entry);
+            localStorage.setItem("cadenza-accounts", JSON.stringify(stored.slice(0, 5)));
+          } catch { /* ignore */ }
+        }
       });
-  }, [(user as Student | null)?.id]);
+  }, [(user as Student | null)?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load sibling family members
   const loadSiblings = useCallback(async () => {
@@ -420,39 +430,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
 
-        {/* Sibling switcher */}
-        {(siblings.length > 0 || familyCode) && (
-          <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)" }}>
-                Family
-              </span>
-              <button onClick={() => { setFamilyModalOpen(true); setSetPinSuccess(false); setSetPinError(null); setJoinError(null); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.04em", textTransform: "uppercase", padding: 0 }}>
-                Manage
-              </button>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {siblings.map(s => {
-                const initials2 = s.displayName.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
-                return (
-                  <button key={s.id} onClick={() => { setSwitchTarget(s); setSwitchPin(""); setSwitchError(null); }} title={`Switch to ${s.displayName}`} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: s.avatarUrl ? "transparent" : "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 600, color: "var(--white)", overflow: "hidden", border: "2px solid var(--border)" }}>
-                      {s.avatarUrl ? <img src={s.avatarUrl} alt={s.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials2}
-                    </div>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", maxWidth: 36, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.displayName.split(" ")[0]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        {!familyCode && siblings.length === 0 && (
-          <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
-            <button onClick={() => { setFamilyModalOpen(true); setJoinError(null); }} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.3rem 0.625rem", cursor: "pointer", fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s" }}>
-              + Add siblings
-            </button>
-          </div>
-        )}
+        {/* Account switcher */}
+        <AccountSwitcher currentEmail={user?.email ?? null} onSwitch={() => signOut()} />
 
         {/* Nav links */}
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
@@ -823,5 +802,70 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     )}
     </PlayerProvider>
     </PracticeProvider>
+  );
+}
+
+// ── Google-style account switcher ─────────────────────────────────────────────
+
+function AccountSwitcher({ currentEmail, onSwitch }: { currentEmail: string | null; onSwitch: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [accounts, setAccounts] = React.useState<Array<{email: string; name: string; avatar: string | null}>>([]);
+  const router = useRouter();
+
+  React.useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("cadenza-accounts") ?? "[]");
+      setAccounts(stored);
+    } catch { /* ignore */ }
+  }, [open]);
+
+  const others = accounts.filter(a => a.email !== currentEmail);
+
+  function switchTo(email: string) {
+    localStorage.setItem("cadenza-switch-email", email);
+    onSwitch(); // signs out → redirects to /
+  }
+
+  function addAccount() {
+    onSwitch(); // sign out → user can log in with new account
+  }
+
+  if (!open) {
+    return (
+      <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+        <button onClick={() => setOpen(true)} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.3rem 0.625rem", cursor: "pointer", fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s" }}>
+          Switch account
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)", background: "var(--cream)", borderRadius: 6, padding: "0.75rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)" }}>Accounts</span>
+        <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", color: "var(--muted)", lineHeight: 1, padding: 0 }}>×</button>
+      </div>
+
+      {others.length > 0 && others.map(a => {
+        const ini = a.name.split(" ").map((w: string) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+        return (
+          <button key={a.email} onClick={() => switchTo(a.email)} style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 6, padding: "0.5rem 0.625rem", cursor: "pointer", marginBottom: "0.375rem" }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: a.avatar ? "transparent" : "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", fontFamily: "Inter, sans-serif", fontWeight: 700, color: "var(--white)", overflow: "hidden", flexShrink: 0 }}>
+              {a.avatar ? <img src={a.avatar} alt={a.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : ini}
+            </div>
+            <div style={{ minWidth: 0, textAlign: "left" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.email}</div>
+            </div>
+          </button>
+        );
+      })}
+
+      <button onClick={addAccount} style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.5rem", background: "none", border: "1px dashed var(--border-strong)", borderRadius: 6, padding: "0.5rem 0.625rem", cursor: "pointer" }}>
+        <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1rem", color: "var(--muted)" }}>+</div>
+        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>Add another account</span>
+      </button>
+    </div>
   );
 }

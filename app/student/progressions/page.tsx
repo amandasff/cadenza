@@ -129,27 +129,28 @@ type Difficulty = "easy" | "medium" | "hard";
 type SongEntry = {
   title: string;
   artist: string;
-  label: string;     // progression label shown after answer
-  numerals: string[]; // correct progression
+  label: string;
+  numerals: string[];
   style: string;
-  youtubeSearch: string;
+  youtubeId: string;   // direct YouTube video ID — reliable embed
 };
 
+// All IDs are official/VEVO uploads. Update if a video is removed.
 const REAL_SONGS: SongEntry[] = [
-  { title: "Let It Be",            artist: "The Beatles",    label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Pop/Rock",    youtubeSearch: "Let+It+Be+Beatles+official" },
-  { title: "With or Without You",  artist: "U2",             label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Rock",        youtubeSearch: "With+Or+Without+You+U2+official" },
-  { title: "No Woman No Cry",      artist: "Bob Marley",     label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Reggae",      youtubeSearch: "No+Woman+No+Cry+Bob+Marley" },
-  { title: "Don't Stop Believin'", artist: "Journey",        label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Rock",        youtubeSearch: "Don't+Stop+Believin+Journey+official" },
-  { title: "Stand By Me",          artist: "Ben E. King",    label: "I – vi – IV – V", numerals: ["I","vi","IV","V"], style: "50s Soul",    youtubeSearch: "Stand+By+Me+Ben+E+King+official" },
-  { title: "Earth Angel",          artist: "The Penguins",   label: "I – vi – IV – V", numerals: ["I","vi","IV","V"], style: "Doo-wop",     youtubeSearch: "Earth+Angel+Penguins+official" },
-  { title: "La Bamba",             artist: "Ritchie Valens", label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock/Folk",   youtubeSearch: "La+Bamba+Ritchie+Valens+official" },
-  { title: "Wild Thing",           artist: "The Troggs",     label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock",        youtubeSearch: "Wild+Thing+Troggs+official" },
-  { title: "Twist and Shout",      artist: "The Beatles",    label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock/R&B",    youtubeSearch: "Twist+And+Shout+Beatles+official" },
-  { title: "Despacito",            artist: "Luis Fonsi",     label: "vi – IV – I – V", numerals: ["vi","IV","I","V"], style: "Latin Pop",   youtubeSearch: "Despacito+Luis+Fonsi+official" },
-  { title: "Royals",               artist: "Lorde",          label: "vi – IV – I – V", numerals: ["vi","IV","I","V"], style: "Indie Pop",   youtubeSearch: "Royals+Lorde+official" },
-  { title: "All of Me",            artist: "John Legend",    label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Pop/Soul",    youtubeSearch: "All+Of+Me+John+Legend+official" },
-  { title: "Autumn Leaves",        artist: "Jazz Standard",  label: "ii – V – I – I",  numerals: ["ii","V","I","I"],  style: "Jazz",        youtubeSearch: "Autumn+Leaves+jazz+standard" },
-  { title: "Fly Me to the Moon",   artist: "Frank Sinatra",  label: "I – vi – ii – V", numerals: ["I","vi","ii","V"], style: "Jazz",        youtubeSearch: "Fly+Me+To+The+Moon+Sinatra+official" },
+  { title: "Let It Be",            artist: "The Beatles",    label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Pop/Rock",   youtubeId: "QDYfEBY9NM4" },
+  { title: "With or Without You",  artist: "U2",             label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Rock",       youtubeId: "XmSdTa9kaiQ" },
+  { title: "No Woman No Cry",      artist: "Bob Marley",     label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Reggae",     youtubeId: "x6S5fBFYkE0" },
+  { title: "Don't Stop Believin'", artist: "Journey",        label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Rock",       youtubeId: "1k8craCGpgs" },
+  { title: "Stand By Me",          artist: "Ben E. King",    label: "I – vi – IV – V", numerals: ["I","vi","IV","V"], style: "50s Soul",   youtubeId: "hwZNL7QVJjE" },
+  { title: "La Bamba",             artist: "Ritchie Valens", label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock/Folk",  youtubeId: "vIGtLtDuRQs" },
+  { title: "Twist and Shout",      artist: "The Beatles",    label: "I – IV – V – I",  numerals: ["I","IV","V","I"],  style: "Rock/R&B",   youtubeId: "b-glYQNtCo0" },
+  { title: "Despacito",            artist: "Luis Fonsi",     label: "vi – IV – I – V", numerals: ["vi","IV","I","V"], style: "Latin Pop",  youtubeId: "kTJczUoc26U" },
+  { title: "Royals",               artist: "Lorde",          label: "vi – IV – I – V", numerals: ["vi","IV","I","V"], style: "Indie Pop",  youtubeId: "nlcIKh6sBtc" },
+  { title: "All of Me",            artist: "John Legend",    label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Pop/Soul",   youtubeId: "450p7goxZqg" },
+  { title: "Africa",               artist: "Toto",           label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Pop/Rock",   youtubeId: "FTQbiNvZqaY" },
+  { title: "Somewhere Only We Know", artist: "Keane",        label: "I – V – vi – IV", numerals: ["I","V","vi","IV"], style: "Indie Rock", youtubeId: "Oalbertpmq9rA" },
+  { title: "Autumn Leaves",        artist: "Jazz Standard",  label: "ii – V – I – I",  numerals: ["ii","V","I","I"],  style: "Jazz",       youtubeId: "r-Z8KuwI7Gc" },
+  { title: "Fly Me to the Moon",   artist: "Frank Sinatra",  label: "I – vi – ii – V", numerals: ["I","vi","ii","V"], style: "Jazz",       youtubeId: "ZEcqHA7dbwM" },
 ];
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -678,8 +679,7 @@ function RealSongsGame() {
     timeoutRef.current = setTimeout(() => nextSong(songIndex), 2800);
   }
 
-  // YouTube embed — search playlist shows top result for the song
-  const embedSrc = `https://www.youtube.com/embed?listType=search&list=${song.youtubeSearch}&autoplay=0`;
+  const embedSrc = `https://www.youtube.com/embed/${song.youtubeId}?rel=0`;
 
   return (
     <>
