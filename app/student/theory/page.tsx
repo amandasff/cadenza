@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import Link from "next/link";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Staff layout constants (all in px)
@@ -2502,6 +2503,23 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
           <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>Fast-paced rounds, streak multipliers, personal bests. The best theory practice happens in small daily doses.</p>
         </div>
         <div style={{ display: "grid", gap: "0.875rem" }}>
+          {/* Pitch Trainer — links to its own page */}
+          <Link href="/student/pitch" style={{ textDecoration: "none" }}>
+            <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(20,184,166,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.2rem" }}>🎹</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>Pitch Trainer</span>
+                    <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: "rgba(20,184,166,0.1)", color: "#0d9488", borderRadius: 4, padding: "0.15rem 0.4rem" }}>Ear Training</span>
+                  </div>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>A note plays — identify it by ear. Three difficulty levels from pentatonic to all 12 chromatic notes. Build absolute pitch recognition.</p>
+                </div>
+                <span style={{ fontSize: "1rem", color: "var(--muted)", flexShrink: 0, alignSelf: "center" }}>›</span>
+              </div>
+            </div>
+          </Link>
+
           {games.map(g => (
             <div key={g.title} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", opacity: g.active ? 1 : 0.48, cursor: g.active ? "pointer" : "default" }} onClick={g.active ? () => onSelect(g.view) : undefined}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
