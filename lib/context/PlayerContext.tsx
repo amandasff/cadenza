@@ -7,6 +7,14 @@ export interface PlayerTrack {
   thumbnail?: string;
 }
 
+export interface DiscoverTrack {
+  id: string;
+  title: string;
+  displayName?: string;
+  mediaType: "audio" | "video";
+  recordingUrl: string;
+}
+
 interface PlayerContextValue {
   current: PlayerTrack | null;
   queue: PlayerTrack[];
@@ -17,6 +25,11 @@ interface PlayerContextValue {
   prev: () => void;
   stop: () => void;
   addToQueue: (track: PlayerTrack) => void;
+  discoverTrack: DiscoverTrack | null;
+  playDiscover: (track: DiscoverTrack) => void;
+  stopDiscover: () => void;
+  suppressMiniPlayer: boolean;
+  setSuppressMiniPlayer: (v: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -24,6 +37,16 @@ const PlayerContext = createContext<PlayerContextValue | null>(null);
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
+  const [discoverTrack, setDiscoverTrack] = useState<DiscoverTrack | null>(null);
+  const [suppressMiniPlayer, setSuppressMiniPlayer] = useState(false);
+
+  const playDiscover = useCallback((track: DiscoverTrack) => {
+    setDiscoverTrack(track);
+  }, []);
+
+  const stopDiscover = useCallback(() => {
+    setDiscoverTrack(null);
+  }, []);
 
   const current = queue[queueIndex] ?? null;
 
@@ -65,7 +88,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <PlayerContext.Provider value={{ current, queue, queueIndex, play, playIndex, next, prev, stop, addToQueue }}>
+    <PlayerContext.Provider value={{ current, queue, queueIndex, play, playIndex, next, prev, stop, addToQueue, discoverTrack, playDiscover, stopDiscover, suppressMiniPlayer, setSuppressMiniPlayer }}>
       {children}
     </PlayerContext.Provider>
   );

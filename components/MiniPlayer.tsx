@@ -1,12 +1,101 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { usePlayer } from "../lib/context/PlayerContext";
 
 export default function MiniPlayer() {
-  const { current, queue, queueIndex, next, prev, stop, playIndex } = usePlayer();
+  const { current, queue, queueIndex, next, prev, stop, playIndex, discoverTrack, stopDiscover, suppressMiniPlayer } = usePlayer();
   const [expanded, setExpanded] = useState(false);
+  const [playing, setPlaying] = useState(true);
+  const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
 
-  if (!current) return null;
+  // Auto-play when a new discover track is set
+  useEffect(() => {
+    if (discoverTrack) {
+      setPlaying(true);
+      setExpanded(false);
+    }
+  }, [discoverTrack?.id]);
+
+  if (!current && !discoverTrack) return null;
+  if (suppressMiniPlayer) return null;
+
+  // ── Discover track mini player ──
+  if (discoverTrack && !current) {
+    const isVideo = discoverTrack.mediaType === "video";
+    return (
+      <div style={{
+        position: "fixed",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 56px)",
+        left: 0, right: 0,
+        background: "#1C1916",
+        borderTop: "1px solid rgba(255,255,255,0.15)",
+        zIndex: 200,
+      }}>
+        {/* Hidden media element */}
+        {isVideo ? (
+          <video
+            ref={mediaRef as React.RefObject<HTMLVideoElement>}
+            src={discoverTrack.recordingUrl}
+            autoPlay
+            playsInline
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+          />
+        ) : (
+          <audio
+            ref={mediaRef as React.RefObject<HTMLAudioElement>}
+            src={discoverTrack.recordingUrl}
+            autoPlay
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
+          />
+        )}
+
+        <div style={{ display: "flex", alignItems: "center", padding: "0.5rem 0.875rem", gap: "0.75rem" }}>
+          {/* Icon */}
+          <div style={{ width: 32, height: 32, borderRadius: 4, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {isVideo ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            )}
+          </div>
+
+          {/* Title + author */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "#F0EDE7", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {discoverTrack.title}
+            </div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "rgba(255,255,255,0.45)", marginTop: "0.1rem" }}>
+              {discoverTrack.displayName ?? "Musician"}
+            </div>
+          </div>
+
+          {/* Play/pause + stop */}
+          <button
+            onClick={() => {
+              const el = mediaRef.current;
+              if (!el) return;
+              if (playing) { el.pause(); setPlaying(false); }
+              else { void el.play(); setPlaying(true); }
+            }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#F0EDE7", padding: "0 0.25rem", fontSize: "1rem", lineHeight: 1 }}
+          >
+            {playing ? "⏸" : "▶"}
+          </button>
+          <button
+            onClick={stopDiscover}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: "0 0.25rem", fontSize: "0.875rem", lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const hasPrev = queueIndex > 0;
   const hasNext = queueIndex < queue.length - 1;

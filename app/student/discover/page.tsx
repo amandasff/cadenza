@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import type { PortfolioItemRow } from "../../../lib/services/PortfolioService";
 import AudioPlayer from "../../../components/AudioPlayer";
+import { usePlayer } from "../../../lib/context/PlayerContext";
 
 type Comment = {
   id: string;
@@ -52,6 +53,7 @@ function VideoThumbnail({ src }: { src: string }) {
 }
 
 export default function DiscoverPage() {
+  const { playDiscover, stopDiscover, setSuppressMiniPlayer } = usePlayer();
   const [items, setItems] = useState<PublicItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [missingColumns, setMissingColumns] = useState(false);
@@ -133,12 +135,26 @@ export default function DiscoverPage() {
     setCommentsOpen(false);
     setCommentText("");
     if (!commentsMap[item.id]) loadComments(item.id);
+    // Register with global player so it persists when navigating away
+    if (item.recording_url) {
+      playDiscover({
+        id: item.id,
+        title: item.title,
+        displayName: item.display_name,
+        mediaType: item.media_type === "video" ? "video" : "audio",
+        recordingUrl: item.recording_url,
+      });
+    }
+    // Hide mini player bar while modal is open (video plays in modal directly)
+    setSuppressMiniPlayer(true);
   }
 
   function closeItem() {
     setExpandedItem(null);
     setCommentsOpen(false);
     setCommentText("");
+    // Show mini player now that modal is closed — it continues playing
+    setSuppressMiniPlayer(false);
   }
 
   async function toggleLike(item: PublicItem) {
