@@ -686,14 +686,32 @@ export default function DiscoverPage() {
                 {expandedItem.media_type === "video" && (
                   <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.3, marginBottom: "0.375rem" }}>{expandedItem.title}</div>
                 )}
-                <div onClick={() => openProfile(expandedItem.student_id)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: expandedItem.description ? "0.625rem" : 0, cursor: "pointer" }}>
-                  <Avatar url={expandedItem.avatar_url} name={expandedItem.display_name} size={28} />
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px" }}>
-                    {expandedItem.display_name ?? "Musician"}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: expandedItem.description ? "0.625rem" : 0 }}>
+                  <div onClick={() => openProfile(expandedItem.student_id)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", flex: 1, minWidth: 0 }}>
+                    <Avatar url={expandedItem.avatar_url} name={expandedItem.display_name} size={28} />
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px" }}>
+                      {expandedItem.display_name ?? "Musician"}
+                    </div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
+                      · {formatRelative(expandedItem.created_at)}
+                    </div>
                   </div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-                    · {formatRelative(expandedItem.created_at)}
-                  </div>
+                  {currentUserId && currentUserId !== expandedItem.student_id && (
+                    <button
+                      onClick={() => toggleFollow(expandedItem.student_id)}
+                      disabled={followLoading}
+                      style={{
+                        padding: "0.3rem 0.875rem", borderRadius: 20, fontFamily: "Inter, sans-serif",
+                        fontWeight: 600, fontSize: "0.75rem", cursor: followLoading ? "default" : "pointer",
+                        border: myFollows.has(expandedItem.student_id) ? "1.5px solid var(--border-strong)" : "none",
+                        background: myFollows.has(expandedItem.student_id) ? "transparent" : "var(--charcoal)",
+                        color: myFollows.has(expandedItem.student_id) ? "var(--charcoal)" : "var(--white)",
+                        flexShrink: 0, transition: "all 0.15s",
+                      }}
+                    >
+                      {followLoading ? "…" : myFollows.has(expandedItem.student_id) ? "Following" : "Follow"}
+                    </button>
+                  )}
                 </div>
                 {expandedItem.description && (
                   <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", lineHeight: 1.6, margin: "0 0 0.5rem", fontStyle: "italic" }}>
