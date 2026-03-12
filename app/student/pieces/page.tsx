@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PieceService } from "../../../lib/services/PieceService";
@@ -31,11 +31,20 @@ export default function MyPieces() {
   const student = user as Student;
   const player = usePlayer();
 
-  const [pieces, setPieces]         = useState<PieceWithGoals[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const [pieces, setPieces]               = useState<PieceWithGoals[]>([]);
+  const [loading, setLoading]             = useState(true);
   const [searchOpenFor, setSearchOpenFor] = useState<string | null>(null);
   const [managingPieceId, setManagingPieceId] = useState<string | null>(null);
-  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [uploadingFor, setUploadingFor]   = useState<string | null>(null);
+  const [uploadingScoreFor, setUploadingScoreFor] = useState<string | null>(null);
+  const [aiConvertingFor, setAiConvertingFor]     = useState<string | null>(null);
+  const [pasteModeFor, setPasteModeFor]   = useState<string | null>(null);
+  const [pendingPastes, setPendingPastes] = useState<File[]>([]);
+  const [uploadError, setUploadError]     = useState<string | null>(null);
+
+  // Keep upload handler stable for paste effect closure
+  const uploadHandlerRef = useRef(handleUploadSheetMusic);
+  useEffect(() => { uploadHandlerRef.current = handleUploadSheetMusic; }); // eslint-disable-line react-hooks/exhaustive-deps
 
   const supabase = getSupabaseBrowserClient();
 
@@ -54,10 +63,41 @@ export default function MyPieces() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Sheet music upload — uses a fresh dynamic input each time to avoid ref issues ──
+  // ── Paste mode clipboard listener ──
+  useEffect(() => {
+    if (!pasteModeFor) return;
+    function onPaste(e: ClipboardEvent) {
+      const imageItem = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"));
+      if (imageItem) {
+        const file = imageItem.getAsFile();
+        if (file) setPendingPastes(prev => [...prev, file]);
+      }
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [pasteModeFor]);
+
+  function startPasteMode(pieceId: string) {
+    setPendingPastes([]);
+    setPasteModeFor(pieceId);
+  }
+
+  function cancelPasteMode() {
+    setPasteModeFor(null);
+    setPendingPastes([]);
+  }
+
+  function uploadPastes(pieceId: string) {
+    if (pendingPastes.length > 0) void uploadHandlerRef.current(pieceId, pendingPastes);
+    setPasteModeFor(null);
+    setPendingPastes([]);
+  }
+
+  // ── Sheet music upload ──
   async function handleUploadSheetMusic(pieceId: string, files: File[]) {
     if (!files.length) return;
     setUploadingFor(pieceId);
+    setUploadError(null);
     try {
       const imageExtRe = /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i;
       const isImages = files.every(f => f.type.startsWith("image/") || imageExtRe.test(f.name));
@@ -93,12 +133,13 @@ export default function MyPieces() {
       setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: sheetUrl } : p));
     } catch (err) {
       console.error("upload error:", err);
+      setUploadError("Upload failed — please try again.");
     } finally {
       setUploadingFor(null);
     }
   }
 
-  // Programmatic file picker — no ref needed, always fresh
+  // Programmatic file picker
   function openFilePicker(pieceId: string) {
     const input = document.createElement("input");
     input.type = "file";
@@ -107,6 +148,78 @@ export default function MyPieces() {
     input.onchange = () => {
       const files = Array.from(input.files ?? []);
       if (files.length) void handleUploadSheetMusic(pieceId, files);
+    };
+    input.click();
+  }
+
+  // ── Score file upload (MusicXML / Guitar Pro) ──
+  async function handleUploadScore(pieceId: string, file: File) {
+    setUploadingScoreFor(pieceId);
+    setUploadError(null);
+    try {
+      const ext = file.name.split(".").pop() ?? "gp";
+      const path = `${pieceId}_score.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("score-files").upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+      if (uploadErr) { setUploadError(`Score upload failed: ${uploadErr.message}`); return; }
+      const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
+      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
+    } catch (err) {
+      setUploadError(`Score upload error: ${(err as Error).message}`);
+    } finally {
+      setUploadingScoreFor(null);
+    }
+  }
+
+  function openScorePicker(pieceId: string) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".gp,.gpx,.gp3,.gp4,.gp5,.xml,.musicxml,application/xml,text/xml";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) void handleUploadScore(pieceId, file);
+    };
+    input.click();
+  }
+
+  // ── AI image → MusicXML ──
+  async function handleAiConvertScore(pieceId: string, file: File) {
+    setAiConvertingFor(pieceId);
+    setUploadError(null);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const mimeType = file.type || "image/png";
+      const res = await fetch("/api/score-from-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) { setUploadError(`AI conversion failed: ${json.error ?? "Unknown error"}`); return; }
+      const xmlBlob = new Blob([json.musicxml], { type: "application/xml" });
+      const path = `${pieceId}_score.xml`;
+      const { error: uploadErr } = await supabase.storage
+        .from("score-files").upload(path, xmlBlob, { upsert: true, contentType: "application/xml" });
+      if (uploadErr) { setUploadError(`Upload failed: ${uploadErr.message}`); return; }
+      const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
+      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
+    } catch (err) {
+      setUploadError(`AI conversion error: ${(err as Error).message}`);
+    } finally {
+      setAiConvertingFor(null);
+    }
+  }
+
+  function openAiConvertPicker(pieceId: string) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) void handleAiConvertScore(pieceId, file);
     };
     input.click();
   }
@@ -199,9 +312,17 @@ export default function MyPieces() {
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
         </div>
         <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center", margin: "0.5rem 0 0", lineHeight: 1.5 }}>
-          Your teacher&apos;s assignments — tap a piece to see your goals and sheet music.
+          Your teacher&apos;s assignments — tap a piece to explore sheet music, find recordings, and more.
         </p>
       </div>
+
+      {/* Global error */}
+      {uploadError && (
+        <div style={{ background: "rgba(192,80,80,0.1)", border: "1px solid rgba(192,80,80,0.3)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#C05050", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{uploadError}</span>
+          <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#C05050", fontSize: "1rem", padding: 0 }}>✕</button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -226,14 +347,16 @@ export default function MyPieces() {
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {section.pieces.map(piece => {
-                  const total    = piece.goals.length;
-                  const done     = piece.goals.filter(g => g.status === "completed").length;
-                  const current  = piece.goals.filter(g => g.status === "current").length;
-                  const pct      = total > 0 ? Math.round((done / total) * 100) : 0;
+                  const total   = piece.goals.length;
+                  const done    = piece.goals.filter(g => g.status === "completed").length;
+                  const current = piece.goals.filter(g => g.status === "current").length;
+                  const pct     = total > 0 ? Math.round((done / total) * 100) : 0;
                   const playing  = isPlaying(piece);
                   const hasRecs  = piece.recordings.length > 0;
                   const managing = managingPieceId === piece.id;
+                  const isPasting = pasteModeFor === piece.id;
                   const statusCfg = STATUS_CONFIG[piece.status] ?? { label: piece.status, emoji: "📌", color: "var(--muted)", bg: "rgba(0,0,0,0.04)" };
+                  const scoreUrl = (piece as PieceWithGoals & { score_url?: string }).score_url;
 
                   return (
                     <div key={piece.id} style={{
@@ -246,7 +369,7 @@ export default function MyPieces() {
                       {/* Card body */}
                       <div style={{ padding: "1rem 1.25rem 0.875rem" }}>
 
-                        {/* Top row: status badge */}
+                        {/* Status badge */}
                         <div style={{ marginBottom: "0.5rem" }}>
                           <span style={{
                             display: "inline-flex", alignItems: "center", gap: "0.3rem",
@@ -297,7 +420,7 @@ export default function MyPieces() {
 
                       {/* Action row */}
                       <div style={{ padding: "0 1.25rem 1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                        {/* Listen / Find recording */}
+                        {/* Listen / Find */}
                         {hasRecs ? (
                           <button
                             onClick={() => playing ? player.stop() : handlePlayPiece(piece)}
@@ -313,7 +436,7 @@ export default function MyPieces() {
                             onClick={() => setSearchOpenFor(searchOpenFor === piece.id ? null : piece.id)}
                             style={btnOutline}
                           >
-                            🔍 Find a recording
+                            🎬 Find on YouTube
                           </button>
                         )}
 
@@ -339,7 +462,7 @@ export default function MyPieces() {
                           </button>
                         )}
 
-                        {/* More / manage toggle */}
+                        {/* More toggle */}
                         <button
                           onClick={() => setManagingPieceId(managing ? null : piece.id)}
                           style={{
@@ -348,18 +471,20 @@ export default function MyPieces() {
                             background: managing ? "var(--cream-deep, #f0ede8)" : "transparent",
                             color: managing ? "var(--charcoal)" : "var(--muted)",
                           }}
-                          title="Manage recordings & sheet music"
                         >
                           {managing ? "▲ Close" : "··· More"}
                         </button>
                       </div>
 
-                      {/* Quick search (for pieces with no recordings) */}
+                      {/* Quick YouTube search (no recordings yet) */}
                       {searchOpenFor === piece.id && (
                         <div style={{ padding: "0 1.25rem 1rem" }}>
                           <div style={{ background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)", padding: "0.875rem" }}>
-                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.5rem" }}>
-                              Search for a recording to listen to:
+                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.25rem" }}>
+                              🎬 Search YouTube for a recording
+                            </div>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem" }}>
+                              Find a professional performance to listen to while you practice.
                             </div>
                             <YouTubeSearch
                               placeholder={`${piece.title}${piece.composer ? ` ${piece.composer}` : ""}…`}
@@ -378,41 +503,124 @@ export default function MyPieces() {
                           display: "flex", flexDirection: "column", gap: "1.5rem",
                         }}>
 
-                          {/* Sheet music section */}
+                          {/* ── Sheet Music ── */}
                           <div>
-                            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
                               📄 Sheet Music
                             </div>
-                            {piece.sheet_music_url ? (
-                              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#3A7A5A" }}>
-                                  ✓ Sheet music uploaded
-                                  {piece.sheet_music_url.startsWith("[") && ` (${JSON.parse(piece.sheet_music_url).length} pages)`}
-                                </span>
-                                <button onClick={() => openFilePicker(piece.id)} style={btnGhost}>
-                                  🔄 Replace
-                                </button>
-                              </div>
-                            ) : (
-                              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                                <button
-                                  onClick={() => openFilePicker(piece.id)}
-                                  disabled={uploadingFor === piece.id}
-                                  style={btnOutline}
+                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                              ✏️ You and your teacher can annotate this together
+                            </div>
+
+                            {piece.sheet_music_url && (
+                              <div style={{ marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                                <a
+                                  href={piece.sheet_music_url.startsWith("[")
+                                    ? JSON.parse(piece.sheet_music_url as string)[0]
+                                    : piece.sheet_music_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ ...btnOutline, textDecoration: "none", fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
                                 >
-                                  {uploadingFor === piece.id ? "⏳ Uploading…" : "📤 Upload PDF or image"}
-                                </button>
-                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                                  PDF or image files
+                                  📄 Open{piece.sheet_music_url.startsWith("[") && ` (${JSON.parse(piece.sheet_music_url).length} pages)`}
+                                </a>
+                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#3A7A5A" }}>✓ Uploaded</span>
+                              </div>
+                            )}
+
+                            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                              <button
+                                onClick={() => openFilePicker(piece.id)}
+                                disabled={uploadingFor === piece.id}
+                                style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
+                              >
+                                {uploadingFor === piece.id ? "⏳ Uploading…" : piece.sheet_music_url ? "🔄 Replace file" : "📤 Upload PDF or image"}
+                              </button>
+                              <button
+                                onClick={() => isPasting ? cancelPasteMode() : startPasteMode(piece.id)}
+                                style={{
+                                  ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem",
+                                  background: isPasting ? "var(--charcoal)" : "transparent",
+                                  color: isPasting ? "var(--white)" : "var(--muted)",
+                                  borderColor: isPasting ? "var(--charcoal)" : undefined,
+                                }}
+                                title="Paste a screenshot from your clipboard (Ctrl+V / ⌘V)"
+                              >
+                                📋 Paste image
+                              </button>
+                            </div>
+
+                            {/* Paste mode banner */}
+                            {isPasting && (
+                              <div style={{
+                                marginTop: "0.625rem",
+                                padding: "0.625rem 0.875rem",
+                                background: "var(--charcoal)",
+                                borderRadius: 8,
+                                display: "flex", alignItems: "center", gap: "0.75rem",
+                              }}>
+                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--white)", flex: 1 }}>
+                                  {pendingPastes.length === 0
+                                    ? <>Press <strong>Ctrl+V</strong> / <strong>⌘V</strong> to paste a screenshot — paste again to add more pages</>
+                                    : <>{pendingPastes.length} image{pendingPastes.length > 1 ? "s" : ""} ready — paste more or upload</>}
                                 </span>
+                                {pendingPastes.length > 0 && (
+                                  <button
+                                    onClick={() => uploadPastes(piece.id)}
+                                    style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 6, cursor: "pointer", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, padding: "0.25rem 0.625rem", whiteSpace: "nowrap" }}
+                                  >
+                                    Upload {pendingPastes.length}
+                                  </button>
+                                )}
+                                <button onClick={cancelPasteMode} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
                               </div>
                             )}
                           </div>
 
-                          {/* Recordings section */}
+                          {/* ── Playable Score (MusicXML / Guitar Pro) ── */}
                           <div>
-                            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>
-                              🎵 Recordings
+                            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
+                              🎵 Playable Score
+                            </div>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem" }}>
+                              MusicXML or Guitar Pro file — play it back note-by-note in the app.
+                            </div>
+
+                            {scoreUrl && (
+                              <div style={{ marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <a href={scoreUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnOutline, textDecoration: "none", fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}>
+                                  🎵 Open Score
+                                </a>
+                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#3A7A5A" }}>✓ Uploaded</span>
+                              </div>
+                            )}
+
+                            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                              <button
+                                onClick={() => openScorePicker(piece.id)}
+                                disabled={uploadingScoreFor === piece.id}
+                                style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
+                              >
+                                {uploadingScoreFor === piece.id ? "⏳ Uploading…" : scoreUrl ? "🔄 Replace score" : "🎵 Upload score file"}
+                              </button>
+                              <button
+                                onClick={() => openAiConvertPicker(piece.id)}
+                                disabled={aiConvertingFor === piece.id}
+                                style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
+                                title="Take a photo or screenshot of your sheet music and convert it to a playable score with AI"
+                              >
+                                {aiConvertingFor === piece.id ? "⏳ Converting…" : "🤖 AI convert from photo"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* ── YouTube Recordings ── */}
+                          <div>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
+                              🎬 YouTube Recordings
+                            </div>
+                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem" }}>
+                              Search YouTube for professional performances to listen to while you practice.
                             </div>
 
                             {piece.recordings.length > 0 && (
@@ -431,10 +639,18 @@ export default function MyPieces() {
                                       )}
                                     </div>
                                     <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0 }}>
+                                      <button
+                                        onClick={() => {
+                                          const tracks = piece.recordings.map(r => ({ id: r.youtube_id, title: r.title, thumbnail: r.thumbnail_url ?? undefined }));
+                                          const idx = piece.recordings.findIndex(r => r.id === rec.id);
+                                          player.play(tracks[idx], tracks);
+                                        }}
+                                        style={{ ...btnGhost, fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}
+                                      >▶</button>
                                       {!rec.is_primary && (
-                                        <button onClick={() => handleSetPrimary(piece.id, rec.id)} title="Set as main" style={btnGhost}>★</button>
+                                        <button onClick={() => handleSetPrimary(piece.id, rec.id)} title="Set as main" style={{ ...btnGhost, fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}>★</button>
                                       )}
-                                      <button onClick={() => handleRemoveRecording(piece.id, rec.id)} title="Remove" style={{ ...btnGhost, color: "#C05050" }}>✕</button>
+                                      <button onClick={() => handleRemoveRecording(piece.id, rec.id)} title="Remove" style={{ ...btnGhost, color: "#C05050", fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}>✕</button>
                                     </div>
                                   </div>
                                 ))}
@@ -442,13 +658,14 @@ export default function MyPieces() {
                             )}
 
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.5rem" }}>
-                              {piece.recordings.length === 0 ? "Add a YouTube recording to listen to:" : "Add another recording:"}
+                              {piece.recordings.length === 0 ? "Search YouTube to add a recording:" : "Add another YouTube recording:"}
                             </div>
                             <YouTubeSearch
-                              placeholder={`Search for ${piece.title}…`}
+                              placeholder={`Search YouTube for "${piece.title}"…`}
                               onSelect={(v: YouTubeResult) => handleAddRecording(piece.id, v)}
                             />
                           </div>
+
                         </div>
                       )}
                     </div>
