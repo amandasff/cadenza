@@ -615,6 +615,80 @@ html[data-theme="dark"] .progress-fill {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   FUN THEME  🎨
+   Toggle by setting html[data-theme="fun"]
+   Soft animated pastel gradient + frosted glass surfaces
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes fun-gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+html[data-theme="fun"] {
+  /* Slow-cycling pastel gradient across the whole page */
+  background: linear-gradient(-45deg, #fce4ec, #f3e5f5, #e8eaf6, #e0f7fa, #f1f8e9, #fff8e1, #fce4ec);
+  background-size: 400% 400%;
+  animation: fun-gradient-shift 18s ease infinite;
+
+  /* ── Cadenza palette overrides — keep text readable, surfaces frosted ── */
+  --cream:        rgba(252, 240, 255, 0.50);
+  --cream-deep:   rgba(238, 220, 255, 0.62);
+  --white:        rgba(255, 255, 255, 0.78);
+  --charcoal:     #26203A;          /* deep purple-black — still very readable */
+  --muted:        #8B6FAE;          /* purple-toned muted */
+  --border:       rgba(190, 150, 240, 0.22);
+  --border-strong: rgba(160, 110, 220, 0.40);
+
+  /* Category colours — slightly more vivid in fun mode */
+  --sage:         #2E7D52;
+  --rose:         #C2185B;
+  --sky:          #1565C0;
+  --butter:       #F57F17;
+  --peach:        #E64A19;
+  --lavender:     #6A1B9A;
+}
+
+/* Shell is transparent so gradient shows through everything */
+html[data-theme="fun"] .student-shell {
+  background: transparent;
+}
+
+/* Sidebar — frosted glass */
+html[data-theme="fun"] .student-sidebar {
+  background: rgba(255, 255, 255, 0.68) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-right-color: rgba(190, 150, 240, 0.30) !important;
+}
+
+/* Mobile header + bottom nav — frosted glass */
+html[data-theme="fun"] .student-mobile-header {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom-color: rgba(190, 150, 240, 0.25) !important;
+}
+
+html[data-theme="fun"] .student-bottom-nav {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top-color: rgba(190, 150, 240, 0.25) !important;
+}
+
+/* Skeleton shimmer adapted for fun mode */
+html[data-theme="fun"] .skeleton {
+  background: linear-gradient(90deg,
+    rgba(220, 180, 255, 0.35) 25%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(220, 180, 255, 0.35) 75%
+  ) !important;
+  background-size: 200% 100% !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    RESPONSIVE LAYOUT CLASSES
    ═══════════════════════════════════════════════════════════════ */
 

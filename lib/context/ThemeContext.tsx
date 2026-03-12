@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 
-export type AppTheme = "light" | "dark";
+export type AppTheme = "light" | "dark" | "fun";
 
 interface ThemeCtx {
   theme: AppTheme;
@@ -10,18 +10,20 @@ interface ThemeCtx {
 
 const ThemeContext = createContext<ThemeCtx>({ theme: "light", toggleTheme: () => {} });
 
+const CYCLE: AppTheme[] = ["light", "fun", "dark"];
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<AppTheme>("light");
 
   useEffect(() => {
     const saved = localStorage.getItem("cadenza-theme") as AppTheme | null;
-    const initial = saved === "dark" ? "dark" : "light";
+    const initial: AppTheme = saved === "dark" ? "dark" : saved === "fun" ? "fun" : "light";
     setTheme(initial);
     document.documentElement.setAttribute("data-theme", initial);
   }, []);
 
   function toggleTheme() {
-    const next: AppTheme = theme === "light" ? "dark" : "light";
+    const next = CYCLE[(CYCLE.indexOf(theme) + 1) % CYCLE.length];
     setTheme(next);
     localStorage.setItem("cadenza-theme", next);
     document.documentElement.setAttribute("data-theme", next);
