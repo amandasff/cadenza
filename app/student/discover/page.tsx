@@ -37,6 +37,7 @@ export default function DiscoverPage() {
   const [items, setItems] = useState<PublicItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [missingColumns, setMissingColumns] = useState(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>({});
@@ -94,10 +95,12 @@ export default function DiscoverPage() {
         setItems(mapped);
       } catch (err) {
         const e = err as { message?: string; code?: string };
+        console.error("discover load error:", e?.code, e?.message);
         if (e?.code === "42703" || e?.code === "42P01" || e?.message?.includes("is_public") || e?.message?.includes("media_type")) {
           setMissingColumns(true);
+        } else {
+          setQueryError(e?.message ?? "Unknown error");
         }
-        console.error("discover load error:", e?.message);
       } finally {
         setLoading(false);
       }
@@ -213,6 +216,17 @@ export default function DiscoverPage() {
             <pre style={{ background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: 6, padding: "0.875rem", fontSize: "0.7rem", fontFamily: "monospace", color: "var(--charcoal)", overflowX: "auto", lineHeight: 1.7, whiteSpace: "pre-wrap", margin: 0 }}>{ALTER_SQL}</pre>
           </div>
         </div>
+      ) : queryError ? (
+        <div style={{ padding: "1.5rem" }}>
+          <div style={{ background: "#FDF6F3", border: "1px solid #E8C4BA", borderRadius: 10, padding: "1.25rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "#B85C3A", marginBottom: "0.375rem" }}>
+              Could not load covers
+            </div>
+            <p style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#B85C3A", margin: 0, wordBreak: "break-all" }}>
+              {queryError}
+            </p>
+          </div>
+        </div>
       ) : items.length === 0 ? (
         <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--white)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem", fontSize: "1.75rem" }}>
@@ -221,8 +235,8 @@ export default function DiscoverPage() {
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>
             Nothing shared yet
           </div>
-          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 260, margin: "0 auto" }}>
-            When musicians share recordings or covers from their Journey, they&apos;ll appear here for everyone to enjoy.
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 280, margin: "0 auto" }}>
+            Covers appear here when students share them from Journey. Go to <strong>Journey → Add Cover</strong> and make sure &ldquo;Share to Discover&rdquo; is turned on.
           </p>
         </div>
       ) : (
