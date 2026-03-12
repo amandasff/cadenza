@@ -352,7 +352,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               letterSpacing: "0.04em", transition: "all 0.15s",
             }}
           >
-            {theme === "light" ? "✨" : theme === "fun" ? "🌙" : "☀️"}
+            {theme === "light" ? "Fun" : theme === "fun" ? "Dark" : "Light"}
           </button>
           <button
             onClick={() => signOut()}
@@ -477,7 +477,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            {theme === "light" ? "✨ Fun mode" : theme === "fun" ? "🌙 Dark mode" : "☀️ Light mode"}
+            {theme === "light" ? "Fun mode" : theme === "fun" ? "Dark mode" : "Light mode"}
           </button>
           <button
             onClick={() => signOut()}
