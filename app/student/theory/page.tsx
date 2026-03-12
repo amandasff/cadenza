@@ -1501,9 +1501,721 @@ function RCMReference({ onBack }: { onBack: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Game: Guitar Fretboard
+// ─────────────────────────────────────────────────────────────────────────────
+const FRET_OPEN_MIDI = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4
+const NOTE_NAMES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const NOTE_NAMES_NATURAL = ["C","D","E","F","G","A","B"];
+
+function fretNoteName(str: number, fret: number) {
+  return NOTE_NAMES_SHARP[(FRET_OPEN_MIDI[str] + fret) % 12];
+}
+
+const STRING_LABELS = ["E","A","D","G","B","e"];
+
+type FretLevel = "beginner" | "intermediate" | "advanced";
+const FRET_LEVELS: Record<FretLevel, { frets: number[]; naturalOnly: boolean; label: string; desc: string }> = {
+  beginner:     { frets: [0,1,2,3,4,5],    naturalOnly: true,  label: "Beginner",     desc: "Open strings & frets 1–5, natural notes only" },
+  intermediate: { frets: [0,1,2,3,4,5,6,7], naturalOnly: false, label: "Intermediate", desc: "Frets 0–7, includes sharps" },
+  advanced:     { frets: Array.from({length: 13}, (_,i) => i), naturalOnly: false, label: "Advanced", desc: "Full neck frets 0–12" },
+};
+
+function FretboardSVG({ highlightStr, highlightFret, maxFret = 12 }: { highlightStr: number; highlightFret: number; maxFret?: number }) {
+  const fretCount = Math.min(maxFret, 12);
+  const W = 300, strSpacing = 16, fretSpacing = (W - 60) / fretCount;
+  const H = 5 * strSpacing + 40;
+  const nutX = 44;
+
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+      {/* String labels */}
+      {STRING_LABELS.map((l, s) => (
+        <text key={s} x={16} y={20 + s * strSpacing + 4} fontSize={9} fontFamily="Inter, sans-serif" fill="rgba(255,255,255,0.5)" textAnchor="middle">{l}</text>
+      ))}
+      {/* Fret numbers */}
+      {Array.from({length: fretCount}, (_,f) => f + 1).map(f => (
+        <text key={f} x={nutX + (f - 0.5) * fretSpacing} y={H - 4} fontSize={8} fontFamily="Inter, sans-serif" fill="rgba(255,255,255,0.3)" textAnchor="middle">{f}</text>
+      ))}
+      {/* Nut */}
+      <line x1={nutX} y1={20} x2={nutX} y2={20 + 5 * strSpacing} stroke="rgba(255,255,255,0.7)" strokeWidth={3} />
+      {/* Fret lines */}
+      {Array.from({length: fretCount}, (_,f) => f + 1).map(f => (
+        <line key={f} x1={nutX + f * fretSpacing} y1={20} x2={nutX + f * fretSpacing} y2={20 + 5 * strSpacing} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
+      ))}
+      {/* Strings */}
+      {[0,1,2,3,4,5].map(s => (
+        <line key={s} x1={nutX} y1={20 + s * strSpacing} x2={nutX + fretCount * fretSpacing} y2={20 + s * strSpacing} stroke="rgba(255,255,255,0.5)" strokeWidth={s < 2 ? 2 : s < 4 ? 1.5 : 1} />
+      ))}
+      {/* Fretboard markers (3, 5, 7, 9, 12) */}
+      {[3,5,7,9].filter(f => f <= fretCount).map(f => (
+        <circle key={f} cx={nutX + (f - 0.5) * fretSpacing} cy={20 + 2.5 * strSpacing} r={3} fill="rgba(255,255,255,0.12)" />
+      ))}
+      {/* Highlight */}
+      {highlightFret === 0 ? (
+        <circle cx={nutX - 14} cy={20 + highlightStr * strSpacing} r={7} fill="#4CAF84" />
+      ) : (
+        <circle cx={nutX + (highlightFret - 0.5) * fretSpacing} cy={20 + highlightStr * strSpacing} r={7} fill="#4CAF84" />
+      )}
+    </svg>
+  );
+}
+
+function makeFretQ(level: FretLevel) {
+  const { frets, naturalOnly } = FRET_LEVELS[level];
+  let str: number, fret: number, name: string;
+  let attempts = 0;
+  do {
+    str  = Math.floor(Math.random() * 6);
+    fret = frets[Math.floor(Math.random() * frets.length)];
+    name = fretNoteName(str, fret);
+    attempts++;
+  } while (naturalOnly && name.includes("#") && attempts < 30);
+  const correct = name.replace("#", "♯");
+  const allNames = naturalOnly
+    ? NOTE_NAMES_NATURAL.map(n => n)
+    : NOTE_NAMES_SHARP.map(n => n.replace("#", "♯"));
+  const wrongs = shuffle(allNames.filter(n => n !== correct)).slice(0, 3);
+  return { str, fret, correct, choices: shuffle([correct, ...wrongs]) };
+}
+
+function FretboardGame({ onBack }: { onBack: () => void }) {
+  const [level, setLevel] = useState<FretLevel>("beginner");
+  const [q, setQ]         = useState(() => makeFretQ("beginner"));
+  const gk   = `fret_${level}`;
+  const game = useGameState(gk);
+
+  useEffect(() => { game.loadHi(); }, [level]); // eslint-disable-line
+
+  function start() {
+    game.loadHi();
+    game.beginCountdown(() => { setQ(makeFretQ(level)); game.beginPlay(); });
+  }
+  function answer(c: string) {
+    if (game.selected || game.gs !== "playing") return;
+    game.setSelected(c);
+    const ok = c === q.correct;
+    game.scoreAnswer(ok);
+    game.scheduleNext(ok, () => setQ(makeFretQ(level)));
+  }
+
+  if (game.gs === "results") return <ResultsScreen score={game.score} correct={game.correct} total={game.total} topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore} gameLabel="Fretboard" onPlayAgain={start} onMenu={onBack} />;
+  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
+
+  if (game.gs === "idle") return (
+    <IdleCard title="Fretboard Challenge" hiScore={game.hiScore}
+      description="A position lights up on the neck — name the note. 30s rounds, streak multipliers."
+      extras={
+        <>
+          <div style={{ background: "#252537", borderRadius: 12, padding: "1rem 0.75rem", marginBottom: "1.25rem", overflowX: "auto", display: "flex", justifyContent: "center" }}>
+            <FretboardSVG highlightStr={2} highlightFret={3} maxFret={7} />
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+            {(Object.keys(FRET_LEVELS) as FretLevel[]).map(lv => (
+              <button key={lv} onClick={() => setLevel(lv)} style={{ padding: "0.4rem 0.875rem", borderRadius: 20, cursor: "pointer", background: level === lv ? "#4CAF84" : "transparent", border: `1.5px solid ${level === lv ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: level === lv ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: level === lv ? 600 : 400, transition: "all 0.15s" }}>
+                {FRET_LEVELS[lv].label}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", marginBottom: "0", lineHeight: 1.6, textAlign: "center" }}>{FRET_LEVELS[level].desc}</p>
+        </>
+      }
+      onStart={start}
+    />
+  );
+
+  const maxFret = level === "beginner" ? 5 : level === "intermediate" ? 7 : 12;
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
+      <TopBar onBack={onBack} label="Fretboard Challenge" />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <Popups entries={game.popups} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.25rem", gap: "1.25rem" }}>
+        <div style={{ background: "#252537", borderRadius: 12, padding: "1rem 0.75rem", overflowX: "auto", display: "flex", justifyContent: "center", width: "100%", maxWidth: 360 }}>
+          <FretboardSVG highlightStr={q.str} highlightFret={q.fret} maxFret={maxFret} />
+        </div>
+        <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.4)", margin: 0, letterSpacing: "0.04em" }}>
+          String <strong style={{ color: "rgba(255,255,255,0.7)" }}>{STRING_LABELS[q.str]}</strong> · Fret <strong style={{ color: "rgba(255,255,255,0.7)" }}>{q.fret === 0 ? "Open" : q.fret}</strong>
+        </p>
+        <div style={{ width: "100%", maxWidth: 360 }}>
+          <AnswerGrid choices={q.choices} selected={game.selected} correct={q.correct} onAnswer={answer} columns={q.choices.length <= 4 ? 2 : 3} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Game: Guitar Chord Finder
+// ─────────────────────────────────────────────────────────────────────────────
+// frets: array of 6 (low-E to high-e): -1=muted, 0=open, N=fret N
+// barre: optional { fret, fromStr, toStr }
+type ChordDiagram = { name: string; frets: number[]; startFret?: number };
+
+const GUITAR_CHORDS_BEGINNER: ChordDiagram[] = [
+  { name: "Em",  frets: [0,2,2,0,0,0] },
+  { name: "Am",  frets: [-1,0,2,2,1,0] },
+  { name: "E",   frets: [0,2,2,1,0,0] },
+  { name: "A",   frets: [-1,0,2,2,2,0] },
+  { name: "D",   frets: [-1,-1,0,2,3,2] },
+  { name: "Dm",  frets: [-1,-1,0,2,3,1] },
+  { name: "G",   frets: [3,2,0,0,0,3] },
+  { name: "C",   frets: [-1,3,2,0,1,0] },
+];
+const GUITAR_CHORDS_INTERMEDIATE: ChordDiagram[] = [
+  ...GUITAR_CHORDS_BEGINNER,
+  { name: "B7",   frets: [-1,2,1,2,0,2] },
+  { name: "A7",   frets: [-1,0,2,0,2,0] },
+  { name: "E7",   frets: [0,2,0,1,0,0] },
+  { name: "D7",   frets: [-1,-1,0,2,1,2] },
+  { name: "G7",   frets: [3,2,0,0,0,1] },
+  { name: "Cadd9",frets: [-1,3,2,0,3,3] },
+  { name: "Dsus2",frets: [-1,-1,0,2,3,0] },
+  { name: "Asus2",frets: [-1,0,2,2,0,0] },
+];
+const GUITAR_CHORDS_ADVANCED: ChordDiagram[] = [
+  ...GUITAR_CHORDS_INTERMEDIATE,
+  { name: "F",    frets: [1,3,3,2,1,1], startFret: 1 },
+  { name: "Bm",   frets: [-1,2,4,4,3,2], startFret: 2 },
+  { name: "F#m",  frets: [-1,-1,4,6,7,5], startFret: 4 },
+  { name: "Bb",   frets: [-1,1,3,3,3,1], startFret: 1 },
+  { name: "Cm",   frets: [-1,3,5,5,4,3], startFret: 3 },
+];
+
+type ChordFinderLevel = "beginner" | "intermediate" | "advanced";
+const CHORD_FINDER_POOLS: Record<ChordFinderLevel, ChordDiagram[]> = {
+  beginner: GUITAR_CHORDS_BEGINNER,
+  intermediate: GUITAR_CHORDS_INTERMEDIATE,
+  advanced: GUITAR_CHORDS_ADVANCED,
+};
+
+function ChordDiagramSVG({ chord, dim = false }: { chord: ChordDiagram; dim?: boolean }) {
+  const sf = chord.startFret ?? 1;
+  const FRETS = 5, STRINGS = 6;
+  const W = 80, H = 90;
+  const strGap = (W - 20) / (STRINGS - 1);
+  const fretGap = (H - 32) / FRETS;
+  const topY = 22, leftX = 10;
+
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block", opacity: dim ? 0.4 : 1 }}>
+      {/* String labels (X/O) */}
+      {chord.frets.map((f, s) => (
+        <text key={s} x={leftX + s * strGap} y={13} fontSize={8} fontFamily="Inter, sans-serif"
+          fill={f === -1 ? "#E05252" : f === 0 ? "#4CAF84" : "transparent"} textAnchor="middle" fontWeight={700}>
+          {f === -1 ? "×" : f === 0 ? "○" : ""}
+        </text>
+      ))}
+      {/* Nut or start fret indicator */}
+      {sf === 1 ? (
+        <line x1={leftX} y1={topY} x2={leftX + (STRINGS-1)*strGap} y2={topY} stroke="rgba(255,255,255,0.7)" strokeWidth={3} />
+      ) : (
+        <text x={leftX + (STRINGS - 1) * strGap + 6} y={topY + fretGap * 0.5 + 4} fontSize={8} fill="rgba(255,255,255,0.5)" fontFamily="Inter, sans-serif">{sf}fr</text>
+      )}
+      {/* Fret lines */}
+      {Array.from({length: FRETS}, (_,f) => f).map(f => (
+        <line key={f} x1={leftX} y1={topY + f * fretGap} x2={leftX + (STRINGS-1)*strGap} y2={topY + f * fretGap} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
+      ))}
+      {/* String lines */}
+      {Array.from({length: STRINGS}, (_,s) => s).map(s => (
+        <line key={s} x1={leftX + s * strGap} y1={topY} x2={leftX + s * strGap} y2={topY + FRETS * fretGap} stroke="rgba(255,255,255,0.45)" strokeWidth={s === 0 || s === 5 ? 1.5 : 1} />
+      ))}
+      {/* Finger dots */}
+      {chord.frets.map((f, s) => {
+        if (f <= 0) return null;
+        const cy = topY + (f - sf + 0.5) * fretGap;
+        const cx = leftX + s * strGap;
+        return <circle key={s} cx={cx} cy={cy} r={6} fill="rgba(255,255,255,0.9)" />;
+      })}
+    </svg>
+  );
+}
+
+function makeChordFinderQ(level: ChordFinderLevel) {
+  const pool   = CHORD_FINDER_POOLS[level];
+  const target = pool[Math.floor(Math.random() * pool.length)];
+  const wrongs = shuffle(pool.filter(c => c.name !== target.name)).slice(0, 3);
+  const allChoices = shuffle([target, ...wrongs]);
+  return { target, choices: allChoices };
+}
+
+function GuitarChordGame({ onBack }: { onBack: () => void }) {
+  const [level, setLevel] = useState<ChordFinderLevel>("beginner");
+  const [q, setQ]         = useState(() => makeChordFinderQ("beginner"));
+  const gk   = `chord_finder_${level}`;
+  const game = useGameState(gk);
+
+  useEffect(() => { game.loadHi(); }, [level]); // eslint-disable-line
+
+  function start() {
+    game.loadHi();
+    game.beginCountdown(() => { setQ(makeChordFinderQ(level)); game.beginPlay(); });
+  }
+  function answer(name: string) {
+    if (game.selected || game.gs !== "playing") return;
+    game.setSelected(name);
+    const ok = name === q.target.name;
+    game.scoreAnswer(ok);
+    game.scheduleNext(ok, () => setQ(makeChordFinderQ(level)));
+  }
+
+  if (game.gs === "results") return <ResultsScreen score={game.score} correct={game.correct} total={game.total} topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore} gameLabel="Guitar Chords" onPlayAgain={start} onMenu={onBack} />;
+  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
+
+  if (game.gs === "idle") return (
+    <IdleCard title="Guitar Chord Finder" hiScore={game.hiScore}
+      description="A chord diagram appears — identify it as fast as possible. Includes all common open chords and barre chords."
+      extras={
+        <>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+            {(["beginner","intermediate","advanced"] as ChordFinderLevel[]).map(lv => (
+              <button key={lv} onClick={() => setLevel(lv)} style={{ padding: "0.4rem 0.875rem", borderRadius: 20, cursor: "pointer", background: level === lv ? "#4CAF84" : "transparent", border: `1.5px solid ${level === lv ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: level === lv ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: level === lv ? 600 : 400, transition: "all 0.15s" }}>
+                {lv.charAt(0).toUpperCase() + lv.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", marginBottom: "1.5rem" }}>
+            {GUITAR_CHORDS_BEGINNER.slice(0, 4).map(c => (
+              <div key={c.name} style={{ textAlign: "center" }}>
+                <ChordDiagramSVG chord={c} />
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{c.name}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      }
+      onStart={start}
+    />
+  );
+
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
+      <TopBar onBack={onBack} label="Guitar Chord Finder" />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <Popups entries={game.popups} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.25rem 1rem", gap: "1.25rem" }}>
+        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: 0, letterSpacing: "0.08em", textTransform: "uppercase" }}>Name this chord</p>
+        <div style={{ background: "#252537", borderRadius: 14, padding: "1.25rem 2rem", display: "flex", justifyContent: "center" }}>
+          <ChordDiagramSVG chord={q.target} />
+        </div>
+        {/* 2×2 name buttons */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem", width: "100%", maxWidth: 320 }}>
+          {q.choices.map(c => {
+            const isSelected = game.selected === c.name;
+            const isRight    = c.name === q.target.name;
+            let bg = "rgba(255,255,255,0.06)", border = "1px solid rgba(255,255,255,0.1)", color = "#FDFCFA";
+            if (game.selected) {
+              if (isRight)    { bg = "rgba(76,175,132,0.2)"; border = "1.5px solid #4CAF84"; color = "#4CAF84"; }
+              else if (isSelected) { bg = "rgba(224,82,82,0.2)"; border = "1.5px solid #E05252"; color = "#E05252"; }
+              else { bg = "rgba(255,255,255,0.03)"; border = "1px solid rgba(255,255,255,0.05)"; color = "rgba(255,255,255,0.25)"; }
+            }
+            return (
+              <button key={c.name} onClick={() => answer(c.name)} disabled={!!game.selected}
+                style={{ padding: "0.875rem 0.5rem", borderRadius: 10, border, background: bg, color, fontSize: "1.125rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: game.selected ? "default" : "pointer", transition: "all 0.1s", textAlign: "center" }}>
+                {c.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Game: Rhythm Echo (hear + tap back)
+// ─────────────────────────────────────────────────────────────────────────────
+// Rhythm patterns: array of beat offsets (in beats at given BPM)
+// Each pattern is defined as a list of beat positions
+const RHYTHM_BPM = 80;
+const BEAT_MS = (60 / RHYTHM_BPM) * 1000;
+
+type RhythmPattern = { label: string; beats: number[] }; // beats: note onset positions in 16th-note units
+
+const RHYTHMS_LEVEL1: RhythmPattern[] = [
+  { label: "♩ ♩ ♩ ♩",     beats: [0, 4, 8, 12] },
+  { label: "♩♩ ♩ ♩",      beats: [0, 2, 4, 8] },
+  { label: "♩ ♩ ♩♩",      beats: [0, 4, 8, 10] },
+  { label: "♩♩♩♩ ♩",      beats: [0, 2, 4, 6, 12] },
+];
+const RHYTHMS_LEVEL2: RhythmPattern[] = [
+  ...RHYTHMS_LEVEL1,
+  { label: "♩. ♪ ♩♩",     beats: [0, 6, 8, 12, 14] },
+  { label: "♪♪♩ ♩ ♩",     beats: [0, 2, 4, 8, 12] },
+  { label: "♩ ♩♪♪ ♩",     beats: [0, 4, 8, 10, 12] },
+  { label: "♩♩♩♩♩♩♩♩",    beats: [0,2,4,6,8,10,12,14] },
+];
+const RHYTHMS_LEVEL3: RhythmPattern[] = [
+  ...RHYTHMS_LEVEL2,
+  { label: "♩. ♪♩. ♪",    beats: [0, 6, 8, 14] },
+  { label: "♪♩♪♩♪♩♪",     beats: [0, 2, 4, 6, 8, 10, 12] },
+  { label: "♩♩. ♪♩♪♪",    beats: [0, 4, 6, 8, 12, 14] },
+];
+
+type RhythmLevel = "level1" | "level2" | "level3";
+const RHYTHM_POOLS: Record<RhythmLevel, RhythmPattern[]> = { level1: RHYTHMS_LEVEL1, level2: RHYTHMS_LEVEL2, level3: RHYTHMS_LEVEL3 };
+const RHYTHM_LEVEL_LABELS: Record<RhythmLevel, string> = { level1: "Level 1", level2: "Level 2", level3: "Level 3" };
+
+function playRhythmPattern(beats: number[], audioCtx: AudioContext) {
+  const sixteenth = BEAT_MS / 4 / 1000;
+  const now = audioCtx.currentTime + 0.1;
+  beats.forEach(b => {
+    const osc = audioCtx.createOscillator();
+    const g   = audioCtx.createGain();
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.frequency.value = 880;
+    g.gain.setValueAtTime(0, now + b * sixteenth);
+    g.gain.linearRampToValueAtTime(0.4, now + b * sixteenth + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, now + b * sixteenth + 0.12);
+    osc.start(now + b * sixteenth);
+    osc.stop(now + b * sixteenth + 0.15);
+  });
+  return now;
+}
+
+function scoreRhythmTaps(expected: number[], taps: number[], startTime: number): number {
+  // expected = absolute ms times, taps = absolute ms times
+  const WINDOW_MS = 180;
+  let matched = 0;
+  const usedTaps = new Set<number>();
+  expected.forEach(e => {
+    const best = taps.findIndex((t, i) => !usedTaps.has(i) && Math.abs(t - e) < WINDOW_MS);
+    if (best >= 0) { matched++; usedTaps.add(best); }
+  });
+  // Penalize extra taps
+  const extra = Math.max(0, taps.length - matched);
+  return Math.max(0, matched - extra * 0.5) / Math.max(expected.length, 1);
+}
+
+type RhythmPhase = "idle" | "listen" | "ready" | "tapping" | "result";
+
+function RhythmEchoGame({ onBack }: { onBack: () => void }) {
+  const [level, setLevel]   = useState<RhythmLevel>("level1");
+  const [pattern, setPat]   = useState<RhythmPattern | null>(null);
+  const [phase, setPhase]   = useState<RhythmPhase>("idle");
+  const [score, setScore]   = useState(0);
+  const [round, setRound]   = useState(0);
+  const [lastAcc, setLastAcc] = useState<number | null>(null);
+  const [hiScore, setHi]    = useState(0);
+  const [newRecord, setNR]  = useState(false);
+  const tapsRef   = useRef<number[]>([]);
+  const startMsRef = useRef<number>(0);
+  const expectedMsRef = useRef<number[]>([]);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    const v = Number(localStorage.getItem(`theory_hi_rhythm_${level}`) ?? 0);
+    setHi(v);
+  }, [level]);
+
+  function getCtx() {
+    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+      audioCtxRef.current = new AudioContext();
+    }
+    if (audioCtxRef.current.state === "suspended") void audioCtxRef.current.resume();
+    return audioCtxRef.current;
+  }
+
+  function pickPattern() {
+    const pool = RHYTHM_POOLS[level];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function startRound() {
+    const p = pickPattern();
+    setPat(p);
+    setPhase("listen");
+    setLastAcc(null);
+    const ctx = getCtx();
+    const sixteenth = BEAT_MS / 4;
+    const startAbsSec = playRhythmPattern(p.beats, ctx);
+    const maxBeat = Math.max(...p.beats);
+    const patternDurMs = (maxBeat + 4) * sixteenth + 200;
+    // Compute expected tap times (ms from start)
+    expectedMsRef.current = p.beats.map(b => b * sixteenth);
+    setTimeout(() => { setPhase("ready"); }, patternDurMs);
+  }
+
+  function beginTapping() {
+    tapsRef.current = [];
+    startMsRef.current = Date.now();
+    setPhase("tapping");
+    const maxDur = expectedMsRef.current[expectedMsRef.current.length - 1] + 2000;
+    setTimeout(() => finishTapping(), maxDur);
+  }
+
+  function tap() {
+    if (phase !== "tapping") return;
+    // click sound
+    const ctx = getCtx();
+    const osc = ctx.createOscillator(); const g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.frequency.value = 660;
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.1);
+    tapsRef.current.push(Date.now() - startMsRef.current);
+  }
+
+  function finishTapping() {
+    const acc = scoreRhythmTaps(expectedMsRef.current, tapsRef.current, startMsRef.current);
+    setLastAcc(acc);
+    const pts = Math.round(acc * 100);
+    const newScore = score + pts;
+    setScore(newScore);
+    setRound(r => r + 1);
+    setPhase("result");
+  }
+
+  function nextRound() {
+    if (round + 1 >= 5) {
+      // Game over
+      const stored = Number(localStorage.getItem(`theory_hi_rhythm_${level}`) ?? 0);
+      if (score > stored) { localStorage.setItem(`theory_hi_rhythm_${level}`, String(score)); setHi(score); setNR(true); }
+      setPhase("idle");
+      setRound(0);
+      setScore(0);
+      setNR(false);
+    } else {
+      startRound();
+    }
+  }
+
+  const accPct = lastAcc !== null ? Math.round(lastAcc * 100) : null;
+
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
+      <TopBar onBack={onBack} label="Rhythm Echo" />
+
+      {phase === "idle" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem" }}>
+          <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.375rem" }}>Rhythm Echo</div>
+            {newRecord && <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#FFD700", marginBottom: "0.5rem" }}>🏆 New Best!</div>}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <div style={{ fontSize: "0.625rem", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>Personal Best</div>
+              <div style={{ fontSize: "3rem", fontWeight: 700, color: "#FDFCFA", lineHeight: 1 }}>{hiScore > 0 ? hiScore : "—"}</div>
+              <div style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.25)" }}>/ 500 pts (5 rounds)</div>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "1.5rem" }}>
+              {(["level1","level2","level3"] as RhythmLevel[]).map(lv => (
+                <button key={lv} onClick={() => setLevel(lv)} style={{ padding: "0.4rem 0.875rem", borderRadius: 20, cursor: "pointer", background: level === lv ? "#4CAF84" : "transparent", border: `1.5px solid ${level === lv ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: level === lv ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: level === lv ? 600 : 400, transition: "all 0.15s" }}>
+                  {RHYTHM_LEVEL_LABELS[lv]}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.35)", marginBottom: "2rem", lineHeight: 1.7 }}>Listen to a rhythm, then tap it back. 5 rounds · scored on accuracy.</p>
+            <button onClick={() => { setScore(0); setRound(0); setNR(false); startRound(); }} style={{ width: "100%", padding: "0.875rem", borderRadius: 8, border: "none", background: "#4CAF84", color: "#fff", fontSize: "1rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 24px #4CAF8444" }}>
+              Start
+            </button>
+          </div>
+        </div>
+      )}
+
+      {phase === "listen" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "1.5rem" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>Round {round + 1} of 5 — Listen</div>
+          <div style={{ fontSize: "3.5rem" }}>👂</div>
+          <div style={{ fontSize: "1.5rem", color: "#FDFCFA", letterSpacing: "0.15em" }}>{pattern?.label}</div>
+          <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.35)", margin: 0 }}>Listen carefully to the rhythm…</p>
+        </div>
+      )}
+
+      {phase === "ready" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "1.5rem" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>Round {round + 1} of 5</div>
+          <div style={{ fontSize: "1.5rem", color: "#FDFCFA", letterSpacing: "0.15em" }}>{pattern?.label}</div>
+          <p style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.5)", margin: 0 }}>Tap the pattern below when ready</p>
+          <button onClick={beginTapping} style={{ padding: "1.25rem 3rem", borderRadius: 12, border: "2.5px solid #4CAF84", background: "rgba(76,175,132,0.15)", color: "#4CAF84", fontSize: "1.125rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: "pointer" }}>
+            TAP NOW
+          </button>
+        </div>
+      )}
+
+      {phase === "tapping" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "1.5rem" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>Tap it out!</div>
+          <div style={{ fontSize: "1.5rem", color: "rgba(255,255,255,0.4)", letterSpacing: "0.15em" }}>{pattern?.label}</div>
+          <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.3)" }}>Taps: {tapsRef.current.length}</div>
+          <button onPointerDown={tap} style={{ width: 140, height: 140, borderRadius: "50%", border: "3px solid #4CAF84", background: "rgba(76,175,132,0.2)", color: "#4CAF84", fontSize: "1rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: "pointer", userSelect: "none", WebkitUserSelect: "none" }}>
+            TAP
+          </button>
+          <button onClick={finishTapping} style={{ background: "none", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "0.375rem 1rem", color: "rgba(255,255,255,0.35)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>
+            Done
+          </button>
+        </div>
+      )}
+
+      {phase === "result" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "1rem" }}>
+          <div style={{ fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>Round {round} of 5</div>
+          <div style={{ fontSize: "4rem", fontWeight: 800, color: accPct! >= 80 ? "#4CAF84" : accPct! >= 50 ? "#E6A817" : "#E05252", lineHeight: 1 }}>{accPct}%</div>
+          <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.45)" }}>
+            {accPct! >= 90 ? "Perfect! 🎯" : accPct! >= 70 ? "Nice! 👏" : accPct! >= 50 ? "Getting there!" : "Keep practising!"}
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#FDFCFA" }}>Score: {score} / {round * 100}</div>
+          <button onClick={nextRound} style={{ padding: "0.875rem 2.5rem", borderRadius: 8, border: "none", background: "#4CAF84", color: "#fff", fontSize: "1rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: "pointer", marginTop: "0.5rem" }}>
+            {round >= 5 ? "Finish" : "Next Round →"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Game: Sight Reading (note sequences)
+// ─────────────────────────────────────────────────────────────────────────────
+type SightLevel = "level1" | "level2" | "level3";
+const SIGHT_POOLS: Record<SightLevel, { name: string; pos: number }[]> = {
+  level1: TREBLE_NOTES.filter(n => ["C4","D4","E4","F4","G4"].includes(n.name)),
+  level2: TREBLE_NOTES,
+  level3: [...TREBLE_NOTES, ...BASS_NOTES],
+};
+const SIGHT_LEVEL_LABELS: Record<SightLevel, string> = { level1: "Level 1 (C–G)", level2: "Level 2 (Full Treble)", level3: "Level 3 (Treble + Bass)" };
+
+const SEQ_LEN = 4;
+function makeSeq(level: SightLevel) {
+  const pool = SIGHT_POOLS[level];
+  const notes: typeof pool = [];
+  for (let i = 0; i < SEQ_LEN; i++) {
+    const prev = notes[notes.length - 1];
+    const candidates = prev ? pool.filter(n => n.pos !== prev.pos) : pool;
+    notes.push(candidates[Math.floor(Math.random() * candidates.length)]);
+  }
+  const choices = shuffle(NOTE_LETTERS);
+  return { notes, choices };
+}
+
+// Multi-note staff: renders SEQ_LEN notes side by side
+const SEQ_SPACING = 52;
+function SequenceStaff({ notes, current, answered }: { notes: { name: string; pos: number }[]; current: number; answered: boolean[] }) {
+  const W = 310, H = CONT_H;
+  const startX = 52;
+
+  return (
+    <div style={{ position: "relative", width: W, height: H, flexShrink: 0 }}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0, overflow: "visible" }}>
+        {/* Staff lines */}
+        {[0,2,4,6,8].map(p => (
+          <line key={p} x1={42} y1={posY(p)} x2={W - 8} y2={posY(p)} stroke="rgba(255,255,255,0.55)" strokeWidth={1.5} />
+        ))}
+        {notes.map((note, i) => {
+          const cx = startX + i * SEQ_SPACING;
+          const ry = posY(note.pos);
+          const isActive = i === current;
+          const isDone   = answered[i];
+          const color    = isDone ? "rgba(76,175,132,0.9)" : isActive ? "#FDFCFA" : "rgba(255,255,255,0.25)";
+          const stemUp   = note.pos <= 4;
+          const stemX    = stemUp ? cx + 10 : cx - 10;
+          // ledger lines
+          const ledgers: number[] = [];
+          if (note.pos <= -2) for (let p = -2; p >= note.pos; p -= 2) ledgers.push(p);
+          if (note.pos >= 10) for (let p = 10; p <= note.pos; p += 2) ledgers.push(p);
+          return (
+            <g key={i}>
+              {ledgers.map(p => <line key={p} x1={cx - 14} y1={posY(p)} x2={cx + 14} y2={posY(p)} stroke="rgba(255,255,255,0.55)" strokeWidth={1.5} />)}
+              <line x1={stemX} y1={ry} x2={stemX} y2={stemUp ? ry - 30 : ry + 30} stroke={color} strokeWidth={1.5} />
+              <ellipse cx={cx} cy={ry} rx={9} ry={7} fill={color} transform={`rotate(-18, ${cx}, ${ry})`} />
+              {isActive && !isDone && <ellipse cx={cx} cy={ry} rx={13} ry={11} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1} transform={`rotate(-18, ${cx}, ${ry})`} />}
+            </g>
+          );
+        })}
+      </svg>
+      {/* Treble clef */}
+      <span aria-hidden style={{ position: "absolute", left: 5, top: BOT_Y - 97, fontSize: 102, lineHeight: 1, fontFamily: "'Times New Roman', Georgia, serif", color: "rgba(255,255,255,0.7)", userSelect: "none", pointerEvents: "none", display: "block" }}>𝄞</span>
+    </div>
+  );
+}
+
+function SightReadGame({ onBack }: { onBack: () => void }) {
+  const [level, setLevel] = useState<SightLevel>("level1");
+  const [seq, setSeq]     = useState(() => makeSeq("level1"));
+  const [step, setStep]   = useState(0);
+  const [answered, setAns] = useState([false, false, false, false]);
+  const gk   = `sight_${level}`;
+  const game = useGameState(gk);
+
+  useEffect(() => { game.loadHi(); }, [level]); // eslint-disable-line
+
+  function start() {
+    game.loadHi();
+    game.beginCountdown(() => {
+      const s = makeSeq(level);
+      setSeq(s); setStep(0); setAns([false,false,false,false]);
+      game.beginPlay();
+    });
+  }
+
+  function answer(letter: string) {
+    if (game.selected || game.gs !== "playing") return;
+    const correct = seq.notes[step].name.replace(/\d/, "");
+    game.setSelected(letter);
+    const ok = letter === correct;
+    game.scoreAnswer(ok);
+    setTimeout(() => {
+      game.setSelected(null);
+      if (step + 1 >= SEQ_LEN) {
+        const ns = makeSeq(level);
+        setSeq(ns); setStep(0); setAns([false,false,false,false]);
+      } else {
+        setAns(prev => { const n = [...prev]; n[step] = ok; return n; });
+        setStep(s => s + 1);
+      }
+    }, ok ? 400 : 900);
+  }
+
+  if (game.gs === "results") return <ResultsScreen score={game.score} correct={game.correct} total={game.total} topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore} gameLabel="Sight Reading" onPlayAgain={start} onMenu={onBack} />;
+  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
+
+  const currentNote = seq.notes[step];
+  const clef = level === "level3" && BASS_NOTES.some(n => n.name === currentNote?.name) ? "bass" : "treble";
+
+  if (game.gs === "idle") return (
+    <IdleCard title="Sight Reading" hiScore={game.hiScore}
+      description={`4 notes appear on the staff — name them left to right as fast as possible. ${SEQ_LEN} notes per sequence, 30s rounds.`}
+      extras={
+        <>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+            {(["level1","level2","level3"] as SightLevel[]).map(lv => (
+              <button key={lv} onClick={() => setLevel(lv)} style={{ padding: "0.4rem 0.875rem", borderRadius: 20, cursor: "pointer", background: level === lv ? "#4CAF84" : "transparent", border: `1.5px solid ${level === lv ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: level === lv ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: level === lv ? 600 : 400, transition: "all 0.15s" }}>
+                {SIGHT_LEVEL_LABELS[lv]}
+              </button>
+            ))}
+          </div>
+          <div style={{ background: "#252537", borderRadius: 12, padding: "0.75rem", marginBottom: "1.25rem", display: "flex", justifyContent: "center" }}>
+            <SequenceStaff notes={makeSeq("level1").notes} current={1} answered={[true,false,false,false]} />
+          </div>
+        </>
+      }
+      onStart={start}
+    />
+  );
+
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
+      <TopBar onBack={onBack} label="Sight Reading" />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <Popups entries={game.popups} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.25rem", gap: "1rem" }}>
+        <div style={{ background: "#252537", borderRadius: 12, padding: "0.75rem 0.5rem", overflowX: "auto" }}>
+          {level === "level3" && clef === "bass"
+            ? <Staff clef="bass" notePos={currentNote.pos} />
+            : <SequenceStaff notes={seq.notes} current={step} answered={answered} />
+          }
+        </div>
+        <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: 0 }}>Note {step + 1} of {SEQ_LEN} — name it</p>
+        <div style={{ width: "100%", maxWidth: 340 }}>
+          <AnswerGrid choices={seq.choices} selected={game.selected} correct={currentNote.name.replace(/\d/, "")} onAnswer={answer} columns={4} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Menu
 // ─────────────────────────────────────────────────────────────────────────────
-type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm";
+type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm" | "fretboard" | "guitarChord" | "rhythmEcho" | "sightRead";
 
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   const scores = {
@@ -1551,12 +2263,20 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       badge: null, active: true,
     },
     {
-      view: "menu" as View, icon: "📖", title: "Sight Reading",
-      desc: "Short melodic passages graded by RCM level. Sing or play along, then self-rate.", badge: null, active: false,
+      view: "sightRead" as View, icon: "📖", title: "Sight Reading",
+      desc: "Four notes appear on the staff — name them left to right. Three levels: beginner to full treble + bass.", badge: null, active: true,
     },
     {
-      view: "menu" as View, icon: "🥁", title: "Rhythm Clapping",
-      desc: "See a rhythm pattern and tap it back. RCM exam prep.", badge: null, active: false,
+      view: "rhythmEcho" as View, icon: "🥁", title: "Rhythm Echo",
+      desc: "Listen to a rhythm, then tap it back. 5 rounds scored on accuracy. Three difficulty levels.", badge: null, active: true,
+    },
+    {
+      view: "fretboard" as View, icon: "🎸", title: "Fretboard Notes",
+      desc: "A fret position lights up on the guitar neck — name the note. Three levels: open position to full neck.", badge: null, active: true,
+    },
+    {
+      view: "guitarChord" as View, icon: "🤘", title: "Guitar Chord Finder",
+      desc: "See a chord diagram and identify the chord name. Covers open chords, barre chords, and extended voicings.", badge: null, active: true,
     },
   ];
 
@@ -1564,7 +2284,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     <div style={{ minHeight: "100%", background: "var(--cream)", padding: "2.5rem 1.5rem", fontFamily: "Inter, sans-serif" }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ marginBottom: "2.5rem" }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>Theory Practice</div>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>Music Games</div>
           <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>Fast-paced rounds, streak multipliers, personal bests. The best theory practice happens in small daily doses.</p>
         </div>
         <div style={{ display: "grid", gap: "0.875rem" }}>
@@ -1602,6 +2322,10 @@ export default function TheoryPage() {
   if (view === "terms")    return <MusicTermsGame onBack={() => setView("menu")} />;
   if (view === "keySig")   return <KeySigGame onBack={() => setView("menu")} />;
   if (view === "scale")    return <ScaleGame onBack={() => setView("menu")} />;
-  if (view === "rcm")      return <RCMReference onBack={() => setView("menu")} />;
+  if (view === "rcm")         return <RCMReference onBack={() => setView("menu")} />;
+  if (view === "fretboard")   return <FretboardGame onBack={() => setView("menu")} />;
+  if (view === "guitarChord") return <GuitarChordGame onBack={() => setView("menu")} />;
+  if (view === "rhythmEcho")  return <RhythmEchoGame onBack={() => setView("menu")} />;
+  if (view === "sightRead")   return <SightReadGame onBack={() => setView("menu")} />;
   return null;
 }

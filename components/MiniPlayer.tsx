@@ -97,6 +97,8 @@ export default function MiniPlayer() {
     );
   }
 
+  if (!current) return null;
+
   const hasPrev = queueIndex > 0;
   const hasNext = queueIndex < queue.length - 1;
 

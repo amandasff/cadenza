@@ -23,7 +23,7 @@ const tabs = [
   { href: "/student",                label: "Home" },
   { href: "/student/practice",       label: "Practice" },
   { href: "/student/pieces",         label: "Pieces" },
-  { href: "/student/theory",         label: "Theory" },
+  { href: "/student/theory",         label: "Games" },
   { href: "/student/ai-tutor",       label: "AI" },
   { href: "/student/chat",           label: "Chat" },
   { href: "/student/journey",        label: "Journey" },
@@ -41,7 +41,7 @@ const primaryMobileTabs = [
 const moreMobileTabs = [
   { href: "/student/chat",     label: "Chat" },
   { href: "/student/pieces",   label: "Pieces" },
-  { href: "/student/theory",   label: "Theory" },
+  { href: "/student/theory",   label: "Games" },
   { href: "/student/ai-tutor", label: "AI Tutor" },
   { href: "/student/rewards",  label: "Awards" },
 ];
