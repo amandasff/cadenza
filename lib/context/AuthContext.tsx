@@ -42,7 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth state changes (sign in / sign out from other tabs, token refresh, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
+      (event: AuthChangeEvent, session: Session | null) => {
+        // INITIAL_SESSION is already handled by getSession() above — skip it to
+        // avoid a double loading cycle that causes the login page to flash.
+        if (event === 'INITIAL_SESSION') return;
         if (session?.user) {
           // Keep loading=true until the profile is fetched. Without this, layouts
           // see loading=false && user=null and immediately redirect back to /auth/login

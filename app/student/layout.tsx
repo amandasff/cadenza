@@ -31,6 +31,21 @@ const tabs = [
   { href: "/student/rewards",        label: "Awards" },
 ];
 
+// Mobile bottom nav: 5 primary tabs + "More" sheet for the rest
+const primaryMobileTabs = [
+  { href: "/student",          label: "Home" },
+  { href: "/student/practice", label: "Practice" },
+  { href: "/student/journey",  label: "Journey" },
+  { href: "/student/discover", label: "Discover" },
+];
+const moreMobileTabs = [
+  { href: "/student/chat",     label: "Chat" },
+  { href: "/student/pieces",   label: "Pieces" },
+  { href: "/student/theory",   label: "Theory" },
+  { href: "/student/ai-tutor", label: "AI Tutor" },
+  { href: "/student/rewards",  label: "Awards" },
+];
+
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
@@ -63,6 +78,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const [setPinError, setSetPinError] = useState<string | null>(null);
   const [setPinSuccess, setSetPinSuccess] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -499,9 +515,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         background: "var(--white)", borderTop: "1px solid var(--border)",
         display: "flex", zIndex: 100, padding: "0.5rem 0 0.625rem",
       }}>
-        {tabs.map(t => {
+        {primaryMobileTabs.map(t => {
           const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
-          const showDot = t.href === "/student/chat" && hasUnread && !active;
           return (
             <Link key={t.href} href={t.href} style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
@@ -519,20 +534,92 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 fontSize: "0.5625rem", fontFamily: "Inter, sans-serif",
                 fontWeight: active ? 600 : 400, letterSpacing: "0.07em",
                 textTransform: "uppercase", marginTop: "0.125rem",
-                position: "relative",
               }}>
                 {t.label}
-                {showDot && (
-                  <span style={{
-                    position: "absolute", top: -2, right: -7,
-                    width: 5, height: 5, borderRadius: "50%", background: "#e85d4a",
-                  }} />
-                )}
               </span>
             </Link>
           );
         })}
+
+        {/* More button */}
+        <button
+          onClick={() => setMoreOpen(true)}
+          style={{
+            flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+            background: "none", border: "none", padding: "0.375rem 0", cursor: "pointer",
+            color: moreMobileTabs.some(t => path.startsWith(t.href)) ? "var(--charcoal)" : "var(--muted)",
+            position: "relative",
+          }}
+        >
+          {moreMobileTabs.some(t => path.startsWith(t.href)) && (
+            <div style={{
+              position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+              width: 20, height: 1.5, background: "var(--charcoal)",
+            }} />
+          )}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+          </svg>
+          <span style={{
+            fontSize: "0.5625rem", fontFamily: "Inter, sans-serif",
+            fontWeight: moreMobileTabs.some(t => path.startsWith(t.href)) ? 600 : 400,
+            letterSpacing: "0.07em", textTransform: "uppercase", position: "relative",
+          }}>
+            More
+            {hasUnread && !path.startsWith("/student/chat") && (
+              <span style={{
+                position: "absolute", top: -2, right: -7,
+                width: 5, height: 5, borderRadius: "50%", background: "#e85d4a",
+              }} />
+            )}
+          </span>
+        </button>
       </nav>
+
+      {/* More sheet */}
+      {moreOpen && (
+        <div
+          onClick={() => setMoreOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "absolute", bottom: 0, left: 0, right: 0,
+              background: "var(--white)", borderRadius: "16px 16px 0 0",
+              padding: "1rem 0 2rem",
+            }}
+          >
+            <div style={{ width: 36, height: 3, borderRadius: 2, background: "var(--border)", margin: "0 auto 1rem" }} />
+            {moreMobileTabs.map(t => {
+              const active = path.startsWith(t.href);
+              const showDot = t.href === "/student/chat" && hasUnread && !active;
+              return (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  onClick={() => setMoreOpen(false)}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "0.875rem 1.5rem",
+                    fontFamily: "Inter, sans-serif", fontSize: "1rem",
+                    fontWeight: active ? 600 : 400,
+                    color: active ? "var(--charcoal)" : "var(--muted)",
+                    textDecoration: "none",
+                    borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                    background: active ? "var(--cream)" : "transparent",
+                  }}
+                >
+                  {t.label}
+                  {showDot && (
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <MiniPlayer />
       <PracticePip />
     </div>
