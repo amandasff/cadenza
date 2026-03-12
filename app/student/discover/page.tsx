@@ -63,6 +63,9 @@ export default function DiscoverPage() {
   const [commentPosting, setCommentPosting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [likingId, setLikingId] = useState<string | null>(null);
+  const [likeError, setLikeError] = useState<string | null>(null);
+  const [profileUser, setProfileUser] = useState<{ id: string; name: string } | null>(null);
+  const [profileItems, setProfileItems] = useState<PublicItem[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -139,7 +142,8 @@ export default function DiscoverPage() {
   }
 
   async function toggleLike(item: PublicItem) {
-    if (!currentUserId || likingId === item.id) return;
+    if (!currentUserId) { setLikeError("Sign in to like covers"); setTimeout(() => setLikeError(null), 3000); return; }
+    if (likingId === item.id) return;
     setLikingId(item.id);
     const next = { ...item, user_liked: !item.user_liked, like_count: item.user_liked ? item.like_count - 1 : item.like_count + 1 };
     setItems(prev => prev.map(i => i.id === item.id ? next : i));
@@ -147,16 +151,42 @@ export default function DiscoverPage() {
     try {
       const supabase = getSupabaseBrowserClient();
       if (item.user_liked) {
-        await supabase.from("portfolio_likes").delete().eq("portfolio_item_id", item.id).eq("user_id", currentUserId);
+        const { error } = await supabase.from("portfolio_likes").delete().eq("portfolio_item_id", item.id).eq("user_id", currentUserId);
+        if (error) throw error;
       } else {
-        await supabase.from("portfolio_likes").insert({ portfolio_item_id: item.id, user_id: currentUserId });
+        const { error } = await supabase.from("portfolio_likes").insert({ portfolio_item_id: item.id, user_id: currentUserId });
+        if (error) throw error;
       }
-    } catch {
+    } catch (err) {
       setItems(prev => prev.map(i => i.id === item.id ? item : i));
       if (expandedItem?.id === item.id) setExpandedItem(item);
+      const e = err as { message?: string };
+      setLikeError(e?.message ?? "Could not save like");
+      setTimeout(() => setLikeError(null), 4000);
     } finally {
       setLikingId(null);
     }
+  }
+
+  async function openProfile(studentId: string, displayName: string) {
+    setProfileUser({ id: studentId, name: displayName });
+    setProfileItems([]);
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase
+      .from("portfolio_items")
+      .select("*")
+      .eq("student_id", studentId)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false });
+    const rows = (data ?? []) as PortfolioItemRow[];
+    const mapped: PublicItem[] = rows.map(row => ({
+      ...row,
+      display_name: displayName,
+      like_count: 0,
+      comment_count: 0,
+      user_liked: false,
+    }));
+    setProfileItems(mapped);
   }
 
   async function loadComments(itemId: string) {
@@ -270,17 +300,71 @@ export default function DiscoverPage() {
                       {item.display_name ?? "Musician"}
                     </div>
                   </div>
-                  {/* Like count badge */}
-                  {item.like_count > 0 && (
-                    <div style={{ position: "absolute", top: "0.4rem", right: "0.4rem", display: "flex", alignItems: "center", gap: "0.25rem", background: "rgba(0,0,0,0.55)", borderRadius: 20, padding: "0.2rem 0.45rem" }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="#e85d4a" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
-                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "#fff", fontWeight: 600 }}>{item.like_count}</span>
-                    </div>
-                  )}
+                  {/* Like + comment counts always visible */}
+                  <div style={{ position: "absolute", top: "0.4rem", right: "0.4rem", display: "flex", alignItems: "center", gap: "0.3rem", background: "rgba(0,0,0,0.55)", borderRadius: 20, padding: "0.2rem 0.45rem" }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill={item.like_count > 0 ? "#e85d4a" : "none"} stroke={item.like_count > 0 ? "#e85d4a" : "rgba(255,255,255,0.6)"} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: item.like_count > 0 ? "#fff" : "rgba(255,255,255,0.6)", fontWeight: 600 }}>{item.like_count}</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "rgba(255,255,255,0.35)" }}>·</span>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={item.comment_count > 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)"} strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: item.comment_count > 0 ? "#fff" : "rgba(255,255,255,0.5)", fontWeight: 600 }}>{item.comment_count}</span>
+                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Like error toast ── */}
+      {likeError && (
+        <div style={{ position: "fixed", bottom: "5.5rem", left: "50%", transform: "translateX(-50%)", zIndex: 600, background: "#2C2824", color: "#fff", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, padding: "0.625rem 1.25rem", borderRadius: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap", pointerEvents: "none" }}>
+          {likeError}
+        </div>
+      )}
+
+      {/* ── Profile sheet ── */}
+      {profileUser && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 600, display: "flex", flexDirection: "column" }}>
+          <div onClick={() => { setProfileUser(null); setProfileItems([]); }} style={{ flex: 1, background: "rgba(0,0,0,0.6)", minHeight: 40 }} />
+          <div style={{ background: "var(--white)", borderRadius: "20px 20px 0 0", maxHeight: "85dvh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.875rem 1rem 0.75rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6875rem", fontWeight: 700, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
+                {initials(profileUser.name)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{profileUser.name}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>{profileItems.length > 0 ? `${profileItems.length} public cover${profileItems.length > 1 ? "s" : ""}` : "Loading…"}</div>
+              </div>
+              <button onClick={() => { setProfileUser(null); setProfileItems([]); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            {/* Grid */}
+            <div style={{ overflowY: "auto", flex: 1, padding: profileItems.length === 0 ? "2rem 1rem" : 0 }}>
+              {profileItems.length === 0 ? (
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", textAlign: "center", margin: 0, fontStyle: "italic" }}>Loading covers…</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, background: "#111" }}>
+                  {profileItems.map(pi => (
+                    <div key={pi.id} onClick={() => { setProfileUser(null); setProfileItems([]); openItem(pi); }} style={{ cursor: "pointer", position: "relative", background: "#1a1a1a", overflow: "hidden", aspectRatio: "9/14" }}>
+                      {pi.media_type === "video" && pi.recording_url ? (
+                        <VideoThumbnail src={pi.recording_url} />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #2C2824 0%, #4a3f38 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                        </div>
+                      )}
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)", pointerEvents: "none" }} />
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0.375rem 0.375rem 0.3rem" }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.5625rem", color: "#fff", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                          {pi.title}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -327,12 +411,18 @@ export default function DiscoverPage() {
                 {expandedItem.media_type === "video" && (
                   <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.3, marginBottom: "0.375rem" }}>{expandedItem.title}</div>
                 )}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: expandedItem.description ? "0.625rem" : 0 }}>
+                <div
+                  onClick={() => openProfile(expandedItem.student_id, expandedItem.display_name ?? "Musician")}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: expandedItem.description ? "0.625rem" : 0, cursor: "pointer" }}
+                >
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", fontWeight: 700, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
                     {initials(expandedItem.display_name)}
                   </div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px" }}>
+                    {expandedItem.display_name ?? "Musician"}
+                  </div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-                    {expandedItem.display_name ?? "Musician"} · {formatRelative(expandedItem.created_at)}
+                    · {formatRelative(expandedItem.created_at)}
                   </div>
                 </div>
                 {expandedItem.description && (
