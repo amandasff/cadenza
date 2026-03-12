@@ -74,7 +74,7 @@ export default function JourneyPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [sharePublic, setSharePublic] = useState(false);
+  const [sharePublic, setSharePublic] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // In-app recording
