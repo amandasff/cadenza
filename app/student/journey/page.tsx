@@ -66,14 +66,26 @@ export default function JourneyPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [togglingPublicId, setTogglingPublicId] = useState<string | null>(null);
 
-  // Video cover upload
+  // Video cover modal
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [coverTab, setCoverTab] = useState<"upload" | "record">("upload");
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // In-app recording
+  const [recording, setRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recordError, setRecordError] = useState("");
+  const liveVideoRef = useRef<HTMLVideoElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordStreamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -150,18 +162,67 @@ export default function JourneyPage() {
     }
   }
 
+  async function startRecording() {
+    setRecordError("");
+    setRecordedBlob(null);
+    setRecordedUrl(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: "user" } });
+      recordStreamRef.current = stream;
+      if (liveVideoRef.current) { liveVideoRef.current.srcObject = stream; }
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "video/webm" });
+        setRecordedBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setRecordedUrl(url);
+        stream.getTracks().forEach(t => t.stop());
+        if (liveVideoRef.current) liveVideoRef.current.srcObject = null;
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setRecording(true);
+    } catch {
+      setRecordError("Camera/mic access denied. Check your browser permissions.");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }
+
+  function discardRecording() {
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedBlob(null);
+    setRecordedUrl(null);
+  }
+
+  function closeModal() {
+    if (recording) { mediaRecorderRef.current?.stop(); recordStreamRef.current?.getTracks().forEach(t => t.stop()); setRecording(false); }
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedBlob(null); setRecordedUrl(null); setRecordError("");
+    setUploadFile(null); setUploadError(""); setUploadTitle(""); setUploadDesc("");
+    setShowUploadModal(false);
+  }
+
   async function handleVideoUpload() {
-    if (!uploadFile || !uploadTitle.trim() || uploading) return;
+    const fileToUpload = coverTab === "record"
+      ? (recordedBlob ? new File([recordedBlob], `recording-${Date.now()}.webm`, { type: "video/webm" }) : null)
+      : uploadFile;
+    if (!fileToUpload || !uploadTitle.trim() || uploading) return;
     if (!student?.id) return;
     setUploading(true);
     setUploadError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      const ext = uploadFile.name.split(".").pop() ?? "mp4";
+      const ext = fileToUpload.name.split(".").pop() ?? "mp4";
       const path = `covers/${student.id}/${Date.now()}.${ext}`;
       const { error: storageError } = await supabase.storage
         .from("practice-recordings")
-        .upload(path, uploadFile, { contentType: uploadFile.type, upsert: false });
+        .upload(path, fileToUpload, { contentType: fileToUpload.type, upsert: false });
       if (storageError) throw storageError;
       const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
       const item = await PortfolioService.getInstance(supabase).addItem({
@@ -174,10 +235,7 @@ export default function JourneyPage() {
         isPublic: false,
       });
       setItems(prev => [item, ...prev]);
-      setShowUploadModal(false);
-      setUploadTitle("");
-      setUploadDesc("");
-      setUploadFile(null);
+      closeModal();
     } catch (err) {
       setUploadError((err as { message?: string })?.message ?? "Upload failed");
     } finally {
@@ -472,83 +530,115 @@ export default function JourneyPage() {
         </div>
       )}
 
-      {/* Upload Video Cover Modal */}
+      {/* Add Cover Modal */}
       {showUploadModal && (
         <div
-          onClick={e => { if (e.target === e.currentTarget) setShowUploadModal(false); }}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000, padding: "1rem" }}
+          onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000 }}
         >
-          <div style={{ background: "var(--white)", borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: 480, boxShadow: "0 -4px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-              <div>
-                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "var(--charcoal)" }}>
-                  Add Video Cover
-                </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>
-                  Upload a performance video to your journey
-                </div>
+          <div style={{ background: "var(--white)", borderRadius: "16px 16px 0 0", padding: "1.5rem", width: "100%", maxWidth: 520, boxShadow: "0 -4px 40px rgba(0,0,0,0.2)", maxHeight: "90dvh", overflowY: "auto" }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "var(--charcoal)" }}>
+                Add Cover
               </div>
-              <button onClick={() => setShowUploadModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--muted)", lineHeight: 1, padding: "0.25rem" }}>×</button>
+              <button onClick={closeModal} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: "1.25rem" }}>
+              {([["upload", "📁 Upload file"], ["record", "🎥 Record now"]] as const).map(([tab, label]) => (
+                <button key={tab} type="button" onClick={() => { setCoverTab(tab); setRecordError(""); setUploadError(""); }}
+                  style={{ flex: 1, padding: "0.5rem", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", transition: "all 0.15s", background: coverTab === tab ? "var(--charcoal)" : "transparent", color: coverTab === tab ? "var(--white)" : "var(--muted)" }}>
+                  {label}
+                </button>
+              ))}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+              {/* Title + note (shared) */}
               <div>
                 <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", display: "block", marginBottom: "0.3rem" }}>Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Understand — Keshi cover"
-                  value={uploadTitle}
-                  onChange={e => setUploadTitle(e.target.value)}
-                  style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }}
-                />
+                <input type="text" placeholder="e.g. Understand — Keshi cover" value={uploadTitle} onChange={e => setUploadTitle(e.target.value)}
+                  style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
               </div>
-
               <div>
                 <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", display: "block", marginBottom: "0.3rem" }}>Note (optional)</label>
-                <textarea
-                  placeholder="What were you working on? How did it feel?"
-                  value={uploadDesc}
-                  onChange={e => setUploadDesc(e.target.value)}
-                  rows={2}
-                  style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none" }}
-                />
+                <textarea placeholder="What were you working on? How did it feel?" value={uploadDesc} onChange={e => setUploadDesc(e.target.value)} rows={2}
+                  style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none" }} />
               </div>
 
-              {/* File drop zone */}
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  border: `2px dashed ${uploadFile ? "var(--sage)" : "var(--border)"}`,
-                  borderRadius: 10, padding: "1.5rem", textAlign: "center", cursor: "pointer",
-                  background: uploadFile ? "rgba(61,107,85,0.04)" : "var(--cream)",
-                  transition: "all 0.15s",
-                }}
-              >
-                {uploadFile ? (
-                  <>
-                    <div style={{ fontSize: "1.5rem", marginBottom: "0.375rem" }}>🎬</div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>{uploadFile.name}</div>
-                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-                      {(uploadFile.size / 1024 / 1024).toFixed(1)} MB · tap to change
+              {coverTab === "upload" ? (
+                <>
+                  <div onClick={() => fileInputRef.current?.click()}
+                    style={{ border: `2px dashed ${uploadFile ? "var(--sage)" : "var(--border)"}`, borderRadius: 10, padding: "1.5rem", textAlign: "center", cursor: "pointer", background: uploadFile ? "rgba(61,107,85,0.04)" : "var(--cream)", transition: "all 0.15s" }}>
+                    {uploadFile ? (
+                      <>
+                        <div style={{ fontSize: "1.5rem", marginBottom: "0.375rem" }}>🎬</div>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>{uploadFile.name}</div>
+                        <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>{(uploadFile.size / 1024 / 1024).toFixed(1)} MB · tap to change</div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: "1.5rem", marginBottom: "0.375rem" }}>📹</div>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>Tap to choose a video</div>
+                        <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>MP4, MOV, WebM</div>
+                      </>
+                    )}
+                    <input ref={fileInputRef} type="file" accept="video/*" onChange={e => { const f = e.target.files?.[0]; if (f) setUploadFile(f); }} style={{ display: "none" }} />
+                  </div>
+                </>
+              ) : (
+                /* Record tab */
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {recordError && (
+                    <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "#FDF6F3", border: "1px solid #E8C4BA", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif" }}>{recordError}</div>
+                  )}
+
+                  {/* Live preview or recorded preview */}
+                  {!recordedBlob ? (
+                    <div style={{ position: "relative", background: "#111", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3" }}>
+                      <video ref={liveVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: recording ? "block" : "none" }} />
+                      {!recording && (
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem" }}>
+                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📷</div>
+                            Camera preview will appear here
+                          </div>
+                        </div>
+                      )}
+                      {recording && (
+                        <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(0,0,0,0.6)", borderRadius: 4, padding: "0.25rem 0.5rem" }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#e85d4a", animation: "pulse 1s infinite" }} />
+                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "#fff", fontWeight: 600, letterSpacing: "0.04em" }}>REC</span>
+                        </div>
+                      )}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: "1.5rem", marginBottom: "0.375rem" }}>📹</div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>Tap to choose a video</div>
-                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>MP4, MOV, WebM — up to 100MB</div>
-                  </>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) setUploadFile(f); }}
-                  style={{ display: "none" }}
-                />
-              </div>
+                  ) : (
+                    <div>
+                      <video ref={previewVideoRef} src={recordedUrl ?? undefined} controls playsInline style={{ width: "100%", borderRadius: 10, background: "#111", maxHeight: 240 }} />
+                      <button onClick={discardRecording} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", padding: 0, textDecoration: "underline" }}>
+                        Re-record
+                      </button>
+                    </div>
+                  )}
 
-              {uploadError && (
+                  {!recordedBlob && (
+                    <button
+                      onClick={recording ? stopRecording : startRecording}
+                      style={{ padding: "0.75rem", borderRadius: 8, border: recording ? "2px solid #e85d4a" : "2px solid var(--charcoal)", background: recording ? "rgba(232,93,74,0.08)" : "var(--charcoal)", color: recording ? "#e85d4a" : "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
+                    >
+                      {recording ? (
+                        <><span style={{ width: 10, height: 10, borderRadius: 2, background: "#e85d4a", flexShrink: 0 }} /> Stop Recording</>
+                      ) : (
+                        <>🎥 Start Recording</>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {(uploadError) && (
                 <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "#FDF6F3", border: "1px solid #E8C4BA", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif" }}>
                   {uploadError}
                 </div>
@@ -556,16 +646,10 @@ export default function JourneyPage() {
 
               <button
                 onClick={handleVideoUpload}
-                disabled={!uploadFile || !uploadTitle.trim() || uploading}
-                style={{
-                  padding: "0.75rem", borderRadius: 8, border: "none",
-                  background: (!uploadFile || !uploadTitle.trim() || uploading) ? "var(--border)" : "var(--charcoal)",
-                  color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600,
-                  fontSize: "0.9375rem", cursor: (!uploadFile || !uploadTitle.trim() || uploading) ? "default" : "pointer",
-                  transition: "background 0.15s",
-                }}
+                disabled={(coverTab === "upload" ? !uploadFile : !recordedBlob) || !uploadTitle.trim() || uploading}
+                style={{ padding: "0.75rem", borderRadius: 8, border: "none", background: ((coverTab === "upload" ? !uploadFile : !recordedBlob) || !uploadTitle.trim() || uploading) ? "var(--border)" : "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", cursor: ((coverTab === "upload" ? !uploadFile : !recordedBlob) || !uploadTitle.trim() || uploading) ? "default" : "pointer", transition: "background 0.15s" }}
               >
-                {uploading ? "Uploading…" : "Save to Journey"}
+                {uploading ? "Saving…" : "Save to Journey"}
               </button>
             </div>
           </div>

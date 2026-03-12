@@ -42,11 +42,10 @@ export class PortfolioService {
     return (data ?? []) as PortfolioItemRow[];
   }
 
-  async getPublicItems(studioId: string): Promise<(PortfolioItemRow & { display_name?: string })[]> {
+  async getPublicItems(): Promise<(PortfolioItemRow & { display_name?: string })[]> {
     const { data, error } = await this.supabase
       .from('portfolio_items')
       .select('*, profiles(display_name)')
-      .eq('studio_id', studioId)
       .eq('is_public', true)
       .order('created_at', { ascending: false });
 

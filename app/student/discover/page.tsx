@@ -1,12 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PortfolioService, type PortfolioItemRow } from "../../../lib/services/PortfolioService";
-import { Student } from "../../../lib/models/Student";
 import AudioPlayer from "../../../components/AudioPlayer";
 
 type PublicItem = PortfolioItemRow & { display_name?: string };
+
+const ALTER_SQL = `ALTER TABLE public.portfolio_items
+  ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'audio',
+  ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE;`;
 
 function formatRelative(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -19,31 +21,30 @@ function formatRelative(iso: string) {
 }
 
 export default function DiscoverPage() {
-  const { user } = useAuth();
-  const student = user as Student;
-
   const [items, setItems] = useState<PublicItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [noTable, setNoTable] = useState(false);
+  const [missingColumns, setMissingColumns] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      if (!student?.studioId) return;
       try {
         const supabase = getSupabaseBrowserClient();
-        const data = await PortfolioService.getInstance(supabase).getPublicItems(student.studioId);
+        const data = await PortfolioService.getInstance(supabase).getPublicItems();
         setItems(data);
       } catch (err) {
         const e = err as { message?: string; code?: string };
-        if (e?.message?.includes("portfolio_items") || e?.code === "42P01") setNoTable(true);
+        // 42703 = undefined_column, 42P01 = undefined_table
+        if (e?.code === "42703" || e?.code === "42P01" || e?.message?.includes("is_public") || e?.message?.includes("media_type")) {
+          setMissingColumns(true);
+        }
         console.error("discover load error:", e?.message);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [student?.studioId]);
+  }, []);
 
   if (loading) {
     return (
@@ -63,16 +64,20 @@ export default function DiscoverPage() {
           Discover
         </h1>
         <p style={{ color: "var(--muted)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif" }}>
-          Performances and covers from your studio
+          Performances &amp; covers from musicians everywhere
         </p>
       </div>
 
-      {noTable ? (
-        <div style={{ padding: "2rem 1.5rem" }}>
-          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem" }}>
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-              The Journey feature needs to be set up first. Ask your teacher to run the setup SQL.
+      {missingColumns ? (
+        <div style={{ padding: "1.5rem" }}>
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 10, padding: "1.25rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>
+              One more SQL step needed
+            </div>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.875rem", lineHeight: 1.6 }}>
+              Run this in your <strong>Supabase SQL Editor</strong> to enable public sharing:
             </p>
+            <pre style={{ background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: 6, padding: "0.875rem", fontSize: "0.7rem", fontFamily: "monospace", color: "var(--charcoal)", overflowX: "auto", lineHeight: 1.7, whiteSpace: "pre-wrap", margin: 0 }}>{ALTER_SQL}</pre>
           </div>
         </div>
       ) : items.length === 0 ? (
@@ -84,7 +89,7 @@ export default function DiscoverPage() {
             Nothing shared yet
           </div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 260, margin: "0 auto" }}>
-            When students share recordings or covers from their Journey, they&apos;ll appear here.
+            When musicians share recordings or covers from their Journey, they&apos;ll appear here for everyone to enjoy.
           </p>
         </div>
       ) : (
@@ -94,33 +99,16 @@ export default function DiscoverPage() {
             const isPlaying = playingId === item.id;
 
             return (
-              <div
-                key={item.id}
-                style={{
-                  background: "var(--white)", borderRadius: 12,
-                  border: "1px solid var(--border)", overflow: "hidden",
-                }}
-              >
-                {/* Video thumbnail / player */}
+              <div key={item.id} style={{ background: "var(--white)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
+                {/* Video */}
                 {isVideo && item.recording_url && (
                   <div style={{ position: "relative", background: "#111", aspectRatio: "16/9", maxHeight: 240 }}>
                     {isPlaying ? (
-                      <video
-                        src={item.recording_url}
-                        autoPlay
-                        controls
-                        playsInline
-                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                      />
+                      <video src={item.recording_url} autoPlay controls playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     ) : (
-                      <div
-                        onClick={() => setPlayingId(item.id)}
-                        style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "absolute", inset: 0 }}
-                      >
+                      <div onClick={() => setPlayingId(item.id)} style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "absolute", inset: 0 }}>
                         <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.9)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.3)" }}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1C1916">
-                            <path d="M5 3l14 9-14 9V3z" />
-                          </svg>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1C1916"><path d="M5 3l14 9-14 9V3z" /></svg>
                         </div>
                       </div>
                     )}
@@ -129,13 +117,12 @@ export default function DiscoverPage() {
 
                 {/* Card body */}
                 <div style={{ padding: "0.875rem 1rem" }}>
-                  {/* Author row */}
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
                       {(item.display_name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{item.display_name ?? "Student"}</div>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{item.display_name ?? "Musician"}</div>
                       <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>{formatRelative(item.created_at)}</div>
                     </div>
                     {isVideo && (
@@ -153,7 +140,6 @@ export default function DiscoverPage() {
                     </p>
                   )}
 
-                  {/* Audio player for non-video */}
                   {!isVideo && item.recording_url && (
                     <div style={{ marginTop: "0.625rem" }}>
                       <AudioPlayer src={item.recording_url} />
