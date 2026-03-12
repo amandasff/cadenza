@@ -214,7 +214,7 @@ export class ChatService {
     onUpdate?: (msg: MessageRow) => void,
     onDelete?: (id: string) => void
   ): () => void {
-    const channelKey = `dm:${studioId}:${[userId1, userId2].sort().join(':')}`;
+    const channelKey = `dm:${studioId}:${[userId1, userId2].sort((a, b) => a.localeCompare(b)).join(':')}`;
     const isThread = (msg: MessageRow) =>
       (msg.sender_id === userId1 && msg.recipient_id === userId2) ||
       (msg.sender_id === userId2 && msg.recipient_id === userId1);
