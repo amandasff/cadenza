@@ -9,6 +9,9 @@ import type { UserRole } from "@/lib/types";
 export default function Home() {
   const router = useRouter();
 
+  // Form mode toggle
+  const [mode, setMode] = useState<"signup" | "signin">("signup");
+
   // Signup form state — embedded right in the hero
   const [role, setRole] = useState<UserRole>("student");
   const [displayName, setDisplayName] = useState("");
@@ -16,6 +19,14 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function switchMode(m: "signup" | "signin") {
+    setMode(m);
+    setError("");
+    setDisplayName("");
+    setEmail("");
+    setPassword("");
+  }
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -31,18 +42,25 @@ export default function Home() {
     });
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
-    if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = AuthService.getInstance(supabase);
-      const user = await service.signUp(email, password, role, displayName);
-      router.push(user.getHomeRoute());
+      if (mode === "signin") {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        const { data: profile } = await supabase.from("profiles").select("role").eq("id", (await supabase.auth.getUser()).data.user!.id).single();
+        router.push(profile?.role === "teacher" ? "/teacher" : "/student");
+      } else {
+        if (password.length < 6) { setError("Password must be at least 6 characters"); setLoading(false); return; }
+        const service = AuthService.getInstance(supabase);
+        const user = await service.signUp(email, password, role, displayName);
+        router.push(user.getHomeRoute());
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign up failed");
+      setError(err instanceof Error ? err.message : mode === "signin" ? "Sign in failed" : "Sign up failed");
     } finally {
       setLoading(false);
     }
@@ -80,9 +98,12 @@ export default function Home() {
         <span style={{ fontWeight: 700, fontSize: "0.8rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#2C2824" }}>
           Cadenza
         </span>
-        <Link href="/auth/login" style={{ padding: "0.375rem 0.875rem", borderRadius: 3, color: "#2C2824", textDecoration: "none", fontWeight: 500, fontSize: "0.8125rem", border: "1px solid #D8D2C8" }}>
+        <button
+          onClick={() => { switchMode("signin"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
+          style={{ padding: "0.375rem 0.875rem", borderRadius: 3, color: "#2C2824", fontWeight: 500, fontSize: "0.8125rem", border: "1px solid #D8D2C8", background: "none", cursor: "pointer" }}
+        >
           Sign in
-        </Link>
+        </button>
       </nav>
 
       {/* Hero — copy left, signup form right */}
@@ -138,8 +159,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right: signup form */}
-        <div style={{
+        {/* Right: signup / signin form */}
+        <div id="hero-form" style={{
           flex: "0 1 380px", minWidth: 300, width: "100%",
           background: "#FFFFFF", border: "1px solid #EDE8E0",
           borderRadius: 10, boxShadow: "0 4px 32px rgba(44,40,36,0.08)",
@@ -151,42 +172,47 @@ export default function Home() {
               fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500,
               fontSize: "1.375rem", color: "#2C2824", marginBottom: "0.875rem",
             }}>
-              Get started for free
+              {mode === "signin" ? "Welcome back" : "Get started for free"}
             </div>
 
-            {/* Role toggle */}
-            <div style={{ display: "flex", border: "1px solid #EDE8E0", borderRadius: 4, overflow: "hidden", marginBottom: "0.25rem" }}>
-              {(["student", "teacher"] as UserRole[]).map(r => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  style={{
-                    flex: 1, padding: "0.5rem", border: "none", cursor: "pointer",
-                    background: role === r ? "#2C2824" : "transparent",
-                    fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
-                    color: role === r ? "#FDFCFA" : "#8A8580",
-                    transition: "all 0.15s", textTransform: "capitalize",
-                  }}
-                >
-                  {r === "student" ? "Student" : "Teacher"}
-                </button>
-              ))}
-            </div>
+            {/* Role toggle — only for signup */}
+            {mode === "signup" && (
+              <div style={{ display: "flex", border: "1px solid #EDE8E0", borderRadius: 4, overflow: "hidden", marginBottom: "0.25rem" }}>
+                {(["student", "teacher"] as UserRole[]).map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    style={{
+                      flex: 1, padding: "0.5rem", border: "none", cursor: "pointer",
+                      background: role === r ? "#2C2824" : "transparent",
+                      fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
+                      color: role === r ? "#FDFCFA" : "#8A8580",
+                      transition: "all 0.15s", textTransform: "capitalize",
+                    }}
+                  >
+                    {r === "student" ? "Student" : "Teacher"}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.875rem", padding: "1rem 1.5rem 1.25rem" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-              <label style={labelStyle}>Name</label>
-              <input
-                type="text"
-                placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"}
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                required
-                style={inputStyle}
-              />
-            </div>
+            {/* Name — signup only */}
+            {mode === "signup" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                <label style={labelStyle}>Name</label>
+                <input
+                  type="text"
+                  placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"}
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  required
+                  style={inputStyle}
+                />
+              </div>
+            )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
               <label style={labelStyle}>Email</label>
@@ -204,7 +230,7 @@ export default function Home() {
               <label style={labelStyle}>Password</label>
               <input
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder={mode === "signin" ? "Your password" : "At least 6 characters"}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
@@ -233,7 +259,9 @@ export default function Home() {
                 letterSpacing: "0.01em", transition: "background 0.15s",
               }}
             >
-              {loading ? "Creating account..." : `Create ${role} account`}
+              {loading
+                ? (mode === "signin" ? "Signing in..." : "Creating account...")
+                : (mode === "signin" ? "Sign in" : `Create ${role} account`)}
             </button>
           </form>
 
@@ -259,13 +287,17 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Sign in link */}
+          {/* Mode toggle footer */}
           <div style={{ padding: "1rem 1.5rem", textAlign: "center" }}>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#ADA9A2", margin: 0 }}>
-              Already have an account?{" "}
-              <Link href="/auth/login" style={{ color: "#2C2824", fontWeight: 500, textDecoration: "underline", textUnderlineOffset: "2px" }}>
-                Sign in
-              </Link>
+              {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+              <button
+                type="button"
+                onClick={() => switchMode(mode === "signin" ? "signup" : "signin")}
+                style={{ background: "none", border: "none", padding: 0, color: "#2C2824", fontWeight: 500, fontSize: "0.75rem", fontFamily: "Inter, sans-serif", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "2px" }}
+              >
+                {mode === "signin" ? "Sign up" : "Sign in"}
+              </button>
             </p>
           </div>
         </div>
