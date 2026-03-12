@@ -735,3 +735,31 @@ html[data-theme="dark"] .progress-fill {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ── Teacher chat responsive ── */
+@media (max-width: 640px) {
+  .chat-desktop-heading {
+    display: none;
+  }
+
+  .chat-grid {
+    grid-template-columns: 1fr !important;
+    height: calc(100dvh - 70px) !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  .chat-sidebar-hidden {
+    display: none !important;
+  }
+
+  .chat-pane-hidden {
+    display: none !important;
+  }
+
+  .chat-back-btn {
+    display: flex !important;
+  }
+}

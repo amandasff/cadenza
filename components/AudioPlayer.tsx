@@ -98,12 +98,27 @@ export default function AudioPlayer({ src }: { src: string }) {
       />
 
       {/* Seek bar */}
-      <div style={{ position: "relative", height: 4, background: "var(--border)", borderRadius: 2 }}>
-        <div style={{
-          position: "absolute", left: 0, top: 0, height: "100%",
-          width: `${progress * 100}%`,
-          background: "var(--charcoal)", borderRadius: 2, pointerEvents: "none",
-        }} />
+      <div style={{ position: "relative", height: 18, display: "flex", alignItems: "center" }}>
+        {/* Track */}
+        <div style={{ position: "absolute", left: 0, right: 0, height: 4, background: "var(--border)", borderRadius: 2 }}>
+          {/* Filled portion */}
+          <div style={{
+            position: "absolute", left: 0, top: 0, height: "100%",
+            width: `${progress * 100}%`,
+            background: "var(--charcoal)", borderRadius: 2, pointerEvents: "none",
+          }} />
+          {/* Thumb knob */}
+          <div style={{
+            position: "absolute", top: "50%",
+            left: `${progress * 100}%`,
+            transform: "translate(-50%, -50%)",
+            width: 12, height: 12, borderRadius: "50%",
+            background: "var(--charcoal)",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+            pointerEvents: "none",
+            transition: dragging ? "none" : "left 0.05s",
+          }} />
+        </div>
         <input
           type="range"
           min={0}

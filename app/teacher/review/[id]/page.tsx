@@ -352,6 +352,11 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
               Record Voice Note
             </div>
 
+            {recordError && (
+              <div style={{ marginBottom: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: 8, background: "var(--rose-bg)", border: "1px solid var(--rose)", fontSize: "0.78rem", color: "var(--rose)", fontFamily: "Nunito, sans-serif", fontWeight: 600 }}>
+                {recordError}
+              </div>
+            )}
             {!recordingBlob ? (
               <div>
                 <button
@@ -383,11 +388,6 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                     <>🎙 Start Recording</>
                   )}
                 </button>
-                {recordError && (
-                  <div style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--rose)", fontFamily: "Nunito, sans-serif", fontWeight: 600 }}>
-                    {recordError}
-                  </div>
-                )}
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.5rem", margin: "0.5rem 0 0" }}>
                   Record a voice note to send directly to {student?.display_name?.split(" ")[0] ?? "the student"} via chat.
                 </p>

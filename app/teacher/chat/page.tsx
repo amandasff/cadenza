@@ -173,25 +173,36 @@ export default function TeacherChat() {
   const isAnnouncements = selectedStudent === null;
   const headerTitle = isAnnouncements ? "Announcements" : selectedStudent.display_name;
   const headerSub = isAnnouncements ? "Visible to all students" : "Private message";
+  // Mobile: track whether we're showing the list or the chat pane
+  const [mobilePane, setMobilePane] = React.useState<"list" | "chat">("list");
+
+  function selectAndOpen(s: ProfileRow | null) {
+    setSelectedStudent(s);
+    setMobilePane("chat");
+  }
 
   return (
     <div>
-      <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 500, fontSize: "1.875rem", color: "var(--charcoal)", marginBottom: "1.5rem", letterSpacing: "-0.01em" }}>
+      {/* Desktop heading — hidden on mobile when in chat pane */}
+      <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 500, fontSize: "1.875rem", color: "var(--charcoal)", marginBottom: "1.5rem", letterSpacing: "-0.01em" }}
+        className="chat-desktop-heading">
         Messages
       </h1>
 
-      <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "1px", height: "74vh", background: "var(--border)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "1px", height: "calc(100dvh - 120px)", maxHeight: "74vh", background: "var(--border)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}
+        className="chat-grid">
 
         {/* Sidebar */}
-        <div style={{ background: "var(--white)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ background: "var(--white)", display: "flex", flexDirection: "column", overflow: "hidden" }}
+          className={`chat-sidebar${mobilePane === "chat" ? " chat-sidebar-hidden" : ""}`}>
           <button
-            onClick={() => setSelectedStudent(null)}
-            style={{ all: "unset", display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.875rem 1rem", borderBottom: "1px solid var(--border)", cursor: "pointer", background: isAnnouncements ? "var(--cream)" : "transparent", boxSizing: "border-box", width: "100%" }}
+            onClick={() => selectAndOpen(null)}
+            style={{ all: "unset", display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.875rem 1rem", borderBottom: "1px solid var(--border)", cursor: "pointer", background: isAnnouncements && mobilePane === "chat" ? "var(--cream)" : "transparent", boxSizing: "border-box", width: "100%" }}
           >
-            <div style={{ width: 28, height: 28, borderRadius: "50%", background: isAnnouncements ? "var(--peach-bg)" : "var(--cream-deep)", border: `1px solid ${isAnnouncements ? "var(--peach-light)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <span style={{ fontSize: "0.5625rem", fontWeight: 600, color: isAnnouncements ? "var(--peach)" : "var(--muted)", letterSpacing: "0.02em" }}>ALL</span>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--peach-bg)", border: "1px solid var(--peach-light)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: "0.5625rem", fontWeight: 600, color: "var(--peach)", letterSpacing: "0.02em" }}>ALL</span>
             </div>
-            <span style={{ fontSize: "0.8125rem", fontWeight: isAnnouncements ? 500 : 400, color: isAnnouncements ? "var(--charcoal)" : "var(--muted)" }}>Announcements</span>
+            <span style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)" }}>Announcements</span>
           </button>
 
           <div style={{ padding: "0.5rem 1rem 0.375rem", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid var(--border)" }}>
@@ -210,7 +221,7 @@ export default function TeacherChat() {
             ) : students.map(s => {
               const isSel = selectedStudent?.id === s.id;
               return (
-                <button key={s.id} onClick={() => setSelectedStudent(s)} style={{ all: "unset", display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", cursor: "pointer", background: isSel ? "var(--cream)" : "transparent", width: "100%", boxSizing: "border-box" }}>
+                <button key={s.id} onClick={() => selectAndOpen(s)} style={{ all: "unset", display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", cursor: "pointer", background: isSel ? "var(--cream)" : "transparent", width: "100%", boxSizing: "border-box" }}>
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: isSel ? "var(--charcoal)" : "var(--cream-deep)", border: `1px solid ${isSel ? "var(--charcoal)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: isSel ? "var(--white)" : "var(--muted)", flexShrink: 0 }}>
                     {initials(s.display_name)}
                   </div>
@@ -224,9 +235,18 @@ export default function TeacherChat() {
         </div>
 
         {/* Message pane */}
-        <div style={{ background: "var(--cream)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ background: "var(--cream)", display: "flex", flexDirection: "column", overflow: "hidden" }}
+          className={`chat-pane${mobilePane === "list" ? " chat-pane-hidden" : ""}`}>
 
-          <div style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid var(--border)", background: "var(--white)", display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
+          <div style={{ padding: "0.875rem 1.25rem", borderBottom: "1px solid var(--border)", background: "var(--white)", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {/* Back button — mobile only */}
+            <button
+              onClick={() => setMobilePane("list")}
+              className="chat-back-btn"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0.5rem 0.25rem 0", color: "var(--muted)", fontSize: "1rem", display: "none", flexShrink: 0 }}
+            >
+              ←
+            </button>
             <span style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)" }}>{headerTitle}</span>
             <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{headerSub}</span>
           </div>
