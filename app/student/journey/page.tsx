@@ -74,6 +74,7 @@ export default function JourneyPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [sharePublic, setSharePublic] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // In-app recording
@@ -204,7 +205,7 @@ export default function JourneyPage() {
     if (recording) { mediaRecorderRef.current?.stop(); recordStreamRef.current?.getTracks().forEach(t => t.stop()); setRecording(false); }
     if (recordedUrl) URL.revokeObjectURL(recordedUrl);
     setRecordedBlob(null); setRecordedUrl(null); setRecordError("");
-    setUploadFile(null); setUploadError(""); setUploadTitle(""); setUploadDesc("");
+    setUploadFile(null); setUploadError(""); setUploadTitle(""); setUploadDesc(""); setSharePublic(false);
     setShowUploadModal(false);
   }
 
@@ -232,7 +233,7 @@ export default function JourneyPage() {
         description: uploadDesc.trim() || undefined,
         recordingUrl: urlData.publicUrl,
         mediaType: "video",
-        isPublic: false,
+        isPublic: sharePublic,
       });
       setItems(prev => [item, ...prev]);
       closeModal();
@@ -637,6 +638,21 @@ export default function JourneyPage() {
                   )}
                 </div>
               )}
+
+              {/* Share toggle */}
+              <button
+                type="button"
+                onClick={() => setSharePublic(p => !p)}
+                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.625rem 0.875rem", borderRadius: 8, border: `1px solid ${sharePublic ? "rgba(91,79,207,0.3)" : "var(--border)"}`, background: sharePublic ? "rgba(91,79,207,0.06)" : "var(--cream)", cursor: "pointer", textAlign: "left", width: "100%" }}
+              >
+                <div style={{ width: 36, height: 20, borderRadius: 10, background: sharePublic ? "#5B4FCF" : "var(--border)", transition: "background 0.2s", flexShrink: 0, position: "relative" }}>
+                  <div style={{ position: "absolute", top: 2, left: sharePublic ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "var(--white)", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+                </div>
+                <div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Share to Discover</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Let others on Cadenza see and like this cover</div>
+                </div>
+              </button>
 
               {(uploadError) && (
                 <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "#FDF6F3", border: "1px solid #E8C4BA", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif" }}>

@@ -1,10 +1,23 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
-import { PortfolioService, type PortfolioItemRow } from "../../../lib/services/PortfolioService";
+import type { PortfolioItemRow } from "../../../lib/services/PortfolioService";
 import AudioPlayer from "../../../components/AudioPlayer";
 
-type PublicItem = PortfolioItemRow & { display_name?: string };
+type Comment = {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  display_name?: string;
+};
+
+type PublicItem = PortfolioItemRow & {
+  display_name?: string;
+  like_count: number;
+  comment_count: number;
+  user_liked: boolean;
+};
 
 const ALTER_SQL = `ALTER TABLE public.portfolio_items
   ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'audio',
@@ -25,16 +38,40 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [missingColumns, setMissingColumns] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [expandedComments, setExpandedComments] = useState<string | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>({});
+  const [commentText, setCommentText] = useState("");
+  const [commentPosting, setCommentPosting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [likingId, setLikingId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
         const supabase = getSupabaseBrowserClient();
-        const data = await PortfolioService.getInstance(supabase).getPublicItems();
-        setItems(data);
+        const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUserId(user?.id ?? null);
+
+        const { data, error } = await supabase
+          .from("portfolio_items")
+          .select("*, profiles(display_name), portfolio_likes(user_id), portfolio_comments(id)")
+          .eq("is_public", true)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        const mapped: PublicItem[] = ((data ?? []) as Record<string, unknown>[]).map(row => ({
+          ...(row as unknown as PortfolioItemRow),
+          display_name: (row.profiles as { display_name?: string } | null)?.display_name,
+          like_count: Array.isArray(row.portfolio_likes) ? row.portfolio_likes.length : 0,
+          comment_count: Array.isArray(row.portfolio_comments) ? row.portfolio_comments.length : 0,
+          user_liked: Array.isArray(row.portfolio_likes)
+            ? (row.portfolio_likes as { user_id: string }[]).some(l => l.user_id === user?.id)
+            : false,
+        }));
+        setItems(mapped);
       } catch (err) {
         const e = err as { message?: string; code?: string };
-        // 42703 = undefined_column, 42P01 = undefined_table
         if (e?.code === "42703" || e?.code === "42P01" || e?.message?.includes("is_public") || e?.message?.includes("media_type")) {
           setMissingColumns(true);
         }
@@ -46,11 +83,85 @@ export default function DiscoverPage() {
     load();
   }, []);
 
+  async function toggleLike(item: PublicItem) {
+    if (!currentUserId || likingId === item.id) return;
+    setLikingId(item.id);
+    setItems(prev => prev.map(i => i.id === item.id ? {
+      ...i,
+      user_liked: !i.user_liked,
+      like_count: i.user_liked ? i.like_count - 1 : i.like_count + 1,
+    } : i));
+    try {
+      const supabase = getSupabaseBrowserClient();
+      if (item.user_liked) {
+        await supabase.from("portfolio_likes").delete()
+          .eq("portfolio_item_id", item.id).eq("user_id", currentUserId);
+      } else {
+        await supabase.from("portfolio_likes").insert({ portfolio_item_id: item.id, user_id: currentUserId });
+      }
+    } catch {
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, user_liked: item.user_liked, like_count: item.like_count } : i));
+    } finally {
+      setLikingId(null);
+    }
+  }
+
+  async function loadComments(itemId: string) {
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase
+      .from("portfolio_comments")
+      .select("*, profiles(display_name)")
+      .eq("portfolio_item_id", itemId)
+      .order("created_at", { ascending: true });
+    setCommentsMap(prev => ({
+      ...prev,
+      [itemId]: ((data ?? []) as Record<string, unknown>[]).map(row => ({
+        ...(row as unknown as Comment),
+        display_name: (row.profiles as { display_name?: string } | null)?.display_name,
+      })),
+    }));
+  }
+
+  function toggleComments(itemId: string) {
+    if (expandedComments === itemId) {
+      setExpandedComments(null);
+    } else {
+      setExpandedComments(itemId);
+      setCommentText("");
+      if (!commentsMap[itemId]) loadComments(itemId);
+    }
+  }
+
+  async function postComment(itemId: string) {
+    if (!commentText.trim() || !currentUserId || commentPosting) return;
+    setCommentPosting(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase
+        .from("portfolio_comments")
+        .insert({ portfolio_item_id: itemId, user_id: currentUserId, content: commentText.trim() })
+        .select("*, profiles(display_name)")
+        .single();
+      if (data) {
+        const row = data as Record<string, unknown>;
+        const comment: Comment = {
+          ...(row as unknown as Comment),
+          display_name: (row.profiles as { display_name?: string } | null)?.display_name,
+        };
+        setCommentsMap(prev => ({ ...prev, [itemId]: [...(prev[itemId] ?? []), comment] }));
+        setItems(prev => prev.map(i => i.id === itemId ? { ...i, comment_count: i.comment_count + 1 } : i));
+        setCommentText("");
+      }
+    } finally {
+      setCommentPosting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ padding: "1.5rem 1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
         {[1, 2, 3].map(i => (
-          <div key={i} className="skeleton" style={{ height: 180, borderRadius: 12 }} />
+          <div key={i} className="skeleton" style={{ height: 280, borderRadius: 12 }} />
         ))}
       </div>
     );
@@ -97,12 +208,14 @@ export default function DiscoverPage() {
           {items.map(item => {
             const isVideo = item.media_type === "video";
             const isPlaying = playingId === item.id;
+            const commentsOpen = expandedComments === item.id;
+            const itemComments = commentsMap[item.id] ?? [];
 
             return (
               <div key={item.id} style={{ background: "var(--white)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden" }}>
-                {/* Video */}
+                {/* Video thumbnail */}
                 {isVideo && item.recording_url && (
-                  <div style={{ position: "relative", background: "#111", aspectRatio: "16/9", maxHeight: 240 }}>
+                  <div style={{ position: "relative", background: "#111", aspectRatio: "16/9" }}>
                     {isPlaying ? (
                       <video src={item.recording_url} autoPlay controls playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     ) : (
@@ -116,23 +229,24 @@ export default function DiscoverPage() {
                 )}
 
                 {/* Card body */}
-                <div style={{ padding: "0.875rem 1rem" }}>
+                <div style={{ padding: "0.875rem 1rem 0" }}>
+                  {/* Author row */}
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif" }}>
                       {(item.display_name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{item.display_name ?? "Musician"}</div>
                       <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>{formatRelative(item.created_at)}</div>
                     </div>
                     {isVideo && (
-                      <span style={{ marginLeft: "auto", fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "rgba(91,79,207,0.08)", color: "#5B4FCF", fontFamily: "Inter, sans-serif" }}>
+                      <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "rgba(91,79,207,0.08)", color: "#5B4FCF", fontFamily: "Inter, sans-serif" }}>
                         Cover
                       </span>
                     )}
                   </div>
 
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>{item.title}</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>{item.title}</div>
 
                   {item.description && (
                     <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.6, margin: "0 0 0.75rem", fontStyle: "italic" }}>
@@ -141,11 +255,80 @@ export default function DiscoverPage() {
                   )}
 
                   {!isVideo && item.recording_url && (
-                    <div style={{ marginTop: "0.625rem" }}>
+                    <div style={{ marginTop: "0.625rem", marginBottom: "0.125rem" }}>
                       <AudioPlayer src={item.recording_url} />
                     </div>
                   )}
+
+                  {/* Like + comment bar */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", borderTop: "1px solid var(--border)", marginTop: "0.75rem", padding: "0.375rem 0" }}>
+                    <button
+                      onClick={() => toggleLike(item)}
+                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.625rem", borderRadius: 7, border: "none", background: "none", cursor: currentUserId ? "pointer" : "default", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: item.user_liked ? "#e85d4a" : "var(--muted)", fontWeight: item.user_liked ? 600 : 400, transition: "all 0.15s" }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill={item.user_liked ? "#e85d4a" : "none"} stroke={item.user_liked ? "#e85d4a" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                      </svg>
+                      <span>{item.like_count > 0 ? item.like_count : ""}</span>
+                    </button>
+
+                    <button
+                      onClick={() => toggleComments(item.id)}
+                      style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0.625rem", borderRadius: 7, border: "none", background: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: commentsOpen ? "var(--charcoal)" : "var(--muted)", fontWeight: commentsOpen ? 600 : 400, transition: "all 0.15s" }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      <span>{item.comment_count > 0 ? item.comment_count : ""} {item.comment_count === 1 ? "comment" : item.comment_count > 1 ? "comments" : "comment"}</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Comments section */}
+                {commentsOpen && (
+                  <div style={{ borderTop: "1px solid var(--border)", background: "var(--cream)", padding: "0.875rem 1rem" }}>
+                    {itemComments.length === 0 && (
+                      <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center", margin: "0 0 0.75rem", fontStyle: "italic" }}>
+                        No comments yet — be the first!
+                      </p>
+                    )}
+
+                    {itemComments.map(c => (
+                      <div key={c.id} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", fontWeight: 600, color: "var(--white)", flexShrink: 0, fontFamily: "Inter, sans-serif", marginTop: 2 }}>
+                          {(c.display_name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", gap: "0.4rem", alignItems: "baseline" }}>
+                            <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "var(--charcoal)" }}>{c.display_name ?? "Musician"}</span>
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{formatRelative(c.created_at)}</span>
+                          </div>
+                          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.1rem 0 0", lineHeight: 1.5 }}>{c.content}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {currentUserId && (
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+                        <input
+                          type="text"
+                          placeholder="Add a comment…"
+                          value={commentText}
+                          onChange={e => setCommentText(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(item.id); } }}
+                          style={{ flex: 1, borderRadius: 7, border: "1px solid var(--border)", padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--white)", color: "var(--charcoal)", outline: "none" }}
+                        />
+                        <button
+                          onClick={() => postComment(item.id)}
+                          disabled={!commentText.trim() || commentPosting}
+                          style={{ padding: "0.5rem 0.875rem", borderRadius: 7, border: "none", background: commentText.trim() ? "var(--charcoal)" : "var(--border)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", cursor: commentText.trim() ? "pointer" : "default", transition: "background 0.15s", flexShrink: 0 }}
+                        >
+                          Post
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
