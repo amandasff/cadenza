@@ -9,6 +9,8 @@ export interface ProfileRow {
   studio_id: string | null;
   avatar_url?: string | null;
   bio?: string | null;
+  instrument?: string | null;
+  music_since?: string | null;
   stripe_customer_id?: string | null;
   subscription_status?: 'free' | 'active' | 'canceled' | 'past_due';
   created_at: string;

@@ -39,6 +39,10 @@ ALTER TABLE public.portfolio_items
   ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'audio',
   ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE;
 
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS instrument TEXT,
+  ADD COLUMN IF NOT EXISTS music_since TEXT;
+
 -- Allow studio members to see public covers
 CREATE POLICY IF NOT EXISTS "Studio members see public covers"
   ON public.portfolio_items FOR SELECT
@@ -50,6 +54,16 @@ CREATE POLICY IF NOT EXISTS "Studio members see public covers"
         AND p.studio_id = portfolio_items.studio_id
     )
   );`;
+
+type ProfileData = {
+  display_name: string;
+  avatar_url: string | null;
+  bio: string | null;
+  instrument: string | null;
+  music_since: string | null;
+  streak_days: number;
+  total_points: number;
+};
 
 export default function JourneyPage() {
   const { user } = useAuth();
@@ -65,6 +79,19 @@ export default function JourneyPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [togglingPublicId, setTogglingPublicId] = useState<string | null>(null);
+
+  // Profile state
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editInstrument, setEditInstrument] = useState("");
+  const [editSince, setEditSince] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Video cover modal
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -91,8 +118,8 @@ export default function JourneyPage() {
   useEffect(() => {
     const load = async () => {
       if (!student?.id) return;
+      const supabase = getSupabaseBrowserClient();
       try {
-        const supabase = getSupabaseBrowserClient();
         const data = await PortfolioService.getInstance(supabase).getItems(student.id);
         setItems(data);
       } catch (err) {
@@ -102,9 +129,61 @@ export default function JourneyPage() {
       } finally {
         setLoading(false);
       }
+      // Load profile data
+      try {
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("display_name, avatar_url, bio, instrument, music_since, streak_days, total_points")
+          .eq("id", student.id)
+          .single();
+        if (p) {
+          const pd = p as ProfileData & { instrument?: string | null; music_since?: string | null };
+          setProfile({ ...pd, instrument: pd.instrument ?? null, music_since: pd.music_since ?? null });
+          setAvatarUrl(pd.avatar_url ?? null);
+        }
+      } catch { /* profile fields may not exist yet */ }
+      // Load follower/following counts
+      try {
+        const [{ count: fc }, { count: ing }] = await Promise.all([
+          supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", student.id),
+          supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", student.id),
+        ]);
+        setFollowerCount(fc ?? 0);
+        setFollowingCount(ing ?? 0);
+      } catch { /* follows table may not exist */ }
     };
     load();
   }, [student?.id]);
+
+  async function saveProfile() {
+    if (!student?.id || savingProfile) return;
+    setSavingProfile(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await supabase.from("profiles").update({
+        display_name: editName.trim() || profile?.display_name,
+        bio: editBio.trim() || null,
+        instrument: editInstrument.trim() || null,
+        music_since: editSince.trim() || null,
+      }).eq("id", student.id);
+      setProfile(prev => prev ? { ...prev, display_name: editName.trim() || prev.display_name, bio: editBio.trim() || null, instrument: editInstrument.trim() || null, music_since: editSince.trim() || null } : prev);
+      setEditingProfile(false);
+    } finally { setSavingProfile(false); }
+  }
+
+  async function handleAvatarChange(file: File) {
+    if (!student?.id) return;
+    const supabase = getSupabaseBrowserClient();
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${student.id}/avatar.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", student.id);
+      setAvatarUrl(publicUrl);
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : prev);
+    }
+  }
 
   function startEdit(item: PortfolioItemRow) {
     setEditingId(item.id);
@@ -284,7 +363,7 @@ export default function JourneyPage() {
   if (noTable) {
     return (
       <div style={{ padding: "1.5rem 1.25rem" }}>
-        <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.75rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>My Journey</h1>
+        <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.75rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>My Profile</h1>
         <p style={{ color: "var(--muted)", fontSize: "0.8125rem", marginBottom: "1.5rem", fontFamily: "Inter, sans-serif" }}>Your musical story, one recording at a time</p>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.5rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>
@@ -297,67 +376,125 @@ export default function JourneyPage() {
   }
 
   const monthGroups = groupByMonth(items);
-  const videoCount = items.filter(i => i.media_type === "video").length;
+  const publicClipCount = items.filter(i => i.is_public).length;
+  const initials = (profile?.display_name ?? student?.displayName ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <div style={{ minHeight: "100%", background: "var(--cream)" }}>
-      {/* Hero header */}
-      <div style={{
-        padding: "2rem 1.5rem 1.75rem",
-        background: "linear-gradient(180deg, var(--white) 0%, var(--cream) 100%)",
-      }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-          <h1 style={{
-            fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500,
-            fontSize: "2rem", color: "var(--charcoal)",
-            letterSpacing: "-0.01em",
-          }}>
-            My Journey
-          </h1>
-          {/* Add Video Cover button */}
-          <button
-            onClick={() => setShowUploadModal(true)}
-            style={{
-              display: "flex", alignItems: "center", gap: "0.375rem",
-              padding: "0.5rem 0.875rem", borderRadius: 6,
-              border: "1px solid var(--border)", background: "var(--white)",
-              color: "var(--charcoal)", cursor: "pointer",
-              fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem",
-              flexShrink: 0, marginTop: "0.25rem",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-            </svg>
-            Add Cover
-          </button>
+
+      {/* ── Profile header ── */}
+      <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1.25rem 1rem 1rem" }}>
+
+        {/* Avatar + name row */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", marginBottom: "0.875rem" }}>
+          {/* Avatar */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <div
+              onClick={() => avatarInputRef.current?.click()}
+              style={{
+                width: 64, height: 64, borderRadius: "50%",
+                background: avatarUrl ? "transparent" : "var(--charcoal)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1.375rem", fontWeight: 700, color: "var(--white)",
+                fontFamily: "Inter, sans-serif", cursor: "pointer", overflow: "hidden",
+                border: "2px solid var(--border)",
+              }}
+            >
+              {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
+            </div>
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "2px solid var(--white)" }}
+              onClick={() => avatarInputRef.current?.click()}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </div>
+            <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarChange(f); }} />
+          </div>
+
+          {/* Name + tags */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--charcoal)", lineHeight: 1.2, marginBottom: "0.25rem" }}>
+              {profile?.display_name ?? student?.displayName}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "0.375rem" }}>
+              {profile?.instrument && (
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 99, padding: "0.15rem 0.625rem", color: "var(--charcoal)", fontWeight: 500 }}>
+                  {profile.instrument}
+                </span>
+              )}
+              {profile?.music_since && (
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 99, padding: "0.15rem 0.625rem", color: "var(--muted)" }}>
+                  Practicing since {profile.music_since}
+                </span>
+              )}
+            </div>
+            {profile?.bio && (
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>{profile.bio}</p>
+            )}
+          </div>
         </div>
-        <p style={{
-          color: "var(--muted)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif",
-          marginBottom: "1rem",
-        }}>
-          {items.length === 0 ? "Your musical story starts here" : "Your musical story, one recording at a time"}
-        </p>
 
         {/* Stats row */}
-        {items.length > 0 && (
-          <div style={{ display: "flex", gap: "1.5rem" }}>
-            <div>
-              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", lineHeight: 1 }}>{items.length}</div>
-              <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 2 }}>Recording{items.length !== 1 ? "s" : ""}</div>
+        <div style={{ display: "flex", gap: "0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", margin: "0 -1rem", padding: "0.625rem 1rem" }}>
+          {[
+            { label: "Followers", value: followerCount },
+            { label: "Following", value: followingCount },
+            { label: "Streak", value: `${profile?.streak_days ?? 0}🔥` },
+            { label: "Public clips", value: publicClipCount },
+          ].map(({ label, value }, i, arr) => (
+            <div key={label} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.25rem 0" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.0625rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{value}</div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{label}</div>
             </div>
-            {videoCount > 0 && (
+          ))}
+        </div>
+
+        {/* Action buttons */}
+        {!editingProfile ? (
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.875rem" }}>
+            <button onClick={() => { setEditName(profile?.display_name ?? student?.displayName ?? ""); setEditBio(profile?.bio ?? ""); setEditInstrument(profile?.instrument ?? ""); setEditSince(profile?.music_since ?? ""); setEditingProfile(true); }} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "1.5px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", cursor: "pointer" }}>
+              Edit Profile
+            </button>
+            <button onClick={() => setShowUploadModal(true)} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              Add Clip
+            </button>
+          </div>
+        ) : (
+          <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
               <div>
-                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", lineHeight: 1 }}>{videoCount}</div>
-                <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 2 }}>Cover{videoCount !== 1 ? "s" : ""}</div>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Name</label>
+                <input value={editName} onChange={e => setEditName(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
               </div>
-            )}
+              <div>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Instrument</label>
+                <input value={editInstrument} onChange={e => setEditInstrument(e.target.value)} placeholder="Piano, Guitar…" style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
+              </div>
+            </div>
             <div>
-              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", lineHeight: 1 }}>{monthGroups.length}</div>
-              <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 2 }}>Month{monthGroups.length !== 1 ? "s" : ""}</div>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Bio</label>
+              <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Tell your musical story…" maxLength={160} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", resize: "none", lineHeight: 1.5 }} />
+            </div>
+            <div>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem" }}>Practicing since</label>
+              <input value={editSince} onChange={e => setEditSince(e.target.value)} placeholder="e.g. 2019, age 6, last year…" style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.625rem", borderRadius: 8, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button onClick={saveProfile} disabled={savingProfile} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--white)", cursor: "pointer" }}>
+                {savingProfile ? "Saving…" : "Save"}
+              </button>
+              <button onClick={() => setEditingProfile(false)} style={{ flex: 1, padding: "0.5rem", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}>
+                Cancel
+              </button>
             </div>
           </div>
         )}
+
+        {/* Privacy hint */}
+        <div style={{ marginTop: "0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Toggle each clip public or private below. Public clips appear on Discover.
+        </div>
       </div>
 
       {items.length === 0 ? (

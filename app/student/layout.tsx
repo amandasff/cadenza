@@ -26,7 +26,7 @@ const tabs = [
   { href: "/student/theory",         label: "Games" },
   { href: "/student/ai-tutor",       label: "AI" },
   { href: "/student/chat",           label: "Chat" },
-  { href: "/student/journey",        label: "Journey" },
+  { href: "/student/journey",        label: "Profile" },
   { href: "/student/discover",       label: "Discover" },
   { href: "/student/rewards",        label: "Awards" },
 ];
@@ -35,7 +35,7 @@ const tabs = [
 const primaryMobileTabs = [
   { href: "/student",          label: "Home" },
   { href: "/student/practice", label: "Practice" },
-  { href: "/student/journey",  label: "Journey" },
+  { href: "/student/journey",  label: "Profile" },
   { href: "/student/discover", label: "Discover" },
 ];
 const moreMobileTabs = [
