@@ -236,10 +236,10 @@ export default function Home() {
           <div style={{ fontSize: "2.5rem", lineHeight: 1, flexShrink: 0 }}>🎓</div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.25rem" }}>
-              Amanda&apos;s students — Cadenza is free for you.
+              Always free for Amanda&apos;s students! 🎉
             </div>
             <div style={{ fontSize: "0.875rem", color: "#5A7A65", lineHeight: 1.6 }}>
-              All Pro features are included with your lessons at no extra cost. Sign up as a Student and search for your teacher to get started.
+              Pro is included with your lessons — no credit card, no catch. Just sign up as a Student and search for your teacher.
             </div>
           </div>
           <button
@@ -374,7 +374,7 @@ export default function Home() {
           {/* Amanda callout under pricing */}
           <div style={{ marginTop: "2rem", textAlign: "center", background: "#EBF3EE", border: "1px solid #B8D4C2", borderRadius: 8, padding: "1rem 1.5rem" }}>
             <span style={{ fontSize: "0.875rem", color: "#3A6A4F" }}>
-              🎓 <strong>Amanda&apos;s students:</strong> You get Pro access free — included with your lessons. No credit card needed.
+              🎉 <strong>Amanda&apos;s students:</strong> Always free — Pro is included with your lessons!
             </span>
           </div>
         </div>
