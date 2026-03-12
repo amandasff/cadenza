@@ -26,6 +26,7 @@ const tabs = [
   { href: "/student/theory",         label: "Theory" },
   { href: "/student/ai-tutor",       label: "AI" },
   { href: "/student/chat",           label: "Chat" },
+  { href: "/student/journey",        label: "Journey" },
   { href: "/student/rewards",        label: "Awards" },
 ];
 
