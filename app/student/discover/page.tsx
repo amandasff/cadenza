@@ -53,44 +53,48 @@ export default function DiscoverPage() {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUserId(user?.id ?? null);
 
-        // Try full query with likes + comments; fall back if those tables don't exist yet
-        let data: Record<string, unknown>[] = [];
-        let hasLikesTable = true;
-
-        const full = await supabase
+        // Fetch public items (no join — no FK between portfolio_items and profiles)
+        const { data: itemData, error: itemError } = await supabase
           .from("portfolio_items")
-          .select("*, profiles(display_name), portfolio_likes(user_id), portfolio_comments(id)")
+          .select("*")
           .eq("is_public", true)
           .order("created_at", { ascending: false });
+        if (itemError) throw itemError;
 
-        if (full.error) {
-          const code = full.error.code;
-          const msg = full.error.message ?? "";
-          // Missing likes/comments tables — fall back to basic query
-          if (code === "42P01" && (msg.includes("portfolio_likes") || msg.includes("portfolio_comments"))) {
-            hasLikesTable = false;
-            const fallback = await supabase
-              .from("portfolio_items")
-              .select("*, profiles(display_name)")
-              .eq("is_public", true)
-              .order("created_at", { ascending: false });
-            if (fallback.error) throw fallback.error;
-            data = (fallback.data ?? []) as Record<string, unknown>[];
-          } else {
-            throw full.error;
-          }
-        } else {
-          data = (full.data ?? []) as Record<string, unknown>[];
+        const rows = (itemData ?? []) as PortfolioItemRow[];
+
+        // Fetch display names for unique student_ids
+        const studentIds = [...new Set(rows.map(r => r.student_id))];
+        const displayNames: Record<string, string> = {};
+        if (studentIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, display_name")
+            .in("id", studentIds);
+          (profiles ?? []).forEach((p: { id: string; display_name?: string }) => {
+            if (p.display_name) displayNames[p.id] = p.display_name;
+          });
         }
 
-        const mapped: PublicItem[] = data.map(row => ({
-          ...(row as unknown as PortfolioItemRow),
-          display_name: (row.profiles as { display_name?: string } | null)?.display_name,
-          like_count: hasLikesTable && Array.isArray(row.portfolio_likes) ? (row.portfolio_likes as unknown[]).length : 0,
-          comment_count: hasLikesTable && Array.isArray(row.portfolio_comments) ? (row.portfolio_comments as unknown[]).length : 0,
-          user_liked: hasLikesTable && Array.isArray(row.portfolio_likes)
-            ? (row.portfolio_likes as { user_id: string }[]).some(l => l.user_id === user?.id)
-            : false,
+        // Try to fetch likes + comments; gracefully skip if tables don't exist
+        let likesData: { portfolio_item_id: string; user_id: string }[] = [];
+        let commentsData: { portfolio_item_id: string }[] = [];
+        if (rows.length > 0) {
+          const itemIds = rows.map(r => r.id);
+          const [likesRes, commentsRes] = await Promise.all([
+            supabase.from("portfolio_likes").select("portfolio_item_id, user_id").in("portfolio_item_id", itemIds),
+            supabase.from("portfolio_comments").select("portfolio_item_id").in("portfolio_item_id", itemIds),
+          ]);
+          if (!likesRes.error) likesData = (likesRes.data ?? []) as typeof likesData;
+          if (!commentsRes.error) commentsData = (commentsRes.data ?? []) as typeof commentsData;
+        }
+
+        const mapped: PublicItem[] = rows.map(row => ({
+          ...row,
+          display_name: displayNames[row.student_id],
+          like_count: likesData.filter(l => l.portfolio_item_id === row.id).length,
+          comment_count: commentsData.filter(c => c.portfolio_item_id === row.id).length,
+          user_liked: likesData.some(l => l.portfolio_item_id === row.id && l.user_id === user?.id),
         }));
         setItems(mapped);
       } catch (err) {
@@ -135,15 +139,20 @@ export default function DiscoverPage() {
     const supabase = getSupabaseBrowserClient();
     const { data } = await supabase
       .from("portfolio_comments")
-      .select("*, profiles(display_name)")
+      .select("*")
       .eq("portfolio_item_id", itemId)
       .order("created_at", { ascending: true });
+    const comments = (data ?? []) as Comment[];
+    // Fetch display names for comment authors
+    const authorIds = [...new Set(comments.map(c => c.user_id))];
+    const nameMap: Record<string, string> = {};
+    if (authorIds.length > 0) {
+      const { data: profiles } = await supabase.from("profiles").select("id, display_name").in("id", authorIds);
+      (profiles ?? []).forEach((p: { id: string; display_name?: string }) => { if (p.display_name) nameMap[p.id] = p.display_name; });
+    }
     setCommentsMap(prev => ({
       ...prev,
-      [itemId]: ((data ?? []) as Record<string, unknown>[]).map(row => ({
-        ...(row as unknown as Comment),
-        display_name: (row.profiles as { display_name?: string } | null)?.display_name,
-      })),
+      [itemId]: comments.map(c => ({ ...c, display_name: nameMap[c.user_id] })),
     }));
   }
 
@@ -165,14 +174,12 @@ export default function DiscoverPage() {
       const { data } = await supabase
         .from("portfolio_comments")
         .insert({ portfolio_item_id: itemId, user_id: currentUserId, content: commentText.trim() })
-        .select("*, profiles(display_name)")
+        .select("*")
         .single();
       if (data) {
-        const row = data as Record<string, unknown>;
-        const comment: Comment = {
-          ...(row as unknown as Comment),
-          display_name: (row.profiles as { display_name?: string } | null)?.display_name,
-        };
+        const row = data as Comment;
+        const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", currentUserId).single();
+        const comment: Comment = { ...row, display_name: (profile as { display_name?: string } | null)?.display_name };
         setCommentsMap(prev => ({ ...prev, [itemId]: [...(prev[itemId] ?? []), comment] }));
         setItems(prev => prev.map(i => i.id === itemId ? { ...i, comment_count: i.comment_count + 1 } : i));
         setCommentText("");
