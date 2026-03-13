@@ -19,6 +19,7 @@ type PublicItem = PortfolioItemRow & {
   like_count: number;
   comment_count: number;
   user_liked: boolean;
+  view_count: number;
 };
 
 type ProfileInfo = {
@@ -123,6 +124,7 @@ export default function DiscoverPage() {
       like_count: likesData.filter(l => l.portfolio_item_id === row.id).length,
       comment_count: commentsData.filter(c => c.portfolio_item_id === row.id).length,
       user_liked: likesData.some(l => l.portfolio_item_id === row.id && l.user_id === userId),
+      view_count: (row as PortfolioItemRow & { view_count?: number }).view_count ?? 0,
     }));
   }
 
@@ -195,7 +197,12 @@ export default function DiscoverPage() {
   // ── Item open/close ─────────────────────────────────────────────────────────
 
   function openItem(item: PublicItem) {
-    setExpandedItem(item);
+    // Increment view count (fire-and-forget, update local state optimistically)
+    const withView = { ...item, view_count: item.view_count + 1 };
+    setExpandedItem(withView);
+    const patch = (list: PublicItem[]) => list.map(i => i.id === item.id ? withView : i);
+    setItems(patch); setFollowingItems(patch);
+    fetch("/api/portfolio/view", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemId: item.id }) }).catch(() => {});
     setCommentsOpen(false);
     setCommentText("");
     if (!commentsMap[item.id]) loadComments(item.id);
@@ -700,8 +707,8 @@ export default function DiscoverPage() {
                   )}
                 </div>
                 {expandedItem.description && (
-                  <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", lineHeight: 1.6, margin: "0 0 0.5rem", fontStyle: "italic" }}>
-                    &ldquo;{expandedItem.description}&rdquo;
+                  <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", lineHeight: 1.6, margin: "0 0 0.5rem" }}>
+                    {expandedItem.description}
                   </p>
                 )}
 
@@ -741,6 +748,15 @@ export default function DiscoverPage() {
                     </svg>
                     {expandedItem.comment_count > 0 ? `${expandedItem.comment_count}` : "Feedback"}
                   </button>
+
+                  {/* View count */}
+                  <span style={{
+                    marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.3rem",
+                    fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)",
+                  }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    {expandedItem.view_count.toLocaleString()}
+                  </span>
                 </div>
               </div>
 

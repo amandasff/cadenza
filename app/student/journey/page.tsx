@@ -105,7 +105,9 @@ export default function JourneyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // In-app recording
+  const [recordMode, setRecordMode] = useState<"video" | "audio">("video");
   const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
   const [recordError, setRecordError] = useState("");
@@ -114,6 +116,7 @@ export default function JourneyPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -246,42 +249,33 @@ export default function JourneyPage() {
     setRecordError("");
     setRecordedBlob(null);
     setRecordedUrl(null);
+    setRecordSeconds(0);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          sampleRate: 48000,
-          channelCount: 2,
-        },
-        video: {
-          facingMode: "user",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 30 },
-        },
-      });
+      const constraints = recordMode === "audio"
+        ? { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true, sampleRate: 48000 } }
+        : {
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000, channelCount: 2 },
+            video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+          };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       recordStreamRef.current = stream;
-      if (liveVideoRef.current) { liveVideoRef.current.srcObject = stream; }
+      if (recordMode === "video" && liveVideoRef.current) { liveVideoRef.current.srcObject = stream; }
 
-      // Pick best available codec — VP9/Opus gives the best quality
-      const mimeType = [
-        "video/webm;codecs=vp9,opus",
-        "video/webm;codecs=vp8,opus",
-        "video/webm",
-        "video/mp4",
-      ].find(m => MediaRecorder.isTypeSupported(m)) ?? "";
+      const mimeType = recordMode === "audio"
+        ? (["audio/webm;codecs=opus", "audio/webm", "audio/ogg"].find(m => MediaRecorder.isTypeSupported(m)) ?? "")
+        : (["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"].find(m => MediaRecorder.isTypeSupported(m)) ?? "");
 
       const recorder = new MediaRecorder(stream, {
         ...(mimeType ? { mimeType } : {}),
         audioBitsPerSecond: 256000,
-        videoBitsPerSecond: 8000000,
+        ...(recordMode === "video" ? { videoBitsPerSecond: 8000000 } : {}),
       });
       chunksRef.current = [];
       recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType || "video/webm" });
+        if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+        const type = recordMode === "audio" ? (mimeType || "audio/webm") : (mimeType || "video/webm");
+        const blob = new Blob(chunksRef.current, { type });
         setRecordedBlob(blob);
         const url = URL.createObjectURL(blob);
         setRecordedUrl(url);
@@ -291,12 +285,16 @@ export default function JourneyPage() {
       recorder.start();
       mediaRecorderRef.current = recorder;
       setRecording(true);
+      recordTimerRef.current = setInterval(() => setRecordSeconds(s => s + 1), 1000);
     } catch {
-      setRecordError("Camera/mic access denied. Check your browser permissions.");
+      setRecordError(recordMode === "audio"
+        ? "Mic access denied. Check your browser permissions."
+        : "Camera/mic access denied. Check your browser permissions.");
     }
   }
 
   function stopRecording() {
+    if (recordTimerRef.current) clearInterval(recordTimerRef.current);
     mediaRecorderRef.current?.stop();
     setRecording(false);
   }
@@ -308,16 +306,17 @@ export default function JourneyPage() {
   }
 
   function closeModal() {
+    if (recordTimerRef.current) clearInterval(recordTimerRef.current);
     if (recording) { mediaRecorderRef.current?.stop(); recordStreamRef.current?.getTracks().forEach(t => t.stop()); setRecording(false); }
     if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-    setRecordedBlob(null); setRecordedUrl(null); setRecordError("");
+    setRecordedBlob(null); setRecordedUrl(null); setRecordError(""); setRecordSeconds(0); setRecordMode("video");
     setUploadFile(null); setUploadError(""); setUploadTitle(""); setUploadDesc(""); setSharePublic(false);
     setShowUploadModal(false);
   }
 
   async function handleVideoUpload() {
     const fileToUpload = coverTab === "record"
-      ? (recordedBlob ? new File([recordedBlob], `recording-${Date.now()}.webm`, { type: "video/webm" }) : null)
+      ? (recordedBlob ? new File([recordedBlob], `recording-${Date.now()}.webm`, { type: recordedBlob.type || "video/webm" }) : null)
       : uploadFile;
     if (!fileToUpload || !uploadTitle.trim() || uploading) return;
     if (!student?.id) return;
@@ -338,7 +337,7 @@ export default function JourneyPage() {
         title: uploadTitle.trim(),
         description: uploadDesc.trim() || undefined,
         recordingUrl: urlData.publicUrl,
-        mediaType: "video",
+        mediaType: coverTab === "record" ? recordMode : "video",
         isPublic: sharePublic,
       });
       setItems(prev => [item, ...prev]);
@@ -620,8 +619,8 @@ export default function JourneyPage() {
                           ) : (
                             <>
                               {item.description && (
-                                <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.65, margin: "0.875rem 0 0", fontFamily: "Inter, sans-serif", fontStyle: "italic", opacity: 0.85 }}>
-                                  &ldquo;{item.description}&rdquo;
+                                <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.65, margin: "0.875rem 0 0", fontFamily: "Inter, sans-serif", opacity: 0.85 }}>
+                                  {item.description}
                                 </p>
                               )}
 
@@ -756,36 +755,79 @@ export default function JourneyPage() {
               ) : (
                 /* Record tab */
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {/* Video / Audio toggle */}
+                  {!recording && !recordedBlob && (
+                    <div style={{ display: "flex", background: "var(--cream)", borderRadius: 8, padding: "0.25rem", gap: "0.25rem" }}>
+                      {(["video", "audio"] as const).map(mode => (
+                        <button key={mode} onClick={() => setRecordMode(mode)} style={{
+                          flex: 1, padding: "0.375rem 0", borderRadius: 6, border: "none",
+                          background: recordMode === mode ? "var(--white)" : "transparent",
+                          fontFamily: "Inter, sans-serif", fontWeight: recordMode === mode ? 600 : 400,
+                          fontSize: "0.8125rem", color: recordMode === mode ? "var(--charcoal)" : "var(--muted)",
+                          cursor: "pointer", transition: "all 0.15s",
+                          boxShadow: recordMode === mode ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                        }}>
+                          {mode === "video" ? "🎥 Video" : "🎙 Audio only"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {recordError && (
                     <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "var(--peach-bg)", border: "1px solid var(--peach-light)", fontSize: "0.8125rem", color: "var(--peach)", fontFamily: "Inter, sans-serif" }}>{recordError}</div>
                   )}
 
-                  {/* Live preview or recorded preview */}
-                  {!recordedBlob ? (
-                    <div style={{ position: "relative", background: "#111", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3" }}>
-                      <video ref={liveVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: recording ? "block" : "none" }} />
-                      {!recording && (
-                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem" }}>
-                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📷</div>
-                            Camera preview will appear here
+                  {/* Live / review area */}
+                  {recordMode === "video" ? (
+                    !recordedBlob ? (
+                      <div style={{ position: "relative", background: "#111", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3" }}>
+                        <video ref={liveVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: recording ? "block" : "none" }} />
+                        {!recording && (
+                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem" }}>
+                              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📷</div>
+                              Camera preview will appear here
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {recording && (
-                        <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(0,0,0,0.6)", borderRadius: 4, padding: "0.25rem 0.5rem" }}>
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--error)", animation: "pulse 1s infinite" }} />
-                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "#fff", fontWeight: 600, letterSpacing: "0.04em" }}>REC</span>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                        {recording && (
+                          <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(0,0,0,0.6)", borderRadius: 4, padding: "0.25rem 0.5rem" }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--error)", animation: "pulse 1s infinite" }} />
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "#fff", fontWeight: 600, letterSpacing: "0.04em" }}>REC {recordSeconds}s</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <video ref={previewVideoRef} src={recordedUrl ?? undefined} controls playsInline style={{ width: "100%", borderRadius: 10, background: "#111", maxHeight: 240 }} />
+                        <button onClick={discardRecording} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", padding: 0, textDecoration: "underline" }}>
+                          Re-record
+                        </button>
+                      </div>
+                    )
                   ) : (
-                    <div>
-                      <video ref={previewVideoRef} src={recordedUrl ?? undefined} controls playsInline style={{ width: "100%", borderRadius: 10, background: "#111", maxHeight: 240 }} />
-                      <button onClick={discardRecording} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", padding: 0, textDecoration: "underline" }}>
-                        Re-record
-                      </button>
-                    </div>
+                    /* Audio-only UI */
+                    !recordedBlob ? (
+                      <div style={{ background: "var(--cream)", borderRadius: 10, padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{ fontSize: "2.5rem" }}>{recording ? "🔴" : "🎙"}</div>
+                        {recording ? (
+                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 600, color: "var(--charcoal)" }}>
+                            Recording — {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
+                          </div>
+                        ) : (
+                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
+                            Ready to record audio
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <audio controls src={recordedUrl ?? undefined} style={{ width: "100%" }} />
+                        <button onClick={discardRecording} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", padding: 0, textDecoration: "underline" }}>
+                          Re-record
+                        </button>
+                      </div>
+                    )
                   )}
 
                   {!recordedBlob && (
@@ -794,9 +836,9 @@ export default function JourneyPage() {
                       style={{ padding: "0.75rem", borderRadius: 8, border: recording ? "2px solid var(--error)" : "2px solid var(--charcoal)", background: recording ? "var(--error-bg)" : "var(--charcoal)", color: recording ? "var(--error)" : "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
                     >
                       {recording ? (
-                        <><span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--error)", flexShrink: 0 }} /> Stop Recording</>
+                        <><span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--error)", flexShrink: 0 }} /> Stop</>
                       ) : (
-                        <>🎥 Start Recording</>
+                        <>{recordMode === "video" ? "🎥 Start Recording" : "🎙 Start Recording"}</>
                       )}
                     </button>
                   )}

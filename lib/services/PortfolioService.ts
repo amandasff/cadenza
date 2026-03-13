@@ -11,6 +11,7 @@ export interface PortfolioItemRow {
   created_at: string;
   media_type: 'audio' | 'video' | null;
   is_public: boolean | null;
+  view_count?: number;
 }
 
 interface AddItemInput {
