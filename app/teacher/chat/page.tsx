@@ -229,8 +229,8 @@ export default function TeacherChat() {
               const isSel = selectedStudent?.id === s.id;
               return (
                 <button key={s.id} onClick={() => selectAndOpen(s)} style={{ all: "unset", display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", cursor: "pointer", background: isSel ? "var(--cream)" : "transparent", width: "100%", boxSizing: "border-box" }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: isSel ? "var(--charcoal)" : "var(--cream-deep)", border: `1px solid ${isSel ? "var(--charcoal)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: isSel ? "var(--white)" : "var(--muted)", flexShrink: 0 }}>
-                    {initials(s.display_name)}
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: isSel ? "var(--charcoal)" : "var(--cream-deep)", border: `1px solid ${isSel ? "var(--charcoal)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: isSel ? "var(--white)" : "var(--muted)", flexShrink: 0, overflow: "hidden" }}>
+                    {s.avatar_url ? <img src={s.avatar_url} alt={s.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(s.display_name)}
                   </div>
                   <span style={{ fontSize: "0.8125rem", fontWeight: isSel ? 500 : 400, color: isSel ? "var(--charcoal)" : "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {s.display_name}
@@ -254,6 +254,11 @@ export default function TeacherChat() {
             >
               ←
             </button>
+            {!isAnnouncements && selectedStudent.avatar_url && (
+              <div style={{ width: 24, height: 24, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
+                <img src={selectedStudent.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            )}
             <span style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)" }}>{headerTitle}</span>
             <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{headerSub}</span>
           </div>

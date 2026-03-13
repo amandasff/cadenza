@@ -30,4 +30,14 @@ export class Teacher extends User {
   hasStudio(): boolean {
     return this.studioId !== null;
   }
+
+  getLevelLabel(): string {
+    if (this.totalPoints >= 9000) return 'Maestro';
+    if (this.totalPoints >= 4500) return 'Virtuoso';
+    if (this.totalPoints >= 2000) return 'Advanced';
+    if (this.totalPoints >= 900)  return 'Performer';
+    if (this.totalPoints >= 400)  return 'Student';
+    if (this.totalPoints >= 150)  return 'Apprentice';
+    return 'Beginner';
+  }
 }

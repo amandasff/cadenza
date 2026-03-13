@@ -314,7 +314,7 @@ export default function TeacherDashboard() {
                       <div style={{
                         width: 36,
                         height: 36,
-                        background: "var(--charcoal)",
+                        background: profile.avatar_url ? "transparent" : "var(--charcoal)",
                         borderRadius: "50%",
                         display: "flex",
                         alignItems: "center",
@@ -325,8 +325,9 @@ export default function TeacherDashboard() {
                         color: "var(--white)",
                         flexShrink: 0,
                         letterSpacing: "0.02em",
+                        overflow: "hidden",
                       }}>
-                        {initials}
+                        {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
@@ -534,7 +535,7 @@ export default function TeacherDashboard() {
                     <div style={{
                       width: 26,
                       height: 26,
-                      background: "var(--charcoal)",
+                      background: profile?.avatar_url ? "transparent" : "var(--charcoal)",
                       borderRadius: "50%",
                       display: "flex",
                       alignItems: "center",
@@ -545,8 +546,9 @@ export default function TeacherDashboard() {
                       color: "var(--white)",
                       flexShrink: 0,
                       letterSpacing: "0.02em",
+                      overflow: "hidden",
                     }}>
-                      {initials}
+                      {profile?.avatar_url ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
