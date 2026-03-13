@@ -631,6 +631,15 @@ html[data-theme="dark"] {
   --ring: oklch(0.70 0 0);
 }
 
+/* Landing page nav — dark mode adaptation */
+.landing-nav-bg {
+  background: rgba(253,252,250,0.92);
+  backdrop-filter: blur(10px);
+}
+html[data-theme="dark"] .landing-nav-bg {
+  background: rgba(20,17,14,0.92);
+}
+
 /* Dark mode skeleton */
 html[data-theme="dark"] .skeleton {
   background: linear-gradient(90deg, #1C1916 25%, #242018 50%, #1C1916 75%) !important;

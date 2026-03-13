@@ -112,10 +112,9 @@ export default function Home() {
     <div style={{ minHeight: "100dvh", background: "var(--white)", display: "flex", flexDirection: "column", color: "var(--charcoal)" }}>
 
       {/* ── Nav ── */}
-      <nav style={{
+      <nav className="landing-nav-bg" style={{
         padding: "0 2rem", display: "flex", justifyContent: "space-between",
         alignItems: "center", height: 54, position: "sticky", top: 0, zIndex: 50,
-        background: "rgba(253,252,250,0.92)", backdropFilter: "blur(10px)",
         borderBottom: "1px solid var(--border)",
       }}>
         <span style={{ fontWeight: 700, fontSize: "0.8rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--charcoal)" }}>
@@ -157,7 +156,7 @@ export default function Home() {
             letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600,
           }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--sage)", flexShrink: 0 }} />
-            The platform for music teachers &amp; students
+            Practice made personal. Studio made simple.
           </div>
 
           <h1 style={{
@@ -166,14 +165,14 @@ export default function Home() {
             lineHeight: 0.98, letterSpacing: "-0.02em", marginBottom: "1.5rem",
           }}>
             {role === "teacher" ? (
-              <>Your students will<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>actually practice.</em></>
+              <>Watch your students<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>fall in love with practice.</em></>
             ) : (
-              <>Practice more.<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>Play better.</em></>
+              <>Daily practice,<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>joyfully done.</em></>
             )}
           </h1>
 
           <p style={{ color: "var(--muted)", fontSize: "1.0625rem", maxWidth: 440, marginBottom: "1.75rem", lineHeight: 1.75 }}>
-            Cadenza gives teachers a studio OS — AI lesson plans, goal tracking, parent updates, and payment logs. Students get games, streaks, an AI tutor, and a practice community. One platform. No notebooks required.
+            Cadenza brings together lesson planning, student goals, practice tracking, and a community students genuinely love. Everything a music teacher needs — thoughtfully in one place.
           </p>
 
           {/* Audience pills */}
@@ -372,14 +371,14 @@ export default function Home() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "4rem" }}>
           {[
-            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", rot: "-1.2deg", icon: "🎹", title: "AI lesson planner", desc: "AI reads your student's practice data and generates a structured lesson plan in 2 minutes. No competitor can do this." },
-            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", rot: "1.0deg",  icon: "📋", title: "Goal & piece tracking", desc: "Set goals and assign pieces before each lesson. Students always know exactly what to work on." },
-            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", rot: "-0.8deg", icon: "💰", title: "Payment log & invoices", desc: "Track lesson fees, mark payments received, and generate clean printable invoices. Ditch the spreadsheet." },
-            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", rot: "1.3deg",  icon: "👪", title: "Parent updates", desc: "Parents see a live view of their child's streak and practice habits. They stay engaged. You stop fielding texts." },
-            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", rot: "-1.5deg", icon: "📊", title: "Student progress dashboard", desc: "See every student's practice minutes, mood, and streak at a glance — without asking them." },
-            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", rot: "0.7deg",  icon: "📝", title: "Lesson notes & history", desc: "Write quick post-lesson notes. AI can expand them. Everything stays in one place, searchable forever." },
+            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "🎹", title: "AI lesson planner", desc: "Before every lesson, Cadenza reads your student's practice log and gently suggests where to focus. A thoughtful plan, ready in two minutes." },
+            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "📋", title: "Goal & piece tracking", desc: "Assign pieces and set intentions before each lesson. Your students always know what matters — and you'll see exactly how they're progressing." },
+            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "💰", title: "Payment log & invoices", desc: "Quietly track fees and mark payments as you go. A calm, clean record so admin never gets in the way of teaching." },
+            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "👪", title: "Parent updates", desc: "Parents see their child's progress unfold week by week — no emails needed from you. Families feel connected; you stay focused on teaching." },
+            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "📊", title: "Student progress dashboard", desc: "Walk into every lesson knowing exactly who practiced, how long, and how they felt. No surprises — only better teaching." },
+            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "📝", title: "Lesson notes & history", desc: "Jot down what clicked and what still needs work. Cadenza keeps every reflection organized and ready for when you need it." },
           ].map((c, i) => (
-            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", transform: `rotate(${c.rot})`, boxShadow: "var(--shadow-sm)" }}>
+            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
               <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
               <h3 style={{ fontWeight: 600, fontSize: "1.25rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{c.title}</h3>
               <div style={{ fontSize: "0.875rem", color: c.color, lineHeight: 1.7 }}>{c.desc}</div>
@@ -395,14 +394,14 @@ export default function Home() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem" }}>
           {[
-            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", rot: "-1.5deg", icon: "⏱", title: "One-tap practice timer", desc: "Open the app, hit start, play. Every minute logged automatically — no fuss." },
-            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", rot: "1.2deg",  icon: "🔥", title: "Streaks & points", desc: "Kids love protecting their streak. Earn bonus points the longer you keep it alive." },
-            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", rot: "-0.8deg", icon: "🤖", title: "AI practice tutor", desc: "Ask anything about your pieces, theory, or technique. Your AI tutor is available 24/7." },
-            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", rot: "1.5deg",  icon: "🎮", title: "Music games", desc: "Fretboard notes, guitar chords, ear training, note ID — learning disguised as playing." },
-            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", rot: "-1deg",   icon: "🎤", title: "Share your covers", desc: "Record yourself and share your covers with your studio community. See what others are playing." },
-            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", rot: "0.8deg",  icon: "🌍", title: "Practice community", desc: "Follow other musicians, see their streaks and pieces, and get inspired. Music is better together." },
+            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "⏱", title: "One-tap practice timer", desc: "Open the app, press start, and just play. Your practice logs itself — no fuss, no forgetting." },
+            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "🔥", title: "Streaks & points", desc: "There's something wonderful about a streak worth protecting. Each day you practice, it grows — and so do you." },
+            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "🤖", title: "AI practice tutor", desc: "Stuck on a passage? Curious about a chord? Your AI tutor is always there — endlessly patient, at any hour." },
+            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "🎮", title: "Music games", desc: "Ear training, note reading, rhythm games — the kind of practice that doesn't feel like practice at all." },
+            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "🎤", title: "Share your covers", desc: "Record a cover and share it with your studio. Hearing each other play is one of the warmest parts of learning music." },
+            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "🌍", title: "Practice community", desc: "Follow other students, cheer on their progress, and let their dedication inspire yours. Music is always better together." },
           ].map((c, i) => (
-            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", transform: `rotate(${c.rot})`, boxShadow: "var(--shadow-sm)" }}>
+            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
               <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
               <h3 style={{ fontWeight: 600, fontSize: "1.25rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{c.title}</h3>
               <div style={{ fontSize: "0.875rem", color: c.color, lineHeight: 1.7 }}>{c.desc}</div>
@@ -422,9 +421,9 @@ export default function Home() {
           <div>
             <h3 style={{ fontWeight: 600, fontSize: "1.125rem", color: "var(--sage)", marginBottom: "1.25rem" }}>For teachers</h3>
             {[
-              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: "Create your studio", sub: "Sign up as a teacher, name your studio, and set your first student's goals — in under 2 minutes." },
-              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: "Invite students & parents", sub: "Share your studio link. Students join for free. Parents get a read-only view of practice habits." },
-              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: "Let the data come to you", sub: "See who practiced this week, plan next week's lesson with AI, and track payments — all in one place." },
+              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: "Create your studio", sub: "Sign up, name your studio, and set your first student's goals. You'll be ready in two minutes — we promise." },
+              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: "Invite students & parents", sub: "Share a simple link. Students join for free, and parents get a gentle window into their child's practice life." },
+              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: "Let the data come to you", sub: "See who practiced, plan your lessons with AI, and keep track of payments — all without switching apps." },
             ].map((step, i) => (
               <div key={i} style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", padding: "1.375rem 0", borderTop: "1px solid var(--border)" }}>
                 <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: step.bg, border: `1px solid ${step.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>{step.n}</div>
@@ -440,9 +439,9 @@ export default function Home() {
           <div>
             <h3 style={{ fontWeight: 600, fontSize: "1.125rem", color: "var(--peach)", marginBottom: "1.25rem" }}>For students</h3>
             {[
-              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: "Sign up free & find your teacher", sub: "Create an account and search for your teacher's studio by name. Join in one tap." },
-              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: "Practice with purpose", sub: "Your teacher's goals are waiting. Hit start on the timer, work through them, and log your session." },
-              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: "Build your streak", sub: "Play music games, earn points, and share your progress. Learning music gets a lot more fun." },
+              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: "Sign up & find your teacher", sub: "Create your account and find your teacher's studio. One tap to join — you're in." },
+              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: "Practice with intention", sub: "Your teacher's goals are there waiting. Start the timer, work through them with focus, and log your session." },
+              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: "Build your streak", sub: "Practice every day and watch your streak grow. Play games, earn points, share your progress — music was never this rewarding." },
             ].map((step, i) => (
               <div key={i} style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", padding: "1.375rem 0", borderTop: "1px solid var(--border)" }}>
                 <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: step.bg, border: `1px solid ${step.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>{step.n}</div>
@@ -458,24 +457,24 @@ export default function Home() {
       </div>
 
       {/* ── Bottom CTA ── */}
-      <div style={{ background: "var(--charcoal)", padding: "5rem 2rem", textAlign: "center" }}>
-        <h2 style={{ fontWeight: 400, fontSize: "clamp(2.25rem, 6vw, 3.5rem)", color: "var(--cream)", lineHeight: 1.1, letterSpacing: "-0.015em", marginBottom: "0.75rem" }}>
-          Stop managing.<br />
-          <em style={{ color: "var(--peach-light)" }}>Start teaching.</em>
+      <div style={{ background: "#1A1714", padding: "5rem 2rem", textAlign: "center" }}>
+        <h2 style={{ fontWeight: 400, fontSize: "clamp(2.25rem, 6vw, 3.5rem)", color: "#F0EDE7", lineHeight: 1.1, letterSpacing: "-0.015em", marginBottom: "0.75rem" }}>
+          More music.<br />
+          <em style={{ color: "#D47050" }}>Less admin.</em>
         </h2>
-        <p style={{ color: "var(--cream)", opacity: 0.4, fontSize: "0.9375rem", marginBottom: "2.25rem", maxWidth: 480, margin: "0 auto 2.25rem" }}>
-          Teachers get a studio OS. Students get a practice habit. Everyone wins.
+        <p style={{ color: "#F0EDE7", opacity: 0.45, fontSize: "0.9375rem", marginBottom: "2.25rem", maxWidth: 480, margin: "0 auto 2.25rem" }}>
+          Cadenza gives teachers their time back — and gives students a reason to practice every single day.
         </p>
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
           <button onClick={() => { switchMode("signup"); setRole("teacher"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn" style={{
-            background: "var(--cream)", color: "var(--charcoal)", padding: "0.9375rem 2.5rem",
+            background: "#F0EDE7", color: "#1A1714", padding: "0.9375rem 2.5rem",
             fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "0.01em",
           }}>
             Set up your studio →
           </button>
           <button onClick={() => { switchMode("signup"); setRole("student"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn" style={{
-            background: "transparent", color: "var(--cream)", opacity: 0.7, padding: "0.9375rem 2.5rem",
-            fontWeight: 500, fontSize: "0.9375rem", border: "1px solid rgba(248,246,242,0.2)",
+            background: "transparent", color: "#F0EDE7", opacity: 0.7, padding: "0.9375rem 2.5rem",
+            fontWeight: 500, fontSize: "0.9375rem", border: "1px solid rgba(240,237,231,0.2)",
             letterSpacing: "0.01em",
           }}>
             Join as a student
@@ -484,7 +483,7 @@ export default function Home() {
       </div>
 
       {/* ── Footer ── */}
-      <div style={{ padding: "1rem 2rem", background: "#221F1B", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+      <div style={{ padding: "1rem 2rem", background: "#111009", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
         <span style={{ fontWeight: 700, fontSize: "0.625rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(248,246,242,0.25)" }}>Cadenza</span>
         <div style={{ display: "flex", gap: "1.5rem" }}>
           {["Privacy", "Terms", "Contact"].map(l => (
