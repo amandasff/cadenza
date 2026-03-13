@@ -1,8 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
-import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
-import { PracticeService } from "../../../lib/services/PracticeService";
 import { Teacher } from "../../../lib/models/Teacher";
 
 function fmt(s: number) {
@@ -62,13 +60,16 @@ export default function TeacherPracticePage() {
     setError("");
     try {
       if (running) stopTimer();
-      const supabase = getSupabaseBrowserClient();
-      await PracticeService.create(supabase).logSession({
-        studentId: teacher.id,
-        studioId: teacher.studioId,
-        durationSeconds: elapsed,
-        notes: notes.trim() || undefined,
+      const logRes = await fetch("/api/practice/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studioId: teacher.studioId,
+          durationSeconds: elapsed,
+          notes: notes.trim() || undefined,
+        }),
       });
+      if (!logRes.ok) throw new Error("Failed to save session");
       setSaved(true);
     } catch (err) {
       console.error("save practice error:", err);

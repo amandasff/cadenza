@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback, useRef, Suspense } from "react
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
-import { PracticeService } from "../../../lib/services/PracticeService";
 import { PieceService } from "../../../lib/services/PieceService";
 import { ChatService } from "../../../lib/services/ChatService";
 import { PortfolioService } from "../../../lib/services/PortfolioService";
@@ -207,7 +206,6 @@ function PracticeInner() {
     setSaveError(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const practiceService = PracticeService.create(supabase);
       const sessionSegments: PracticeSegment[] = segments.map(({ id: _id, ...s }) => s);
 
       let recordingUrl: string | undefined;
@@ -232,15 +230,20 @@ function PracticeInner() {
       if (focusNext.trim()) notesParts.push(`Focus: ${focusNext.trim()}`);
       const notesStr = notesParts.join(" | ") || undefined;
 
-      const sessionData = await practiceService.logSession({
-        studentId: student.id,
-        studioId: student.studioId,
-        pieceId: selectedPieceId || undefined,
-        durationSeconds: finalElapsed,
-        notes: notesStr,
-        segments: sessionSegments.length > 0 ? sessionSegments : undefined,
-        recordingUrl,
+      const logRes = await fetch("/api/practice/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studioId: student.studioId,
+          pieceId: selectedPieceId || undefined,
+          durationSeconds: finalElapsed,
+          notes: notesStr,
+          segments: sessionSegments.length > 0 ? sessionSegments : undefined,
+          recordingUrl,
+        }),
       });
+      if (!logRes.ok) throw new Error("Failed to save session");
+      const { session: sessionData } = await logRes.json() as { session: { id: string } };
 
       // Fire AI analysis in background — don't block submit flow
       if (recordingUrl && sessionData?.id) {

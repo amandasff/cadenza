@@ -536,11 +536,17 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         .from("practice-recordings").upload(path, recBlob, { contentType: "audio/webm", upsert: false });
       if (!uploadErr) {
         const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
-        const sessionData = await PracticeService.create(supabase).logSession({
-          studentId: student.id, studioId: student.studioId,
-          durationSeconds: elapsed, recordingUrl: urlData.publicUrl,
-          notes: `Performance recording — ${piece?.title ?? "piece"}`,
+        const logRes = await fetch("/api/practice/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studioId: student.studioId,
+            durationSeconds: elapsed,
+            recordingUrl: urlData.publicUrl,
+            notes: `Performance recording — ${piece?.title ?? "piece"}`,
+          }),
         });
+        const sessionData = logRes.ok ? (await logRes.json() as { session: { id: string } }).session : null;
         // Fire AI analysis in background
         if (sessionData?.id) {
           fetch("/api/practice/analyze-recording", {
