@@ -66,6 +66,11 @@ export default function DiscoverPage() {
   const { playDiscover, stopDiscover, setSuppressMiniPlayer } = usePlayer();
   const [tab, setTab] = useState<"everyone" | "following">("everyone");
 
+  // When navigating away, release the mini-player suppression so audio keeps playing
+  useEffect(() => {
+    return () => setSuppressMiniPlayer(false);
+  }, [setSuppressMiniPlayer]);
+
   const [items, setItems]                       = useState<PublicItem[]>([]);
   const [followingItems, setFollowingItems]     = useState<PublicItem[]>([]);
   const [followingLoaded, setFollowingLoaded]   = useState(false);
