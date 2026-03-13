@@ -347,6 +347,9 @@ export default function StudentChat() {
             const isEditing = editingId === msg.id;
             const canAct = tab === "private" && isMe;
             const heartInfo = hearts[msg.id] ?? { count: 0, liked: false };
+            const audioLine = msg.content.split("\n").find(l => l.startsWith("AUDIO:"));
+            const audioSrc = audioLine?.slice(6);
+            const audioLabel = audioLine ? msg.content.split("\n").filter(l => !l.startsWith("AUDIO:")).join("\n").trim() : "";
 
             return (
               <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : 0 }}
@@ -378,14 +381,15 @@ export default function StudentChat() {
                       <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
                     </div>
                   </div>
-                ) : msg.content.startsWith("AUDIO:") ? (
+                ) : audioSrc ? (
                   <div style={{
                     maxWidth: "78%", padding: "0.5rem 0.75rem",
                     background: isMe ? "var(--charcoal)" : "var(--white)",
                     borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                     border: isMe ? "none" : "1px solid var(--border-strong)",
                   }}>
-                    <audio controls src={msg.content.slice(6)} style={{ height: 32, maxWidth: "100%" }} />
+                    {audioLabel && <p style={{ margin: "0 0 0.375rem", fontSize: "0.8125rem", color: isMe ? "var(--cream)" : "var(--charcoal)" }}>{audioLabel}</p>}
+                    <audio controls src={audioSrc} style={{ height: 32, maxWidth: "100%" }} />
                   </div>
                 ) : (
                   <div style={{

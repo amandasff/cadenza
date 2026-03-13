@@ -143,14 +143,14 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
     setSendingVoice(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const path = `teacher-notes/${teacher.id}/${Date.now()}.webm`;
+      const path = `${session.studio_id}/${teacher.id}/${Date.now()}.webm`;
       const { error: uploadErr } = await supabase.storage
-        .from("practice-recordings")
-        .upload(path, recordingBlob, { contentType: "audio/webm", upsert: false });
+        .from("chat-voice-notes")
+        .upload(path, recordingBlob, { contentType: "audio/webm", upsert: true });
 
       if (uploadErr) throw uploadErr;
 
-      const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("chat-voice-notes").getPublicUrl(path);
       const audioUrl = urlData.publicUrl;
 
       await ChatService.create(supabase).sendPrivateMessage(
