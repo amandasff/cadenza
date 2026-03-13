@@ -6,6 +6,7 @@ import { ChatService } from "../../../lib/services/ChatService";
 import { StudioService } from "../../../lib/services/StudioService";
 import { Teacher } from "../../../lib/models/Teacher";
 import { useRecording } from "../../../lib/context/RecordingContext";
+import VideoRecorderModal from "../../../components/VideoRecorderModal";
 import type { MessageRow, ProfileRow } from "../../../lib/types";
 
 function formatTime(iso: string) {
@@ -40,6 +41,7 @@ export default function TeacherChat() {
   const [editError, setEditError] = useState<string | null>(null);
   const [hearts, setHearts] = useState<HeartMap>({});
   const { isRecording, recordingSeconds, uploadingAudio, audioError, startRecording, stopRecording, clearError } = useRecording();
+  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -177,6 +179,24 @@ export default function TeacherChat() {
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  }
+
+  async function handleSendVideo(blob: Blob) {
+    if (!teacher?.studioId) return;
+    const supabase = getSupabaseBrowserClient();
+    const path = `${teacher.studioId}/${teacher.id}/${Date.now()}.webm`;
+    const { error } = await supabase.storage.from("chat-voice-notes").upload(path, blob, { upsert: true, contentType: "video/webm" });
+    if (error) throw error;
+    const { data } = supabase.storage.from("chat-voice-notes").getPublicUrl(path);
+    const content = `VIDEO:${data.publicUrl}`;
+    const service = ChatService.create(supabase);
+    if (selectedStudent === null) {
+      await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, content);
+      setMessages(await service.getAnnouncements(teacher.studioId));
+    } else {
+      await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, content);
+      setMessages(await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id));
+    }
   }
 
   async function handleStartRecording() {
@@ -318,6 +338,8 @@ export default function TeacherChat() {
               const audioLine = msg.content.split("\n").find(l => l.startsWith("AUDIO:"));
               const audioSrc = audioLine?.slice(6);
               const audioLabel = audioLine ? msg.content.split("\n").filter(l => !l.startsWith("AUDIO:")).join("\n").trim() : "";
+              const videoLine = msg.content.split("\n").find(l => l.startsWith("VIDEO:"));
+              const videoSrc = videoLine?.slice(6);
 
               return (
                 <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : "0.125rem" }}
@@ -348,6 +370,10 @@ export default function TeacherChat() {
                         <button onClick={() => { setEditingId(null); setEditError(null); }} style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}>Cancel</button>
                         <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
                       </div>
+                    </div>
+                  ) : videoSrc ? (
+                    <div style={{ maxWidth: "66%", borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px", overflow: "hidden", border: isMe ? "none" : "1px solid var(--border-strong)" }}>
+                      <video controls src={videoSrc} style={{ display: "block", width: "100%", maxWidth: 280 }} />
                     </div>
                   ) : audioSrc ? (
                     <div style={{
@@ -419,21 +445,20 @@ export default function TeacherChat() {
               rows={Math.min(6, Math.max(1, input.split("\n").length))}
               style={{ flex: 1, border: "1px solid var(--border)", borderRadius: 3, padding: "0.5625rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }}
             />
-            {/* Mic button */}
+            {/* Camera / video message button */}
             <button
-              onClick={isRecording ? stopRecording : handleStartRecording}
-              disabled={uploadingAudio || sending}
-              title={isRecording ? "Stop recording" : "Send voice message"}
+              onClick={() => setShowVideoRecorder(true)}
+              disabled={sending || isRecording || uploadingAudio}
+              title="Send video message"
               style={{
                 padding: "0.5625rem 0.75rem", borderRadius: 3, border: "1px solid var(--border)",
-                background: isRecording ? "var(--error-bg)" : "var(--white)",
-                color: isRecording ? "var(--error)" : "var(--muted)",
-                cursor: uploadingAudio || sending ? "default" : "pointer",
+                background: "var(--white)", color: "var(--muted)",
+                cursor: sending || isRecording || uploadingAudio ? "default" : "pointer",
                 fontSize: "1rem", flexShrink: 0, marginBottom: "0.125rem",
                 transition: "all 0.15s",
               }}
             >
-              {uploadingAudio ? "⏳" : isRecording ? `⏹ ${recordingSeconds}s` : "🎙"}
+              📹
             </button>
             <button
               onClick={handleSend}
@@ -445,6 +470,13 @@ export default function TeacherChat() {
           </div>
         </div>
       </div>
+
+      {showVideoRecorder && (
+        <VideoRecorderModal
+          onSend={handleSendVideo}
+          onClose={() => setShowVideoRecorder(false)}
+        />
+      )}
     </div>
   );
 }
