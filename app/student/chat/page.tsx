@@ -36,8 +36,14 @@ export default function StudentChat() {
   const [editError, setEditError] = useState<string | null>(null);
   const [hearts, setHearts] = useState<HeartMap>({});
   const [sessionFeedbacks, setSessionFeedbacks] = useState<Record<string, string>>({});
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -205,6 +211,52 @@ export default function StudentChat() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      recordingChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) recordingChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        const blob = new Blob(recordingChunksRef.current, { type: "audio/webm" });
+        setIsRecording(false);
+        setRecordingSeconds(0);
+        await uploadAndSendAudio(blob);
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
+    } catch { /* mic denied */ }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+  }
+
+  async function uploadAndSendAudio(blob: Blob) {
+    if (!student?.studioId || !teacherId) return;
+    setUploadingAudio(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const path = `${student.studioId}/${student.id}/${Date.now()}.webm`;
+      const { error } = await supabase.storage.from("chat-voice-notes").upload(path, blob, { upsert: true, contentType: "audio/webm" });
+      if (error) throw error;
+      const { data } = supabase.storage.from("chat-voice-notes").getPublicUrl(path);
+      const content = `AUDIO:${data.publicUrl}`;
+      const svc = ChatService.create(supabase);
+      await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, content);
+      const fresh = await svc.getPrivateThread(student.studioId, student.id, teacherId);
+      setPrivateMessages(fresh);
+      setTab("private");
+    } catch { /* no-op */ } finally {
+      setUploadingAudio(false);
+    }
+  }
+
   const activeMessages = tab === "announcements" ? announcements : privateMessages;
 
   return (
@@ -326,6 +378,15 @@ export default function StudentChat() {
                       <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
                     </div>
                   </div>
+                ) : msg.content.startsWith("AUDIO:") ? (
+                  <div style={{
+                    maxWidth: "78%", padding: "0.5rem 0.75rem",
+                    background: isMe ? "var(--charcoal)" : "var(--white)",
+                    borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                    border: isMe ? "none" : "1px solid var(--border-strong)",
+                  }}>
+                    <audio controls src={msg.content.slice(6)} style={{ height: 32, maxWidth: "100%" }} />
+                  </div>
                 ) : (
                   <div style={{
                     maxWidth: "78%", padding: "0.5rem 0.875rem",
@@ -380,8 +441,24 @@ export default function StudentChat() {
 
       {tab === "private" && (
         <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "flex-end", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
-          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>Send</button>
+          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId || isRecording || uploadingAudio} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
+          {/* Mic button */}
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={uploadingAudio || sending || !teacherId}
+            title={isRecording ? "Stop recording" : "Send voice message"}
+            style={{
+              padding: "0.5rem 0.625rem", borderRadius: 3, border: "1px solid var(--border)",
+              background: isRecording ? "var(--error-bg)" : "var(--white)",
+              color: isRecording ? "var(--error)" : "var(--muted)",
+              cursor: uploadingAudio || sending || !teacherId ? "default" : "pointer",
+              fontSize: "1rem", flexShrink: 0, marginBottom: "0.0625rem",
+              transition: "all 0.15s",
+            }}
+          >
+            {uploadingAudio ? "⏳" : isRecording ? `⏹ ${recordingSeconds}s` : "🎙"}
+          </button>
+          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId || isRecording} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId && !isRecording ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId && !isRecording ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>Send</button>
         </div>
       )}
     </div>
