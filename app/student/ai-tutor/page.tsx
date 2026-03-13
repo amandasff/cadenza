@@ -262,8 +262,8 @@ export default function AITutorPage() {
             </p>
           </div>
           <div style={{
-            fontSize: "0.6875rem", color: remaining <= 5 ? "#E05252" : "var(--muted)",
-            background: remaining <= 5 ? "#E0525215" : "var(--cream)",
+            fontSize: "0.6875rem", color: remaining <= 5 ? "var(--error)" : "var(--muted)",
+            background: remaining <= 5 ? "var(--error-bg)" : "var(--cream)",
             padding: "0.25rem 0.625rem", borderRadius: 12,
             fontWeight: 500, whiteSpace: "nowrap", marginTop: "0.25rem",
           }}>
@@ -294,6 +294,7 @@ export default function AITutorPage() {
                     key={q}
                     onClick={() => send(q)}
                     disabled={atLimit}
+                    className="ai-tutor-suggestion"
                     style={{
                       background: "var(--white)", border: "1px solid var(--border)",
                       borderRadius: 8, padding: "0.875rem 1rem",
@@ -302,8 +303,6 @@ export default function AITutorPage() {
                       lineHeight: 1.5, transition: "all 0.15s",
                       opacity: atLimit ? 0.5 : 1,
                     }}
-                    onMouseEnter={e => { if (!atLimit) { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--charcoal)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--cream-deep)"; } }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.background = "var(--white)"; }}
                   >
                     {q}
                   </button>
@@ -363,7 +362,7 @@ export default function AITutorPage() {
           ))}
 
           {error && (
-            <div style={{ textAlign: "center", padding: "1rem", color: "#c0392b", fontSize: "0.8125rem" }}>
+            <div style={{ textAlign: "center", padding: "1rem", color: "var(--error)", fontSize: "0.8125rem" }}>
               {error}
               <button onClick={() => setError(null)} style={{ marginLeft: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem" }}>dismiss</button>
             </div>
@@ -433,6 +432,7 @@ export default function AITutorPage() {
 
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .ai-tutor-suggestion:not(:disabled):hover { border-color: var(--charcoal) !important; background: var(--cream-deep) !important; }
         .ai-markdown { overflow-wrap: break-word; word-break: break-word; }
         .ai-markdown > :first-child { margin-top: 0; }
         .ai-markdown > :last-child { margin-bottom: 0; }
