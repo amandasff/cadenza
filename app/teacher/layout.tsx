@@ -16,7 +16,7 @@ const tabs = [
   { href: "/teacher/chat",           label: "Chat" },
   { href: "/teacher/inspirations",   label: "Inspire" },
   { href: "/teacher/studio",         label: "Studio" },
-  { href: "/student/practice",       label: "Practice" },
+  { href: "/teacher/practice",       label: "Practice" },
 ];
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {

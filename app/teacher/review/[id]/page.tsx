@@ -190,18 +190,26 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
   }
 
   async function handleSaveFeedback() {
-    if (!goal || !feedback.trim() || savingFeedback) return;
+    if (!feedback.trim() || savingFeedback) return;
     setSavingFeedback(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      await GoalService.create(supabase).addFeedback(goal.id, feedback.trim());
 
-      // Send feedback as chat message to student
-      if (session && student) {
+      if (goal) {
+        // Has linked goal: save to goal record AND send as chat message
+        await GoalService.create(supabase).addFeedback(goal.id, feedback.trim());
+        if (session && student) {
+          await ChatService.create(supabase).sendPrivateMessage(
+            session.studio_id, teacher.id, teacher.displayName, student.id,
+            `📝 Feedback on "${goal.title}":\n${feedback.trim()}`
+          ).catch(() => {});
+        }
+      } else if (session && student) {
+        // No linked goal: send directly as a chat message
         await ChatService.create(supabase).sendPrivateMessage(
           session.studio_id, teacher.id, teacher.displayName, student.id,
-          `📝 Feedback on "${goal.title}":\n${feedback.trim()}`
-        ).catch(() => {});
+          `📝 Session note from ${teacher.displayName}:\n${feedback.trim()}`
+        );
       }
 
       setFeedbackSaved(true);
@@ -474,11 +482,11 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           />
           <button
             onClick={handleSaveFeedback}
-            disabled={!feedback.trim() || savingFeedback || !goal}
+            disabled={!feedback.trim() || savingFeedback}
             style={{
               width: "100%", marginTop: "0.75rem", padding: "0.65rem", borderRadius: 100,
-              border: "none", cursor: !feedback.trim() || !goal ? "default" : "pointer",
-              background: feedbackSaved ? "var(--sage)" : !feedback.trim() || !goal ? "var(--border)" : "var(--sky)",
+              border: "none", cursor: !feedback.trim() ? "default" : "pointer",
+              background: feedbackSaved ? "var(--sage)" : !feedback.trim() ? "var(--border)" : "var(--sky)",
               color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem",
               transition: "background 0.15s",
             }}
@@ -487,7 +495,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           </button>
           {!goal && (
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.5rem", textAlign: "center" }}>
-              No goal linked to this session
+              No goal linked — note will be sent via chat
             </p>
           )}
 
