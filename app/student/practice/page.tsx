@@ -355,7 +355,7 @@ function PracticeInner() {
           <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", alignItems: "center" }}>
             {/* Pause (only while recording) */}
             {recording && (
-              <button onClick={handlePause} style={{ width: 52, height: 52, borderRadius: "50%", border: "1.5px solid var(--border-strong)", background: "var(--white)", cursor: "pointer", fontSize: "1.125rem", color: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={handlePause} style={{ width: 52, height: 52, borderRadius: "50%", border: "1px solid var(--border-strong)", background: "var(--white)", cursor: "pointer", fontSize: "1.125rem", color: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 ⏸
               </button>
             )}
@@ -369,12 +369,12 @@ function PracticeInner() {
               }}
               style={{
                 width: 80, height: 80, borderRadius: "50%",
-                background: recording ? "#8A3030" : "var(--charcoal)",
+                background: recording ? "var(--error)" : "var(--charcoal)",
                 border: "none", cursor: "pointer",
                 fontSize: "1.5rem", transition: "background 0.2s",
                 color: "var(--white)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: recording ? "0 0 0 6px rgba(138,48,48,0.15)" : "0 4px 16px rgba(44,40,36,0.2)",
+                boxShadow: recording ? "0 0 0 6px rgba(138,48,48,0.15)" : "var(--shadow-md)",
               }}
             >
               {recording ? "⏹" : "⏺"}
@@ -398,7 +398,7 @@ function PracticeInner() {
             onClick={() => setShowWorkingOn(true)}
             style={{
               width: "100%", background: "var(--white)", border: "1px solid var(--border)",
-              borderRadius: 8, padding: "0.875rem 1.125rem",
+              borderRadius: 6, padding: "0.875rem 1.125rem",
               display: "flex", alignItems: "center", justifyContent: "space-between",
               cursor: "pointer", textAlign: "left",
             }}
@@ -427,7 +427,7 @@ function PracticeInner() {
 
         {/* Metronome toggle strip */}
         <div style={{ padding: "0 1.25rem 2rem" }}>
-          <div style={{ background: "var(--white)", borderRadius: 8, border: "1px solid var(--border)", overflow: "hidden" }}>
+          <div style={{ background: "var(--white)", borderRadius: 6, border: "1px solid var(--border)", overflow: "hidden" }}>
             <button
               onClick={() => setShowMetronome(m => !m)}
               style={{ width: "100%", background: "none", border: "none", padding: "0.875rem 1.125rem", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
@@ -473,7 +473,7 @@ function PracticeInner() {
                   Piece
                 </label>
                 {loadingPieces ? (
-                  <div className="skeleton" style={{ height: 40, borderRadius: 3 }} />
+                  <div className="skeleton" style={{ height: 40, borderRadius: 4 }} />
                 ) : (
                   <select
                     value={selectedPieceId}
@@ -488,7 +488,7 @@ function PracticeInner() {
                         setPracticeYouTubeId(null);
                       }
                     }}
-                    style={{ width: "100%", borderRadius: 6, border: "1.5px solid var(--border-strong)", padding: "0.75rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}
+                    style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border-strong)", padding: "0.75rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}
                   >
                     <option value="">— no piece selected —</option>
                     {grouped.map(g => (
@@ -513,7 +513,7 @@ function PracticeInner() {
                       <button
                         key={r.id}
                         onClick={() => setPracticeYouTubeId(practiceYouTubeId === r.youtube_id ? null : r.youtube_id)}
-                        style={{ padding: "0.3rem 0.625rem", borderRadius: 3, cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, background: practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--cream)", color: practiceYouTubeId === r.youtube_id ? "var(--white)" : "var(--charcoal)", border: `1px solid ${practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--border)"}`, transition: "all 0.15s" }}
+                        style={{ padding: "0.3rem 0.625rem", borderRadius: 4, cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, background: practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--cream)", color: practiceYouTubeId === r.youtube_id ? "var(--white)" : "var(--charcoal)", border: `1px solid ${practiceYouTubeId === r.youtube_id ? "var(--charcoal)" : "var(--border)"}`, transition: "all 0.15s" }}
                       >
                         {practiceYouTubeId === r.youtube_id ? "▶ Playing" : (r.is_primary ? "★ Listen" : "▶ " + r.title.slice(0, 20))}
                       </button>
@@ -558,7 +558,7 @@ function PracticeInner() {
                       onChange={e => setNewSegTitle(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter") handleAddSegment(); if (e.key === "Escape") setShowAddSeg(false); }}
                       placeholder={`What are you working on? (${fmt(elapsed)})`}
-                      style={{ borderRadius: 6, border: "1.5px solid var(--border-strong)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", width: "100%", boxSizing: "border-box" }}
+                      style={{ borderRadius: 6, border: "1px solid var(--border-strong)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", width: "100%", boxSizing: "border-box" }}
                     />
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <select value={newSegArea} onChange={e => setNewSegArea(e.target.value)} style={{ flex: 1, borderRadius: 6, border: "1px solid var(--border)", padding: "0.5rem 0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}>
@@ -573,7 +573,7 @@ function PracticeInner() {
 
               <button
                 onClick={() => setShowWorkingOn(false)}
-                style={{ marginTop: "1.5rem", width: "100%", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 8, padding: "0.875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", cursor: "pointer" }}
+                style={{ marginTop: "1.5rem", width: "100%", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 6, padding: "0.875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", cursor: "pointer" }}
               >
                 Done
               </button>
@@ -604,7 +604,7 @@ function PracticeInner() {
             <button
               key={m.key}
               onClick={() => setMood(m.key)}
-              style={{ flex: 1, padding: "0.5rem 0.25rem", borderRadius: 3, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", background: mood === m.key ? "var(--charcoal)" : "var(--cream)", border: `1.5px solid ${mood === m.key ? "var(--charcoal)" : "var(--border)"}`, transition: "all 0.15s" }}
+              style={{ flex: 1, padding: "0.5rem 0.25rem", borderRadius: 4, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", background: mood === m.key ? "var(--charcoal)" : "var(--cream)", border: `1px solid ${mood === m.key ? "var(--charcoal)" : "var(--border)"}`, transition: "all 0.15s" }}
             >
               <span style={{ fontSize: "1.375rem", lineHeight: 1 }}>{m.emoji}</span>
               <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500, letterSpacing: "0.04em", color: mood === m.key ? "var(--white)" : "var(--muted)", textTransform: "uppercase" }}>{m.label}</span>
@@ -616,9 +616,9 @@ function PracticeInner() {
       {/* Reflection textareas */}
       <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1.25rem", marginBottom: "1rem", textAlign: "left" }}>
         <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>What went well?</div>
-        <textarea value={wentWell} onChange={e => setWentWell(e.target.value)} placeholder="e.g. The tricky passage in bar 8 is clicking…" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
+        <textarea value={wentWell} onChange={e => setWentWell(e.target.value)} placeholder="e.g. The tricky passage in bar 8 is clicking…" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
         <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>Focus next time</div>
-        <textarea value={focusNext} onChange={e => setFocusNext(e.target.value)} placeholder="e.g. Work on the dynamics in the second section…" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
+        <textarea value={focusNext} onChange={e => setFocusNext(e.target.value)} placeholder="e.g. Work on the dynamics in the second section…" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
       </div>
 
       {/* Audio recording review */}
@@ -637,8 +637,8 @@ function PracticeInner() {
           </div>
           {portfolioSave && (
             <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <input autoFocus value={portfolioTitle} onChange={e => setPortfolioTitle(e.target.value)} placeholder="Piece name, e.g. Für Elise" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
-              <textarea value={portfolioDesc} onChange={e => setPortfolioDesc(e.target.value)} placeholder="Notes about this recording… (optional)" style={{ width: "100%", borderRadius: 3, border: "1px solid var(--border)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none", minHeight: 52 }} />
+              <input autoFocus value={portfolioTitle} onChange={e => setPortfolioTitle(e.target.value)} placeholder="Piece name, e.g. Für Elise" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border-strong)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
+              <textarea value={portfolioDesc} onChange={e => setPortfolioDesc(e.target.value)} placeholder="Notes about this recording… (optional)" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none", minHeight: 52 }} />
             </div>
           )}
         </div>
