@@ -6,6 +6,8 @@ import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Teacher } from "../../lib/models/Teacher";
+import { RecordingProvider } from "../../lib/context/RecordingContext";
+import RecordingIndicator from "../../components/RecordingIndicator";
 
 
 const tabs = [
@@ -201,6 +203,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   );
 
   return (
+    <RecordingProvider>
     <div className="student-shell">
 
       {/* ── Mobile header (hidden ≥700px) ── */}
@@ -354,6 +357,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         <main className="teacher-main">{children}</main>
       </div>
 
+      <RecordingIndicator />
+
       {/* Upload error toast */}
       {uploadError && (
         <div style={{
@@ -431,5 +436,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         </div>
       )}
     </div>
+    </RecordingProvider>
   );
 }

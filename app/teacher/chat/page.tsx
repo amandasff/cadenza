@@ -5,6 +5,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { ChatService } from "../../../lib/services/ChatService";
 import { StudioService } from "../../../lib/services/StudioService";
 import { Teacher } from "../../../lib/models/Teacher";
+import { useRecording } from "../../../lib/context/RecordingContext";
 import type { MessageRow, ProfileRow } from "../../../lib/types";
 
 function formatTime(iso: string) {
@@ -38,15 +39,9 @@ export default function TeacherChat() {
   const [editText, setEditText] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [hearts, setHearts] = useState<HeartMap>({});
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
+  const { isRecording, recordingSeconds, uploadingAudio, audioError, startRecording, stopRecording, clearError } = useRecording();
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -184,63 +179,23 @@ export default function TeacherChat() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  async function startRecording() {
-    setAudioError(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setAudioError("Voice recording is not supported in this browser.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
-      recordingChunksRef.current = [];
-      mr.ondataavailable = (e) => { if (e.data.size > 0) recordingChunksRef.current.push(e.data); };
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-        const blob = new Blob(recordingChunksRef.current, { type: "audio/webm" });
-        setIsRecording(false);
-        setRecordingSeconds(0);
-        await uploadAndSendAudio(blob);
-      };
-      mr.start();
-      mediaRecorderRef.current = mr;
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-    } catch (err) {
-      const msg = (err as Error)?.message ?? String(err);
-      setAudioError(msg.includes("denied") || msg.includes("Permission") ? "Microphone access denied — check your browser permissions." : `Microphone error: ${msg}`);
-    }
-  }
-
-  function stopRecording() {
-    mediaRecorderRef.current?.stop();
-  }
-
-  async function uploadAndSendAudio(blob: Blob) {
+  async function handleStartRecording() {
     if (!teacher?.studioId) return;
-    setUploadingAudio(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const path = `${teacher.studioId}/${teacher.id}/${Date.now()}.webm`;
-      const { error } = await supabase.storage.from("chat-voice-notes").upload(path, blob, { upsert: true, contentType: "audio/webm" });
-      if (error) throw error;
-      const { data } = supabase.storage.from("chat-voice-notes").getPublicUrl(path);
-      const content = `AUDIO:${data.publicUrl}`;
-      const service = ChatService.create(supabase);
-      if (selectedStudent === null) {
-        await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, content);
-        setMessages(await service.getAnnouncements(teacher.studioId));
-      } else {
-        await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, content);
-        setMessages(await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id));
-      }
-    } catch (err) {
-      setAudioError(`Failed to send voice note: ${(err as Error)?.message ?? "unknown error"}`);
-    } finally {
-      setUploadingAudio(false);
-    }
+    const supabase = getSupabaseBrowserClient();
+    const service = ChatService.create(supabase);
+    await startRecording({
+      studioId: teacher.studioId,
+      senderId: teacher.id,
+      senderName: teacher.displayName,
+      recipientId: selectedStudent?.id ?? null,
+      onSent: async () => {
+        if (selectedStudent === null) {
+          setMessages(await service.getAnnouncements(teacher.studioId!));
+        } else {
+          setMessages(await service.getPrivateThread(teacher.studioId!, teacher.id, selectedStudent.id));
+        }
+      },
+    });
   }
 
   const isAnnouncements = selectedStudent === null;
@@ -450,7 +405,7 @@ export default function TeacherChat() {
           {audioError && (
             <div style={{ padding: "0.375rem 1.25rem", background: "var(--error-bg, #fff0f0)", borderTop: "1px solid var(--error, #d00)", fontSize: "0.75rem", color: "var(--error, #d00)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span>{audioError}</span>
-              <button onClick={() => setAudioError(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
+              <button onClick={clearError} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
             </div>
           )}
           <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid var(--border)", background: "var(--white)", display: "flex", gap: "0.625rem", alignItems: "flex-end" }}>
@@ -466,7 +421,7 @@ export default function TeacherChat() {
             />
             {/* Mic button */}
             <button
-              onClick={isRecording ? stopRecording : startRecording}
+              onClick={isRecording ? stopRecording : handleStartRecording}
               disabled={uploadingAudio || sending}
               title={isRecording ? "Stop recording" : "Send voice message"}
               style={{

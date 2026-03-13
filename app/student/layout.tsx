@@ -8,8 +8,10 @@ import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 import { PlayerProvider } from "../../lib/context/PlayerContext";
 import { PracticeProvider } from "../../lib/context/PracticeContext";
+import { RecordingProvider } from "../../lib/context/RecordingContext";
 import MiniPlayer from "../../components/MiniPlayer";
 import PracticePip from "../../components/PracticePip";
+import RecordingIndicator from "../../components/RecordingIndicator";
 
 
 interface SiblingProfile {
@@ -348,6 +350,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   );
 
   return (
+    <RecordingProvider>
     <PracticeProvider>
     <PlayerProvider>
     <div className="student-shell">
@@ -822,6 +825,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     )}
     </PlayerProvider>
     </PracticeProvider>
+    <RecordingIndicator />
+    </RecordingProvider>
   );
 }
 

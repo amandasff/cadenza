@@ -4,6 +4,7 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { ChatService } from "../../../lib/services/ChatService";
 import { Student } from "../../../lib/models/Student";
+import { useRecording } from "../../../lib/context/RecordingContext";
 import type { MessageRow } from "../../../lib/types";
 import AudioPlayer from "../../../components/AudioPlayer";
 
@@ -36,15 +37,9 @@ export default function StudentChat() {
   const [editError, setEditError] = useState<string | null>(null);
   const [hearts, setHearts] = useState<HeartMap>({});
   const [sessionFeedbacks, setSessionFeedbacks] = useState<Record<string, string>>({});
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [audioError, setAudioError] = useState<string | null>(null);
+  const { isRecording, recordingSeconds, uploadingAudio, audioError, startRecording, stopRecording, clearError } = useRecording();
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -212,60 +207,21 @@ export default function StudentChat() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  async function startRecording() {
-    setAudioError(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setAudioError("Voice recording is not supported in this browser.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
-      recordingChunksRef.current = [];
-      mr.ondataavailable = (e) => { if (e.data.size > 0) recordingChunksRef.current.push(e.data); };
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-        const blob = new Blob(recordingChunksRef.current, { type: "audio/webm" });
-        setIsRecording(false);
-        setRecordingSeconds(0);
-        await uploadAndSendAudio(blob);
-      };
-      mr.start();
-      mediaRecorderRef.current = mr;
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-    } catch (err) {
-      const msg = (err as Error)?.message ?? String(err);
-      setAudioError(msg.includes("denied") || msg.includes("Permission") ? "Microphone access denied — check your browser permissions." : `Microphone error: ${msg}`);
-    }
-  }
-
-  function stopRecording() {
-    mediaRecorderRef.current?.stop();
-  }
-
-  async function uploadAndSendAudio(blob: Blob) {
+  async function handleStartRecording() {
     if (!student?.studioId || !teacherId) return;
-    setUploadingAudio(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const path = `${student.studioId}/${student.id}/${Date.now()}.webm`;
-      const { error } = await supabase.storage.from("chat-voice-notes").upload(path, blob, { upsert: true, contentType: "audio/webm" });
-      if (error) throw error;
-      const { data } = supabase.storage.from("chat-voice-notes").getPublicUrl(path);
-      const content = `AUDIO:${data.publicUrl}`;
-      const svc = ChatService.create(supabase);
-      await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, content);
-      const fresh = await svc.getPrivateThread(student.studioId, student.id, teacherId);
-      setPrivateMessages(fresh);
-      setTab("private");
-    } catch (err) {
-      setAudioError(`Failed to send voice note: ${(err as Error)?.message ?? "unknown error"}`);
-    } finally {
-      setUploadingAudio(false);
-    }
+    const supabase = getSupabaseBrowserClient();
+    const svc = ChatService.create(supabase);
+    await startRecording({
+      studioId: student.studioId,
+      senderId: student.id,
+      senderName: student.displayName,
+      recipientId: teacherId,
+      onSent: async () => {
+        const fresh = await svc.getPrivateThread(student.studioId!, student.id, teacherId!);
+        setPrivateMessages(fresh);
+        setTab("private");
+      },
+    });
   }
 
   const activeMessages = tab === "announcements" ? announcements : privateMessages;
@@ -457,7 +413,7 @@ export default function StudentChat() {
       {tab === "private" && audioError && (
         <div style={{ padding: "0.375rem 1rem", background: "var(--error-bg, #fff0f0)", borderTop: "1px solid var(--error, #d00)", fontSize: "0.75rem", color: "var(--error, #d00)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <span>{audioError}</span>
-          <button onClick={() => setAudioError(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
+          <button onClick={clearError} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
         </div>
       )}
       {tab === "private" && (
@@ -465,7 +421,7 @@ export default function StudentChat() {
           <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId || isRecording || uploadingAudio} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
           {/* Mic button */}
           <button
-            onClick={isRecording ? stopRecording : startRecording}
+            onClick={isRecording ? stopRecording : handleStartRecording}
             disabled={uploadingAudio || sending || !teacherId}
             title={isRecording ? "Stop recording" : "Send voice message"}
             style={{
