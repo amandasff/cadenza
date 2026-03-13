@@ -6,20 +6,20 @@ Items identified during CEO + engineering review (2026-03-12 and 2026-03-13) tha
 
 ## P1 — Critical for go-to-market
 
-### 1. Parent view (read-only practice summary)
-**What:** A `/parent` route or shareable link that shows a child's practice streak, recent sessions, and teacher goals for the week. Read-only, no login required (token-based or public link).
+### 1. Parent accounts + portal (replaces old "parent view" TODO)
+**What:** A full `role=parent` account type with dual onboarding: (A) teacher adds parent_email to student profile → parent gets invite → creates account auto-linked to child + studio, OR (B) parent signs up independently → enters a child link code → links to child. Parent dashboard shows: child's streak, practice sessions, goals, teacher notes, lesson schedule. Parents also get their own practice features (timer, games, AI tutor) and a curated support resources page (practice routines, motivation tips, understanding practice data).
 
-**Why:** Parents write the checks for kids' music lessons. Without visibility into practice habits, they have no reason to trust (or pay for) the platform. This is the unlock for the school-age student market.
+**Why:** Parents write the checks for kids' music lessons. They need visibility AND empowerment. A parent who can see their child's practice AND learn alongside them is deeply invested. This is the unlock for the school-age student market. No competitor offers parent-as-learner.
 
-**Pros:** Gives teachers a concrete talking point when signing up parents. "Send them this link and they'll see everything." Removes the parent from being a black box.
+**Pros:** Three value streams from one feature: (1) parent visibility increases teacher credibility, (2) parent practice features add a new revenue stream, (3) support resources reduce churn by helping parents help kids. Teachers get a concrete talking point: "Your parents can see everything AND learn music themselves."
 
-**Cons:** Requires careful auth design — parent accesses student data without being a studio member. Needs RLS policies that scope access to a signed token or public student ID.
+**Cons:** Largest build effort of any TODO. New role type, new RLS policies, dual onboarding flows, child-parent linking, support resources content. Needs careful data scoping — parents see child data but not other students' data.
 
-**Context:** The teacher already sees this data at `/teacher/student/[id]`. The parent view is a stripped-down version of that page — streak, last 7 sessions (date + duration), current goals. No chat, no recordings.
+**Context:** New `role='parent'` value in profiles. New `parent_student_links(id, parent_id, student_id, linked_via, created_at)` table. Teacher sets `parent_email` on student profile → triggers invite. OR parent enters a `child_link_code` (generated per student, shown to teacher). Parent dashboard at `/parent/dashboard`. Own practice at `/parent/practice`. Support resources at `/parent/resources`. RLS: parent can SELECT child's goals, sessions, pieces, lesson schedule. Parent's own practice data is separate (their own profile).
 
-**Effort:** M
-**Priority:** P1
-**Depends on:** Nothing — can be built independently.
+**Effort:** L
+**Priority:** P1 (Phase 2 — after AI Planner + Payment Log)
+**Depends on:** Nothing, but benefits from Lesson Notes (#7) being built first.
 
 ---
 
@@ -120,6 +120,40 @@ Items identified during CEO + engineering review (2026-03-12 and 2026-03-13) tha
 **Cons:** No online payment processing in v1 — parents still pay outside the app. Some teachers may want Stripe in the future (add later as TODO).
 
 **Context:** New Supabase table: `lesson_payments(id, studio_id, student_id, amount_cents, description, paid_at TIMESTAMPTZ nullable, due_date DATE, notes TEXT, created_at)`. The student profile needs a `lesson_rate_cents INT` field. Revenue dashboard: query all payments for the studio, group by student, show paid/unpaid. Invoice generation: simple React page with `@media print` CSS, or use browser `window.print()`. Rate can be set on `/teacher/student/[id]`.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** Nothing.
+
+---
+
+### 9. Lesson prep card (on schedule page)
+**What:** Before a scheduled lesson, show a summary card on the schedule page: student's practice this week (total minutes, practice areas breakdown, mood trend), current goals status (X of Y completed), and last lesson notes. Teacher sees everything they need for the upcoming lesson in one glance.
+
+**Why:** Teachers currently click through 3 pages (dashboard → student → goals) to prepare for a lesson. A prep card on the schedule page transforms it from a calendar into an intelligent lesson prep tool. This is the kind of detail that makes teachers say "this app *gets* me."
+
+**Pros:** High teacher delight for moderate effort. Uses all existing data (practice sessions, goals, lesson notes). Natural integration point — the schedule page already shows upcoming lessons. Sets the stage for the AI Lesson Planner (prep card shows the data, AI interprets it).
+
+**Cons:** Schedule page is already complex (~800 lines). Need to keep the card compact so it doesn't overwhelm. Performance: fetching practice data for all upcoming students in one query.
+
+**Context:** Expand the lesson card in `app/teacher/schedule/page.tsx`. For each upcoming lesson, fetch: `practice_sessions` from the last 7 days (sum minutes, extract mood, group by practice area), `goals` (count current/completed), `lessons` (last lesson's notes). Display as a collapsible card below the lesson time/student info. Use existing services: PracticeService, GoalService, LessonService.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Nothing. Enhanced by Lesson Notes (#7).
+
+---
+
+### 10. Student needs attention nudge
+**What:** On the teacher dashboard, highlight students whose streak broke or who haven't practiced in 3+ days. Show a visual indicator (amber/red dot) on the student card. Include a one-tap "Send encouragement" button that opens a pre-filled chat message like "Hey [name], I noticed you haven't practiced in a few days — even 10 minutes makes a difference! 🎵"
+
+**Why:** Teachers can't monitor every student's practice daily. A nudge system makes the dashboard proactive instead of passive. The teacher feels like Cadenza is their assistant, not just a filing cabinet. Students who get timely encouragement are less likely to quit.
+
+**Pros:** Small build, high impact. Uses existing streak_days + practice_sessions data. Chat send already works. Makes the teacher dashboard feel alive and intelligent.
+
+**Cons:** Risk of notification fatigue if too many students show warnings. Need a threshold that's useful but not noisy (3 days seems right for weekly-lesson students).
+
+**Context:** On `app/teacher/page.tsx`, check each student's last practice session date. If > 3 days ago or streak_days dropped from previous value, show an amber indicator. One-tap "Encourage" button calls ChatService.sendPrivateMessage with a template. Teacher can edit before sending.
 
 **Effort:** S
 **Priority:** P2

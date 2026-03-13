@@ -6,12 +6,16 @@ import { LessonService } from "../../../lib/services/LessonService";
 import { AssignmentService } from "../../../lib/services/AssignmentService";
 import { StudioService } from "../../../lib/services/StudioService";
 import { PieceService } from "../../../lib/services/PieceService";
+import { PracticeService } from "../../../lib/services/PracticeService";
+import { GoalService } from "../../../lib/services/GoalService";
 import { Teacher } from "../../../lib/models/Teacher";
 import type {
   LessonWithAssignments,
   AssignmentRow,
   AssignmentType,
   ProfileRow,
+  PracticeSessionRow,
+  GoalRow,
 } from "../../../lib/types";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -89,6 +93,28 @@ function groupByDay(lessons: LessonWithAssignments[]) {
   return groups;
 }
 
+// ── Lesson Prep Card data ──────────────────────────────────────────
+interface PrepData {
+  totalMinutes: number;
+  sessionCount: number;
+  practiceAreas: { area: string; minutes: number }[];
+  moodTrend: string[];  // last 3 moods
+  goalsTotal: number;
+  goalsCurrent: number;
+  goalsCompleted: number;
+  lastLessonNotes: string | null;
+  lastLessonDate: string | null;
+}
+
+const PRACTICE_AREA_COLORS: Record<string, string> = {
+  Technique: "var(--rose)",
+  Repertoire: "var(--sage)",
+  "Ear Training": "var(--sky)",
+  Theory: "var(--butter)",
+  "Sight Reading": "var(--lavender)",
+  Improvisation: "var(--peach)",
+};
+
 const inputStyle: React.CSSProperties = {
   width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)",
   padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
@@ -114,6 +140,7 @@ export default function SchedulePage() {
   const [lessons, setLessons] = useState<LessonWithAssignments[]>([]);
   const [students, setStudents] = useState<ProfileRow[]>([]);
   const [pieces, setPieces] = useState<{ id: string; title: string; student_id: string }[]>([]);
+  const [prepData, setPrepData] = useState<Record<string, PrepData>>({});
   const [loading, setLoading] = useState(true);
 
   // Expanded lesson (show notes + assignments inline)
@@ -179,6 +206,89 @@ export default function SchedulePage() {
         if (l.lesson_notes) noteDraftInit[l.id] = l.lesson_notes;
       }
       setNoteDrafts(noteDraftInit);
+
+      // ── Load prep data for each unique student ──────────────────────
+      const uniqueStudentIds = [...new Set(lessonData.map(l => l.student_id))];
+      const practiceService = PracticeService.create(supabase);
+      const goalService = GoalService.create(supabase);
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      const prepMap: Record<string, PrepData> = {};
+      await Promise.all(uniqueStudentIds.map(async (studentId) => {
+        try {
+          const [sessions, goals] = await Promise.all([
+            practiceService.getStudentSessions(studentId, 50),
+            goalService.getStudentGoals(studentId),
+          ]);
+
+          // Filter sessions to last 7 days
+          const recentSessions = sessions.filter(s => s.created_at >= oneWeekAgo);
+          const totalMinutes = Math.round(recentSessions.reduce((sum, s) => sum + s.duration_seconds, 0) / 60);
+
+          // Practice area breakdown
+          const areaMap: Record<string, number> = {};
+          for (const s of recentSessions) {
+            if (s.segments_json) {
+              for (let i = 0; i < s.segments_json.length; i++) {
+                const seg = s.segments_json[i];
+                const nextSeg = s.segments_json[i + 1];
+                const segDuration = nextSeg
+                  ? (nextSeg.start_seconds - seg.start_seconds)
+                  : (s.duration_seconds - seg.start_seconds);
+                areaMap[seg.practice_area] = (areaMap[seg.practice_area] || 0) + segDuration / 60;
+              }
+            }
+          }
+          const practiceAreas = Object.entries(areaMap)
+            .map(([area, minutes]) => ({ area, minutes: Math.round(minutes) }))
+            .sort((a, b) => b.minutes - a.minutes);
+
+          // Mood trend (last 3 sessions with notes containing mood indicators)
+          const moodTrend = recentSessions
+            .slice(0, 5)
+            .map(s => {
+              const notes = (s.notes ?? "").toLowerCase();
+              if (notes.includes("frustrated") || notes.includes("hard") || notes.includes("difficult")) return "😓";
+              if (notes.includes("good") || notes.includes("great") || notes.includes("fun")) return "😊";
+              if (notes.includes("ok") || notes.includes("fine") || notes.includes("alright")) return "🙂";
+              return "";
+            })
+            .filter(Boolean)
+            .slice(0, 3);
+
+          // Goals summary
+          const goalsTotal = goals.length;
+          const goalsCurrent = goals.filter(g => g.status === "current").length;
+          const goalsCompleted = goals.filter(g => g.status === "completed").length;
+
+          // Last completed lesson notes
+          const { data: lastLessons } = await supabase
+            .from("lessons")
+            .select("lesson_notes, scheduled_at")
+            .eq("student_id", studentId)
+            .eq("status", "completed")
+            .not("lesson_notes", "is", null)
+            .order("scheduled_at", { ascending: false })
+            .limit(1);
+
+          const lastLesson = lastLessons?.[0] as { lesson_notes: string | null; scheduled_at: string } | undefined;
+
+          prepMap[studentId] = {
+            totalMinutes,
+            sessionCount: recentSessions.length,
+            practiceAreas,
+            moodTrend,
+            goalsTotal,
+            goalsCurrent,
+            goalsCompleted,
+            lastLessonNotes: lastLesson?.lesson_notes ?? null,
+            lastLessonDate: lastLesson?.scheduled_at ?? null,
+          };
+        } catch (err) {
+          console.error(`Failed to load prep data for student ${studentId}:`, err);
+        }
+      }));
+      setPrepData(prepMap);
     } catch (err) {
       console.error("Failed to load lessons — run supabase/lessons.sql in your Supabase dashboard:", err);
     } finally {
@@ -394,6 +504,7 @@ export default function SchedulePage() {
             {group.lessons.map(lesson => {
               const isExpanded = expandedId === lesson.id;
               const studentPieces = pieces.filter(p => p.student_id === lesson.student_id);
+              const prep = prepData[lesson.student_id];
 
               return (
                 <div key={lesson.id} style={{
@@ -429,9 +540,14 @@ export default function SchedulePage() {
                       </p>
                       <p style={{ margin: "0.125rem 0 0", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
                         {formatTime(lesson.scheduled_at)} · {lesson.duration_minutes} min
-                        {lesson.assignments.length > 0 && (
-                          <span style={{ marginLeft: "0.75rem" }}>
-                            {lesson.completion_count}/{lesson.assignments.length} assignments done
+                        {prep && prep.totalMinutes > 0 && (
+                          <span style={{ marginLeft: "0.75rem", color: prep.totalMinutes >= 60 ? "var(--sage)" : "var(--warning)" }}>
+                            {prep.totalMinutes} min this week
+                          </span>
+                        )}
+                        {prep && prep.totalMinutes === 0 && (
+                          <span style={{ marginLeft: "0.75rem", color: "var(--error)" }}>
+                            No practice this week
                           </span>
                         )}
                       </p>
@@ -457,6 +573,112 @@ export default function SchedulePage() {
                       {isExpanded ? "▲" : "▼"}
                     </span>
                   </div>
+
+                  {/* ── Lesson Prep Card ──────────────────────────── */}
+                  {isExpanded && prep && (
+                    <div style={{
+                      margin: "0 1.25rem", padding: "0.875rem 1rem",
+                      background: "var(--cream)", borderRadius: 4,
+                      border: "1px solid var(--border)",
+                    }}>
+                      <p style={{
+                        fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600,
+                        color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase",
+                        margin: "0 0 0.625rem",
+                      }}>
+                        Lesson Prep
+                      </p>
+
+                      {/* Stats row */}
+                      <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+                        {/* Practice this week */}
+                        <div>
+                          <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "1.25rem", fontWeight: 600, color: "var(--charcoal)" }}>
+                            {prep.totalMinutes}<span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)" }}> min</span>
+                          </p>
+                          <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                            {prep.sessionCount} session{prep.sessionCount !== 1 ? "s" : ""} this week
+                          </p>
+                        </div>
+
+                        {/* Goals */}
+                        <div>
+                          <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "1.25rem", fontWeight: 600, color: "var(--charcoal)" }}>
+                            {prep.goalsCompleted}<span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)" }}> / {prep.goalsTotal}</span>
+                          </p>
+                          <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                            goals completed · {prep.goalsCurrent} active
+                          </p>
+                        </div>
+
+                        {/* Mood trend */}
+                        {prep.moodTrend.length > 0 && (
+                          <div>
+                            <p style={{ margin: 0, fontSize: "1.25rem" }}>
+                              {prep.moodTrend.join(" ")}
+                            </p>
+                            <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                              recent mood
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Practice area breakdown */}
+                      {prep.practiceAreas.length > 0 && (
+                        <div style={{ marginBottom: "0.625rem" }}>
+                          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+                            {prep.practiceAreas.map(({ area, minutes }) => (
+                              <span key={area} style={{
+                                display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                                padding: "0.1875rem 0.5rem", borderRadius: 3,
+                                background: "var(--white)", border: "1px solid var(--border)",
+                                fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)",
+                              }}>
+                                <span style={{
+                                  width: 6, height: 6, borderRadius: "50%",
+                                  background: PRACTICE_AREA_COLORS[area] ?? "var(--muted)",
+                                  flexShrink: 0,
+                                }} />
+                                {area} · {minutes}m
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Last lesson notes */}
+                      {prep.lastLessonNotes && (
+                        <div style={{
+                          padding: "0.5rem 0.75rem", borderRadius: 3,
+                          background: "var(--white)", border: "1px solid var(--border)",
+                        }}>
+                          <p style={{
+                            margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem",
+                            color: "var(--muted)", marginBottom: "0.25rem",
+                          }}>
+                            Last lesson{prep.lastLessonDate ? ` · ${new Date(prep.lastLessonDate).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
+                          </p>
+                          <p style={{
+                            margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
+                            color: "var(--charcoal)", lineHeight: 1.5,
+                          }}>
+                            {prep.lastLessonNotes}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* No data state */}
+                      {prep.totalMinutes === 0 && prep.goalsTotal === 0 && !prep.lastLessonNotes && (
+                        <p style={{
+                          margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
+                          color: "var(--muted)", fontStyle: "italic",
+                        }}>
+                          No practice data yet — prep data will appear as the student logs sessions.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Expanded: notes + assignments */}
                   {isExpanded && (
