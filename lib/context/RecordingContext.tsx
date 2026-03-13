@@ -48,12 +48,24 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       targetRef.current = target;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rawStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true, sampleRate: 48000 },
+      });
+      // Boost gain by 2× so quiet mics come through clearly
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(rawStream);
+      const gain = audioCtx.createGain();
+      gain.gain.value = 2.0;
+      const dest = audioCtx.createMediaStreamDestination();
+      source.connect(gain);
+      gain.connect(dest);
+      const stream = dest.stream;
       const mr = new MediaRecorder(stream);
       chunksRef.current = [];
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
+        rawStream.getTracks().forEach(t => t.stop());
+        audioCtx.close();
         if (timerRef.current) clearInterval(timerRef.current);
         setIsRecording(false);
         setRecordingSeconds(0);

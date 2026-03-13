@@ -4,7 +4,10 @@ import React, { useEffect, useRef, useState } from "react";
 type Mode = "preview" | "recording" | "review";
 
 interface Props {
-  onSend: (blob: Blob) => Promise<void>;
+  /** Storage path for the upload, e.g. "{studioId}/{userId}/{ts}.webm" */
+  uploadPath: string;
+  /** Called with the final public URL after upload succeeds */
+  onSend: (publicUrl: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -14,7 +17,7 @@ interface Props {
  * recording → live feed + timer, tap "Stop"
  * review    → playback of recorded clip, tap "Send" or "Retake"
  */
-export default function VideoRecorderModal({ onSend, onClose }: Props) {
+export default function VideoRecorderModal({ uploadPath, onSend, onClose }: Props) {
   const [mode, setMode] = useState<Mode>("preview");
   const [seconds, setSeconds] = useState(0);
   const [sending, setSending] = useState(false);
@@ -110,7 +113,17 @@ export default function VideoRecorderModal({ onSend, onClose }: Props) {
     if (!blobRef.current) return;
     setSending(true);
     try {
-      await onSend(blobRef.current);
+      // Upload via API route (admin client bypasses storage RLS)
+      const form = new FormData();
+      form.append("file", blobRef.current, uploadPath.split("/").pop() ?? "video.webm");
+      form.append("path", uploadPath);
+      const res = await fetch("/api/messages/upload-media", { method: "POST", body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? "Upload failed");
+      }
+      const { url } = await res.json() as { url: string };
+      await onSend(url);
       onClose();
     } catch (err) {
       setError(`Send failed: ${(err as Error)?.message ?? "unknown error"}`);

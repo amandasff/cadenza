@@ -209,14 +209,14 @@ export default function StudentChat() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  async function handleSendVideo(blob: Blob) {
+  function videoUploadPath() {
+    return `${student?.studioId}/${student?.id}/${Date.now()}.webm`;
+  }
+
+  async function handleSendVideo(publicUrl: string) {
     if (!student?.studioId || !teacherId) return;
     const supabase = getSupabaseBrowserClient();
-    const path = `${student.studioId}/${student.id}/${Date.now()}.webm`;
-    const { error } = await supabase.storage.from("chat-voice-notes").upload(path, blob, { upsert: true, contentType: "video/webm" });
-    if (error) throw error;
-    const { data } = supabase.storage.from("chat-voice-notes").getPublicUrl(path);
-    const content = `VIDEO:${data.publicUrl}`;
+    const content = `VIDEO:${publicUrl}`;
     const svc = ChatService.create(supabase);
     await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, content);
     const fresh = await svc.getPrivateThread(student.studioId, student.id, teacherId);
@@ -442,7 +442,23 @@ export default function StudentChat() {
       {tab === "private" && (
         <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "flex-end", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
           <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId || isRecording || uploadingAudio} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
-          {/* Camera / video message button */}
+          {/* Mic button — audio-only voice note */}
+          <button
+            onClick={isRecording ? stopRecording : handleStartRecording}
+            disabled={uploadingAudio || sending || !teacherId}
+            title={isRecording ? "Stop recording" : "Send voice note"}
+            style={{
+              padding: "0.5rem 0.625rem", borderRadius: 3, border: "1px solid var(--border)",
+              background: isRecording ? "var(--error-bg)" : "var(--white)",
+              color: isRecording ? "var(--error)" : "var(--muted)",
+              cursor: uploadingAudio || sending || !teacherId ? "default" : "pointer",
+              fontSize: "1rem", flexShrink: 0, marginBottom: "0.0625rem",
+              transition: "all 0.15s",
+            }}
+          >
+            {uploadingAudio ? "⏳" : isRecording ? `⏹ ${recordingSeconds}s` : "🎙"}
+          </button>
+          {/* Camera button — video message */}
           <button
             onClick={() => setShowVideoRecorder(true)}
             disabled={sending || isRecording || uploadingAudio || !teacherId}
@@ -463,6 +479,7 @@ export default function StudentChat() {
 
       {showVideoRecorder && (
         <VideoRecorderModal
+          uploadPath={videoUploadPath()}
           onSend={handleSendVideo}
           onClose={() => setShowVideoRecorder(false)}
         />
