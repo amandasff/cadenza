@@ -27,9 +27,9 @@ const ASSIGNMENT_TYPES: { value: AssignmentType; label: string; color: string; e
 ];
 
 const RATING_CONFIG = {
-  struggling:    { emoji: "😓", label: "Struggling",    color: "#dc2626" },
+  struggling:    { emoji: "😓", label: "Struggling",    color: "var(--error)" },
   getting_there: { emoji: "🙂", label: "Getting there", color: "#d97706" },
-  nailed_it:     { emoji: "🎉", label: "Nailed it",     color: "#16a34a" },
+  nailed_it:     { emoji: "🎉", label: "Nailed it",     color: "var(--success)" },
 };
 
 interface AssignmentDraft {
@@ -371,7 +371,7 @@ export default function SchedulePage() {
       ) : groups.length === 0 ? (
         <div style={{
           textAlign: "center", padding: "3rem", background: "var(--white)",
-          borderRadius: 6, border: "1px solid var(--border)",
+          borderRadius: 4, border: "1px solid var(--border)",
         }}>
           <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
             No lessons scheduled in the next 14 days.
@@ -398,7 +398,7 @@ export default function SchedulePage() {
               return (
                 <div key={lesson.id} style={{
                   background: "var(--white)", border: "1px solid var(--border)",
-                  borderRadius: 6, marginBottom: "0.75rem", overflow: "hidden",
+                  borderRadius: 4, marginBottom: "0.75rem", overflow: "hidden",
                 }}>
                   {/* Lesson card header */}
                   <div
@@ -570,7 +570,7 @@ export default function SchedulePage() {
 
               return (
                 <div key={draft.id} style={{
-                  border: "1px solid var(--border)", borderRadius: 6,
+                  border: "1px solid var(--border)", borderRadius: 4,
                   padding: "1rem", marginBottom: "0.75rem",
                   background: "var(--cream)",
                 }}>
@@ -648,8 +648,8 @@ export default function SchedulePage() {
                           ...btnSecondary,
                           padding: "0.375rem 0.75rem", fontSize: "0.75rem",
                           background: isRecording ? "#fee2e2" : undefined,
-                          borderColor: isRecording ? "#dc2626" : undefined,
-                          color: isRecording ? "#dc2626" : undefined,
+                          borderColor: isRecording ? "var(--error)" : undefined,
+                          color: isRecording ? "var(--error)" : undefined,
                         }}
                       >
                         {isRecording ? `⏹ Stop (${recordingSeconds}s)` : "🎙 Record voice note"}
@@ -678,7 +678,7 @@ export default function SchedulePage() {
               <div style={{
                 marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: 4,
                 background: "#fff0f0", border: "1px solid #fca5a5",
-                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#dc2626",
+                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--error)",
               }}>
                 {saveError}
               </div>
@@ -768,7 +768,7 @@ export default function SchedulePage() {
               <div style={{
                 marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: 4,
                 background: "#fff0f0", border: "1px solid #fca5a5",
-                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#dc2626",
+                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--error)",
               }}>
                 {scheduleError}
               </div>
