@@ -294,7 +294,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   if (!user || (user.role !== "student" && user.role !== "teacher")) return null;
 
   const isTeacherPracticing = user.role === "teacher";
-  const student = isTeacherPracticing ? { displayName: user.displayName, studioId: null } as unknown as Student : user as Student;
+  const teacher = isTeacherPracticing ? user as unknown as import("../../lib/models/Teacher").Teacher : null;
+  const student = isTeacherPracticing
+    ? { id: user.id, displayName: user.displayName, studioId: teacher!.studioId, streakDays: teacher!.streakDays, totalPoints: teacher!.totalPoints, email: user.email, role: "student" as const, createdAt: user.createdAt, getHomeRoute: () => "/student", isStudent: () => true, isTeacher: () => false, getInitials: () => user.getInitials(), getLevelLabel: () => "Beginner" } as unknown as Student
+    : user as Student;
   const initials = student.displayName
     .split(" ")
     .map((w: string) => w[0] ?? "")
