@@ -37,7 +37,7 @@ export default function StudentChat() {
   const [hearts, setHearts] = useState<HeartMap>({});
   const [sessionFeedbacks, setSessionFeedbacks] = useState<Record<string, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -333,15 +333,25 @@ export default function StudentChat() {
                     color: isMe ? "var(--cream)" : "var(--charcoal)",
                     borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                     border: isMe ? "none" : "1px solid var(--border-strong)",
-                    fontSize: "0.875rem", lineHeight: 1.55,
+                    fontSize: "0.875rem", lineHeight: 1.6,
                     overflowWrap: "break-word", wordBreak: "break-word",
+                    whiteSpace: "pre-wrap",
                   }}>
                     {msg.content}
                   </div>
                 )}
 
+                {/* Edit/Delete — all own private messages when hovered */}
+                {canAct && !isEditing && (
+                  <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: hoveredId === msg.id ? 1 : 0, transition: "opacity 0.15s", pointerEvents: hoveredId === msg.id ? "auto" : "none", paddingRight: "0.25rem" }}>
+                    <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
+                    <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
+                    <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
+                  </div>
+                )}
+
                 {isLast && !isEditing && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.2rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.15rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
                     <span style={{ fontSize: "0.625rem", color: "var(--muted)", letterSpacing: "0.02em" }}>{formatTime(msg.created_at)}</span>
 
                     {/* Heart */}
@@ -352,15 +362,6 @@ export default function StudentChat() {
                       {heartInfo.liked ? "♥" : "♡"}
                       {heartInfo.count > 0 && <span style={{ fontSize: "0.625rem" }}>{heartInfo.count}</span>}
                     </button>
-
-                    {/* Edit / Delete — own private messages, always visible */}
-                    {canAct && (
-                      <span style={{ display: "flex", gap: "0.375rem" }}>
-                        <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0", fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
-                        <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                        <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0", fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
-                      </span>
-                    )}
                   </div>
                 )}
               </div>
@@ -378,9 +379,9 @@ export default function StudentChat() {
       </div>
 
       {tab === "private" && (
-        <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "center", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-          <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }} />
-          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s" }}>Send</button>
+        <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "flex-end", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
+          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
+          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>Send</button>
         </div>
       )}
     </div>

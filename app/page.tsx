@@ -133,33 +133,40 @@ export default function Home() {
             letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600,
           }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#5B9E79", flexShrink: 0 }} />
-            The practice platform for music students
+            The platform for music teachers &amp; students
           </div>
 
           <h1 style={{
             fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500,
-            fontSize: "clamp(2.75rem, 7vw, 5rem)", color: "#2C2824",
-            lineHeight: 0.95, letterSpacing: "-0.02em", marginBottom: "1.5rem",
+            fontSize: "clamp(2.5rem, 6vw, 4.5rem)", color: "#2C2824",
+            lineHeight: 0.98, letterSpacing: "-0.02em", marginBottom: "1.5rem",
           }}>
-            Practice more.<br />
-            <em style={{ color: "#B85C3A", fontStyle: "italic" }}>Play better.</em>
+            Your students will<br />
+            <em style={{ color: "#B85C3A", fontStyle: "italic" }}>actually practice.</em>
           </h1>
 
           <p style={{ color: "#8A8580", fontSize: "1.0625rem", maxWidth: 440, marginBottom: "1.75rem", lineHeight: 1.75 }}>
-            Cadenza gives music students a daily practice companion — with a tuner, metronome, music games, an AI tutor, and a community of fellow musicians. Your teacher sets the goals. You show up and play.
+            Cadenza gives teachers a studio OS — AI lesson plans, goal tracking, parent updates, and payment logs. Students get games, streaks, an AI tutor, and a practice community. One platform. No notebooks required.
           </p>
 
-          {/* Feature pills */}
+          {/* Audience pills */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "2rem" }}>
-            {["🎸 Guitar games", "🎵 Note & ear training", "🤖 AI tutor", "🎤 Share covers", "🔥 Daily streaks", "🎼 Piece library"].map(f => (
-              <span key={f} style={{ fontSize: "0.75rem", fontWeight: 500, color: "#5A5550", background: "#F0EDE8", border: "1px solid #E4DFD6", borderRadius: 999, padding: "0.25rem 0.75rem" }}>{f}</span>
+            {[
+              { text: "🎹 AI lesson planner", color: "#EBF3EE", border: "#B8D4C2", textColor: "#3A6A4F" },
+              { text: "📊 Practice tracking", color: "#EEF6FD", border: "#A8D4F0", textColor: "#2A5A7A" },
+              { text: "🔥 Student streaks", color: "#FDF3E8", border: "#EAC98C", textColor: "#7A5A2A" },
+              { text: "🤖 AI tutor 24/7", color: "#F0EEFA", border: "#C4B8E8", textColor: "#4A3A78" },
+              { text: "👪 Parent updates", color: "#FEF3F2", border: "#F5C5BE", textColor: "#8A3A2A" },
+              { text: "🎮 Music games", color: "#FDF8E8", border: "#E8D89C", textColor: "#6A5A1A" },
+            ].map(f => (
+              <span key={f.text} style={{ fontSize: "0.75rem", fontWeight: 500, color: f.textColor, background: f.color, border: `1px solid ${f.border}`, borderRadius: 999, padding: "0.25rem 0.75rem" }}>{f.text}</span>
             ))}
           </div>
 
           <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
             {[
               { val: "Free", sub: "for students" },
-              { val: "30s", sub: "to sign up" },
+              { val: "2 min", sub: "studio setup" },
               { val: "10+", sub: "games & tools" },
             ].map((item, i) => (
               <div key={i}>
@@ -277,18 +284,43 @@ export default function Home() {
 
       {/* ── Feature cards ── */}
       <div style={{ padding: "1rem 2rem 5rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "#ADA9A2", marginBottom: "0.75rem", textAlign: "center" }}>Everything included</div>
-        <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "#2C2824", textAlign: "center", marginBottom: "2.5rem", letterSpacing: "-0.015em" }}>
-          More than a practice log.
-        </h2>
+        {/* For Teachers */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+          <div style={{ height: 1, background: "#EDE8E0", flex: 1 }} />
+          <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#5B9E79", whiteSpace: "nowrap" }}>For Teachers</span>
+          <div style={{ height: 1, background: "#EDE8E0", flex: 1 }} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "4rem" }}>
+          {[
+            { bg: "#EBF3EE", border: "#B8D4C2", textColor: "#3A6A4F", rot: "-1.2deg", icon: "🎹", title: "AI lesson planner", desc: "AI reads your student's practice data and generates a structured lesson plan in 2 minutes. No competitor can do this." },
+            { bg: "#FDF8E8", border: "#E8D89C", textColor: "#6A5A1A", rot: "1.0deg",  icon: "📋", title: "Goal & piece tracking", desc: "Set goals and assign pieces before each lesson. Students always know exactly what to work on." },
+            { bg: "#FEF3F2", border: "#F5C5BE", textColor: "#8A3A2A", rot: "-0.8deg", icon: "💰", title: "Payment log & invoices", desc: "Track lesson fees, mark payments received, and generate clean printable invoices. Ditch the spreadsheet." },
+            { bg: "#EEF6FD", border: "#A8D4F0", textColor: "#2A5A7A", rot: "1.3deg",  icon: "👪", title: "Parent updates", desc: "Parents see a live view of their child's streak and practice habits. They stay engaged. You stop fielding texts." },
+            { bg: "#F0EEFA", border: "#C4B8E8", textColor: "#4A3A78", rot: "-1.5deg", icon: "📊", title: "Student progress dashboard", desc: "See every student's practice minutes, mood, and streak at a glance — without asking them." },
+            { bg: "#FDF3E8", border: "#EAC98C", textColor: "#7A5A2A", rot: "0.7deg",  icon: "📝", title: "Lesson notes & history", desc: "Write quick post-lesson notes. AI can expand them. Everything stays in one place, searchable forever." },
+          ].map((c, i) => (
+            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", transform: `rotate(${c.rot})`, boxShadow: "0 2px 20px rgba(44,40,36,0.06)" }}>
+              <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.5rem" }}>{c.title}</div>
+              <div style={{ fontSize: "0.875rem", color: c.textColor, lineHeight: 1.7 }}>{c.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* For Students */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+          <div style={{ height: 1, background: "#EDE8E0", flex: 1 }} />
+          <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#B85C3A", whiteSpace: "nowrap" }}>For Students</span>
+          <div style={{ height: 1, background: "#EDE8E0", flex: 1 }} />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem" }}>
           {[
             { bg: "#EBF3EE", border: "#B8D4C2", textColor: "#3A6A4F", rot: "-1.5deg", icon: "⏱", title: "One-tap practice timer", desc: "Open the app, hit start, play. Every minute logged automatically — no fuss." },
             { bg: "#FDF3E8", border: "#EAC98C", textColor: "#7A5A2A", rot: "1.2deg",  icon: "🔥", title: "Streaks & points", desc: "Kids love protecting their streak. Earn bonus points the longer you keep it alive." },
-            { bg: "#F0EEFA", border: "#C4B8E8", textColor: "#4A3A78", rot: "-0.8deg", icon: "🎯", title: "Goals from your teacher", desc: "Your teacher sets what to work on. Check it off as you go — always knowing what's next." },
-            { bg: "#FEF3F2", border: "#F5C5BE", textColor: "#8A3A2A", rot: "1.5deg",  icon: "🤖", title: "AI practice tutor", desc: "Ask anything about your pieces, theory, or technique. Your AI tutor is available 24/7." },
-            { bg: "#EEF6FD", border: "#A8D4F0", textColor: "#2A5A7A", rot: "-1deg",   icon: "🎮", title: "Music games", desc: "Fretboard notes, guitar chords, ear training, note ID — learning disguised as playing." },
-            { bg: "#FDF8E8", border: "#E8D89C", textColor: "#6A5A1A", rot: "0.8deg",  icon: "🎤", title: "Share your covers", desc: "Record yourself and share your covers with your studio community. See what others are playing." },
+            { bg: "#F0EEFA", border: "#C4B8E8", textColor: "#4A3A78", rot: "-0.8deg", icon: "🤖", title: "AI practice tutor", desc: "Ask anything about your pieces, theory, or technique. Your AI tutor is available 24/7." },
+            { bg: "#FEF3F2", border: "#F5C5BE", textColor: "#8A3A2A", rot: "1.5deg",  icon: "🎮", title: "Music games", desc: "Fretboard notes, guitar chords, ear training, note ID — learning disguised as playing." },
+            { bg: "#EEF6FD", border: "#A8D4F0", textColor: "#2A5A7A", rot: "-1deg",   icon: "🎤", title: "Share your covers", desc: "Record yourself and share your covers with your studio community. See what others are playing." },
+            { bg: "#FDF8E8", border: "#E8D89C", textColor: "#6A5A1A", rot: "0.8deg",  icon: "🌍", title: "Practice community", desc: "Follow other musicians, see their streaks and pieces, and get inspired. Music is better together." },
           ].map((c, i) => (
             <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", transform: `rotate(${c.rot})`, boxShadow: "0 2px 20px rgba(44,40,36,0.06)" }}>
               <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
@@ -300,25 +332,49 @@ export default function Home() {
       </div>
 
       {/* ── How it works ── */}
-      <div style={{ padding: "3rem 2rem 5rem", maxWidth: 540, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+      <div style={{ padding: "3rem 2rem 5rem", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "#ADA9A2", marginBottom: "0.75rem", textAlign: "center" }}>Getting started</div>
-        <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "#2C2824", textAlign: "center", marginBottom: "2.5rem", letterSpacing: "-0.015em" }}>
-          Three steps, then just practice.
+        <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "#2C2824", textAlign: "center", marginBottom: "3rem", letterSpacing: "-0.015em" }}>
+          Up and running in minutes.
         </h2>
-        {[
-          { n: "1", bg: "#EBF3EE", border: "#B8D4C2", title: "Your teacher sets up a studio", sub: "They add your name, goals, and pieces before your first lesson." },
-          { n: "2", bg: "#FDF3E8", border: "#EAC98C", title: "You sign up and join", sub: "Create a free account and search for your teacher's studio by name." },
-          { n: "3", bg: "#F0EEFA", border: "#C4B8E8", title: "Practice every day", sub: "Log sessions, protect your streak, play games, and grow as a musician." },
-        ].map((step, i) => (
-          <div key={i} style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", padding: "1.375rem 0", borderTop: "1px solid #EDE8E0" }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: step.bg, border: `1px solid ${step.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1rem", color: "#2C2824" }}>{step.n}</div>
-            <div style={{ paddingTop: "0.4rem" }}>
-              <div style={{ fontWeight: 500, fontSize: "0.9375rem", color: "#2C2824", marginBottom: "0.2rem" }}>{step.title}</div>
-              <div style={{ fontSize: "0.8125rem", color: "#8A8580", lineHeight: 1.65 }}>{step.sub}</div>
-            </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "3rem" }}>
+          {/* Teacher track */}
+          <div>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.125rem", color: "#5B9E79", marginBottom: "1.25rem" }}>For teachers</div>
+            {[
+              { n: "1", bg: "#EBF3EE", border: "#B8D4C2", title: "Create your studio", sub: "Sign up as a teacher, name your studio, and set your first student's goals — in under 2 minutes." },
+              { n: "2", bg: "#FDF3E8", border: "#EAC98C", title: "Invite students & parents", sub: "Share your studio link. Students join for free. Parents get a read-only view of practice habits." },
+              { n: "3", bg: "#F0EEFA", border: "#C4B8E8", title: "Let the data come to you", sub: "See who practiced this week, plan next week's lesson with AI, and track payments — all in one place." },
+            ].map((step, i) => (
+              <div key={i} style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", padding: "1.375rem 0", borderTop: "1px solid #EDE8E0" }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: step.bg, border: `1px solid ${step.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1rem", color: "#2C2824" }}>{step.n}</div>
+                <div style={{ paddingTop: "0.4rem" }}>
+                  <div style={{ fontWeight: 500, fontSize: "0.9375rem", color: "#2C2824", marginBottom: "0.2rem" }}>{step.title}</div>
+                  <div style={{ fontSize: "0.8125rem", color: "#8A8580", lineHeight: 1.65 }}>{step.sub}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{ height: 1, background: "#EDE8E0" }} />
           </div>
-        ))}
-        <div style={{ height: 1, background: "#EDE8E0" }} />
+          {/* Student track */}
+          <div>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.125rem", color: "#B85C3A", marginBottom: "1.25rem" }}>For students</div>
+            {[
+              { n: "1", bg: "#EBF3EE", border: "#B8D4C2", title: "Sign up free & find your teacher", sub: "Create an account and search for your teacher's studio by name. Join in one tap." },
+              { n: "2", bg: "#FDF3E8", border: "#EAC98C", title: "Practice with purpose", sub: "Your teacher's goals are waiting. Hit start on the timer, work through them, and log your session." },
+              { n: "3", bg: "#F0EEFA", border: "#C4B8E8", title: "Build your streak", sub: "Play music games, earn points, and share your progress. Learning music gets a lot more fun." },
+            ].map((step, i) => (
+              <div key={i} style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", padding: "1.375rem 0", borderTop: "1px solid #EDE8E0" }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: step.bg, border: `1px solid ${step.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1rem", color: "#2C2824" }}>{step.n}</div>
+                <div style={{ paddingTop: "0.4rem" }}>
+                  <div style={{ fontWeight: 500, fontSize: "0.9375rem", color: "#2C2824", marginBottom: "0.2rem" }}>{step.title}</div>
+                  <div style={{ fontSize: "0.8125rem", color: "#8A8580", lineHeight: 1.65 }}>{step.sub}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{ height: 1, background: "#EDE8E0" }} />
+          </div>
+        </div>
       </div>
 
       {/* ── Pricing ── */}
@@ -329,7 +385,7 @@ export default function Home() {
             Simple, fair pricing.
           </h2>
           <p style={{ textAlign: "center", color: "#8A8580", fontSize: "0.9375rem", marginBottom: "3rem" }}>
-            Students are always free to join. Upgrade for the full experience.
+            Students in a studio are always free. Self-learners and teachers pay for what they use.
           </p>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem", alignItems: "start" }}>
@@ -383,7 +439,7 @@ export default function Home() {
               </div>
               <div style={{ fontSize: "0.75rem", color: "#ADA9A2", marginBottom: "1.5rem" }}>per teacher · unlimited students</div>
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                {["Pro for all your students", "Studio management dashboard", "Assign pieces & goals", "Track every student's progress", "Parent-visible reports", "Priority support"].map(f => (
+                {["Pro included for all students", "AI lesson planner", "Lesson notes & history", "Payment log & invoices", "Parent progress portal", "Student practice dashboard"].map(f => (
                   <li key={f} style={{ display: "flex", gap: "0.5rem", fontSize: "0.875rem", color: "#5A5550" }}>
                     <span style={{ color: "#5B9E79", fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
                   </li>
@@ -407,19 +463,28 @@ export default function Home() {
       {/* ── Bottom CTA ── */}
       <div style={{ background: "#2C2824", padding: "5rem 2rem", textAlign: "center" }}>
         <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 400, fontSize: "clamp(2.25rem, 6vw, 3.5rem)", color: "#F8F6F2", lineHeight: 1.1, letterSpacing: "-0.015em", marginBottom: "0.75rem" }}>
-          Every practice session<br />
-          <em style={{ color: "#E4C4B4" }}>builds a musician.</em>
+          Stop managing.<br />
+          <em style={{ color: "#E4C4B4" }}>Start teaching.</em>
         </h2>
-        <p style={{ color: "rgba(248,246,242,0.4)", fontSize: "0.9375rem", marginBottom: "2.25rem" }}>
-          Join your teacher&apos;s studio and start your streak today.
+        <p style={{ color: "rgba(248,246,242,0.4)", fontSize: "0.9375rem", marginBottom: "2.25rem", maxWidth: 480, margin: "0 auto 2.25rem" }}>
+          Teachers get a studio OS. Students get a practice habit. Everyone wins.
         </p>
-        <button onClick={() => { document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} style={{
-          background: "#F8F6F2", color: "#2C2824", padding: "0.9375rem 2.5rem",
-          borderRadius: 4, fontWeight: 600, fontSize: "0.9375rem", border: "none",
-          letterSpacing: "0.01em", cursor: "pointer", display: "inline-block",
-        }}>
-          Get Started Free
-        </button>
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+          <button onClick={() => { switchMode("signup"); setRole("teacher"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} style={{
+            background: "#F8F6F2", color: "#2C2824", padding: "0.9375rem 2.5rem",
+            borderRadius: 4, fontWeight: 600, fontSize: "0.9375rem", border: "none",
+            letterSpacing: "0.01em", cursor: "pointer", display: "inline-block",
+          }}>
+            Set up your studio →
+          </button>
+          <button onClick={() => { switchMode("signup"); setRole("student"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} style={{
+            background: "transparent", color: "rgba(248,246,242,0.7)", padding: "0.9375rem 2.5rem",
+            borderRadius: 4, fontWeight: 500, fontSize: "0.9375rem", border: "1px solid rgba(248,246,242,0.2)",
+            letterSpacing: "0.01em", cursor: "pointer", display: "inline-block",
+          }}>
+            Join as a student
+          </button>
+        </div>
       </div>
 
       {/* ── Footer ── */}

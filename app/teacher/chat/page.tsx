@@ -39,7 +39,7 @@ export default function TeacherChat() {
   const [editError, setEditError] = useState<string | null>(null);
   const [hearts, setHearts] = useState<HeartMap>({});
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -291,7 +291,7 @@ export default function TeacherChat() {
               const heartInfo = hearts[msg.id] ?? { count: 0, liked: false };
 
               return (
-                <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : 0 }}
+                <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start", marginBottom: isLast ? "0.625rem" : "0.125rem" }}
                   onMouseEnter={() => setHoveredId(msg.id)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
@@ -311,8 +311,8 @@ export default function TeacherChat() {
                           if (e.key === "Escape") { setEditingId(null); setEditError(null); }
                         }}
                         autoFocus
-                        rows={Math.max(1, editText.split("\n").length)}
-                        style={{ width: "100%", borderRadius: 3, border: `1px solid ${editError ? "var(--error)" : "var(--border-strong)"}`, padding: "0.5rem 0.75rem", fontSize: "0.875rem", lineHeight: 1.5, outline: "none", resize: "none", background: "var(--white)", color: "var(--charcoal)", fontFamily: "Inter, sans-serif" }}
+                        rows={Math.max(2, editText.split("\n").length)}
+                        style={{ width: "100%", borderRadius: 3, border: `1px solid ${editError ? "var(--error)" : "var(--border-strong)"}`, padding: "0.5rem 0.75rem", fontSize: "0.875rem", lineHeight: 1.5, outline: "none", resize: "none", background: "var(--white)", color: "var(--charcoal)", fontFamily: "Inter, sans-serif", boxSizing: "border-box" }}
                       />
                       {editError && <p style={{ fontSize: "0.6875rem", color: "var(--error)", margin: "0.25rem 0 0" }}>{editError}</p>}
                       <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.375rem", justifyContent: "flex-end" }}>
@@ -322,22 +322,32 @@ export default function TeacherChat() {
                     </div>
                   ) : (
                     <div style={{
-                      maxWidth: "66%", padding: "0.5rem 0.875rem", fontSize: "0.875rem", lineHeight: 1.55,
+                      maxWidth: "66%", padding: "0.5rem 0.875rem", fontSize: "0.875rem", lineHeight: 1.6,
                       background: isMe ? (isAnnouncements ? "var(--peach-bg)" : "var(--charcoal)") : "var(--white)",
                       color: isMe ? (isAnnouncements ? "var(--charcoal)" : "var(--cream)") : "var(--charcoal)",
                       border: isMe ? (isAnnouncements ? "1px solid var(--peach-light)" : "none") : "1px solid var(--border-strong)",
                       borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                       overflowWrap: "break-word", wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
                     }}>
                       {msg.content}
                     </div>
                   )}
 
+                  {/* Edit/Delete — shown on ALL own messages when hovered */}
+                  {isMe && !isEditing && (
+                    <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none", paddingRight: "0.25rem" }}>
+                      <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
+                      <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
+                      <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
+                    </div>
+                  )}
+
                   {isLast && !isEditing && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.2rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.15rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" }}>
                       <span style={{ fontSize: "0.625rem", color: "var(--muted)", letterSpacing: "0.02em" }}>{formatTime(msg.created_at)}</span>
 
-                      {/* Heart button — always visible */}
+                      {/* Heart button */}
                       <button
                         onClick={() => handleHeart(msg.id)}
                         style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: "0.2rem", fontSize: "0.75rem", color: heartInfo.liked ? "var(--peach)" : "var(--muted)", transition: "color 0.15s" }}
@@ -345,15 +355,6 @@ export default function TeacherChat() {
                         {heartInfo.liked ? "♥" : "♡"}
                         {heartInfo.count > 0 && <span style={{ fontSize: "0.625rem" }}>{heartInfo.count}</span>}
                       </button>
-
-                      {/* Edit / Delete — own messages, opacity-toggled */}
-                      {isMe && (
-                        <span style={{ display: "flex", gap: "0.375rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none" }}>
-                          <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
-                          <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                          <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
@@ -362,20 +363,21 @@ export default function TeacherChat() {
             <div ref={bottomRef} />
           </div>
 
-          <div style={{ padding: "0.875rem 1.25rem", borderTop: "1px solid var(--border)", background: "var(--white)", display: "flex", gap: "0.625rem", alignItems: "center" }}>
-            <input
+          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid var(--border)", background: "var(--white)", display: "flex", gap: "0.625rem", alignItems: "flex-end" }}>
+            <textarea
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isAnnouncements ? "Post an announcement…" : `Message ${selectedStudent?.display_name}…`}
               disabled={sending}
-              style={{ flex: 1, border: "1px solid var(--border)", borderRadius: 3, padding: "0.5625rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)" }}
+              rows={Math.min(6, Math.max(1, input.split("\n").length))}
+              style={{ flex: 1, border: "1px solid var(--border)", borderRadius: 3, padding: "0.5625rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || sending}
-              style={{ padding: "0.5625rem 1.25rem", borderRadius: 3, border: "none", background: input.trim() ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, transition: "background 0.15s", flexShrink: 0 }}
+              style={{ padding: "0.5625rem 1.25rem", borderRadius: 3, border: "none", background: input.trim() ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, transition: "background 0.15s", flexShrink: 0, marginBottom: "0.125rem" }}
             >
               Send
             </button>

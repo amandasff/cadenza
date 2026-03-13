@@ -1,6 +1,6 @@
 # Cadenza — Deferred Work
 
-Items identified during CEO + engineering review (2026-03-12) that are high-value but not yet built.
+Items identified during CEO + engineering review (2026-03-12 and 2026-03-13) that are high-value but not yet built.
 
 ---
 
@@ -23,20 +23,20 @@ Items identified during CEO + engineering review (2026-03-12) that are high-valu
 
 ---
 
-### 2. Flip Stripe to teacher-side pricing
-**What:** Move the Stripe subscription from students to teachers. Teachers pay ~$29/month for Pro (unlimited students, AI features, video lessons). Students are free.
+### 2. Three-tier pricing model
+**What:** Restructure from the current per-student model to three tiers: (1) **Free** — self-learners and students in a studio get core features; (2) **Pro ($4.99/mo)** — self-learners pay for AI tutor, all games, social/community; (3) **Studio ($19-29/mo, teacher pays)** — all students in the studio get Pro included, plus teacher gets AI Lesson Planner, payment tracker, parent portal, studio management.
 
-**Why:** Teachers have budget and authority. Students (especially kids) don't have credit cards. The current model — students pay — is backwards for a B2B go-to-market where the teacher is the buyer and distribution channel.
+**Why:** Most music teachers use nothing (not myMusicStaff, not anything). The opportunity is to sell running water to people hauling buckets — a comprehensive platform vs. a teacher's notebook + Venmo. Self-learners (people practicing without a formal teacher) are a huge adjacent market who would pay for the student features alone. The Studio tier gives teachers a compelling ROI: one payment, all their students get Pro.
 
-**Pros:** One teacher acquisition = 15+ users. Unit economics flip from $X per student to $X per studio. Aligns payment with the person who feels the pain.
+**Pros:** Three clear value propositions for three user types. Self-learners provide organic growth and B2C revenue. Teachers provide B2B revenue and bring 10-15 students each. Network effect: self-learners and studio students are on the same social platform.
 
-**Cons:** Requires new Stripe product/price IDs, updating the webhook to key on teacher profiles instead of student profiles, and changing the upgrade flow from `/student/upgrade` to a teacher settings page.
+**Cons:** More pricing complexity than "one plan." Requires Stripe product restructuring, new upgrade flows, and changing the landing page significantly.
 
-**Context:** Stripe webhook is in `app/api/stripe/webhook/route.ts`. Student upgrade page is at `app/student/upgrade`. The `profiles` table already has `subscription_status` and `stripe_customer_id` columns — just need to shift which role they apply to.
+**Context:** Current model: students pay $4.99/mo Pro. New model: teachers pay $19-29/mo Studio (students in their studio get Pro free), self-learners pay $4.99/mo Pro independently. Stripe webhook at `app/api/stripe/webhook/route.ts`. The `profiles` table has `subscription_status` and `stripe_customer_id`. Need to add a concept of "studio subscription" that grants Pro to all students in a studio. Pricing page lives in `app/page.tsx`.
 
-**Effort:** M
+**Effort:** L
 **Priority:** P1
-**Depends on:** Nothing — can be done independently.
+**Depends on:** Nothing — but de-risks other features (parent portal, AI planner) to have a clear pricing context.
 
 ---
 
@@ -69,6 +69,57 @@ Items identified during CEO + engineering review (2026-03-12) that are high-valu
 **Cons:** None meaningful. The data is already accessible via existing services (StudioService, GoalService, PracticeService).
 
 **Context:** New route at `app/api/teacher/export/route.ts`. Query all students in the studio, their goals, and their last 90 days of practice sessions. Format as CSV with headers: `student_name, goal_title, goal_status, goal_points, session_date, session_minutes`.
+
+**Effort:** S
+**Priority:** P2
+**Depends on:** Nothing.
+
+---
+
+### 6. AI Lesson Planner
+**What:** A page at `/teacher/student/[id]/lesson-plan` (or a modal in the schedule page) where the teacher selects a student and the AI generates a structured lesson plan. The AI reads: current goals (title, status), recent practice sessions (last 7 days — duration, segments worked on, mood), active pieces, and any prior lesson notes. Teacher reviews and edits the plan before saving. Student sees it in their chat after the lesson as a "Lesson Plan" system message.
+
+**Why:** No competitor has practice data to inform AI lesson planning. myMusicStaff can't do this. A teacher who plans a lesson in 2 minutes (vs. 15 minutes from memory) will never go back. This is Cadenza's highest-moat feature.
+
+**Pros:** Completely defensible — requires the student's actual practice data which only Cadenza has. Saves teachers 10-15 min per student per week. Creates switching cost (all lesson history locked in). Natural AI upsell for Studio tier.
+
+**Cons:** Quality depends on how much practice data the student has. New students with 0 sessions will get a generic plan. Requires careful prompt engineering to produce pedagogically sound output (not just filler).
+
+**Context:** All needed data already exists in Supabase: `goals` table (goals with status/points), `practice_sessions` table (has segments_json with practice areas, duration, mood, student notes), `pieces` table (pieces the student is learning), `lessons` table (once lesson notes are added — see TODO #7). The AI call follows the same pattern as `app/api/ai-tutor/route.ts`. Output should be structured JSON: `{ warmup: string, pieces: [{title, focus, notes}], technique: string, celebrate: string, homework: string[] }`. New API route: `app/api/ai/lesson-plan/route.ts`.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** TODO #7 (Lesson Notes) for best results, but can be built without it using goals + practice data alone.
+
+---
+
+### 7. Lesson Notes (extend Schedule page)
+**What:** Add a `notes` text field to each lesson in the schedule page. After a lesson, the teacher writes 1-3 sentences about how it went. Optionally, AI expands the note into a structured recap. Notes appear in the parent portal and are used by the AI Lesson Planner.
+
+**Why:** Teachers currently write lesson notes in a physical notebook or a Notes app. Bringing notes into Cadenza creates: (1) data for the AI planner, (2) content for the parent portal, (3) a searchable lesson history. This is the connective tissue between the schedule and the AI features.
+
+**Pros:** Small effort (add a `notes` column to `lessons` table + textarea in the schedule UI), high leverage (unblocks AI planner and parent portal with real content). Teachers already write notes — this just moves where they write them.
+
+**Cons:** Teachers won't write notes if it's friction-heavy. The UX must be frictionless: after marking a lesson complete, a small notes popover appears. Optional, not required.
+
+**Context:** The `lessons` table needs a `notes TEXT` column (nullable). The schedule page (`app/teacher/schedule/page.tsx`) is already complex — add a "Notes" textarea that appears when a lesson is expanded or after clicking "Mark complete." Save via the existing lesson update API. Display in the per-student view (`app/teacher/student/[id]/page.tsx`).
+
+**Effort:** S
+**Priority:** P1
+**Depends on:** Nothing. Unblocks AI Lesson Planner.
+
+---
+
+### 8. Payment Log + Invoice PDF
+**What:** A "Payments" tab in the per-student view (`/teacher/student/[id]`). Teacher sets a monthly rate or per-lesson rate for each student. The system shows: what's been paid, what's outstanding, and total receivable. Teacher marks payments received. Teacher can generate a clean printable invoice (HTML → PDF or printable page) for any billing period.
+
+**Why:** Most music teachers use nothing to track payments — they remember, text parents, or use a spreadsheet. A clean payment log in Cadenza eliminates that entirely. The invoice PDF is something teachers can send to parents via email. No Stripe Connect needed — parents pay however they want (Venmo, cash, check). The value is in the tracking, not the processing.
+
+**Pros:** Eliminates the spreadsheet. Professional invoices increase perceived value of the teacher's service. Simple to build (new `lesson_payments` table + UI). Becomes a revenue dashboard: "You have $X outstanding this month."
+
+**Cons:** No online payment processing in v1 — parents still pay outside the app. Some teachers may want Stripe in the future (add later as TODO).
+
+**Context:** New Supabase table: `lesson_payments(id, studio_id, student_id, amount_cents, description, paid_at TIMESTAMPTZ nullable, due_date DATE, notes TEXT, created_at)`. The student profile needs a `lesson_rate_cents INT` field. Revenue dashboard: query all payments for the studio, group by student, show paid/unpaid. Invoice generation: simple React page with `@media print` CSS, or use browser `window.print()`. Rate can be set on `/teacher/student/[id]`.
 
 **Effort:** S
 **Priority:** P2
