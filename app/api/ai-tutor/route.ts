@@ -175,7 +175,7 @@ async function checkRateLimit(supabase: Awaited<ReturnType<typeof getSupabaseSer
 }
 
 async function logAiCall(supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>, userId: string): Promise<void> {
-  await supabase.from("ai_calls").insert({ user_id: userId }).catch(() => {});
+  try { await supabase.from("ai_calls").insert({ user_id: userId }); } catch { /* best effort */ }
 }
 
 export async function POST(request: Request) {
