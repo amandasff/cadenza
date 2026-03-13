@@ -316,6 +316,51 @@ export default function Home() {
         </p>
       </div>
 
+      {/* ── Social proof strip ── */}
+      <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", background: "var(--cream)", padding: "1.25rem 2rem" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "2.5rem" }}>
+          {[
+            { val: "Free", label: "for every student" },
+            { val: "2 min", label: "studio setup" },
+            { val: "10+", label: "music games & tools" },
+            { val: "24/7", label: "AI practice tutor" },
+          ].map(s => (
+            <div key={s.label} style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 600, color: "var(--charcoal)", lineHeight: 1 }}>{s.val}</div>
+              <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem", letterSpacing: "0.03em" }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Demo video ── */}
+      {process.env.NEXT_PUBLIC_DEMO_VIDEO_URL && (
+        <div style={{ padding: "5rem 2rem", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+            <div style={{ fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>See it in action</div>
+            <h2 style={{ fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "var(--charcoal)", letterSpacing: "-0.015em", margin: 0 }}>
+              Cadenza in 90 seconds.
+            </h2>
+          </div>
+          <div style={{
+            position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden",
+            borderRadius: 16, boxShadow: "0 24px 64px rgba(44,40,36,0.18)",
+            border: "1px solid var(--border)",
+          }}>
+            <iframe
+              src={process.env.NEXT_PUBLIC_DEMO_VIDEO_URL}
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title="Cadenza demo"
+            />
+          </div>
+          <p style={{ textAlign: "center", color: "var(--muted)", fontSize: "0.8125rem", marginTop: "1.25rem" }}>
+            See how teachers plan lessons with AI, and how students build their streak.
+          </p>
+        </div>
+      )}
+
       {/* ── Feature cards ── */}
       <div style={{ padding: "1rem 2rem 5rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         {/* For Teachers */}
