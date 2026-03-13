@@ -49,7 +49,7 @@ export default function ReviewQueue() {
 
   return (
     <div>
-      <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1.4rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
+      <h1 style={{ fontWeight: 800, fontSize: "1.4rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
         Review Queue
       </h1>
       <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.5rem" }}>
@@ -59,14 +59,14 @@ export default function ReviewQueue() {
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: 680 }}>
           {[1, 2, 3].map(i => (
-            <div key={i} className="skeleton" style={{ height: 112, borderRadius: 20 }} />
+            <div key={i} className="skeleton" style={{ height: 112, borderRadius: 4 }} />
           ))}
         </div>
       ) : sessions.length === 0 ? (
         <div className="empty-state" style={{ padding: "3rem 0" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
-          <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--charcoal)", margin: 0 }}>No sessions yet</p>
-          <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
+          <p style={{ fontWeight: 700, color: "var(--charcoal)", margin: 0 }}>No sessions yet</p>
+          <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
             Sessions will appear here when students practice
           </p>
         </div>
@@ -84,28 +84,28 @@ export default function ReviewQueue() {
               <Link
                 key={s.id}
                 href={`/teacher/review/${s.id}`}
-                style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)", textDecoration: "none", display: "block" }}
+                style={{ background: "var(--white)", borderRadius: 4, padding: "1.25rem", border: "1.5px solid var(--border)", textDecoration: "none", display: "block" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
                     <div style={{
                       width: 36, height: 36, background: "var(--peach)", borderRadius: "50%",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.75rem", color: "white", flexShrink: 0,
+                      fontWeight: 800, fontSize: "0.75rem", color: "var(--white)", flexShrink: 0,
                     }}>
                       {initials}
                     </div>
                     <div>
-                      <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1rem", color: "var(--charcoal)" }}>
+                      <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--charcoal)" }}>
                         {profile?.display_name ?? "Unknown Student"}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif" }}>
+                      <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
                         {timeAgo(s.created_at)}
                       </div>
                     </div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.875rem", color: "var(--peach)" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.875rem", color: "var(--peach)" }}>
                       {mins} min
                     </div>
                     <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
@@ -116,16 +116,16 @@ export default function ReviewQueue() {
 
                 <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                   {s.recording_url && (
-                    <span style={{ background: "var(--sky-bg)", color: "var(--sky)", padding: "0.2rem 0.6rem", borderRadius: 100, fontSize: "0.7rem", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>
+                    <span style={{ background: "var(--sky-bg)", color: "var(--sky)", padding: "0.2rem 0.6rem", borderRadius: 100, fontSize: "0.7rem", fontWeight: 700 }}>
                       🎙 Recording
                     </span>
                   )}
                   {s.notes && (
-                    <span style={{ background: "var(--cream-deep)", color: "var(--muted)", padding: "0.2rem 0.6rem", borderRadius: 100, fontSize: "0.7rem", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>
+                    <span style={{ background: "var(--cream-deep)", color: "var(--muted)", padding: "0.2rem 0.6rem", borderRadius: 100, fontSize: "0.7rem", fontWeight: 700 }}>
                       💬 Notes
                     </span>
                   )}
-                  <span style={{ marginLeft: "auto", color: "var(--sky)", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem" }}>
+                  <span style={{ marginLeft: "auto", color: "var(--sky)", fontWeight: 700, fontSize: "0.8rem" }}>
                     Review →
                   </span>
                 </div>
