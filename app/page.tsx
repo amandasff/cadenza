@@ -16,7 +16,13 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<"student" | "teacher" | null>(null);
   const [dashboardUrl, setDashboardUrl] = useState<string | null>(null);
+
+  const demoStudentEmail = process.env.NEXT_PUBLIC_DEMO_STUDENT_EMAIL;
+  const demoStudentPassword = process.env.NEXT_PUBLIC_DEMO_STUDENT_PASSWORD;
+  const demoTeacherEmail = process.env.NEXT_PUBLIC_DEMO_TEACHER_EMAIL;
+  const demoTeacherPassword = process.env.NEXT_PUBLIC_DEMO_TEACHER_PASSWORD;
 
   function switchMode(m: "signup" | "signin") {
     setMode(m); setError(""); setDisplayName(""); setEmail(""); setPassword("");
@@ -64,6 +70,21 @@ export default function Home() {
     } catch (err) {
       setError(err instanceof Error ? err.message : mode === "signin" ? "Sign in failed" : "Sign up failed");
     } finally { setLoading(false); }
+  };
+
+  const handleDemoLogin = async (type: "student" | "teacher") => {
+    const email = type === "student" ? demoStudentEmail : demoTeacherEmail;
+    const password = type === "student" ? demoStudentPassword : demoTeacherPassword;
+    if (!email || !password) return;
+    setDemoLoading(type); setError("");
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+      router.push(type === "teacher" ? "/teacher" : "/student");
+    } catch {
+      setError("Demo login failed — try signing up instead.");
+    } finally { setDemoLoading(null); }
   };
 
   const handleGoogleSignup = async () => {
@@ -141,8 +162,11 @@ export default function Home() {
             fontSize: "clamp(2.5rem, 6vw, 4.5rem)", color: "#2C2824",
             lineHeight: 0.98, letterSpacing: "-0.02em", marginBottom: "1.5rem",
           }}>
-            Your students will<br />
-            <em style={{ color: "#B85C3A", fontStyle: "italic" }}>actually practice.</em>
+            {role === "teacher" ? (
+              <>Your students will<br /><em style={{ color: "#B85C3A", fontStyle: "italic" }}>actually practice.</em></>
+            ) : (
+              <>Practice more.<br /><em style={{ color: "#B85C3A", fontStyle: "italic" }}>Play better.</em></>
+            )}
           </h1>
 
           <p style={{ color: "#8A8580", fontSize: "1.0625rem", maxWidth: 440, marginBottom: "1.75rem", lineHeight: 1.75 }}>
@@ -246,6 +270,38 @@ export default function Home() {
             </button>
           </div>
 
+          {(demoStudentEmail || demoTeacherEmail) && (
+            <div style={{ padding: "0 1.5rem 0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
+                <span style={{ fontSize: "0.6875rem", color: "#ADA9A2", fontWeight: 500 }}>or try a demo</span>
+                <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {demoStudentEmail && (
+                  <button type="button" onClick={() => handleDemoLogin("student")} disabled={!!demoLoading} style={{
+                    flex: 1, padding: "0.5625rem", borderRadius: 4, border: "1px solid #D8D2C8",
+                    background: "#FDFCFA", cursor: demoLoading ? "default" : "pointer",
+                    fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#5A5550",
+                    opacity: demoLoading && demoLoading !== "student" ? 0.4 : 1,
+                  }}>
+                    {demoLoading === "student" ? "Loading..." : "👤 Student demo"}
+                  </button>
+                )}
+                {demoTeacherEmail && (
+                  <button type="button" onClick={() => handleDemoLogin("teacher")} disabled={!!demoLoading} style={{
+                    flex: 1, padding: "0.5625rem", borderRadius: 4, border: "1px solid #D8D2C8",
+                    background: "#FDFCFA", cursor: demoLoading ? "default" : "pointer",
+                    fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#5A5550",
+                    opacity: demoLoading && demoLoading !== "teacher" ? 0.4 : 1,
+                  }}>
+                    {demoLoading === "teacher" ? "Loading..." : "🎹 Teacher demo"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div style={{ padding: "1rem 1.5rem", textAlign: "center" }}>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#ADA9A2", margin: 0 }}>
               {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
@@ -257,29 +313,11 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Amanda's students callout ── */}
-      <div style={{ padding: "0 2rem 3rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        <div style={{
-          background: "linear-gradient(135deg, #EBF3EE 0%, #F0EEFA 100%)",
-          border: "1px solid #B8D4C2", borderRadius: 14, padding: "1.5rem 2rem",
-          display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap",
-        }}>
-          <div style={{ fontSize: "2.5rem", lineHeight: 1, flexShrink: 0 }}>🎓</div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.25rem" }}>
-              Always free for Amanda&apos;s students! 🎉
-            </div>
-            <div style={{ fontSize: "0.875rem", color: "#5A7A65", lineHeight: 1.6 }}>
-              Pro is included with your lessons — no credit card, no catch. Just sign up as a Student and search for your teacher.
-            </div>
-          </div>
-          <button
-            onClick={() => { switchMode("signup"); setRole("student"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
-            style={{ padding: "0.625rem 1.5rem", borderRadius: 6, background: "#2C2824", color: "#FDFCFA", border: "none", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", cursor: "pointer", whiteSpace: "nowrap" }}
-          >
-            Join free →
-          </button>
-        </div>
+      {/* ── Amanda's students note ── */}
+      <div style={{ padding: "0 2rem 3rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box", textAlign: "center" }}>
+        <p style={{ fontSize: "0.8125rem", color: "#8A8580", margin: 0 }}>
+          🎉 <strong style={{ color: "#3A6A4F" }}>Amanda&apos;s students:</strong> Pro is already included with your lessons — just sign up free.
+        </p>
       </div>
 
       {/* ── Feature cards ── */}
