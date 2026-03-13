@@ -41,6 +41,7 @@ export default function TeacherChat() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -184,6 +185,11 @@ export default function TeacherChat() {
   }
 
   async function startRecording() {
+    setAudioError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setAudioError("Voice recording is not supported in this browser.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream);
@@ -202,7 +208,10 @@ export default function TeacherChat() {
       setIsRecording(true);
       setRecordingSeconds(0);
       recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-    } catch { /* mic denied */ }
+    } catch (err) {
+      const msg = (err as Error)?.message ?? String(err);
+      setAudioError(msg.includes("denied") || msg.includes("Permission") ? "Microphone access denied — check your browser permissions." : `Microphone error: ${msg}`);
+    }
   }
 
   function stopRecording() {
@@ -227,7 +236,9 @@ export default function TeacherChat() {
         await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, content);
         setMessages(await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id));
       }
-    } catch { /* no-op */ } finally {
+    } catch (err) {
+      setAudioError(`Failed to send voice note: ${(err as Error)?.message ?? "unknown error"}`);
+    } finally {
       setUploadingAudio(false);
     }
   }
@@ -436,6 +447,12 @@ export default function TeacherChat() {
             <div ref={bottomRef} />
           </div>
 
+          {audioError && (
+            <div style={{ padding: "0.375rem 1.25rem", background: "var(--error-bg, #fff0f0)", borderTop: "1px solid var(--error, #d00)", fontSize: "0.75rem", color: "var(--error, #d00)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>{audioError}</span>
+              <button onClick={() => setAudioError(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
+            </div>
+          )}
           <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid var(--border)", background: "var(--white)", display: "flex", gap: "0.625rem", alignItems: "flex-end" }}>
             <textarea
               ref={inputRef}
