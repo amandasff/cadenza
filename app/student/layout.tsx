@@ -390,7 +390,17 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         }}>
           Cadenza
         </Link>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+          {/* Streak + points — visible at a glance on every page */}
+          <span className="streak-pill-compact">🔥 {student.streakDays}</span>
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: "0.1875rem",
+            padding: "0.2rem 0.5rem", background: "var(--cream-deep)", border: "1px solid var(--border-strong)",
+            borderRadius: 20, fontFamily: "Inter, sans-serif", fontWeight: 600,
+            fontSize: "0.6875rem", color: "var(--charcoal)", whiteSpace: "nowrap",
+          }}>
+            ✦ {student.totalPoints.toLocaleString()}
+          </span>
           {avatarCircle(28, "0.625rem")}
           <button
             onClick={toggleTheme}
@@ -446,9 +456,9 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             }}>
               {student.displayName}
             </div>
-            <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.25rem" }}>
-              <span className="streak-pill">{student.streakDays}d</span>
-              <span className="points-pill">{student.totalPoints.toLocaleString()}</span>
+            <div style={{ display: "flex", gap: "0.3rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
+              <span className="streak-pill">🔥 {student.streakDays} day{student.streakDays !== 1 ? "s" : ""}</span>
+              <span className="points-pill">✦ {student.totalPoints.toLocaleString()} pts</span>
             </div>
           </div>
         </div>

@@ -347,35 +347,68 @@ h1, h2, h3, h4, h5, h6 {
 .level-performer   { background: var(--lavender-bg);color: var(--lavender);border: 1px solid var(--lavender-light); }
 .level-virtuoso    { background: var(--butter-bg);  color: var(--butter);  border: 1px solid var(--butter-light); }
 
-/* ── Streak & points tags — minimal ── */
+/* ── Streak & points chips ── */
 .streak-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.2rem 0.55rem;
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  border-radius: 2px;
+  padding: 0.275rem 0.625rem;
+  background: #FFF4E0;
+  border: 1px solid #F5C07A;
+  border-radius: 20px;
   font-family: 'Inter', sans-serif;
-  font-weight: 500;
-  font-size: 0.7rem;
-  color: var(--charcoal);
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #C47500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.streak-pill .streak-zero {
+  color: var(--muted);
+  background: var(--cream-deep);
+  border-color: var(--border);
+}
+[data-theme="dark"] .streak-pill {
+  background: rgba(255,180,0,0.12);
+  border-color: rgba(255,180,0,0.3);
+  color: #FFB800;
 }
 
 .points-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.2rem 0.55rem;
-  background: transparent;
+  padding: 0.275rem 0.625rem;
+  background: var(--cream-deep);
   border: 1px solid var(--border-strong);
-  border-radius: 2px;
+  border-radius: 20px;
   font-family: 'Inter', sans-serif;
   font-weight: 500;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--charcoal);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Compact variants for mobile header */
+.streak-pill-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  padding: 0.2rem 0.5rem;
+  background: #FFF4E0;
+  border: 1px solid #F5C07A;
+  border-radius: 20px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  color: #C47500;
+  white-space: nowrap;
+}
+[data-theme="dark"] .streak-pill-compact {
+  background: rgba(255,180,0,0.12);
+  border-color: rgba(255,180,0,0.3);
+  color: #FFB800;
 }
 
 /* ── Empty state ── */
