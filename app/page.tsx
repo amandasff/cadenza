@@ -122,18 +122,6 @@ export default function Home() {
           Cadenza
         </span>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-          <a href="#pricing" style={{ fontSize: "0.8125rem", color: "var(--muted)", textDecoration: "none", fontWeight: 500 }}>Pricing</a>
-          <button
-            onClick={toggleTheme}
-            style={{
-              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
-              padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.625rem",
-              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
-              letterSpacing: "0.04em",
-            }}
-          >
-            {theme === "light" ? "Light" : "Dark"}
-          </button>
           {dashboardUrl ? (
             <a
               href={dashboardUrl}
@@ -469,89 +457,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Pricing ── */}
-      <div id="pricing" style={{ padding: "4rem 2rem 5rem", background: "var(--cream)", borderTop: "1px solid var(--border)" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem", textAlign: "center" }}>Pricing</div>
-          <h2 style={{ fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.75rem)", color: "var(--charcoal)", textAlign: "center", marginBottom: "0.75rem", letterSpacing: "-0.015em" }}>
-            Simple, fair pricing.
-          </h2>
-          <p style={{ textAlign: "center", color: "var(--muted)", fontSize: "0.9375rem", marginBottom: "3rem" }}>
-            Students in a studio are always free. Self-learners and teachers pay for what they use.
-          </p>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem", alignItems: "start" }}>
-
-            {/* Free */}
-            <div className="card-base" style={{ borderRadius: 12, padding: "2rem", boxShadow: "var(--shadow-sm)" }}>
-              <h3 style={{ fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>Free</h3>
-              <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--charcoal)", lineHeight: 1, marginBottom: "0.25rem" }}>$0</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: "1.5rem" }}>forever</div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                {["Practice timer & log", "Streaks & points", "Piece library", "Teacher goals & feedback", "Basic music games", "Studio chat"].map(f => (
-                  <li key={f} style={{ display: "flex", gap: "0.5rem", fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                    <span style={{ color: "var(--sage)", fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => { document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn btn-secondary" style={{ width: "100%", borderRadius: 6 }}>
-                Get started free
-              </button>
-            </div>
-
-            {/* Pro — featured */}
-            <div style={{ background: "var(--charcoal)", border: "2px solid var(--charcoal)", borderRadius: 12, padding: "2rem", boxShadow: "var(--shadow-lg)", position: "relative" }}>
-              <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "var(--peach)", color: "#fff", fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.25rem 0.875rem", borderRadius: 999, whiteSpace: "nowrap" }}>
-                Most popular
-              </div>
-              <h3 style={{ fontWeight: 600, fontSize: "1.375rem", color: "var(--white)", marginBottom: "0.25rem" }}>Pro</h3>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "0.375rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--white)", lineHeight: 1 }}>$4.99</span>
-                <span style={{ fontSize: "0.875rem", opacity: 0.5, color: "var(--white)" }}>/month</span>
-              </div>
-              <div style={{ fontSize: "0.75rem", opacity: 0.4, color: "var(--white)", marginBottom: "1.5rem" }}>per student · cancel anytime</div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                {["Everything in Free", "AI practice tutor (24/7)", "All music games & levels", "Discover community", "Journey & progress tracking", "Recording history", "Metronome & tuner"].map((f, i) => (
-                  <li key={f} style={{ display: "flex", gap: "0.5rem", fontSize: "0.875rem", color: "var(--white)", opacity: i === 0 ? 0.5 : 1, fontStyle: i === 0 ? "italic" : "normal" }}>
-                    <span style={{ color: "var(--sage-light)", fontWeight: 700, flexShrink: 0 }}>{i === 0 ? "↑" : "✓"}</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => { document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn" style={{ width: "100%", borderRadius: 6, background: "var(--white)", color: "var(--charcoal)", fontWeight: 700, fontSize: "0.9375rem" }}>
-                Start free, upgrade anytime
-              </button>
-            </div>
-
-            {/* Studio */}
-            <div className="card-base" style={{ borderRadius: 12, padding: "2rem", boxShadow: "var(--shadow-sm)" }}>
-              <h3 style={{ fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>Studio</h3>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "0.375rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--charcoal)", lineHeight: 1 }}>$12.99</span>
-                <span style={{ fontSize: "0.875rem", color: "var(--muted)" }}>/month</span>
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: "1.5rem" }}>per teacher · unlimited students</div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                {["Pro included for all students", "AI lesson planner", "Lesson notes & history", "Payment log & invoices", "Parent progress portal", "Student practice dashboard"].map(f => (
-                  <li key={f} style={{ display: "flex", gap: "0.5rem", fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                    <span style={{ color: "var(--sage)", fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => { switchMode("signup"); setRole("teacher"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn btn-secondary" style={{ width: "100%", borderRadius: 6 }}>
-                Set up your studio
-              </button>
-            </div>
-          </div>
-
-          {/* Amanda callout under pricing */}
-          <div style={{ marginTop: "2rem", textAlign: "center", background: "var(--sage-bg)", border: "1px solid var(--sage-light)", borderRadius: 8, padding: "1rem 1.5rem" }}>
-            <span style={{ fontSize: "0.875rem", color: "var(--sage)" }}>
-              🎉 <strong>Amanda&apos;s students:</strong> Always free — Pro is included with your lessons!
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* ── Bottom CTA ── */}
       <div style={{ background: "var(--charcoal)", padding: "5rem 2rem", textAlign: "center" }}>
         <h2 style={{ fontWeight: 400, fontSize: "clamp(2.25rem, 6vw, 3.5rem)", color: "var(--cream)", lineHeight: 1.1, letterSpacing: "-0.015em", marginBottom: "0.75rem" }}>
@@ -588,6 +493,23 @@ export default function Home() {
         </div>
         <span style={{ fontSize: "0.5625rem", color: "rgba(248,246,242,0.2)" }}>&copy; {new Date().getFullYear()}</span>
       </div>
+
+      {/* ── Fixed theme toggle ── */}
+      <button
+        onClick={toggleTheme}
+        title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+        style={{
+          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
+          width: 40, height: 40, borderRadius: "50%",
+          background: "var(--white)", border: "1px solid var(--border-strong)",
+          boxShadow: "0 2px 12px rgba(44,40,36,0.12)",
+          cursor: "pointer", fontSize: "1.1rem",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "box-shadow 0.15s",
+        }}
+      >
+        {theme === "light" ? "🌙" : "☀️"}
+      </button>
     </div>
   );
 }
