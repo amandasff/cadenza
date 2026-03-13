@@ -24,10 +24,10 @@ interface StudentAssignment {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#d97706",
-  approved: "#16a34a",
-  waitlisted: "#2563eb",
-  denied: "#dc2626",
+  pending: "var(--warning)",
+  approved: "var(--success)",
+  waitlisted: "var(--sky)",
+  denied: "var(--error)",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -293,7 +293,7 @@ export default function StudioManagementPage() {
           <div style={{
             display: "flex", gap: "0.625rem", alignItems: "center",
             background: "var(--cream)", border: "1px solid var(--border)",
-            borderRadius: 3, padding: "0.625rem 0.875rem",
+            borderRadius: 4, padding: "0.625rem 0.875rem",
           }}>
             <span style={{ ...s, fontSize: "0.875rem", color: "var(--charcoal)", flex: 1, wordBreak: "break-all" }}>
               {enrollmentLink}
@@ -302,7 +302,7 @@ export default function StudioManagementPage() {
               onClick={() => { if (enrollmentLink) navigator.clipboard.writeText(enrollmentLink); }}
               style={{
                 ...s, flexShrink: 0, background: "var(--charcoal)", color: "#fff",
-                border: "none", borderRadius: 3, padding: "0.375rem 0.75rem",
+                border: "none", borderRadius: 4, padding: "0.375rem 0.75rem",
                 fontSize: "0.75rem", fontWeight: 500, cursor: "pointer", letterSpacing: "0.04em",
               }}
             >
@@ -332,7 +332,7 @@ export default function StudioManagementPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
               {applications.map(app => (
                 <div key={app.id} style={{
-                  border: "1px solid var(--border)", borderRadius: 3, padding: "1rem",
+                  border: "1px solid var(--border)", borderRadius: 4, padding: "1rem",
                   background: app.status === "pending" ? "var(--cream)" : "transparent",
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem" }}>
@@ -378,19 +378,19 @@ export default function StudioManagementPage() {
                     <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
                       <button
                         onClick={() => handleApplicationStatus(app.id, "approved")}
-                        style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 3, border: "none", background: "#16a34a", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
+                        style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 4, border: "none", background: "var(--success)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => handleApplicationStatus(app.id, "waitlisted")}
-                        style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: "none", color: "var(--muted)", fontSize: "0.8125rem", cursor: "pointer" }}
+                        style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 4, border: "1px solid var(--border-strong)", background: "none", color: "var(--muted)", fontSize: "0.8125rem", cursor: "pointer" }}
                       >
                         Waitlist
                       </button>
                       <button
                         onClick={() => handleApplicationStatus(app.id, "denied")}
-                        style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 3, border: "1px solid #fca5a5", background: "none", color: "#dc2626", fontSize: "0.8125rem", cursor: "pointer" }}
+                        style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 4, border: "1px solid var(--error)", background: "none", color: "var(--error)", fontSize: "0.8125rem", cursor: "pointer" }}
                       >
                         Deny
                       </button>
@@ -433,7 +433,7 @@ export default function StudioManagementPage() {
               {isDirector && m.role !== "director" && (
                 <button
                   onClick={() => handleRemoveTeacher(m.teacher_id, m.display_name)}
-                  style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.25rem 0.625rem", fontSize: "0.75rem", color: "var(--muted)", cursor: "pointer" }}
+                  style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 4, padding: "0.25rem 0.625rem", fontSize: "0.75rem", color: "var(--muted)", cursor: "pointer" }}
                 >
                   Remove
                 </button>
@@ -450,7 +450,7 @@ export default function StudioManagementPage() {
               value={inviteEmail}
               onChange={e => setInviteEmail(e.target.value)}
               style={{
-                flex: 1, minWidth: 200, border: "1px solid var(--border-strong)", borderRadius: 3,
+                flex: 1, minWidth: 200, border: "1px solid var(--border-strong)", borderRadius: 4,
                 padding: "0.5rem 0.875rem", fontSize: "0.875rem", fontFamily: "Inter, sans-serif",
                 background: "var(--cream)", color: "var(--charcoal)", outline: "none",
               }}
@@ -459,7 +459,7 @@ export default function StudioManagementPage() {
               type="submit"
               disabled={inviting || !inviteEmail.trim()}
               style={{
-                ...s, padding: "0.5rem 1rem", borderRadius: 3, border: "none",
+                ...s, padding: "0.5rem 1rem", borderRadius: 4, border: "none",
                 background: inviting || !inviteEmail.trim() ? "var(--border)" : "var(--charcoal)",
                 color: "#fff", fontSize: "0.875rem", fontWeight: 500,
                 cursor: inviting || !inviteEmail.trim() ? "default" : "pointer",
@@ -473,7 +473,7 @@ export default function StudioManagementPage() {
         {inviteMsg && (
           <p style={{
             ...s, fontSize: "0.8125rem", marginTop: "0.625rem",
-            color: inviteMsg.type === "ok" ? "#16a34a" : "#dc2626",
+            color: inviteMsg.type === "ok" ? "var(--success)" : "var(--error)",
           }}>
             {inviteMsg.text}
           </p>
@@ -498,7 +498,7 @@ export default function StudioManagementPage() {
               return (
                 <div key={student.id} style={{
                   display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap",
-                  padding: "0.75rem", border: "1px solid var(--border)", borderRadius: 3,
+                  padding: "0.75rem", border: "1px solid var(--border)", borderRadius: 4,
                 }}>
                   <span style={{ ...s, flex: 1, fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
                     {student.display_name}
@@ -513,7 +513,7 @@ export default function StudioManagementPage() {
                         value={reassignTeacherId}
                         onChange={e => setReassignTeacherId(e.target.value)}
                         style={{
-                          border: "1px solid var(--border-strong)", borderRadius: 3,
+                          border: "1px solid var(--border-strong)", borderRadius: 4,
                           padding: "0.375rem 0.625rem", fontSize: "0.8125rem",
                           fontFamily: "Inter, sans-serif", background: "var(--cream)", color: "var(--charcoal)",
                         }}
@@ -527,7 +527,7 @@ export default function StudioManagementPage() {
                         onClick={() => handleReassign(student.id)}
                         disabled={!reassignTeacherId || reassigning}
                         style={{
-                          ...s, padding: "0.375rem 0.75rem", borderRadius: 3, border: "none",
+                          ...s, padding: "0.375rem 0.75rem", borderRadius: 4, border: "none",
                           background: !reassignTeacherId || reassigning ? "var(--border)" : "var(--charcoal)",
                           color: "#fff", fontSize: "0.8125rem", fontWeight: 500,
                           cursor: !reassignTeacherId || reassigning ? "default" : "pointer",
@@ -537,7 +537,7 @@ export default function StudioManagementPage() {
                       </button>
                       <button
                         onClick={() => { setReassigningStudent(null); setReassignTeacherId(""); }}
-                        style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.375rem 0.625rem", fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}
+                        style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 4, padding: "0.375rem 0.625rem", fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}
                       >
                         Cancel
                       </button>
@@ -545,7 +545,7 @@ export default function StudioManagementPage() {
                   ) : (
                     <button
                       onClick={() => { setReassigningStudent(student.id); setReassignTeacherId(asgn?.teacher_id ?? ""); }}
-                      style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.25rem 0.625rem", fontSize: "0.75rem", color: "var(--muted)", cursor: "pointer" }}
+                      style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 4, padding: "0.25rem 0.625rem", fontSize: "0.75rem", color: "var(--muted)", cursor: "pointer" }}
                     >
                       Reassign
                     </button>
