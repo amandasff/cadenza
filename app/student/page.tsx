@@ -231,14 +231,14 @@ export default function ThisWeek() {
           style={{
             display: "block", width: "100%", textAlign: "left",
             background: practice.isActive
-              ? "linear-gradient(135deg, #8A3030 0%, #6B2424 100%)"
-              : "linear-gradient(135deg, #3D6B55 0%, #2C5242 100%)",
+              ? "linear-gradient(135deg, var(--error) 0%, #6B2424 100%)"
+              : "linear-gradient(135deg, var(--sage) 0%, #2C5242 100%)",
             borderRadius: 10, border: "none",
             padding: "1.625rem 1.5rem",
-            color: "#FDFCFA",
+            color: "var(--white)",
             boxShadow: practice.isActive
-              ? "0 4px 24px rgba(138,48,48,0.28)"
-              : "0 4px 24px rgba(44,82,66,0.28)",
+              ? "var(--shadow-md)"
+              : "var(--shadow-sage)",
             position: "relative",
             overflow: "hidden",
             cursor: "pointer",
@@ -301,7 +301,7 @@ export default function ThisWeek() {
               background: teacherAvatarUrl ? "transparent" : "linear-gradient(135deg, var(--sage) 0%, #5a9a7a 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
               color: "#fff", fontSize: "0.8125rem", fontWeight: 600,
-              fontFamily: "Inter, sans-serif", flexShrink: 0, overflow: "hidden",
+              flexShrink: 0, overflow: "hidden",
             }}>
               {teacherAvatarUrl
                 ? <img src={teacherAvatarUrl} alt={teacherName ?? "Teacher"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />

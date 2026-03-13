@@ -318,7 +318,7 @@ export default function StudioManagementPage() {
           <p style={sectionTitle}>
             Enrollment Applications {pendingCount > 0 && (
               <span style={{
-                background: "#e85d4a", color: "#fff", borderRadius: 10,
+                background: "var(--error)", color: "#fff", borderRadius: 10,
                 padding: "0.125rem 0.5rem", fontSize: "0.6875rem", marginLeft: "0.5rem",
               }}>
                 {pendingCount} new

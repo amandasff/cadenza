@@ -446,9 +446,9 @@ export default function DiscoverPage() {
         </div>
       ) : queryError ? (
         <div style={{ padding: "1.5rem" }}>
-          <div style={{ background: "#FDF6F3", border: "1px solid #E8C4BA", borderRadius: 10, padding: "1.25rem" }}>
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "#B85C3A", marginBottom: "0.375rem" }}>Could not load feed</div>
-            <p style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#B85C3A", margin: 0 }}>{queryError}</p>
+          <div style={{ background: "var(--peach-bg)", border: "1px solid var(--peach-light)", borderRadius: 4, padding: "1.25rem" }}>
+            <div style={{ fontWeight: 500, fontSize: "0.875rem", color: "var(--peach)", marginBottom: "0.375rem" }}>Could not load feed</div>
+            <p style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "var(--peach)", margin: 0 }}>{queryError}</p>
           </div>
         </div>
       ) : tab === "following" && followingLoading ? (
@@ -520,7 +520,7 @@ export default function DiscoverPage() {
 
       {/* ── Like error toast ── */}
       {likeError && (
-        <div style={{ position: "fixed", bottom: "5.5rem", left: "50%", transform: "translateX(-50%)", zIndex: 600, background: "#2C2824", color: "#fff", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, padding: "0.625rem 1.25rem", borderRadius: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap", pointerEvents: "none" }}>
+        <div style={{ position: "fixed", bottom: "5.5rem", left: "50%", transform: "translateX(-50%)", zIndex: 600, background: "var(--charcoal)", color: "var(--white)", fontSize: "0.8125rem", fontWeight: 500, padding: "0.625rem 1.25rem", borderRadius: 24, boxShadow: "var(--shadow-md)", whiteSpace: "nowrap", pointerEvents: "none" }}>
           {likeError}
         </div>
       )}
@@ -568,7 +568,7 @@ export default function DiscoverPage() {
                   >
                     {followLoading ? "…" : myFollows.has(profileInfo.id) ? "Following" : "Follow"}
                   </button>
-                  {followError && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "#c0392b", maxWidth: 120, textAlign: "right", lineHeight: 1.3 }}>{followError}</span>}
+                  {followError && <span style={{ fontSize: "0.625rem", color: "var(--error)", maxWidth: 120, textAlign: "right", lineHeight: 1.3 }}>{followError}</span>}
                   </div>
                 ) : (
                   <button onClick={() => { setProfileInfo(null); setProfileItems([]); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>

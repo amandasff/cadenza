@@ -84,7 +84,7 @@ export default function ReviewQueue() {
               <Link
                 key={s.id}
                 href={`/teacher/review/${s.id}`}
-                style={{ background: "var(--white)", borderRadius: 4, padding: "1.25rem", border: "1.5px solid var(--border)", textDecoration: "none", display: "block" }}
+                style={{ background: "var(--white)", borderRadius: 4, padding: "1.25rem", border: "1px solid var(--border)", textDecoration: "none", display: "block" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>

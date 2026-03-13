@@ -28,7 +28,7 @@ const ASSIGNMENT_TYPES: { value: AssignmentType; label: string; color: string; e
 
 const RATING_CONFIG = {
   struggling:    { emoji: "😓", label: "Struggling",    color: "var(--error)" },
-  getting_there: { emoji: "🙂", label: "Getting there", color: "#d97706" },
+  getting_there: { emoji: "🙂", label: "Getting there", color: "var(--warning)" },
   nailed_it:     { emoji: "🎉", label: "Nailed it",     color: "var(--success)" },
 };
 

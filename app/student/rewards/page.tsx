@@ -15,10 +15,10 @@ import type { PracticeSessionRow, GoalRow } from "../../../lib/types";
 const LEVELS = [
   { name: "Beginner",   min: 0,    color: "var(--muted)" },
   { name: "Apprentice", min: 150,  color: "var(--sage)" },
-  { name: "Student",    min: 400,  color: "#7b9cbf" },
-  { name: "Performer",  min: 900,  color: "#9b8bbf" },
+  { name: "Student",    min: 400,  color: "var(--sky)" },
+  { name: "Performer",  min: 900,  color: "var(--lavender)" },
   { name: "Advanced",   min: 2000, color: "var(--peach)" },
-  { name: "Virtuoso",   min: 4500, color: "#c9a227" },
+  { name: "Virtuoso",   min: 4500, color: "var(--butter)" },
   { name: "Maestro",    min: 9000, color: "var(--charcoal)" },
 ];
 

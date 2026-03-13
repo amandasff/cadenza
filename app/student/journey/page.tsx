@@ -550,7 +550,7 @@ export default function JourneyPage() {
                         {/* Type indicator */}
                         <div style={{
                           width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                          background: isLatest ? "linear-gradient(135deg, #3D6B55, #2C5242)" : isVideo ? "linear-gradient(135deg, #5B4FCF, #3D3499)" : "var(--cream)",
+                          background: isLatest ? "linear-gradient(135deg, #3D6B55, #2C5242)" : isVideo ? "linear-gradient(135deg, var(--lavender), #3D3499)" : "var(--cream)",
                           border: (isLatest || isVideo) ? "none" : "1px solid var(--border)",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: isVideo ? "1rem" : "0.75rem", fontWeight: 600,
@@ -576,7 +576,7 @@ export default function JourneyPage() {
                               </div>
                               <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>
                                 {formatDate(item.created_at)} · {formatRelative(item.created_at)}
-                                {isVideo && <span style={{ marginLeft: "0.4rem", color: "#5B4FCF", fontWeight: 600 }}>· Video cover</span>}
+                                {isVideo && <span style={{ marginLeft: "0.4rem", color: "var(--lavender)", fontWeight: 600 }}>· Video cover</span>}
                               </div>
                             </>
                           )}
@@ -589,7 +589,7 @@ export default function JourneyPage() {
                             </span>
                           )}
                           {isPublic && editingId !== item.id && (
-                            <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "rgba(91,79,207,0.08)", color: "#5B4FCF", fontFamily: "Inter, sans-serif" }}>
+                            <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "var(--lavender-bg)", color: "var(--lavender)", fontFamily: "Inter, sans-serif" }}>
                               Public
                             </span>
                           )}
@@ -658,9 +658,9 @@ export default function JourneyPage() {
                                   disabled={togglingPublicId === item.id}
                                   style={{
                                     background: isPublic ? "rgba(91,79,207,0.07)" : "transparent",
-                                    border: `1px solid ${isPublic ? "#5B4FCF" : "var(--border)"}`,
+                                    border: `1px solid ${isPublic ? "var(--lavender)" : "var(--border)"}`,
                                     borderRadius: 4, cursor: "pointer", padding: "0.2rem 0.5rem",
-                                    color: isPublic ? "#5B4FCF" : "var(--muted)",
+                                    color: isPublic ? "var(--lavender)" : "var(--muted)",
                                     fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 500,
                                     display: "flex", alignItems: "center", gap: "0.25rem",
                                     opacity: togglingPublicId === item.id ? 0.5 : 1,
@@ -757,7 +757,7 @@ export default function JourneyPage() {
                 /* Record tab */
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {recordError && (
-                    <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "#FDF6F3", border: "1px solid #E8C4BA", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif" }}>{recordError}</div>
+                    <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "var(--peach-bg)", border: "1px solid var(--peach-light)", fontSize: "0.8125rem", color: "var(--peach)", fontFamily: "Inter, sans-serif" }}>{recordError}</div>
                   )}
 
                   {/* Live preview or recorded preview */}
@@ -774,7 +774,7 @@ export default function JourneyPage() {
                       )}
                       {recording && (
                         <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(0,0,0,0.6)", borderRadius: 4, padding: "0.25rem 0.5rem" }}>
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#e85d4a", animation: "pulse 1s infinite" }} />
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--error)", animation: "pulse 1s infinite" }} />
                           <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "#fff", fontWeight: 600, letterSpacing: "0.04em" }}>REC</span>
                         </div>
                       )}
@@ -791,10 +791,10 @@ export default function JourneyPage() {
                   {!recordedBlob && (
                     <button
                       onClick={recording ? stopRecording : startRecording}
-                      style={{ padding: "0.75rem", borderRadius: 8, border: recording ? "2px solid #e85d4a" : "2px solid var(--charcoal)", background: recording ? "rgba(232,93,74,0.08)" : "var(--charcoal)", color: recording ? "#e85d4a" : "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
+                      style={{ padding: "0.75rem", borderRadius: 8, border: recording ? "2px solid var(--error)" : "2px solid var(--charcoal)", background: recording ? "var(--error-bg)" : "var(--charcoal)", color: recording ? "var(--error)" : "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
                     >
                       {recording ? (
-                        <><span style={{ width: 10, height: 10, borderRadius: 2, background: "#e85d4a", flexShrink: 0 }} /> Stop Recording</>
+                        <><span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--error)", flexShrink: 0 }} /> Stop Recording</>
                       ) : (
                         <>🎥 Start Recording</>
                       )}
@@ -809,7 +809,7 @@ export default function JourneyPage() {
                 onClick={() => setSharePublic(p => !p)}
                 style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.625rem 0.875rem", borderRadius: 8, border: `1px solid ${sharePublic ? "rgba(91,79,207,0.3)" : "var(--border)"}`, background: sharePublic ? "rgba(91,79,207,0.06)" : "var(--cream)", cursor: "pointer", textAlign: "left", width: "100%" }}
               >
-                <div style={{ width: 36, height: 20, borderRadius: 10, background: sharePublic ? "#5B4FCF" : "var(--border)", transition: "background 0.2s", flexShrink: 0, position: "relative" }}>
+                <div style={{ width: 36, height: 20, borderRadius: 10, background: sharePublic ? "var(--lavender)" : "var(--border)", transition: "background 0.2s", flexShrink: 0, position: "relative" }}>
                   <div style={{ position: "absolute", top: 2, left: sharePublic ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "var(--white)", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
                 </div>
                 <div>
@@ -819,7 +819,7 @@ export default function JourneyPage() {
               </button>
 
               {(uploadError) && (
-                <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "#FDF6F3", border: "1px solid #E8C4BA", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif" }}>
+                <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "var(--peach-bg)", border: "1px solid var(--peach-light)", fontSize: "0.8125rem", color: "var(--peach)", fontFamily: "Inter, sans-serif" }}>
                   {uploadError}
                 </div>
               )}
