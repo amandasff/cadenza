@@ -61,7 +61,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       });
   }, [(user as Teacher | null)?.id]);
 
-  // Unread chat badge
+  // Unread chat badge — uses Supabase realtime instead of polling
   useEffect(() => {
     const teacher = user as Teacher | null;
     if (!teacher?.id || !teacher?.studioId) return;
@@ -72,22 +72,39 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       return;
     }
 
-    const checkUnread = async () => {
-      const lastRead = localStorage.getItem(`chat_last_read_${teacher.id}`) ?? new Date(0).toISOString();
-      const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase
-        .from("messages")
-        .select("id")
-        .eq("studio_id", teacher.studioId!)
-        .neq("sender_id", teacher.id)
-        .gt("created_at", lastRead)
-        .limit(1);
-      setHasUnread((data?.length ?? 0) > 0);
-    };
+    const supabase = getSupabaseBrowserClient();
 
-    checkUnread().catch(() => {});
-    const interval = setInterval(() => checkUnread().catch(() => {}), 15000);
-    return () => clearInterval(interval);
+    // Initial check on mount
+    const lastRead = localStorage.getItem(`chat_last_read_${teacher.id}`) ?? new Date(0).toISOString();
+    supabase
+      .from("messages")
+      .select("id")
+      .eq("studio_id", teacher.studioId!)
+      .neq("sender_id", teacher.id)
+      .gt("created_at", lastRead)
+      .limit(1)
+      .then(({ data }) => setHasUnread((data?.length ?? 0) > 0))
+      .catch(() => {});
+
+    // Realtime subscription — badge updates instantly on new message
+    const channel = supabase
+      .channel(`teacher-unread-${teacher.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `studio_id=eq.${teacher.studioId}`,
+        },
+        (payload) => {
+          const msg = payload.new as { sender_id?: string };
+          if (msg.sender_id !== teacher.id) setHasUnread(true);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user, path]);
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {

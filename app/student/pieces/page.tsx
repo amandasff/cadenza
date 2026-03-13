@@ -52,7 +52,7 @@ export default function MyPieces() {
     if (!student?.id) return;
     setLoading(true);
     try {
-      const data = await PieceService.getInstance(supabase).getStudentPieces(student.id);
+      const data = await PieceService.create(supabase).getStudentPieces(student.id);
       setPieces(data);
     } catch (err) {
       console.error(err);
@@ -129,7 +129,7 @@ export default function MyPieces() {
         sheetUrl = JSON.stringify(urls);
       }
 
-      await PieceService.getInstance(supabase).updatePiece(pieceId, { sheet_music_url: sheetUrl });
+      await PieceService.create(supabase).updatePiece(pieceId, { sheet_music_url: sheetUrl });
       setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: sheetUrl } : p));
     } catch (err) {
       console.error("upload error:", err);
@@ -163,7 +163,7 @@ export default function MyPieces() {
         .from("score-files").upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
       if (uploadErr) { setUploadError(`Score upload failed: ${uploadErr.message}`); return; }
       const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
-      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      await PieceService.create(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
       setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
     } catch (err) {
       setUploadError(`Score upload error: ${(err as Error).message}`);
@@ -204,7 +204,7 @@ export default function MyPieces() {
         .from("score-files").upload(path, xmlBlob, { upsert: true, contentType: "application/xml" });
       if (uploadErr) { setUploadError(`Upload failed: ${uploadErr.message}`); return; }
       const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
-      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      await PieceService.create(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
       setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
     } catch (err) {
       setUploadError(`AI conversion error: ${(err as Error).message}`);
@@ -229,14 +229,14 @@ export default function MyPieces() {
     const piece = pieces.find(p => p.id === pieceId);
     const isPrimary = !piece || piece.recordings.length === 0;
     try {
-      const rec = await PieceService.getInstance(supabase).addRecording(pieceId, video, student.id, isPrimary);
+      const rec = await PieceService.create(supabase).addRecording(pieceId, video, student.id, isPrimary);
       setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, recordings: [...p.recordings, rec] } : p));
     } catch (err) { console.error(err); }
   }
 
   async function handleRemoveRecording(pieceId: string, recordingId: string) {
     try {
-      await PieceService.getInstance(supabase).removeRecording(recordingId);
+      await PieceService.create(supabase).removeRecording(recordingId);
       setPieces(prev => prev.map(p =>
         p.id === pieceId ? { ...p, recordings: p.recordings.filter(r => r.id !== recordingId) } : p
       ));
@@ -250,7 +250,7 @@ export default function MyPieces() {
 
   async function handleSetPrimary(pieceId: string, recordingId: string) {
     try {
-      await PieceService.getInstance(supabase).setPrimaryRecording(pieceId, recordingId);
+      await PieceService.create(supabase).setPrimaryRecording(pieceId, recordingId);
       setPieces(prev => prev.map(p =>
         p.id === pieceId
           ? { ...p, recordings: p.recordings.map((r: PieceRecording) => ({ ...r, is_primary: r.id === recordingId })) }

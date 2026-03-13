@@ -51,7 +51,7 @@ export default function TeacherChat() {
   useEffect(() => {
     if (!teacher?.studioId) return;
     const supabase = getSupabaseBrowserClient();
-    StudioService.getInstance(supabase)
+    StudioService.create(supabase)
       .getStudents(teacher.studioId)
       .then(data => { setStudents(data); setLoadingStudents(false); })
       .catch(() => setLoadingStudents(false));
@@ -65,7 +65,7 @@ export default function TeacherChat() {
     setEditingId(null);
     setEditError(null);
     const supabase = getSupabaseBrowserClient();
-    const service = ChatService.getInstance(supabase);
+    const service = ChatService.create(supabase);
 
     const onInsert = (msg: MessageRow) => setMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg]);
     const onUpdate = (msg: MessageRow) => setMessages(p => p.map(m => m.id === msg.id ? msg : m));
@@ -119,7 +119,7 @@ export default function TeacherChat() {
     setSending(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = ChatService.getInstance(supabase);
+      const service = ChatService.create(supabase);
       if (selectedStudent === null) {
         await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, text);
         const fresh = await service.getAnnouncements(teacher.studioId);
@@ -141,7 +141,7 @@ export default function TeacherChat() {
     setMessages(p => p.filter(m => m.id !== msgId));
     try {
       const supabase = getSupabaseBrowserClient();
-      await ChatService.getInstance(supabase).deleteMessage(msgId);
+      await ChatService.create(supabase).deleteMessage(msgId);
     } catch { /* no-op */ }
   }
 
@@ -151,7 +151,7 @@ export default function TeacherChat() {
     setEditError(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const updated = await ChatService.getInstance(supabase).updateMessage(msgId, trimmed);
+      const updated = await ChatService.create(supabase).updateMessage(msgId, trimmed);
       setMessages(p => p.map(m => m.id === msgId ? updated : m));
       setEditingId(null);
     } catch (err) {
@@ -167,7 +167,7 @@ export default function TeacherChat() {
     }));
     try {
       const supabase = getSupabaseBrowserClient();
-      await ChatService.getInstance(supabase).toggleHeart(msgId);
+      await ChatService.create(supabase).toggleHeart(msgId);
     } catch {
       setHearts(prev => ({ ...prev, [msgId]: current }));
     }

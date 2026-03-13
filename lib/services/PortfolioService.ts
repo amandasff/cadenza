@@ -27,7 +27,7 @@ interface AddItemInput {
 export class PortfolioService {
   private constructor(private supabase: SupabaseClient) {}
 
-  static getInstance(supabase: SupabaseClient): PortfolioService {
+  static create(supabase: SupabaseClient): PortfolioService {
     return new PortfolioService(supabase);
   }
 

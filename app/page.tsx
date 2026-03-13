@@ -57,7 +57,7 @@ export default function Home() {
         router.push(profile?.role === "teacher" ? "/teacher" : "/student");
       } else {
         if (password.length < 6) { setError("Password must be at least 6 characters"); setLoading(false); return; }
-        const service = AuthService.getInstance(supabase);
+        const service = AuthService.create(supabase);
         const user = await service.signUp(email, password, role, displayName);
         router.push(user.getHomeRoute());
       }

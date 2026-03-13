@@ -153,11 +153,11 @@ export default function SchedulePage() {
 
     // Load students + pieces independently — works even if lessons table doesn't exist yet
     try {
-      const studioService = StudioService.getInstance(supabase);
+      const studioService = StudioService.create(supabase);
       const studentData = await studioService.getStudents(teacher.studioId!);
       setStudents(studentData);
 
-      const pieceService = PieceService.getInstance(supabase);
+      const pieceService = PieceService.create(supabase);
       const allPieces: typeof pieces = [];
       for (const s of studentData) {
         const sp = await pieceService.getStudentPieces(s.id);
@@ -170,7 +170,7 @@ export default function SchedulePage() {
 
     // Load lessons separately — requires lessons table to exist in Supabase
     try {
-      const lessonService = LessonService.getInstance(supabase);
+      const lessonService = LessonService.create(supabase);
       const lessonData = await lessonService.getUpcomingLessonsWithContext(teacher.id);
       setLessons(lessonData);
 
@@ -193,7 +193,7 @@ export default function SchedulePage() {
     const notes = noteDrafts[lessonId] ?? "";
     try {
       const supabase = getSupabaseBrowserClient();
-      await LessonService.getInstance(supabase).updateNotes(lessonId, notes, teacher.id);
+      await LessonService.create(supabase).updateNotes(lessonId, notes, teacher.id);
     } catch (err) {
       console.error(err);
     }
@@ -204,7 +204,7 @@ export default function SchedulePage() {
     if (!confirm(`Cancel ${lesson.student_name}'s lesson on ${formatDayGroup(lesson.scheduled_at)}?`)) return;
     try {
       const supabase = getSupabaseBrowserClient();
-      await LessonService.getInstance(supabase).cancelLesson(lesson.id, teacher.id);
+      await LessonService.create(supabase).cancelLesson(lesson.id, teacher.id);
       setLessons(prev => prev.filter(l => l.id !== lesson.id));
     } catch (err) {
       console.error(err);
@@ -230,8 +230,8 @@ export default function SchedulePage() {
     setSaveError(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const lessonService = LessonService.getInstance(supabase);
-      const assignmentService = AssignmentService.getInstance(supabase);
+      const lessonService = LessonService.create(supabase);
+      const assignmentService = AssignmentService.create(supabase);
 
       await lessonService.completeLesson(completingLesson.id, completeNotes, teacher.id);
 
@@ -277,7 +277,7 @@ export default function SchedulePage() {
     setScheduleError(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const lessonService = LessonService.getInstance(supabase);
+      const lessonService = LessonService.create(supabase);
 
       if (scheduleForm.recurring) {
         const d = new Date(scheduleForm.scheduledAt);

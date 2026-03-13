@@ -120,7 +120,7 @@ export default function JourneyPage() {
       if (!student?.id) return;
       const supabase = getSupabaseBrowserClient();
       try {
-        const data = await PortfolioService.getInstance(supabase).getItems(student.id);
+        const data = await PortfolioService.create(supabase).getItems(student.id);
         setItems(data);
       } catch (err) {
         const e = err as { message?: string; code?: string };
@@ -196,7 +196,7 @@ export default function JourneyPage() {
     setSaving(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      await PortfolioService.getInstance(supabase).updateItem(id, {
+      await PortfolioService.create(supabase).updateItem(id, {
         title: editTitle.trim(),
         description: editDesc.trim() || undefined,
       });
@@ -218,7 +218,7 @@ export default function JourneyPage() {
     setDeletingId(id);
     try {
       const supabase = getSupabaseBrowserClient();
-      await PortfolioService.getInstance(supabase).deleteItem(id);
+      await PortfolioService.create(supabase).deleteItem(id);
       setItems(prev => prev.filter(i => i.id !== id));
     } catch (err) {
       console.error("delete error:", err);
@@ -234,7 +234,7 @@ export default function JourneyPage() {
     setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_public: newVal } : i));
     try {
       const supabase = getSupabaseBrowserClient();
-      await PortfolioService.getInstance(supabase).updateItem(item.id, { is_public: newVal });
+      await PortfolioService.create(supabase).updateItem(item.id, { is_public: newVal });
     } catch {
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_public: item.is_public } : i));
     } finally {
@@ -332,7 +332,7 @@ export default function JourneyPage() {
         .upload(path, fileToUpload, { contentType: fileToUpload.type, upsert: false });
       if (storageError) throw storageError;
       const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
-      const item = await PortfolioService.getInstance(supabase).addItem({
+      const item = await PortfolioService.create(supabase).addItem({
         studentId: student.id,
         studioId: student.studioId ?? undefined,
         title: uploadTitle.trim(),

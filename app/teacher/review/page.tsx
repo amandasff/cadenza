@@ -31,8 +31,8 @@ export default function ReviewQueue() {
     try {
       const supabase = getSupabaseBrowserClient();
       const [rawSessions, students] = await Promise.all([
-        PracticeService.getInstance(supabase).getStudioSessions(teacher.studioId, 50),
-        StudioService.getInstance(supabase).getStudents(teacher.studioId),
+        PracticeService.create(supabase).getStudioSessions(teacher.studioId, 50),
+        StudioService.create(supabase).getStudents(teacher.studioId),
       ]);
       setSessions(rawSessions);
       const map: Record<string, ProfileRow> = {};

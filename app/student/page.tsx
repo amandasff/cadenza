@@ -145,8 +145,8 @@ export default function ThisWeek() {
     // Load lessons + assignments separately — requires lessons SQL to be run in Supabase
     try {
       const supabase = getSupabaseBrowserClient();
-      const lessonService = LessonService.getInstance(supabase);
-      const assignmentService = AssignmentService.getInstance(supabase);
+      const lessonService = LessonService.create(supabase);
+      const assignmentService = AssignmentService.create(supabase);
       const [lesson, activeAssignments] = await Promise.all([
         lessonService.getStudentNextLesson(student.id),
         assignmentService.getActiveAssignments(student.id),
@@ -167,7 +167,7 @@ export default function ThisWeek() {
       const tId = studioData?.owner_id ?? null;
       if (tId) {
         setChatTeacherId(tId);
-        const chatService = ChatService.getInstance(supabase);
+        const chatService = ChatService.create(supabase);
         const msgs = await chatService.getPrivateThread(student.studioId!, student.id, tId);
         setRecentMessages(msgs.slice(-15));
         const { data: tp } = await supabase.from("profiles").select("display_name, avatar_url").eq("id", tId).single();
@@ -192,7 +192,7 @@ export default function ThisWeek() {
     setRatingSaving(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      await AssignmentService.getInstance(supabase).completeAssignment(
+      await AssignmentService.create(supabase).completeAssignment(
         ratingAssignment.id, student.id, ratingValue, ratingNote || undefined
       );
       setAssignments(prev => prev.filter(a => a.id !== ratingAssignment.id));

@@ -153,7 +153,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
       const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
       const audioUrl = urlData.publicUrl;
 
-      await ChatService.getInstance(supabase).sendPrivateMessage(
+      await ChatService.create(supabase).sendPrivateMessage(
         session.studio_id, teacher.id, teacher.displayName, student.id,
         `🎙 Voice note from ${teacher.displayName}\nAUDIO:${audioUrl}`
       );
@@ -172,10 +172,10 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
     setApproving(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      await GoalService.getInstance(supabase).completeGoal(goal.id, student.id, goal.points);
+      await GoalService.create(supabase).completeGoal(goal.id, student.id, goal.points);
 
       // Notify student via system message (recipient = student)
-      await ChatService.getInstance(supabase).postSystemMessage(
+      await ChatService.create(supabase).postSystemMessage(
         session.studio_id, teacher.id, student.id,
         `🎉 Goal approved by your teacher!\n📌 ${goal.title}\n⭐ +${goal.points} stars awarded`
       ).catch(() => {});
@@ -194,11 +194,11 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
     setSavingFeedback(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      await GoalService.getInstance(supabase).addFeedback(goal.id, feedback.trim());
+      await GoalService.create(supabase).addFeedback(goal.id, feedback.trim());
 
       // Send feedback as chat message to student
       if (session && student) {
-        await ChatService.getInstance(supabase).sendPrivateMessage(
+        await ChatService.create(supabase).sendPrivateMessage(
           session.studio_id, teacher.id, teacher.displayName, student.id,
           `📝 Feedback on "${goal.title}":\n${feedback.trim()}`
         ).catch(() => {});

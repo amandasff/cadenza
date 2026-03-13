@@ -120,7 +120,7 @@ export default function Rewards() {
     const supabase = getSupabaseBrowserClient();
     try {
       const [sessionData] = await Promise.all([
-        PracticeService.getInstance(supabase).getStudentSessions(student.id, 500),
+        PracticeService.create(supabase).getStudentSessions(student.id, 500),
       ]);
       setSessions(sessionData);
 

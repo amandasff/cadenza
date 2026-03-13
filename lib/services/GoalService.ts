@@ -24,7 +24,7 @@ export class GoalService {
     this.supabase = supabase;
   }
 
-  static getInstance(supabase: SupabaseClient): GoalService {
+  static create(supabase: SupabaseClient): GoalService {
     return new GoalService(supabase);
   }
 

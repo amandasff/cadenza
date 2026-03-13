@@ -8,7 +8,7 @@ export class StudioService {
     this.supabase = supabase;
   }
 
-  static getInstance(supabase: SupabaseClient): StudioService {
+  static create(supabase: SupabaseClient): StudioService {
     return new StudioService(supabase);
   }
 

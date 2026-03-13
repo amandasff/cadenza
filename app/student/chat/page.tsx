@@ -49,7 +49,7 @@ export default function StudentChat() {
   useEffect(() => {
     if (!student?.studioId || !student?.id) return;
     const supabase = getSupabaseBrowserClient();
-    const chatService = ChatService.getInstance(supabase);
+    const chatService = ChatService.create(supabase);
 
     const load = async () => {
       const { data: studioData } = await supabase
@@ -93,7 +93,7 @@ export default function StudentChat() {
   useEffect(() => {
     if (!student?.studioId || !student?.id || !teacherId) return;
     const supabase = getSupabaseBrowserClient();
-    const chatService = ChatService.getInstance(supabase);
+    const chatService = ChatService.create(supabase);
     const unsubPriv = chatService.subscribeToPrivateThread(
       student.studioId, student.id, teacherId,
       msg => setPrivateMessages(p => p.some(m => m.id === msg.id) ? p : [...p, msg]),
@@ -152,7 +152,7 @@ export default function StudentChat() {
     setSending(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const svc = ChatService.getInstance(supabase);
+      const svc = ChatService.create(supabase);
       await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
       const fresh = await svc.getPrivateThread(student.studioId!, student.id, teacherId);
       setPrivateMessages(fresh);
@@ -169,7 +169,7 @@ export default function StudentChat() {
     setPrivateMessages(p => p.filter(m => m.id !== msgId));
     try {
       const supabase = getSupabaseBrowserClient();
-      await ChatService.getInstance(supabase).deleteMessage(msgId);
+      await ChatService.create(supabase).deleteMessage(msgId);
     } catch { /* no-op */ }
   }
 
@@ -179,7 +179,7 @@ export default function StudentChat() {
     setEditError(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const updated = await ChatService.getInstance(supabase).updateMessage(msgId, trimmed);
+      const updated = await ChatService.create(supabase).updateMessage(msgId, trimmed);
       setPrivateMessages(p => p.map(m => m.id === msgId ? updated : m));
       setEditingId(null);
     } catch (err) {
@@ -195,7 +195,7 @@ export default function StudentChat() {
     }));
     try {
       const supabase = getSupabaseBrowserClient();
-      await ChatService.getInstance(supabase).toggleHeart(msgId);
+      await ChatService.create(supabase).toggleHeart(msgId);
     } catch {
       setHearts(prev => ({ ...prev, [msgId]: current }));
     }

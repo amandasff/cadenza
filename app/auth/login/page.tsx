@@ -41,7 +41,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = AuthService.getInstance(supabase);
+      const service = AuthService.create(supabase);
       const user = await service.signIn(email, password);
       router.push(user.getHomeRoute());
     } catch (err) {

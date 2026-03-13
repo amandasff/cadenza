@@ -43,7 +43,7 @@ export default function GoalBuilder() {
     setLoadingStudents(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = StudioService.getInstance(supabase);
+      const service = StudioService.create(supabase);
       const profiles = await service.getStudents(teacher.studioId);
       setStudents(profiles);
       if (profiles.length > 0) setSelectedStudentId(profiles[0].id);
@@ -62,7 +62,7 @@ export default function GoalBuilder() {
     if (!selectedStudentId || !teacher?.id) return;
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = GoalService.getInstance(supabase);
+      const service = GoalService.create(supabase);
       const goals = await service.getTeacherGoalsByStudent(teacher.id, selectedStudentId);
       setStudentGoals(goals);
     } catch (err) {
@@ -81,7 +81,7 @@ export default function GoalBuilder() {
     setError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = GoalService.getInstance(supabase);
+      const service = GoalService.create(supabase);
       await service.createGoal({
         studioId: teacher.studioId,
         studentId: selectedStudentId,

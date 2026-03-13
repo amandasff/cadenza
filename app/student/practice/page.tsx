@@ -90,7 +90,7 @@ function PracticeInner() {
     try {
       const supabase = getSupabaseBrowserClient();
       const [data, studioRes] = await Promise.all([
-        PieceService.getInstance(supabase).getStudentPieces(student.id),
+        PieceService.create(supabase).getStudentPieces(student.id),
         supabase.from("studios").select("owner_id").eq("id", student.studioId).single(),
       ]);
       setPieces(data);
@@ -207,7 +207,7 @@ function PracticeInner() {
     setSaveError(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const practiceService = PracticeService.getInstance(supabase);
+      const practiceService = PracticeService.create(supabase);
       const sessionSegments: PracticeSegment[] = segments.map(({ id: _id, ...s }) => s);
 
       let recordingUrl: string | undefined;
@@ -254,7 +254,7 @@ function PracticeInner() {
       const selectedPiece = pieces.find(p => p.id === selectedPieceId);
 
       if (portfolioSave && portfolioTitle.trim()) {
-        await PortfolioService.getInstance(supabase).addItem({
+        await PortfolioService.create(supabase).addItem({
           studentId: student.id,
           studioId: student.studioId ?? undefined,
           title: portfolioTitle.trim(),
@@ -278,7 +278,7 @@ function PracticeInner() {
         if (sessionData?.id) lines.push(`SESSION:${sessionData.id}`);
 
         try {
-          await ChatService.getInstance(supabase).postSystemMessage(
+          await ChatService.create(supabase).postSystemMessage(
             student.studioId, student.id, teacherId, lines.join("\n")
           );
         } catch (chatErr) {

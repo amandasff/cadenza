@@ -505,8 +505,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         setStudent(profileData as ProfileRow);
 
         const [studentPieces, sessionData] = await Promise.all([
-          PieceService.getInstance(supabase).getStudentPieces(id),
-          PracticeService.getInstance(supabase).getStudentSessions(id, 8),
+          PieceService.create(supabase).getStudentPieces(id),
+          PracticeService.create(supabase).getStudentSessions(id, 8),
         ]);
         setPieces(studentPieces);
         setSessions(sessionData);
@@ -517,8 +517,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         setStandaloneGoals((sgData ?? []) as GoalRow[]);
 
         // Load next lesson + active assignments for pre-lesson report
-        const lessonService = LessonService.getInstance(supabase);
-        const assignmentService = AssignmentService.getInstance(supabase);
+        const lessonService = LessonService.create(supabase);
+        const assignmentService = AssignmentService.create(supabase);
         const [lesson, activeAssignments] = await Promise.all([
           lessonService.getLessonsForStudent(teacher?.id ?? "", id).then(ls => ls.find(l => l.status === "scheduled" && new Date(l.scheduled_at) > new Date()) ?? null),
           assignmentService.getAssignmentsWithCompletions(teacher?.id ?? "", id),
@@ -538,10 +538,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     if (!student || awarding || points <= 0) return;
     setAwarding(true); setAwardError(""); setAwardSuccess(false);
     try {
-      await GoalService.getInstance(supabase).awardPoints(student.id, points);
+      await GoalService.create(supabase).awardPoints(student.id, points);
       if (teacher?.studioId) {
         const note = awardNote.trim() ? ` — "${awardNote.trim()}"` : "";
-        await ChatService.getInstance(supabase).postSystemMessage(
+        await ChatService.create(supabase).postSystemMessage(
           teacher.studioId, teacher.id, student.id,
           `Your teacher awarded you ${points} points!${note}`
         ).catch(() => {});
@@ -561,9 +561,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     if (completingGoalId) return;
     setCompletingGoalId(goal.id);
     try {
-      await GoalService.getInstance(supabase).completeGoal(goal.id, goal.student_id, goal.points);
+      await GoalService.create(supabase).completeGoal(goal.id, goal.student_id, goal.points);
       if (teacher?.studioId) {
-        await ChatService.getInstance(supabase).postSystemMessage(
+        await ChatService.create(supabase).postSystemMessage(
           teacher.studioId, teacher.id, goal.student_id,
           `Your teacher marked "${goal.title}" complete — you earned ${goal.points} points!`
         ).catch(() => {});
@@ -583,7 +583,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     const next = goal.status === "locked" ? "current" : "locked";
     setTogglingGoalId(goal.id);
     try {
-      await GoalService.getInstance(supabase).updateGoalStatus(goal.id, next);
+      await GoalService.create(supabase).updateGoalStatus(goal.id, next);
       setPieces(prev => prev.map(p => ({ ...p, goals: p.goals.map(g => g.id === goal.id ? { ...g, status: next } : g) })));
       setStandaloneGoals(prev => prev.map(g => g.id === goal.id ? { ...g, status: next } : g));
     } catch (err) {
@@ -598,7 +598,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     if (!pieceForm.title.trim() || !teacher?.studioId) return;
     setAddingPiece(true);
     try {
-      const pieceService = PieceService.getInstance(supabase);
+      const pieceService = PieceService.create(supabase);
       const newPiece = await pieceService.createPiece({
         studentId: id, teacherId: teacher.id, studioId: teacher.studioId,
         title: pieceForm.title.trim(),
@@ -672,7 +672,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       }
       const sheetMusicUrl = urls.length === 1 ? urls[0] : JSON.stringify(urls);
       try {
-        await PieceService.getInstance(supabase).updatePiece(pieceId, { sheet_music_url: sheetMusicUrl });
+        await PieceService.create(supabase).updatePiece(pieceId, { sheet_music_url: sheetMusicUrl });
         setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: sheetMusicUrl } : p));
       } catch (updateErr) {
         setUploadError(`Uploaded but URL save failed: ${(updateErr as Error).message}. Run the Supabase SQL migration.`);
@@ -697,7 +697,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         return;
       }
       const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
-      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      await PieceService.create(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
       setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
     } catch (err) {
       setUploadError(`Score upload error: ${(err as Error).message}`);
@@ -736,7 +736,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         return;
       }
       const { data: urlData } = supabase.storage.from("score-files").getPublicUrl(path);
-      await PieceService.getInstance(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
+      await PieceService.create(supabase).updatePiece(pieceId, { score_url: urlData.publicUrl });
       setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, score_url: urlData.publicUrl } : p));
     } catch (err) {
       setUploadError(`AI conversion error: ${(err as Error).message}`);
@@ -746,7 +746,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   }
 
   async function handleAddRecording(pieceId: string, video: YouTubeResult) {
-    const svc = PieceService.getInstance(supabase);
+    const svc = PieceService.create(supabase);
     const currentPiece = pieces.find(p => p.id === pieceId);
     const isPrimary = !currentPiece || currentPiece.recordings.length === 0;
     try {
@@ -765,7 +765,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
   async function handleRemoveRecording(recordingId: string, pieceId: string) {
     try {
-      await PieceService.getInstance(supabase).removeRecording(recordingId);
+      await PieceService.create(supabase).removeRecording(recordingId);
       setPieces(prev => prev.map(p => {
         if (p.id !== pieceId) return p;
         const remaining = p.recordings.filter(r => r.id !== recordingId);
@@ -782,7 +782,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
   async function handleSetPrimaryRecording(recordingId: string, pieceId: string) {
     try {
-      await PieceService.getInstance(supabase).setPrimaryRecording(pieceId, recordingId);
+      await PieceService.create(supabase).setPrimaryRecording(pieceId, recordingId);
       setPieces(prev => prev.map(p => {
         if (p.id !== pieceId) return p;
         return { ...p, recordings: p.recordings.map(r => ({ ...r, is_primary: r.id === recordingId })) };
@@ -799,7 +799,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     try {
       const pieceId = addGoalFor === "standalone" ? undefined : addGoalFor;
       const practiceArea = pieceId ? (pieces.find(p => p.id === pieceId)?.category ?? "repertoire") : "free";
-      const newGoal = await GoalService.getInstance(supabase).createGoal({
+      const newGoal = await GoalService.create(supabase).createGoal({
         studioId: teacher.studioId, studentId: id, teacherId: teacher.id,
         title: goalForm.title.trim(),
         description: goalForm.description.trim() || undefined,

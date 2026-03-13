@@ -158,11 +158,39 @@ C — G(1♯) — D(2♯) — A(3♯) — E(4♯) — B(5♯) — F♯/G♭(6♯
 
 Be warm, encouraging, and specific. Use bullet points and headers for clarity. When asked about specific piece lists, note that RCM updates repertoire annually and recommend checking rcmusic.com for the current syllabus year. You can discuss composers, styles, and interpretation freely. If a student seems discouraged, remind them that struggle is a normal part of learning.`;
 
+// Server-side rate limit: max 20 AI calls per hour per user.
+// Requires the ai_calls table — run supabase/ai_calls.sql once in your Supabase SQL editor.
+const HOURLY_LIMIT = 20;
+
+async function checkRateLimit(supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>, userId: string): Promise<boolean> {
+  const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabase
+    .from("ai_calls")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", hourAgo);
+  // If the table doesn't exist yet, fail open (don't block the user)
+  if (error) return false;
+  return typeof count === "number" && count >= HOURLY_LIMIT;
+}
+
+async function logAiCall(supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>, userId: string): Promise<void> {
+  await supabase.from("ai_calls").insert({ user_id: userId }).catch(() => {});
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await getSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+    const limited = await checkRateLimit(supabase, user.id);
+    if (limited) {
+      return Response.json(
+        { error: `Hourly limit of ${HOURLY_LIMIT} messages reached. Try again in an hour.` },
+        { status: 429 }
+      );
+    }
 
     const { messages } = await request.json() as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
@@ -171,6 +199,9 @@ export async function POST(request: Request) {
     if (!messages || messages.length === 0) {
       return Response.json({ error: "No messages provided" }, { status: 400 });
     }
+
+    // Log the call before streaming — fire-and-forget, don't block response
+    void logAiCall(supabase, user.id);
 
     const stream = client.messages.stream({
       model: "claude-sonnet-4-6",

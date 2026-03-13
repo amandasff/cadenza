@@ -38,7 +38,7 @@ function StudentJoinInner() {
     setSearchError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      const results = await StudioService.getInstance(supabase).listStudios(term);
+      const results = await StudioService.create(supabase).listStudios(term);
       setStudios(results);
     } catch (err) {
       setStudios([]);
@@ -63,7 +63,7 @@ function StudentJoinInner() {
     setCodeStudio(null);
     try {
       const supabase = getSupabaseBrowserClient();
-      const studio = await StudioService.getInstance(supabase).findByInviteCode(c.trim());
+      const studio = await StudioService.create(supabase).findByInviteCode(c.trim());
       if (!studio) { setCodeError("No studio found with that code."); return; }
       // Fetch teacher name
       const { data: profile } = await supabase
@@ -91,7 +91,7 @@ function StudentJoinInner() {
     setJoinError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      await StudioService.getInstance(supabase).joinStudio(user.id, studioId);
+      await StudioService.create(supabase).joinStudio(user.id, studioId);
       await refresh();
       router.replace("/student");
     } catch (err: unknown) {

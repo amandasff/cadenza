@@ -8,7 +8,7 @@ export class ChatService {
     this.supabase = supabase;
   }
 
-  static getInstance(supabase: SupabaseClient): ChatService {
+  static create(supabase: SupabaseClient): ChatService {
     return new ChatService(supabase);
   }
 

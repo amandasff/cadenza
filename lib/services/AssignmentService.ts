@@ -31,7 +31,7 @@ export class AssignmentService {
     this.supabase = supabase;
   }
 
-  static getInstance(supabase: SupabaseClient): AssignmentService {
+  static create(supabase: SupabaseClient): AssignmentService {
     return new AssignmentService(supabase);
   }
 

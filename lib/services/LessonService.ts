@@ -26,7 +26,7 @@ export class LessonService {
     this.supabase = supabase;
   }
 
-  static getInstance(supabase: SupabaseClient): LessonService {
+  static create(supabase: SupabaseClient): LessonService {
     return new LessonService(supabase);
   }
 

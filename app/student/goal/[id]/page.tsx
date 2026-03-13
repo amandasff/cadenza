@@ -65,13 +65,13 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
     setClaimError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      await GoalService.getInstance(supabase).completeGoal(goal.id, student.id, goal.points);
+      await GoalService.create(supabase).completeGoal(goal.id, student.id, goal.points);
 
       if (teacherId) {
         const bonusLine = goal.bonus_title && goal.bonus_points
           ? `\n⭐ Bonus: ${goal.bonus_title} (+${goal.bonus_points} pts)`
           : "";
-        await ChatService.getInstance(supabase).postSystemMessage(
+        await ChatService.create(supabase).postSystemMessage(
           goal.studio_id, student.id, teacherId,
           `🎉 Goal completed!\n📌 ${goal.title}\n⭐ +${goal.points} stars earned${bonusLine}`
         ).catch(() => {});

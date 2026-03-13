@@ -13,7 +13,7 @@ export class OrgService {
     this.supabase = supabase;
   }
 
-  static getInstance(supabase: SupabaseClient): OrgService {
+  static create(supabase: SupabaseClient): OrgService {
     return new OrgService(supabase);
   }
 

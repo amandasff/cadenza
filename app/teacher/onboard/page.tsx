@@ -19,7 +19,7 @@ export default function TeacherOnboardPage() {
     setError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = StudioService.getInstance(supabase);
+      const service = StudioService.create(supabase);
       await service.createStudio(user.id, studioName.trim());
       await refresh();
       router.replace("/teacher");

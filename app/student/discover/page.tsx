@@ -31,48 +31,6 @@ type ProfileInfo = {
   streak_days: number;
 };
 
-const SETUP_SQL = `-- Run this once in your Supabase SQL editor
-
-ALTER TABLE public.portfolio_items
-  ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'audio',
-  ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE;
-
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS bio TEXT;
-
-CREATE TABLE IF NOT EXISTS public.portfolio_likes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  portfolio_item_id UUID NOT NULL REFERENCES public.portfolio_items(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(portfolio_item_id, user_id)
-);
-ALTER TABLE public.portfolio_likes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "likes_select" ON public.portfolio_likes FOR SELECT USING (true);
-CREATE POLICY "likes_all"    ON public.portfolio_likes FOR ALL   USING (auth.uid() = user_id);
-
-CREATE TABLE IF NOT EXISTS public.portfolio_comments (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  portfolio_item_id UUID NOT NULL REFERENCES public.portfolio_items(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-ALTER TABLE public.portfolio_comments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "comments_select" ON public.portfolio_comments FOR SELECT USING (true);
-CREATE POLICY "comments_insert" ON public.portfolio_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "comments_delete" ON public.portfolio_comments FOR DELETE USING (auth.uid() = user_id);
-
-CREATE TABLE IF NOT EXISTS public.follows (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  follower_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  following_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(follower_id, following_id)
-);
-ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "follows_select" ON public.follows FOR SELECT USING (true);
-CREATE POLICY "follows_all"    ON public.follows FOR ALL   USING (auth.uid() = follower_id);`;
 
 function formatRelative(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -479,12 +437,11 @@ export default function DiscoverPage() {
         <div style={{ padding: "1.5rem" }}>
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 10, padding: "1.25rem" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
-              SQL migration needed
+              Setup required
             </div>
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 0.75rem" }}>
-              Run this in your Supabase SQL editor to enable social features:
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: 0 }}>
+              Run <code>supabase/discover_social.sql</code> in your Supabase SQL editor to enable social features.
             </p>
-            <pre style={{ background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: 6, padding: "0.875rem", fontSize: "0.65rem", fontFamily: "monospace", color: "var(--charcoal)", overflowX: "auto", lineHeight: 1.7, whiteSpace: "pre-wrap", margin: 0 }}>{SETUP_SQL}</pre>
           </div>
         </div>
       ) : queryError ? (

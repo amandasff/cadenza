@@ -138,7 +138,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   useEffect(() => {
     if (!student?.id) return;
     (async () => {
-      const pieces = await PieceService.getInstance(supabase).getStudentPieces(student.id);
+      const pieces = await PieceService.create(supabase).getStudentPieces(student.id);
       const found = pieces.find(p => p.id === pieceId) ?? null;
       setPiece(found);
       setLoading(false);
@@ -536,7 +536,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         .from("practice-recordings").upload(path, recBlob, { contentType: "audio/webm", upsert: false });
       if (!uploadErr) {
         const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
-        const sessionData = await PracticeService.getInstance(supabase).logSession({
+        const sessionData = await PracticeService.create(supabase).logSession({
           studentId: student.id, studioId: student.studioId,
           durationSeconds: elapsed, recordingUrl: urlData.publicUrl,
           notes: `Performance recording — ${piece?.title ?? "piece"}`,

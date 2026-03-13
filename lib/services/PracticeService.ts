@@ -19,7 +19,7 @@ export class PracticeService {
     this.supabase = supabase;
   }
 
-  static getInstance(supabase: SupabaseClient): PracticeService {
+  static create(supabase: SupabaseClient): PracticeService {
     return new PracticeService(supabase);
   }
 

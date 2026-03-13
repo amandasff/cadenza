@@ -48,17 +48,20 @@ export default function TeacherDashboard() {
   const [encourageMsg, setEncourageMsg] = useState("");
   const [encourageSending, setEncourageSending] = useState(false);
   const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
+  const [encourageError, setEncourageError] = useState<string | null>(null);
 
   function openEncourage(profile: ProfileRow) {
     setEncourageTarget(profile);
     setEncourageMsg(`Keep it up, ${profile.display_name.split(" ")[0]}! Time to practice today 🎵`);
+    setEncourageError(null);
   }
 
   async function sendEncouragement() {
     if (!encourageTarget || !teacher?.studioId || encourageSending) return;
     setEncourageSending(true);
+    setEncourageError(null);
     try {
-      await fetch("/api/messages/send", {
+      const res = await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -67,10 +70,16 @@ export default function TeacherDashboard() {
           recipientId: encourageTarget.id,
         }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Failed to send message");
+      }
       setSentReminderIds(prev => new Set(prev).add(encourageTarget.id));
       setTimeout(() => setSentReminderIds(prev => { const next = new Set(prev); next.delete(encourageTarget!.id); return next; }), 3000);
       setEncourageTarget(null);
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      setEncourageError(err instanceof Error ? err.message : "Failed to send. Please try again.");
+    } finally {
       setEncourageSending(false);
     }
   }
@@ -80,9 +89,9 @@ export default function TeacherDashboard() {
     setLoading(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const studioService = StudioService.getInstance(supabase);
-      const goalService = GoalService.getInstance(supabase);
-      const practiceService = PracticeService.getInstance(supabase);
+      const studioService = StudioService.create(supabase);
+      const goalService = GoalService.create(supabase);
+      const practiceService = PracticeService.create(supabase);
 
       const [profiles, sessions] = await Promise.all([
         studioService.getStudents(teacher.studioId),
@@ -605,6 +614,11 @@ export default function TeacherDashboard() {
             }}
             autoFocus
           />
+          {encourageError && (
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--rose, #c0392b)", margin: "0 0 0.75rem" }}>
+              {encourageError}
+            </p>
+          )}
           <div style={{ display: "flex", gap: "0.625rem" }}>
             <button
               onClick={() => setEncourageTarget(null)}
