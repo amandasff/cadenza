@@ -173,7 +173,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           table: "messages",
           filter: `studio_id=eq.${student.studioId}`,
         },
-        (payload) => {
+        (payload: { new: { sender_id?: string } }) => {
           const msg = payload.new as { sender_id?: string };
           if (msg.sender_id !== student.id) setHasUnread(true);
         }
