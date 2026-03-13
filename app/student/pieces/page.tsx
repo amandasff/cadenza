@@ -20,9 +20,9 @@ const SECTIONS: { category: string; label: string; color: string }[] = [
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-  learning:          { label: "Learning",          emoji: "📖", color: "#C07A1A", bg: "rgba(230,168,23,0.12)" },
-  polishing:         { label: "Polishing",         emoji: "✨", color: "#3A6BAA", bg: "rgba(74,123,196,0.12)" },
-  performance_ready: { label: "Ready to perform!", emoji: "🎭", color: "#3A7A5A", bg: "rgba(91,158,121,0.14)" },
+  learning:          { label: "Learning",          emoji: "📖", color: "var(--butter)", bg: "rgba(230,168,23,0.12)" },
+  polishing:         { label: "Polishing",         emoji: "✨", color: "var(--sky)", bg: "rgba(74,123,196,0.12)" },
+  performance_ready: { label: "Ready to perform!", emoji: "🎭", color: "var(--sage)", bg: "rgba(91,158,121,0.14)" },
   completed:         { label: "Completed",         emoji: "🏆", color: "#7A6A5A", bg: "rgba(138,122,106,0.1)" },
 };
 
@@ -288,7 +288,7 @@ export default function MyPieces() {
   };
   const btnOutline: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: "0.375rem",
-    padding: "0.5rem 1rem", borderRadius: 8, border: "1.5px solid var(--border-strong)",
+    padding: "0.5rem 1rem", borderRadius: 8, border: "1px solid var(--border-strong)",
     background: "transparent", color: "var(--charcoal)",
     fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
     cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
@@ -318,9 +318,9 @@ export default function MyPieces() {
 
       {/* Global error */}
       {uploadError && (
-        <div style={{ background: "rgba(192,80,80,0.1)", border: "1px solid rgba(192,80,80,0.3)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#C05050", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ background: "var(--error-bg)", border: "1px solid rgba(192,80,80,0.3)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--error)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>{uploadError}</span>
-          <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#C05050", fontSize: "1rem", padding: 0 }}>✕</button>
+          <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--error)", fontSize: "1rem", padding: 0 }}>✕</button>
         </div>
       )}
 
@@ -364,7 +364,7 @@ export default function MyPieces() {
                       border: playing ? "2px solid var(--charcoal)" : "1px solid var(--border)",
                       borderRadius: 12,
                       overflow: "hidden",
-                      boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+                      boxShadow: "var(--shadow-xs)",
                     }}>
                       {/* Card body */}
                       <div style={{ padding: "1rem 1.25rem 0.875rem" }}>
@@ -524,7 +524,7 @@ export default function MyPieces() {
                                 >
                                   📄 Open{piece.sheet_music_url.startsWith("[") && ` (${JSON.parse(piece.sheet_music_url).length} pages)`}
                                 </a>
-                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#3A7A5A" }}>✓ Uploaded</span>
+                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--sage)" }}>✓ Uploaded</span>
                               </div>
                             )}
 
@@ -591,7 +591,7 @@ export default function MyPieces() {
                                 <a href={scoreUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnOutline, textDecoration: "none", fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}>
                                   🎵 Open Score
                                 </a>
-                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#3A7A5A" }}>✓ Uploaded</span>
+                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--sage)" }}>✓ Uploaded</span>
                               </div>
                             )}
 
@@ -635,7 +635,7 @@ export default function MyPieces() {
                                         {rec.title}
                                       </div>
                                       {rec.is_primary && (
-                                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "#C07A1A", marginTop: "0.125rem" }}>★ Main recording</div>
+                                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--butter)", marginTop: "0.125rem" }}>★ Main recording</div>
                                       )}
                                     </div>
                                     <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0 }}>
@@ -650,7 +650,7 @@ export default function MyPieces() {
                                       {!rec.is_primary && (
                                         <button onClick={() => handleSetPrimary(piece.id, rec.id)} title="Set as main" style={{ ...btnGhost, fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}>★</button>
                                       )}
-                                      <button onClick={() => handleRemoveRecording(piece.id, rec.id)} title="Remove" style={{ ...btnGhost, color: "#C05050", fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}>✕</button>
+                                      <button onClick={() => handleRemoveRecording(piece.id, rec.id)} title="Remove" style={{ ...btnGhost, color: "var(--error)", fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}>✕</button>
                                     </div>
                                   </div>
                                 ))}
