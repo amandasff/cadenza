@@ -22,7 +22,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const service = AuthService.create(supabase);
+      const service = AuthService.getInstance(supabase);
       const user = await service.signUp(email, password, role, displayName);
       router.push(user.getHomeRoute());
     } catch (err) {
