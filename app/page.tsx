@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AuthService } from "@/lib/services/AuthService";
 import type { UserRole } from "@/lib/types";
+import { useTheme } from "@/lib/context/ThemeContext";
 
 export default function Home() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function Home() {
   const [demoLoading, setDemoLoading] = useState<"student" | "teacher" | null>(null);
   const [dashboardUrl, setDashboardUrl] = useState<string | null>(null);
 
+  const { theme, toggleTheme } = useTheme();
   const demoStudentEmail = process.env.NEXT_PUBLIC_DEMO_STUDENT_EMAIL;
   const demoStudentPassword = process.env.NEXT_PUBLIC_DEMO_STUDENT_PASSWORD;
   const demoTeacherEmail = process.env.NEXT_PUBLIC_DEMO_TEACHER_EMAIL;
@@ -121,6 +123,17 @@ export default function Home() {
         </span>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
           <a href="#pricing" style={{ fontSize: "0.8125rem", color: "var(--muted)", textDecoration: "none", fontWeight: 500 }}>Pricing</a>
+          <button
+            onClick={toggleTheme}
+            style={{
+              background: "none", border: "1px solid var(--border-strong)", borderRadius: 2,
+              padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.625rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {theme === "light" ? "Light" : "Dark"}
+          </button>
           {dashboardUrl ? (
             <a
               href={dashboardUrl}
