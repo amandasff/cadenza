@@ -112,10 +112,10 @@ export default function GoalBuilder() {
 
   return (
     <div>
-      <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.5rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
+      <h1 style={{ fontWeight: 900, fontSize: "1.5rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
         Goal Builder
       </h1>
-      <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.75rem", fontFamily: "DM Sans, sans-serif" }}>
+      <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.75rem" }}>
         Create goals that become nodes on your student's learning path.
       </p>
 
@@ -126,13 +126,13 @@ export default function GoalBuilder() {
 
           {/* Student picker */}
           <div>
-            <label style={{ display: "block", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Student
             </label>
             {loadingStudents ? (
-              <div className="skeleton" style={{ height: 42, borderRadius: "var(--radius-md)" }} />
+              <div className="skeleton" style={{ height: 42, borderRadius: 4 }} />
             ) : students.length === 0 ? (
-              <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
+              <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
                 No students in your studio yet.
               </p>
             ) : (
@@ -142,10 +142,9 @@ export default function GoalBuilder() {
                 style={{
                   width: "100%",
                   padding: "0.7rem 1rem",
-                  borderRadius: "var(--radius-md)",
-                  border: "1.5px solid var(--border)",
-                  fontFamily: "Nunito, sans-serif",
-                  fontWeight: 700,
+                  borderRadius: 4,
+                  border: "1px solid var(--border)",
+                                   fontWeight: 700,
                   fontSize: "0.9rem",
                   color: "var(--charcoal)",
                   background: "var(--cream)",
@@ -162,20 +161,20 @@ export default function GoalBuilder() {
 
           {/* Title */}
           <div>
-            <label style={{ display: "block", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Goal Title
             </label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g. Bach Minuet mm. 9–16 at 60 BPM"
-              style={{ width: "100%", borderRadius: "var(--radius-md)", border: "1.5px solid var(--border)", padding: "0.75rem 1rem", fontFamily: "DM Sans, sans-serif", fontSize: "0.9rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", boxSizing: "border-box" }}
+              style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.75rem 1rem", fontSize: "0.9rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", boxSizing: "border-box" }}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label style={{ display: "block", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Instructions (optional)
             </label>
             <textarea
@@ -183,13 +182,13 @@ export default function GoalBuilder() {
               onChange={e => setDesc(e.target.value)}
               placeholder="Tips, expectations, or context for the student..."
               rows={3}
-              style={{ width: "100%", borderRadius: "var(--radius-md)", border: "1.5px solid var(--border)", padding: "0.75rem 1rem", fontFamily: "DM Sans, sans-serif", fontSize: "0.9rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "vertical", boxSizing: "border-box" }}
+              style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.75rem 1rem", fontSize: "0.9rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "vertical", boxSizing: "border-box" }}
             />
           </div>
 
           {/* Practice area */}
           <div>
-            <label style={{ display: "block", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Practice Area
             </label>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -202,12 +201,11 @@ export default function GoalBuilder() {
                     padding: "0.4rem 0.9rem",
                     borderRadius: 100,
                     cursor: "pointer",
-                    fontFamily: "Nunito, sans-serif",
-                    fontWeight: 700,
+                                       fontWeight: 700,
                     fontSize: "0.8rem",
                     background: area === a.value ? a.color : a.bg,
                     color: area === a.value ? "white" : a.color,
-                    border: `1.5px solid ${area === a.value ? a.color : "transparent"}`,
+                    border: `1px solid ${area === a.value ? a.color : "transparent"}`,
                     transition: "all 0.15s",
                   }}
                 >
@@ -220,7 +218,7 @@ export default function GoalBuilder() {
           {/* Points + Boss */}
           <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: "block", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Points
               </label>
               <input
@@ -229,21 +227,21 @@ export default function GoalBuilder() {
                 onChange={e => setPoints(Number(e.target.value))}
                 min={10}
                 max={1000}
-                style={{ width: "100%", borderRadius: "var(--radius-md)", border: "1.5px solid var(--border)", padding: "0.75rem 1rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "1rem", outline: "none", background: "var(--cream)", color: "var(--butter)", boxSizing: "border-box" }}
+                style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.75rem 1rem", fontWeight: 700, fontSize: "1rem", outline: "none", background: "var(--cream)", color: "var(--butter)", boxSizing: "border-box" }}
               />
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", paddingBottom: "0.65rem" }}>
               <input type="checkbox" checked={isBoss} onChange={e => setIsBoss(e.target.checked)} style={{ width: 16, height: 16, accentColor: "var(--peach)" }} />
-              <span style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>⭐ Boss Node</span>
+              <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>⭐ Boss Node</span>
             </label>
           </div>
 
           {/* Bonus challenge */}
-          <div style={{ borderRadius: "var(--radius-md)", border: "1.5px solid var(--butter-light)", background: "var(--butter-bg)", overflow: "hidden" }}>
+          <div style={{ borderRadius: 4, border: "1px solid var(--butter-light)", background: "var(--butter-bg)", overflow: "hidden" }}>
             <button
               type="button"
               onClick={() => setHasBonus(b => !b)}
-              style={{ width: "100%", padding: "0.75rem 1rem", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)" }}
+              style={{ width: "100%", padding: "0.75rem 1rem", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)" }}
             >
               <span>⭐ Bonus Challenge</span>
               <span style={{ color: "var(--butter)" }}>{hasBonus ? "▲" : "▼"}</span>
@@ -254,20 +252,20 @@ export default function GoalBuilder() {
                   value={bonusTitle}
                   onChange={e => setBonusTitle(e.target.value)}
                   placeholder="Bonus description"
-                  style={{ width: "100%", borderRadius: "var(--radius-md)", border: "1.5px solid var(--butter-light)", padding: "0.6rem 0.875rem", fontFamily: "DM Sans, sans-serif", fontSize: "0.875rem", outline: "none", background: "var(--white)", boxSizing: "border-box" }}
+                  style={{ width: "100%", borderRadius: 4, border: "1px solid var(--butter-light)", padding: "0.6rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--white)", boxSizing: "border-box" }}
                 />
                 <input
                   type="number"
                   value={bonusPoints}
                   onChange={e => setBonusPoints(Number(e.target.value))}
-                  style={{ width: 100, borderRadius: "var(--radius-md)", border: "1.5px solid var(--butter-light)", padding: "0.6rem 0.875rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.9rem", outline: "none", background: "var(--white)", color: "var(--butter)" }}
+                  style={{ width: 100, borderRadius: 4, border: "1px solid var(--butter-light)", padding: "0.6rem 0.875rem", fontWeight: 700, fontSize: "0.9rem", outline: "none", background: "var(--white)", color: "var(--butter)" }}
                 />
               </div>
             )}
           </div>
 
           {error && (
-            <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem", color: "var(--error)", background: "#fff1f0", padding: "0.6rem 0.875rem", borderRadius: "var(--radius-md)", margin: 0 }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--error)", background: "var(--error-bg)", padding: "0.6rem 0.875rem", borderRadius: 4, margin: 0 }}>
               {error}
             </p>
           )}
@@ -284,13 +282,13 @@ export default function GoalBuilder() {
 
         {/* Path preview */}
         <div className="card-base" style={{ padding: "1.25rem" }}>
-          <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
+          <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
             {students.find(s => s.id === selectedStudentId)?.display_name || "Student"}'s Path
           </div>
           {studentGoals.length === 0 && !title ? (
             <div style={{ textAlign: "center", padding: "2rem 0" }}>
               <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🗺</div>
-              <p style={{ fontFamily: "DM Sans, sans-serif", color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>No goals yet</p>
+              <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>No goals yet</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -311,7 +309,7 @@ export default function GoalBuilder() {
                       }}>
                         {g.status === "completed" ? "✓" : a.icon}
                       </div>
-                      <span style={{ fontSize: "0.7rem", color: "var(--charcoal)", fontFamily: "Nunito, sans-serif", fontWeight: 600, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.title}</span>
+                      <span style={{ fontSize: "0.7rem", color: "var(--charcoal)", fontWeight: 600, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.title}</span>
                     </div>
                   </div>
                 );
@@ -323,7 +321,7 @@ export default function GoalBuilder() {
                     <div style={{ width: 28, height: 28, borderRadius: isBoss ? 8 : 100, background: selectedArea.bg, border: `2px dashed ${selectedArea.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem" }}>
                       {selectedArea.icon}
                     </div>
-                    <span style={{ fontSize: "0.7rem", color: "var(--charcoal)", fontFamily: "Nunito, sans-serif", fontStyle: "italic", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
+                    <span style={{ fontSize: "0.7rem", color: "var(--charcoal)", fontStyle: "italic", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
                   </div>
                 </>
               )}
