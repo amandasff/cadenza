@@ -83,7 +83,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       .neq("sender_id", teacher.id)
       .gt("created_at", lastRead)
       .limit(1)
-      .then(({ data }) => setHasUnread((data?.length ?? 0) > 0))
+      .then(({ data }: { data: { id: string }[] | null }) => setHasUnread((data?.length ?? 0) > 0))
       .catch(() => {});
 
     // Realtime subscription — badge updates instantly on new message
