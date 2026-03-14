@@ -507,7 +507,7 @@ export default function Home() {
           transition: "box-shadow 0.15s",
         }}
       >
-        {theme === "light" ? "🌙" : "☀️"}
+        {theme === "light" ? "🌙" : theme === "dark" ? "☀️" : "🎨"}
       </button>
     </div>
   );
