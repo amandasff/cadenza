@@ -33,7 +33,7 @@ export default function TeacherSettings() {
       .select("display_name, avatar_url")
       .eq("id", teacher.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data }: { data: { display_name: string | null; avatar_url: string | null } | null }) => {
         if (data) {
           setDisplayName(data.display_name ?? "");
           setAvatarUrl(data.avatar_url ?? null);
@@ -44,7 +44,7 @@ export default function TeacherSettings() {
       .select("name")
       .eq("owner_id", teacher.id)
       .single()
-      .then(({ data }) => { if (data) setStudioName(data.name ?? ""); });
+      .then(({ data }: { data: { name: string | null } | null }) => { if (data) setStudioName(data.name ?? ""); });
   }, [teacher?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSaveProfile() {

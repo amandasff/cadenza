@@ -35,7 +35,7 @@ export default function StudentSettings() {
       .select("display_name, instrument, avatar_url")
       .eq("id", student.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data }: { data: { display_name: string | null; instrument: string | null; avatar_url: string | null } | null }) => {
         if (data) {
           setDisplayName(data.display_name ?? "");
           setInstrument(data.instrument ?? "");
