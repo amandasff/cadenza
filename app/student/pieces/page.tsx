@@ -440,18 +440,14 @@ export default function MyPieces() {
                           </button>
                         )}
 
-                        {/* Sheet music */}
+                        {/* Sheet music → annotate page */}
                         {piece.sheet_music_url ? (
-                          <a
-                            href={piece.sheet_music_url.startsWith("[")
-                              ? JSON.parse(piece.sheet_music_url as string)[0]
-                              : piece.sheet_music_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <Link
+                            href={`/student/perform/${piece.id}`}
                             style={{ ...btnOutline, textDecoration: "none" }}
                           >
-                            📄 Sheet Music
-                          </a>
+                            📄 Annotate
+                          </Link>
                         ) : (
                           <button
                             onClick={() => openFilePicker(piece.id)}
@@ -461,6 +457,14 @@ export default function MyPieces() {
                             {uploadingFor === piece.id ? "⏳ Uploading…" : "📄 Upload sheet music"}
                           </button>
                         )}
+
+                        {/* Perform */}
+                        <Link
+                          href={`/student/perform/${piece.id}`}
+                          style={{ ...btnOutline, textDecoration: "none" }}
+                        >
+                          🎭 Perform
+                        </Link>
 
                         {/* More toggle */}
                         <button
@@ -514,16 +518,12 @@ export default function MyPieces() {
 
                             {piece.sheet_music_url && (
                               <div style={{ marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                                <a
-                                  href={piece.sheet_music_url.startsWith("[")
-                                    ? JSON.parse(piece.sheet_music_url as string)[0]
-                                    : piece.sheet_music_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <Link
+                                  href={`/student/perform/${piece.id}`}
                                   style={{ ...btnOutline, textDecoration: "none", fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
                                 >
-                                  📄 Open{piece.sheet_music_url.startsWith("[") && ` (${JSON.parse(piece.sheet_music_url).length} pages)`}
-                                </a>
+                                  📄 Open &amp; Annotate
+                                </Link>
                                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--sage)" }}>✓ Uploaded</span>
                               </div>
                             )}

@@ -2503,7 +2503,25 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
           <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>Fast-paced rounds, streak multipliers, personal bests. The best theory practice happens in small daily doses.</p>
         </div>
         <div style={{ display: "grid", gap: "0.875rem" }}>
-          {/* Pitch Trainer — links to its own page */}
+          {/* Note Identification + Interval first */}
+          {games.slice(0, 2).map(g => (
+            <div key={g.title} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", opacity: g.active ? 1 : 0.48, cursor: g.active ? "pointer" : "default" }} onClick={g.active ? () => onSelect(g.view) : undefined}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: g.active ? "rgba(74,103,185,0.1)" : "rgba(74,103,185,0.04)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.2rem" }}>{g.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>{g.title}</span>
+                    {(() => { const c = categoryColors[g.category]; return c ? <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: c.bg, color: c.text, borderRadius: 4, padding: "0.15rem 0.4rem" }}>{g.category}</span> : null; })()}
+                    {g.badge && <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{g.badge}</span>}
+                  </div>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>{g.desc}</p>
+                </div>
+                {g.active && <span style={{ fontSize: "1rem", color: "var(--muted)", flexShrink: 0, alignSelf: "center" }}>›</span>}
+              </div>
+            </div>
+          ))}
+
+          {/* Pitch Trainer */}
           <Link href="/student/pitch" style={{ textDecoration: "none" }}>
             <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
@@ -2536,7 +2554,8 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
             </div>
           </Link>
 
-          {games.map(g => (
+          {/* Remaining games */}
+          {games.slice(2).map(g => (
             <div key={g.title} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", opacity: g.active ? 1 : 0.48, cursor: g.active ? "pointer" : "default" }} onClick={g.active ? () => onSelect(g.view) : undefined}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
                 <div style={{ width: 40, height: 40, borderRadius: 8, background: g.active ? "rgba(74,103,185,0.1)" : "rgba(74,103,185,0.04)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.2rem" }}>{g.icon}</div>

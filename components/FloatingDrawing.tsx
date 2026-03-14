@@ -48,6 +48,7 @@ function spawnDoodleStamp(x: number, y: number, src: string) {
     "object-fit:contain",
     "pointer-events:none", "z-index:9990",
     "border-radius:4px",
+    "mix-blend-mode:multiply",  // white canvas bg becomes transparent
     `transform:translate(-50%,-50%) rotate(${angle}deg)`,
     "opacity:0.85",
     "transition:transform 0.9s cubic-bezier(.1,.85,.3,1),opacity 0.9s ease-out",
@@ -79,6 +80,7 @@ function spawnClickBurst(x: number, y: number, emojis: string[], doodleSrc: stri
         `left:${x}px`, `top:${y}px`,
         `width:${size}px`, `height:${size}px`,
         "object-fit:contain", "border-radius:3px",
+        "mix-blend-mode:multiply",
         "pointer-events:none", "z-index:9991",
         `transform:translate(-50%,-50%) rotate(${rot}deg) scale(1)`,
         "opacity:1",
@@ -160,7 +162,7 @@ function injectAmbientStyles() {
     .cadenza-ambient-img {
       position:fixed; bottom:-48px; pointer-events:none;
       z-index:1; width:44px; height:44px; object-fit:contain;
-      border-radius:4px; opacity:0;
+      border-radius:4px; opacity:0; mix-blend-mode:multiply;
     }
   `;
   document.head.appendChild(style);
