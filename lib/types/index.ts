@@ -208,10 +208,22 @@ export type AssignmentType = 'practice' | 'listen' | 'theory' | 'memorize' | 're
 export type AssignmentStatus = 'active' | 'completed' | 'reviewed';
 export type SelfRating = 'struggling' | 'getting_there' | 'nailed_it';
 
+export interface ExternalStudentRow {
+  id: string;
+  studio_id: string;
+  teacher_id: string;
+  name: string;
+  email: string | null;
+  instrument: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface LessonRow {
   id: string;
   studio_id: string;
-  student_id: string;
+  student_id: string | null;           // null for external-student lessons
+  external_student_id: string | null;  // set for external-student lessons
   teacher_id: string;
   scheduled_at: string;
   duration_minutes: number;
@@ -224,7 +236,8 @@ export interface LessonRow {
 export interface LessonRecurrenceRow {
   id: string;
   studio_id: string;
-  student_id: string;
+  student_id: string | null;
+  external_student_id: string | null;
   teacher_id: string;
   day_of_week: number;   // 0=Sunday
   time_of_day: string;   // "HH:MM:SS"
@@ -269,6 +282,7 @@ export interface AssignmentWithContext extends AssignmentRow {
 export interface LessonWithAssignments extends LessonRow {
   student_name?: string;
   student_avatar?: string | null;
+  is_external?: boolean;
   assignments: AssignmentRow[];
   completion_count: number;
 }

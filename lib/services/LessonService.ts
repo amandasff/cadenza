@@ -1,9 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { LessonRow, LessonRecurrenceRow, LessonWithAssignments } from '../types';
+import type { LessonRow, LessonRecurrenceRow, LessonWithAssignments, ExternalStudentRow } from '../types';
 
 interface CreateLessonInput {
   studioId: string;
-  studentId: string;
+  studentId?: string;
+  externalStudentId?: string;
   teacherId: string;
   scheduledAt: string;       // ISO datetime string
   durationMinutes?: number;
@@ -12,11 +13,20 @@ interface CreateLessonInput {
 
 interface CreateRecurrenceInput {
   studioId: string;
-  studentId: string;
+  studentId?: string;
+  externalStudentId?: string;
   teacherId: string;
   dayOfWeek: number;         // 0=Sunday
   timeOfDay: string;         // "HH:MM"
   durationMinutes?: number;
+}
+
+interface CreateExternalStudentInput {
+  studioId: string;
+  teacherId: string;
+  name: string;
+  email?: string;
+  instrument?: string;
 }
 
 export class LessonService {
@@ -79,13 +89,44 @@ export class LessonService {
     return data as LessonRow | null;
   }
 
+  // Teacher: create an external (off-app) student
+  async createExternalStudent(input: CreateExternalStudentInput): Promise<ExternalStudentRow> {
+    const { data, error } = await this.supabase
+      .from('external_students')
+      .insert({
+        studio_id: input.studioId,
+        teacher_id: input.teacherId,
+        name: input.name,
+        email: input.email ?? null,
+        instrument: input.instrument ?? null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as ExternalStudentRow;
+  }
+
+  // Teacher: list external students
+  async getExternalStudents(teacherId: string): Promise<ExternalStudentRow[]> {
+    const { data, error } = await this.supabase
+      .from('external_students')
+      .select()
+      .eq('teacher_id', teacherId)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as ExternalStudentRow[];
+  }
+
   // Teacher: schedule a single lesson
   async createLesson(input: CreateLessonInput): Promise<LessonRow> {
     const { data, error } = await this.supabase
       .from('lessons')
       .insert({
         studio_id: input.studioId,
-        student_id: input.studentId,
+        student_id: input.studentId ?? null,
+        external_student_id: input.externalStudentId ?? null,
         teacher_id: input.teacherId,
         scheduled_at: input.scheduledAt,
         duration_minutes: input.durationMinutes ?? 45,
@@ -99,13 +140,29 @@ export class LessonService {
     return data as LessonRow;
   }
 
+  // Teacher: update lesson time / duration
+  async updateLesson(lessonId: string, patch: { scheduledAt?: string; durationMinutes?: number }, teacherId: string): Promise<void> {
+    const update: Record<string, unknown> = {};
+    if (patch.scheduledAt !== undefined) update.scheduled_at = patch.scheduledAt;
+    if (patch.durationMinutes !== undefined) update.duration_minutes = patch.durationMinutes;
+
+    const { error } = await this.supabase
+      .from('lessons')
+      .update(update)
+      .eq('id', lessonId)
+      .eq('teacher_id', teacherId);
+
+    if (error) throw error;
+  }
+
   // Teacher: save a recurring lesson template + generate 8 weeks of lessons
   async createRecurrence(input: CreateRecurrenceInput): Promise<LessonRecurrenceRow> {
     const { data, error } = await this.supabase
       .from('lesson_recurrences')
       .insert({
         studio_id: input.studioId,
-        student_id: input.studentId,
+        student_id: input.studentId ?? null,
+        external_student_id: input.externalStudentId ?? null,
         teacher_id: input.teacherId,
         day_of_week: input.dayOfWeek,
         time_of_day: input.timeOfDay,
@@ -140,7 +197,8 @@ export class LessonService {
       if (date > new Date()) {
         lessons.push({
           studio_id: recurrence.studio_id,
-          student_id: recurrence.student_id,
+          student_id: recurrence.student_id ?? null,
+          external_student_id: recurrence.external_student_id ?? null,
           teacher_id: recurrence.teacher_id,
           scheduled_at: date.toISOString(),
           duration_minutes: recurrence.duration_minutes,
@@ -228,14 +286,27 @@ export class LessonService {
     const lessons = await this.getUpcomingLessons(teacherId);
     if (lessons.length === 0) return [];
 
-    // Fetch student profiles
-    const studentIds = [...new Set(lessons.map((l) => l.student_id))];
-    const { data: profiles } = await this.supabase
-      .from('profiles')
-      .select('id, display_name, avatar_url')
-      .in('id', studentIds);
+    // Fetch registered student profiles
+    const studentIds = [...new Set(lessons.map((l) => l.student_id).filter((id): id is string => !!id))];
+    const profileMap = new Map<string, { id: string; display_name: string; avatar_url: string | null }>();
+    if (studentIds.length > 0) {
+      const { data: profiles } = await this.supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', studentIds);
+      for (const p of profiles ?? []) profileMap.set(p.id, p);
+    }
 
-    const profileMap = new Map((profiles ?? []).map((p: { id: string; display_name: string; avatar_url: string | null }) => [p.id, p]));
+    // Fetch external student names
+    const extIds = [...new Set(lessons.map((l) => l.external_student_id).filter((id): id is string => !!id))];
+    const extMap = new Map<string, string>();
+    if (extIds.length > 0) {
+      const { data: extStudents } = await this.supabase
+        .from('external_students')
+        .select('id, name')
+        .in('id', extIds);
+      for (const e of extStudents ?? []) extMap.set(e.id, e.name);
+    }
 
     // Fetch assignments for these lessons
     const lessonIds = lessons.map((l) => l.id);
@@ -263,14 +334,17 @@ export class LessonService {
     const completedSet = new Set((completions ?? []).map((c: { assignment_id: string }) => c.assignment_id));
 
     return lessons.map((lesson) => {
-      const profile = profileMap.get(lesson.student_id);
+      const isExternal = !lesson.student_id && !!lesson.external_student_id;
+      const profile = lesson.student_id ? profileMap.get(lesson.student_id) : undefined;
+      const extName = lesson.external_student_id ? extMap.get(lesson.external_student_id) : undefined;
       const lessonAssignments = assignmentMap.get(lesson.id) ?? [];
       const completionCount = lessonAssignments.filter((a: { id: string }) => completedSet.has(a.id)).length;
 
       return {
         ...lesson,
-        student_name: profile?.display_name ?? 'Student',
+        student_name: extName ?? profile?.display_name ?? 'Student',
         student_avatar: profile?.avatar_url ?? null,
+        is_external: isExternal,
         assignments: lessonAssignments,
         completion_count: completionCount,
       } as LessonWithAssignments;

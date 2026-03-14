@@ -16,6 +16,7 @@ import type {
   ProfileRow,
   PracticeSessionRow,
   GoalRow,
+  ExternalStudentRow,
 } from "../../../lib/types";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -139,6 +140,7 @@ export default function SchedulePage() {
 
   const [lessons, setLessons] = useState<LessonWithAssignments[]>([]);
   const [students, setStudents] = useState<ProfileRow[]>([]);
+  const [externalStudents, setExternalStudents] = useState<ExternalStudentRow[]>([]);
   const [pieces, setPieces] = useState<{ id: string; title: string; student_id: string }[]>([]);
   const [prepData, setPrepData] = useState<Record<string, PrepData>>({});
   const [loading, setLoading] = useState(true);
@@ -156,15 +158,25 @@ export default function SchedulePage() {
 
   // Schedule new lesson modal
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleStudentType, setScheduleStudentType] = useState<"app" | "ext_existing" | "ext_new">("app");
   const [scheduleForm, setScheduleForm] = useState({
     studentId: "",
     scheduledAt: "",
     durationMinutes: 45,
     recurring: false,
   });
+  const [scheduleExtId, setScheduleExtId] = useState("");
+  const [scheduleExtName, setScheduleExtName] = useState("");
+  const [scheduleExtEmail, setScheduleExtEmail] = useState("");
   const [scheduling, setScheduling] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Edit lesson modal
+  const [editingLesson, setEditingLesson] = useState<LessonWithAssignments | null>(null);
+  const [editForm, setEditForm] = useState({ scheduledAt: "", durationMinutes: 45 });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Voice note recording (tracks which draft index is recording)
   const [recordingDraftId, setRecordingDraftId] = useState<string | null>(null);
@@ -181,8 +193,13 @@ export default function SchedulePage() {
     // Load students + pieces independently — works even if lessons table doesn't exist yet
     try {
       const studioService = StudioService.create(supabase);
-      const studentData = await studioService.getStudents(teacher.studioId!);
+      const lessonSvc = LessonService.create(supabase);
+      const [studentData, extData] = await Promise.all([
+        studioService.getStudents(teacher.studioId!),
+        lessonSvc.getExternalStudents(teacher.id).catch(() => [] as ExternalStudentRow[]),
+      ]);
       setStudents(studentData);
+      setExternalStudents(extData);
 
       const pieceService = PieceService.create(supabase);
       const allPieces: typeof pieces = [];
@@ -208,7 +225,7 @@ export default function SchedulePage() {
       setNoteDrafts(noteDraftInit);
 
       // ── Load prep data for each unique student ──────────────────────
-      const uniqueStudentIds = [...new Set(lessonData.map(l => l.student_id))];
+      const uniqueStudentIds = [...new Set(lessonData.map(l => l.student_id).filter((id): id is string => !!id))];
       const practiceService = PracticeService.create(supabase);
       const goalService = GoalService.create(supabase);
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -326,7 +343,7 @@ export default function SchedulePage() {
     setCompletingLesson(lesson);
     setCompleteNotes(noteDrafts[lesson.id] ?? "");
     // Auto-fill next lesson due date
-    const nextLesson = lessons.find(l => l.student_id === lesson.student_id && l.id !== lesson.id);
+    const nextLesson = lessons.find(l => lesson.student_id && l.student_id === lesson.student_id && l.id !== lesson.id);
     const dueDate = nextLesson
       ? new Date(nextLesson.scheduled_at).toISOString().split("T")[0]
       : (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; })();
@@ -345,27 +362,29 @@ export default function SchedulePage() {
 
       await lessonService.completeLesson(completingLesson.id, completeNotes, teacher.id);
 
-      for (const draft of assignmentDrafts) {
-        if (!draft.title.trim()) continue;
+      if (completingLesson.student_id) {
+        for (const draft of assignmentDrafts) {
+          if (!draft.title.trim()) continue;
 
-        let audioUrl: string | null = null;
-        if (draft.audioBlob) {
-          audioUrl = await assignmentService.uploadVoiceNote(draft.audioBlob, completingLesson.id + "_" + draft.id);
+          let audioUrl: string | null = null;
+          if (draft.audioBlob) {
+            audioUrl = await assignmentService.uploadVoiceNote(draft.audioBlob, completingLesson.id + "_" + draft.id);
+          }
+
+          await assignmentService.createAssignment({
+            studioId: teacher.studioId!,
+            studentId: completingLesson.student_id,
+            teacherId: teacher.id,
+            lessonId: completingLesson.id,
+            pieceId: draft.pieceId || undefined,
+            title: draft.title.trim(),
+            focus: draft.focus || undefined,
+            type: draft.type,
+            targetMinutesPerDay: draft.targetMins ? parseInt(draft.targetMins) : undefined,
+            dueDate: draft.dueDate || undefined,
+            referenceAudioUrl: audioUrl || undefined,
+          });
         }
-
-        await assignmentService.createAssignment({
-          studioId: teacher.studioId!,
-          studentId: completingLesson.student_id,
-          teacherId: teacher.id,
-          lessonId: completingLesson.id,
-          pieceId: draft.pieceId || undefined,
-          title: draft.title.trim(),
-          focus: draft.focus || undefined,
-          type: draft.type,
-          targetMinutesPerDay: draft.targetMins ? parseInt(draft.targetMins) : undefined,
-          dueDate: draft.dueDate || undefined,
-          referenceAudioUrl: audioUrl || undefined,
-        });
       }
 
       setLessons(prev => prev.filter(l => l.id !== completingLesson.id));
@@ -382,18 +401,43 @@ export default function SchedulePage() {
 
   // Schedule new lesson
   async function handleScheduleLesson() {
-    if (!scheduleForm.studentId || !scheduleForm.scheduledAt) return;
+    const isExtNew = scheduleStudentType === "ext_new";
+    const isExtExisting = scheduleStudentType === "ext_existing";
+    const isApp = scheduleStudentType === "app";
+
+    if (isApp && !scheduleForm.studentId) return;
+    if (isExtNew && !scheduleExtName.trim()) return;
+    if (isExtExisting && !scheduleExtId) return;
+    if (!scheduleForm.scheduledAt) return;
+
     setScheduling(true);
     setScheduleError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const lessonService = LessonService.create(supabase);
 
+      // Create external student record if needed
+      let externalStudentId: string | undefined;
+      if (isExtNew) {
+        const ext = await lessonService.createExternalStudent({
+          studioId: teacher.studioId!,
+          teacherId: teacher.id,
+          name: scheduleExtName.trim(),
+          email: scheduleExtEmail.trim() || undefined,
+        });
+        externalStudentId = ext.id;
+      } else if (isExtExisting) {
+        externalStudentId = scheduleExtId;
+      }
+
+      const studentId = isApp ? scheduleForm.studentId : undefined;
+
       if (scheduleForm.recurring) {
         const d = new Date(scheduleForm.scheduledAt);
         await lessonService.createRecurrence({
           studioId: teacher.studioId!,
-          studentId: scheduleForm.studentId,
+          studentId,
+          externalStudentId,
           teacherId: teacher.id,
           dayOfWeek: d.getDay(),
           timeOfDay: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
@@ -402,7 +446,8 @@ export default function SchedulePage() {
       } else {
         await lessonService.createLesson({
           studioId: teacher.studioId!,
-          studentId: scheduleForm.studentId,
+          studentId,
+          externalStudentId,
           teacherId: teacher.id,
           scheduledAt: new Date(scheduleForm.scheduledAt).toISOString(),
           durationMinutes: scheduleForm.durationMinutes,
@@ -410,15 +455,57 @@ export default function SchedulePage() {
       }
 
       setShowScheduleModal(false);
+      setScheduleStudentType("app");
       setScheduleForm({ studentId: "", scheduledAt: "", durationMinutes: 45, recurring: false });
+      setScheduleExtId("");
+      setScheduleExtName("");
+      setScheduleExtEmail("");
       await loadData();
     } catch (err) {
       const msg = (err as { message?: string })?.message ?? String(err);
       setScheduleError(msg.includes("does not exist")
-        ? "Database tables not set up yet. Run supabase/lessons.sql in your Supabase dashboard first."
+        ? "Database tables not set up yet. Run supabase/lessons.sql and supabase/external_students.sql in your Supabase dashboard first."
         : `Error: ${msg}`);
     } finally {
       setScheduling(false);
+    }
+  }
+
+  // Edit lesson time/duration
+  function openEdit(lesson: LessonWithAssignments) {
+    const local = new Date(lesson.scheduled_at);
+    // datetime-local format: "YYYY-MM-DDTHH:MM"
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localStr = `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`;
+    setEditingLesson(lesson);
+    setEditForm({ scheduledAt: localStr, durationMinutes: lesson.duration_minutes });
+    setEditError(null);
+  }
+
+  async function handleEditLesson() {
+    if (!editingLesson) return;
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      await LessonService.create(supabase).updateLesson(
+        editingLesson.id,
+        {
+          scheduledAt: new Date(editForm.scheduledAt).toISOString(),
+          durationMinutes: editForm.durationMinutes,
+        },
+        teacher.id
+      );
+      setLessons(prev => prev.map(l =>
+        l.id === editingLesson.id
+          ? { ...l, scheduled_at: new Date(editForm.scheduledAt).toISOString(), duration_minutes: editForm.durationMinutes }
+          : l
+      ));
+      setEditingLesson(null);
+    } catch (err) {
+      setEditError((err as { message?: string })?.message ?? String(err));
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -535,9 +622,21 @@ export default function SchedulePage() {
 
                     {/* Name + meta */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
-                        {lesson.student_name}
-                      </p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
+                          {lesson.student_name}
+                        </p>
+                        {lesson.is_external && (
+                          <span style={{
+                            fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.04em",
+                            textTransform: "uppercase", color: "var(--muted)",
+                            border: "1px solid var(--border-strong)", padding: "0.125rem 0.375rem",
+                            borderRadius: 2, fontFamily: "Inter, sans-serif",
+                          }}>
+                            not on app
+                          </span>
+                        )}
+                      </div>
                       <p style={{ margin: "0.125rem 0 0", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
                         {formatTime(lesson.scheduled_at)} · {lesson.duration_minutes} min
                         {prep && prep.totalMinutes > 0 && (
@@ -555,11 +654,19 @@ export default function SchedulePage() {
 
                     {/* Actions */}
                     <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      {!lesson.is_external && (
+                        <button
+                          onClick={() => openComplete(lesson)}
+                          style={{ ...btnPrimary, padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
+                        >
+                          Complete
+                        </button>
+                      )}
                       <button
-                        onClick={() => openComplete(lesson)}
-                        style={{ ...btnPrimary, padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
+                        onClick={() => openEdit(lesson)}
+                        style={{ ...btnSecondary, padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
                       >
-                        Complete
+                        Edit
                       </button>
                       <button
                         onClick={() => handleCancel(lesson)}
@@ -917,6 +1024,68 @@ export default function SchedulePage() {
         </div>
       )}
 
+      {/* ── Edit Lesson Modal ────────────────────────────────── */}
+      {editingLesson && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 200, padding: "1rem",
+        }}>
+          <div style={{
+            background: "var(--white)", borderRadius: 8, width: "100%", maxWidth: 400,
+            padding: "1.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+          }}>
+            <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
+              Edit Lesson
+            </h2>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.5rem" }}>
+              {editingLesson.student_name}
+            </p>
+
+            <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
+              Date & time
+            </label>
+            <input
+              type="datetime-local"
+              value={editForm.scheduledAt}
+              onChange={e => setEditForm(f => ({ ...f, scheduledAt: e.target.value }))}
+              style={{ ...inputStyle, marginBottom: "1rem" }}
+            />
+
+            <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
+              Duration
+            </label>
+            <select
+              value={editForm.durationMinutes}
+              onChange={e => setEditForm(f => ({ ...f, durationMinutes: parseInt(e.target.value) }))}
+              style={{ ...inputStyle, marginBottom: "1.5rem" }}
+            >
+              {DURATIONS.map(d => (
+                <option key={d} value={d}>{d} minutes</option>
+              ))}
+            </select>
+
+            {editError && (
+              <div style={{
+                marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: 4,
+                background: "#fff0f0", border: "1px solid #fca5a5",
+                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--error)",
+              }}>
+                {editError}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button onClick={() => setEditingLesson(null)} style={btnSecondary} disabled={editSaving}>
+                Cancel
+              </button>
+              <button onClick={handleEditLesson} style={btnPrimary} disabled={editSaving || !editForm.scheduledAt}>
+                {editSaving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Schedule New Lesson Modal ─────────────────────────── */}
       {showScheduleModal && (
         <div style={{
@@ -932,19 +1101,73 @@ export default function SchedulePage() {
               Schedule a Lesson
             </h2>
 
+            {/* Student type toggle */}
+            <div style={{ display: "flex", gap: "0.375rem", marginBottom: "1rem" }}>
+              {(["app", "ext_existing", "ext_new"] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => setScheduleStudentType(type)}
+                  style={{
+                    ...btnSecondary,
+                    flex: 1, fontSize: "0.75rem", padding: "0.375rem 0.5rem",
+                    background: scheduleStudentType === type ? "var(--charcoal)" : "transparent",
+                    color: scheduleStudentType === type ? "var(--white)" : "var(--muted)",
+                    border: scheduleStudentType === type ? "1px solid var(--charcoal)" : "1px solid var(--border-strong)",
+                  }}
+                >
+                  {type === "app" ? "On Cadenza" : type === "ext_existing" ? "Existing external" : "New external"}
+                </button>
+              ))}
+            </div>
+
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
               Student
             </label>
-            <select
-              value={scheduleForm.studentId}
-              onChange={e => setScheduleForm(f => ({ ...f, studentId: e.target.value }))}
-              style={{ ...inputStyle, marginBottom: "1rem" }}
-            >
-              <option value="">Select student…</option>
-              {students.map(s => (
-                <option key={s.id} value={s.id}>{s.display_name}</option>
-              ))}
-            </select>
+
+            {scheduleStudentType === "app" && (
+              <select
+                value={scheduleForm.studentId}
+                onChange={e => setScheduleForm(f => ({ ...f, studentId: e.target.value }))}
+                style={{ ...inputStyle, marginBottom: "1rem" }}
+              >
+                <option value="">Select student…</option>
+                {students.map(s => (
+                  <option key={s.id} value={s.id}>{s.display_name}</option>
+                ))}
+              </select>
+            )}
+
+            {scheduleStudentType === "ext_existing" && (
+              <select
+                value={scheduleExtId}
+                onChange={e => setScheduleExtId(e.target.value)}
+                style={{ ...inputStyle, marginBottom: "1rem" }}
+              >
+                <option value="">Select external student…</option>
+                {externalStudents.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}{s.instrument ? ` (${s.instrument})` : ""}</option>
+                ))}
+              </select>
+            )}
+
+            {scheduleStudentType === "ext_new" && (
+              <div style={{ marginBottom: "1rem" }}>
+                <input
+                  type="text"
+                  placeholder="Student name *"
+                  value={scheduleExtName}
+                  onChange={e => setScheduleExtName(e.target.value)}
+                  style={{ ...inputStyle, marginBottom: "0.5rem" }}
+                />
+                <input
+                  type="email"
+                  placeholder="Email (optional)"
+                  value={scheduleExtEmail}
+                  onChange={e => setScheduleExtEmail(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            )}
 
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
               Date & time
@@ -1003,10 +1226,21 @@ export default function SchedulePage() {
                 onClick={handleScheduleLesson}
                 style={{
                   ...btnPrimary,
-                  opacity: (scheduling || !scheduleForm.studentId || !scheduleForm.scheduledAt) ? 0.45 : 1,
-                  cursor: (scheduling || !scheduleForm.studentId || !scheduleForm.scheduledAt) ? "not-allowed" : "pointer",
+                  opacity: (() => {
+                    if (scheduling || !scheduleForm.scheduledAt) return 0.45;
+                    if (scheduleStudentType === "app" && !scheduleForm.studentId) return 0.45;
+                    if (scheduleStudentType === "ext_existing" && !scheduleExtId) return 0.45;
+                    if (scheduleStudentType === "ext_new" && !scheduleExtName.trim()) return 0.45;
+                    return 1;
+                  })(),
+                  cursor: "pointer",
                 }}
-                disabled={scheduling || !scheduleForm.studentId || !scheduleForm.scheduledAt}
+                disabled={
+                  scheduling || !scheduleForm.scheduledAt ||
+                  (scheduleStudentType === "app" && !scheduleForm.studentId) ||
+                  (scheduleStudentType === "ext_existing" && !scheduleExtId) ||
+                  (scheduleStudentType === "ext_new" && !scheduleExtName.trim())
+                }
               >
                 {scheduling ? "Scheduling…" : scheduleForm.recurring ? "Schedule + Repeat" : "Schedule Lesson"}
               </button>
