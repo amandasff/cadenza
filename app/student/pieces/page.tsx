@@ -6,6 +6,7 @@ import { PieceService } from "../../../lib/services/PieceService";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 import { Student } from "../../../lib/models/Student";
 import { usePlayer } from "../../../lib/context/PlayerContext";
+import Link from "next/link";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import type { YouTubeResult, PieceRecording } from "../../../lib/types";
 
