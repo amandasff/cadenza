@@ -591,7 +591,7 @@ export default function SchedulePage() {
             {group.lessons.map(lesson => {
               const isExpanded = expandedId === lesson.id;
               const studentPieces = pieces.filter(p => p.student_id === lesson.student_id);
-              const prep = prepData[lesson.student_id];
+              const prep = lesson.student_id ? prepData[lesson.student_id] : undefined;
 
               return (
                 <div key={lesson.id} style={{
