@@ -12,6 +12,7 @@ export interface FunThemeVars {
   cream: string;
   white: string;
   label: string;
+  emojis: string[]; // themed characters for cursor trail + ambient effects
 }
 
 interface ThemeCtx {

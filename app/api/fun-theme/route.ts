@@ -10,37 +10,41 @@ export async function POST(req: NextRequest) {
   }
 
   const prompt = `You are a creative UI theme designer for a kids' music app called Cadenza.
-The user has described a visual theme they want: "${description.slice(0, 200)}"
+The user has described a visual theme: "${description.slice(0, 200)}"
 
 Return ONLY a valid JSON object (no markdown, no explanation) with these exact keys:
 {
-  "background": "<CSS gradient string for the animated page background — make it vivid and beautiful>",
-  "charcoal": "<dark hex color for text — must be very dark and legible on white>",
-  "muted": "<medium hex color for secondary text — warm neutral, not purple>",
-  "border": "<rgba CSS color for subtle borders>",
+  "background": "<CSS gradient string — vivid, beautiful, evocative of the theme. Use multiple color stops.>",
+  "charcoal": "<dark hex color for main text — must be very dark, legible on white>",
+  "muted": "<hex color for secondary text — warm neutral, never purple or bright>",
+  "border": "<rgba CSS color for subtle borders — tinted to match theme>",
   "borderStrong": "<rgba CSS color for stronger borders>",
-  "cream": "<rgba CSS color for card/surface backgrounds — translucent white>",
-  "white": "<rgba CSS color for panels — mostly white but slightly tinted>",
-  "label": "<2–3 word name for this theme>"
+  "cream": "<rgba CSS color for card surfaces — semi-transparent white, slightly tinted to theme>",
+  "white": "<rgba CSS color for panels — mostly white, very subtly tinted>",
+  "label": "<2–3 word poetic name for this theme>",
+  "emojis": ["<emoji 1>", "<emoji 2>", "<emoji 3>", "<emoji 4>", "<emoji 5>", "<emoji 6>"]
 }
 
 Guidelines:
-- Make the background gradient evocative and colorful (like the aurora effect but for this theme)
-- Text colors (charcoal, muted) must stay dark/neutral so they're readable — don't make them colorful
-- Surfaces (cream, white) should be semi-transparent white so the background shows through
-- Keep border colors subtle and matching the theme's accent color`;
+- background: animate-able gradient (will use background-size 400% with CSS animation). Be creative and vivid.
+- charcoal + muted: always stay dark/neutral — these are text colors on white backgrounds
+- cream + white: translucent so the background shows through
+- emojis: pick 6 emojis that perfectly evoke the theme (e.g. galaxy → ⭐🌙🪐✨💫🌌). They float around the screen and trail the cursor, so make them delightful.`;
 
   try {
     const msg = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
+      max_tokens: 600,
       messages: [{ role: "user", content: prompt }],
     });
 
     const text = (msg.content[0] as { type: string; text: string }).text.trim();
-    // Strip markdown fences if present
     const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const theme = JSON.parse(json);
+    // Ensure emojis is always an array
+    if (!Array.isArray(theme.emojis) || theme.emojis.length === 0) {
+      theme.emojis = ["✨", "🌟", "⭐", "💫", "🎵", "🎶"];
+    }
     return NextResponse.json({ theme });
   } catch (err) {
     console.error("fun-theme error:", err);
