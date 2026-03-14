@@ -1,0 +1,16 @@
+{
+  "appId": "com.cadenza.app",
+  "appName": "Cadenza",
+  "server": {
+    "url": "https://cadenza-rosy.vercel.app",
+    "cleartext": false
+  },
+  "android": {
+    "backgroundColor": "#1A1714"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

@@ -327,6 +327,18 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           >
             {theme === "light" ? "Light mode" : theme === "dark" ? "Dark mode" : "🎨 Fun mode"}
           </button>
+          <Link
+            href="/teacher/settings"
+            style={{
+              width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
+              padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
+              fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)",
+              textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
+              display: "block", textDecoration: "none",
+            }}
+          >
+            Settings
+          </Link>
           <button
             onClick={() => signOut()}
             style={{

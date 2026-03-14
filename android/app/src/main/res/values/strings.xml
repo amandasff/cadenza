@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cadenza</string>
+    <string name="title_activity_main">Cadenza</string>
+    <string name="package_name">com.cadenza.app</string>
+    <string name="custom_url_scheme">com.cadenza.app</string>
+</resources>
