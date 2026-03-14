@@ -141,18 +141,21 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
   async function sendVoiceNote() {
     if (!recordingBlob || !session || !student || sendingVoice) return;
     setSendingVoice(true);
+    setRecordError("");
     try {
-      const supabase = getSupabaseBrowserClient();
       const path = `${session.studio_id}/${teacher.id}/${Date.now()}.webm`;
-      const { error: uploadErr } = await supabase.storage
-        .from("chat-voice-notes")
-        .upload(path, recordingBlob, { contentType: "audio/webm", upsert: true });
+      const form = new FormData();
+      form.append("file", new File([recordingBlob], `${Date.now()}.webm`, { type: "audio/webm" }));
+      form.append("path", path);
 
-      if (uploadErr) throw uploadErr;
+      const res = await fetch("/api/messages/upload-media", { method: "POST", body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Upload failed");
+      }
+      const { url: audioUrl } = await res.json();
 
-      const { data: urlData } = supabase.storage.from("chat-voice-notes").getPublicUrl(path);
-      const audioUrl = urlData.publicUrl;
-
+      const supabase = getSupabaseBrowserClient();
       await ChatService.create(supabase).sendPrivateMessage(
         session.studio_id, teacher.id, teacher.displayName, student.id,
         `🎙 Voice note from ${teacher.displayName}\nAUDIO:${audioUrl}`
@@ -222,6 +225,18 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
   }
 
   const segments = (session?.segments_json ?? []) as PracticeSegment[];
+
+  // Parse mood tag out of notes
+  const moodMatch = session?.notes?.match(/\[mood:(\w+)\]/);
+  const mood = moodMatch?.[1] ?? null;
+  const notesText = session?.notes?.replace(/\[mood:\w+\]\s*/g, "").trim() || null;
+  const MOOD_DISPLAY: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+    great:   { label: "Great",   emoji: "😄", color: "var(--sage)",    bg: "var(--sage-bg)" },
+    good:    { label: "Good",    emoji: "🙂", color: "var(--sky)",     bg: "var(--sky-bg)" },
+    okay:    { label: "Okay",    emoji: "😐", color: "var(--butter)",  bg: "var(--butter-bg)" },
+    tired:   { label: "Tired",   emoji: "😴", color: "var(--muted)",   bg: "var(--cream)" },
+    frustrated: { label: "Frustrated", emoji: "😤", color: "var(--rose)", bg: "var(--rose-bg)" },
+  };
   const mins = session ? Math.max(1, Math.round(session.duration_seconds / 60)) : 0;
 
   if (loading) {
@@ -343,14 +358,25 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           )}
 
           {/* Student notes */}
-          {session.notes && (
+          {(mood || notesText) && (
             <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
-              <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.625rem" }}>
+              <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
                 Student Notes
               </div>
-              <p style={{ fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.6, margin: 0, fontFamily: "DM Sans, sans-serif" }}>
-                {session.notes}
-              </p>
+              {mood && (() => {
+                const m = MOOD_DISPLAY[mood] ?? { label: mood, emoji: "🙂", color: "var(--muted)", bg: "var(--cream)" };
+                return (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.3rem 0.75rem", borderRadius: 999, background: m.bg, border: `1px solid ${m.color}`, marginBottom: notesText ? "0.75rem" : 0 }}>
+                    <span style={{ fontSize: "1rem" }}>{m.emoji}</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: m.color, fontFamily: "Nunito, sans-serif" }}>Feeling {m.label}</span>
+                  </div>
+                );
+              })()}
+              {notesText && (
+                <p style={{ fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.6, margin: 0, fontFamily: "DM Sans, sans-serif" }}>
+                  {notesText}
+                </p>
+              )}
             </div>
           )}
 
