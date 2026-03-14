@@ -180,7 +180,7 @@ export default function TeacherChat() {
   }
 
 
-  async function handleSendImage(file) {
+  async function handleSendImage(file: File) {
     if (!teacher?.studioId) return;
     setSendingImage(true);
     try {

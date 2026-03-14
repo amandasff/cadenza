@@ -208,7 +208,7 @@ export default function StudentChat() {
   }
 
 
-  async function handleSendImage(file) {
+  async function handleSendImage(file: File) {
     if (!student?.studioId || !teacherId) return;
     setSendingImage(true);
     try {
