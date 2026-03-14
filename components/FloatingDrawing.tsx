@@ -1,80 +1,118 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTheme } from "@/lib/context/ThemeContext";
 
-const NOTES = ["🎵", "🎶", "✨", "⭐", "🎸", "🎹", "🎺", "🎀", "🌟"];
-
-function spawnParticle(x: number, y: number) {
-  const el = document.createElement("span");
-  el.textContent = NOTES[Math.floor(Math.random() * NOTES.length)];
-  const size = 12 + Math.random() * 10;
-  const angle = Math.random() * Math.PI * 2;
-  const dist  = 25 + Math.random() * 40;
-  const dx    = Math.cos(angle) * dist;
-  const dy    = Math.sin(angle) * dist - 20; // always drift slightly up
+function spawnDoodleStamp(x: number, y: number, src: string) {
+  const el = document.createElement("img");
+  el.src = src;
+  const size = 28 + Math.random() * 22; // 28–50px
+  const angle = (Math.random() - 0.5) * 60; // –30° to +30°
+  const dy = -(18 + Math.random() * 24);   // drift upward
+  const dx = (Math.random() - 0.5) * 30;   // slight horizontal drift
 
   el.style.cssText = [
     "position:fixed",
     `left:${x}px`,
     `top:${y}px`,
-    `font-size:${size}px`,
+    `width:${size}px`,
+    `height:${size}px`,
+    "object-fit:contain",
     "pointer-events:none",
     "z-index:9990",
-    "transform:translate(-50%,-50%)",
-    "opacity:1",
-    "transition:transform 0.7s cubic-bezier(.2,.8,.4,1),opacity 0.7s ease-out",
+    `transform:translate(-50%,-50%) rotate(${angle}deg)`,
+    "opacity:0.72",
+    "border-radius:4px",
+    "transition:transform 0.65s cubic-bezier(.15,.8,.35,1),opacity 0.65s ease-out",
     "will-change:transform,opacity",
   ].join(";");
 
   document.body.appendChild(el);
 
-  // Trigger animation on next frame
   requestAnimationFrame(() => {
-    el.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.3)`;
+    el.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${angle + (Math.random() - 0.5) * 20}deg) scale(0.35)`;
     el.style.opacity = "0";
   });
 
-  setTimeout(() => el.remove(), 720);
+  setTimeout(() => el.remove(), 680);
+}
+
+function spawnDot(x: number, y: number) {
+  const el = document.createElement("div");
+  const size = 6 + Math.random() * 6;
+  const dy = -(12 + Math.random() * 20);
+  const dx = (Math.random() - 0.5) * 24;
+  const hue = Math.floor(Math.random() * 360);
+
+  el.style.cssText = [
+    "position:fixed",
+    `left:${x}px`,
+    `top:${y}px`,
+    `width:${size}px`,
+    `height:${size}px`,
+    `background:hsl(${hue},70%,65%)`,
+    "border-radius:50%",
+    "pointer-events:none",
+    "z-index:9990",
+    "transform:translate(-50%,-50%)",
+    "opacity:0.8",
+    "transition:transform 0.6s cubic-bezier(.15,.8,.35,1),opacity 0.6s ease-out",
+    "will-change:transform,opacity",
+  ].join(";");
+
+  document.body.appendChild(el);
+
+  requestAnimationFrame(() => {
+    el.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.1)`;
+    el.style.opacity = "0";
+  });
+
+  setTimeout(() => el.remove(), 640);
 }
 
 export default function FloatingDrawing() {
   const { theme, openDrawModal } = useTheme();
   const [drawingSrc, setDrawingSrc] = useState<string | null>(null);
+  const drawingSrcRef = useRef<string | null>(null);
 
   // Refresh drawing from localStorage whenever theme switches to fun or modal closes
   useEffect(() => {
     if (theme === "fun") {
-      setDrawingSrc(localStorage.getItem("cadenza-fun-drawing"));
+      const src = localStorage.getItem("cadenza-fun-drawing");
+      setDrawingSrc(src);
+      drawingSrcRef.current = src;
     } else {
       setDrawingSrc(null);
+      drawingSrcRef.current = null;
     }
   }, [theme]);
 
   // Listen for the custom event fired when a new drawing is saved
   useEffect(() => {
     function onDrawSaved() {
-      setDrawingSrc(localStorage.getItem("cadenza-fun-drawing"));
+      const src = localStorage.getItem("cadenza-fun-drawing");
+      setDrawingSrc(src);
+      drawingSrcRef.current = src;
     }
     window.addEventListener("cadenza-drawing-saved", onDrawSaved);
     return () => window.removeEventListener("cadenza-drawing-saved", onDrawSaved);
   }, []);
 
-  // Cursor sparkle trail
-  const handleMove = useCallback((e: MouseEvent | TouchEvent) => {
-    const x = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-    const y = "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-    spawnParticle(x, y);
-  }, []);
-
+  // Cursor trail — doodle stamps when drawing exists, colorful dots otherwise
   useEffect(() => {
     if (theme !== "fun") return;
 
     let last = 0;
     function throttled(e: MouseEvent | TouchEvent) {
       const now = Date.now();
-      if (now - last < 90) return;
+      if (now - last < 80) return;
       last = now;
-      handleMove(e);
+      const x = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      const y = "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+      if (drawingSrcRef.current) {
+        spawnDoodleStamp(x, y, drawingSrcRef.current);
+      } else {
+        spawnDot(x, y);
+      }
     }
 
     document.addEventListener("mousemove", throttled);
@@ -83,7 +121,7 @@ export default function FloatingDrawing() {
       document.removeEventListener("mousemove", throttled);
       document.removeEventListener("touchmove", throttled);
     };
-  }, [theme, handleMove]);
+  }, [theme]);
 
   if (theme !== "fun") return null;
 

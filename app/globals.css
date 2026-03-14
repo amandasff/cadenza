@@ -697,8 +697,9 @@ html[data-theme="fun"] {
   /*
    * Rich dark aurora — near-black base with deep teal, violet,
    * magenta, and green flowing through it.
+   * When --fun-bg-override is set by AI theme, it takes priority.
    */
-  background: linear-gradient(
+  background: var(--fun-bg-override, linear-gradient(
     -45deg,
     #06030f,   /* near-black */
     #0c1e42,   /* deep ocean navy */
@@ -707,17 +708,16 @@ html[data-theme="fun"] {
     #200336,   /* deep magenta-violet */
     #031820,   /* midnight teal */
     #06030f
-  );
+  ));
   background-size: 400% 400%;
   animation: aurora-shift 14s ease infinite;
 
   /*
-   * Keep charcoal DARK — all existing inline color="#2C2824"
-   * and color=var(--charcoal) references stay readable on white glass.
-   * Only raise muted slightly purple to complement the aurora.
+   * Keep charcoal and muted neutral so nav text doesn't go purple.
+   * The aurora background provides the fun — text stays warm charcoal.
    */
-  --charcoal:      #160D2E;                    /* deep purple-black, still very dark */
-  --muted:         #7A6AAC;                    /* dusty purple, readable on white */
+  --charcoal:      #1A1714;                    /* standard warm dark — legible on white glass */
+  --muted:         #6B6460;                    /* warm neutral gray — no purple tint */
 
   /* Surfaces: translucent white glass — aurora glows through */
   --white:         rgba(255, 255, 255, 0.88);  /* cards, modals */

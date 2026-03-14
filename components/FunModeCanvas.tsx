@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useEffect, useState } from "react";
+import { useTheme, FunThemeVars } from "@/lib/context/ThemeContext";
 
 interface Props {
   onClose: () => void;
@@ -9,11 +10,15 @@ const COLORS = ["#1A1714", "#B85C3A", "#3D6B55", "#2D5E78", "#7A4858", "#7A6318"
 const SIZES  = [3, 7, 14];
 
 export default function FunModeCanvas({ onClose }: Props) {
+  const { applyFunTheme, resetFunTheme, funTheme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing   = useRef(false);
   const lastPos   = useRef<{ x: number; y: number } | null>(null);
   const [color, setColor] = useState("#1A1714");
   const [size,  setSize]  = useState(1);
+  const [themeInput, setThemeInput] = useState("");
+  const [themeLoading, setThemeLoading] = useState(false);
+  const [themeError, setThemeError] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -79,6 +84,26 @@ export default function FunModeCanvas({ onClose }: Props) {
     localStorage.setItem("cadenza-fun-drawing", c.toDataURL("image/png"));
     window.dispatchEvent(new Event("cadenza-drawing-saved"));
     onClose();
+  }
+
+  async function generateTheme() {
+    if (!themeInput.trim()) return;
+    setThemeLoading(true);
+    setThemeError(null);
+    try {
+      const res = await fetch("/api/fun-theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: themeInput }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const { theme } = await res.json() as { theme: FunThemeVars };
+      applyFunTheme(theme);
+    } catch {
+      setThemeError("Couldn't generate theme — try again!");
+    } finally {
+      setThemeLoading(false);
+    }
   }
 
   return (
@@ -152,6 +177,63 @@ export default function FunModeCanvas({ onClose }: Props) {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* AI Theme Generator */}
+        <div style={{ borderTop: "1px solid #E8E3D9", paddingTop: "0.875rem" }}>
+          <div style={{ fontSize: "0.7rem", color: "#9A9590", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+            ✨ AI theme magic
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              type="text"
+              value={themeInput}
+              onChange={e => setThemeInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && generateTheme()}
+              placeholder="Describe a vibe — galaxy, cherry blossom, ocean..."
+              style={{
+                flex: 1, padding: "0.5rem 0.75rem", borderRadius: 8,
+                border: "1px solid #E8E3D9", fontSize: "0.8125rem",
+                fontFamily: "Inter, sans-serif", outline: "none", color: "#1A1714",
+                background: "#FDFCFA",
+              }}
+            />
+            <button
+              onClick={generateTheme}
+              disabled={themeLoading || !themeInput.trim()}
+              style={{
+                padding: "0.5rem 0.875rem", borderRadius: 8,
+                border: "none", background: themeInput.trim() ? "#1A1714" : "#E8E3D9",
+                color: themeInput.trim() ? "#FFFFFF" : "#9A9590",
+                cursor: themeInput.trim() ? "pointer" : "default",
+                fontSize: "0.8125rem", fontWeight: 600, whiteSpace: "nowrap",
+                transition: "all 0.15s",
+              }}
+            >
+              {themeLoading ? "..." : "Apply"}
+            </button>
+            {funTheme && (
+              <button
+                onClick={resetFunTheme}
+                title="Reset to aurora theme"
+                style={{
+                  padding: "0.5rem 0.625rem", borderRadius: 8,
+                  border: "1px solid #E8E3D9", background: "transparent",
+                  cursor: "pointer", fontSize: "0.8125rem", color: "#9A9590",
+                }}
+              >
+                ↺
+              </button>
+            )}
+          </div>
+          {funTheme && (
+            <div style={{ fontSize: "0.7rem", color: "#3D6B55", marginTop: "0.375rem" }}>
+              Theme active: {funTheme.label}
+            </div>
+          )}
+          {themeError && (
+            <div style={{ fontSize: "0.7rem", color: "#B85C3A", marginTop: "0.375rem" }}>{themeError}</div>
+          )}
         </div>
 
         {/* Actions */}
