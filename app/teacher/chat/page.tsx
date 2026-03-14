@@ -42,6 +42,8 @@ export default function TeacherChat() {
   const [hearts, setHearts] = useState<HeartMap>({});
   const { isRecording, recordingSeconds, uploadingAudio, audioError, startRecording, stopRecording, clearError } = useRecording();
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
+  const [sendingImage, setSendingImage] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -175,6 +177,29 @@ export default function TeacherChat() {
     } catch {
       setHearts(prev => ({ ...prev, [msgId]: current }));
     }
+  }
+
+
+  async function handleSendImage(file) {
+    if (!teacher?.studioId) return;
+    setSendingImage(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = 'chat/' + teacher.studioId + '/' + teacher.id + '/' + Date.now() + '.' + ext;
+      const { error: upErr } = await supabase.storage.from('chat-images').upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(path);
+      const service = ChatService.create(supabase);
+      if (selectedStudent === null) {
+        await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, 'IMAGE:' + urlData.publicUrl);
+        setMessages(await service.getAnnouncements(teacher.studioId));
+      } else {
+        await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, 'IMAGE:' + urlData.publicUrl);
+        setMessages(await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id));
+      }
+    } catch (err) { console.error('Image upload failed:', err); }
+    finally { setSendingImage(false); }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -375,6 +400,10 @@ export default function TeacherChat() {
                     <div style={{ maxWidth: "66%", borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px", overflow: "hidden", border: isMe ? "none" : "1px solid var(--border-strong)" }}>
                       <video controls src={videoSrc} style={{ display: "block", width: "100%", maxWidth: 280 }} />
                     </div>
+                  ) : msg.content.startsWith('IMAGE:') ? (
+                    <div style={{ maxWidth: "66%", borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px", overflow: "hidden" }}>
+                      <img src={msg.content.slice(6)} alt="shared image" style={{ display: "block", width: "100%", maxWidth: 280, borderRadius: "inherit" }} />
+                    </div>
                   ) : audioSrc ? (
                     <div style={{
                       maxWidth: "66%", padding: "0.5rem 0.75rem",
@@ -475,6 +504,22 @@ export default function TeacherChat() {
               }}
             >
               📹
+            </button>
+            {/* Hidden image input */}
+            <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) { void handleSendImage(f); e.target.value = ''; } }} />
+            {/* Image button */}
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              disabled={sending || isRecording || uploadingAudio || sendingImage}
+              title="Send image"
+              style={{
+                padding: "0.5625rem 0.75rem", borderRadius: 3, border: "1px solid var(--border)",
+                background: "var(--white)", color: "var(--muted)",
+                cursor: sending || isRecording || uploadingAudio || sendingImage ? "default" : "pointer",
+                fontSize: "1rem", flexShrink: 0, marginBottom: "0.125rem",
+              }}
+            >
+              {sendingImage ? "⏳" : "🖼"}
             </button>
             <button
               onClick={handleSend}

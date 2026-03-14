@@ -6,7 +6,6 @@ import { useTheme } from "../../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { Student } from "../../../lib/models/Student";
 
-const INSTRUMENTS = ["Piano", "Guitar", "Violin", "Viola", "Cello", "Bass", "Flute", "Clarinet", "Saxophone", "Trumpet", "Drums", "Voice", "Other"];
 
 export default function StudentSettings() {
   const { user, signOut } = useAuth();
@@ -136,10 +135,12 @@ export default function StudentSettings() {
           </Field>
 
           <Field label="Instrument">
-            <select value={instrument} onChange={e => setInstrument(e.target.value)} style={inputStyle}>
-              <option value="">Not set</option>
-              {INSTRUMENTS.map(i => <option key={i} value={i}>{i}</option>)}
-            </select>
+            <input
+              value={instrument}
+              onChange={e => setInstrument(e.target.value)}
+              placeholder="e.g. Piano, Guitar, Violin…"
+              style={inputStyle}
+            />
           </Field>
 
           <button onClick={handleSaveProfile} disabled={saving} style={{ ...btnPrimary, marginTop: "0.25rem" }}>

@@ -42,6 +42,8 @@ export default function StudentChat() {
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [sendingImage, setSendingImage] = useState(false);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -203,6 +205,26 @@ export default function StudentChat() {
     } catch {
       setHearts(prev => ({ ...prev, [msgId]: current }));
     }
+  }
+
+
+  async function handleSendImage(file) {
+    if (!student?.studioId || !teacherId) return;
+    setSendingImage(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = 'chat/' + student.studioId + '/' + student.id + '/' + Date.now() + '.' + ext;
+      const { error: upErr } = await supabase.storage.from('chat-images').upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(path);
+      const svc = ChatService.create(supabase);
+      await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, 'IMAGE:' + urlData.publicUrl);
+      const fresh = await svc.getPrivateThread(student.studioId, student.id, teacherId);
+      setPrivateMessages(fresh);
+      setTab('private');
+    } catch (err) { console.error('Image upload failed:', err); }
+    finally { setSendingImage(false); }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -371,6 +393,10 @@ export default function StudentChat() {
                   <div style={{ maxWidth: "78%", borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px", overflow: "hidden", border: isMe ? "none" : "1px solid var(--border-strong)" }}>
                     <video controls src={videoSrc} style={{ display: "block", width: "100%", maxWidth: 280 }} />
                   </div>
+                ) : msg.content.startsWith('IMAGE:') ? (
+                  <div style={{ maxWidth: "78%", borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px", overflow: "hidden" }}>
+                    <img src={msg.content.slice(6)} alt="shared image" style={{ display: "block", width: "100%", maxWidth: 280, borderRadius: "inherit" }} />
+                  </div>
                 ) : audioSrc ? (
                   <div style={{
                     maxWidth: "78%", padding: "0.5rem 0.75rem",
@@ -472,6 +498,22 @@ export default function StudentChat() {
             }}
           >
             📹
+          </button>
+          {/* Hidden image input */}
+          <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) { void handleSendImage(f); e.target.value = ''; } }} />
+          {/* Image button */}
+          <button
+            onClick={() => imageInputRef.current?.click()}
+            disabled={sending || isRecording || uploadingAudio || sendingImage || !teacherId}
+            title="Send image"
+            style={{
+              padding: "0.5rem 0.625rem", borderRadius: 3, border: "1px solid var(--border)",
+              background: "var(--white)", color: sendingImage ? "var(--muted)" : "var(--muted)",
+              cursor: sending || isRecording || uploadingAudio || sendingImage || !teacherId ? "default" : "pointer",
+              fontSize: "1rem", flexShrink: 0, marginBottom: "0.0625rem",
+            }}
+          >
+            {sendingImage ? "⏳" : "🖼"}
           </button>
           <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId || isRecording} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId && !isRecording ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId && !isRecording ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>Send</button>
         </div>

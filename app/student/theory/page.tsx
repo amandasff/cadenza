@@ -2554,6 +2554,22 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
             </div>
           </Link>
 
+          <Link href="/student/theory/chords" style={{ textDecoration: "none" }}>
+            <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(184,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.2rem" }}>🎸</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>Chord Reference</span>
+                    <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", background: "rgba(184,92,58,0.1)", color: "#B85C3A", borderRadius: 4, padding: "0.15rem 0.4rem" }}>Reference</span>
+                  </div>
+                  <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>Interactive chord diagrams for piano, guitar, and ukulele. Tap a chord to see the keys or fingering positions.</p>
+                </div>
+                <span style={{ fontSize: "1rem", color: "var(--muted)", flexShrink: 0, alignSelf: "center" }}>›</span>
+              </div>
+            </div>
+          </Link>
+
           {/* Remaining games */}
           {games.slice(2).map(g => (
             <div key={g.title} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", opacity: g.active ? 1 : 0.48, cursor: g.active ? "pointer" : "default" }} onClick={g.active ? () => onSelect(g.view) : undefined}>
