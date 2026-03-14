@@ -2554,7 +2554,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
             </div>
           </Link>
 
-          <Link href="/student/theory/chords" style={{ textDecoration: "none" }}>
+          <Link href="/student/reference" style={{ textDecoration: "none" }}>
             <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
                 <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(184,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.2rem" }}>🎸</div>

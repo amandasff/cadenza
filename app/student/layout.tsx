@@ -26,6 +26,7 @@ const tabs = [
   { href: "/student/practice",       label: "Practice" },
   { href: "/student/pieces",         label: "Pieces" },
   { href: "/student/theory",         label: "Games" },
+  { href: "/student/reference",      label: "Reference" },
   { href: "/student/ai-tutor",       label: "AI" },
   { href: "/student/chat",           label: "Chat" },
   { href: "/student/journey",        label: "Profile" },
@@ -41,11 +42,12 @@ const primaryMobileTabs = [
   { href: "/student/discover", label: "Discover" },
 ];
 const moreMobileTabs = [
-  { href: "/student/chat",     label: "Chat" },
-  { href: "/student/pieces",   label: "Pieces" },
-  { href: "/student/theory",   label: "Games" },
-  { href: "/student/ai-tutor", label: "AI Tutor" },
-  { href: "/student/rewards",  label: "Awards" },
+  { href: "/student/chat",      label: "Chat" },
+  { href: "/student/pieces",    label: "Pieces" },
+  { href: "/student/theory",    label: "Games" },
+  { href: "/student/reference", label: "Reference" },
+  { href: "/student/ai-tutor",  label: "AI Tutor" },
+  { href: "/student/rewards",   label: "Awards" },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {

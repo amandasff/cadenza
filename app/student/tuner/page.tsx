@@ -480,48 +480,91 @@ export default function TunerPage() {
         )}
       </button>
 
-      {/* String reference */}
+      {/* String visualizer — Yousician-style stacked strings */}
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.875rem", textAlign: "center" }}>
-          {instrument.name} · Standard Tuning
+          {instrument.name} · Standard Tuning · tap a string to hear it
         </div>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${instrument.columns}, 1fr)`,
-          gap: "0.5rem",
-        }}>
-          {instrument.strings.map(s => {
+        <div style={{ background: "#2C2C2E", borderRadius: 14, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.35)" }}>
+          {[...instrument.strings].reverse().map((s, idx, arr) => {
             const sNote = s.label.replace(/\d+/, "");
             const sOctave = parseInt(s.label.match(/\d+/)![0]);
-            const isActive = noteInfo
-              ? noteInfo.note === sNote && noteInfo.octave === sOctave
-              : false;
+            const isActive = noteInfo ? noteInfo.note === sNote && noteInfo.octave === sOctave : false;
             const isPlaying = playingString === s.label;
+            // String thickness: lower string number = higher pitch = thinner
+            const totalStrings = arr.length;
+            const reversedIdx = totalStrings - 1 - idx; // 0 = highest pitch (thinnest)
+            const stringThickness = 1.5 + (reversedIdx / (totalStrings - 1)) * 3.5;
+            const color = isPlaying ? "#E6A817" : isActive ? "#4CAF84" : "rgba(255,255,255,0.25)";
+            const glowColor = isPlaying ? "#E6A81760" : isActive ? "#4CAF8460" : "transparent";
+
             return (
               <button
                 key={`${s.label}-${s.stringNum}`}
                 onClick={() => playTone(s.freq, s.label)}
                 style={{
-                  background: isPlaying ? "#E6A81733" : isActive ? "#4CAF8422" : "#2C2C2E",
-                  border: `1px solid ${isPlaying ? "#E6A817" : isActive ? "#4CAF84" : "rgba(255,255,255,0.08)"}`,
-                  borderRadius: 8,
-                  padding: "0.625rem 0.25rem",
-                  textAlign: "center",
-                  transition: "all 0.2s",
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0,
+                  background: isActive ? "#4CAF8410" : isPlaying ? "#E6A81710" : "transparent",
+                  border: "none",
+                  borderTop: idx > 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
                   cursor: "pointer",
+                  padding: 0,
+                  transition: "background 0.2s",
                   fontFamily: "Inter, sans-serif",
                 }}
               >
-                <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: isPlaying ? "#E6A817" : isActive ? "#4CAF84" : "#FDFCFA", marginBottom: "0.125rem" }}>
-                  {sNote}
+                {/* String label + number */}
+                <div style={{
+                  width: 64, flexShrink: 0, textAlign: "center",
+                  padding: "0.875rem 0",
+                  borderRight: "1px solid rgba(255,255,255,0.06)",
+                }}>
+                  <div style={{ fontSize: "1rem", fontWeight: 700, color: isActive ? "#4CAF84" : isPlaying ? "#E6A817" : "#FDFCFA", lineHeight: 1 }}>
+                    {sNote}
+                  </div>
+                  <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.3)", marginTop: 3, letterSpacing: "0.06em" }}>
+                    STR {s.stringNum}
+                  </div>
+                </div>
+
+                {/* The actual string line */}
+                <div style={{ flex: 1, position: "relative", height: 52, display: "flex", alignItems: "center" }}>
+                  <div style={{
+                    position: "absolute", left: 0, right: 0,
+                    height: stringThickness,
+                    background: color,
+                    borderRadius: stringThickness,
+                    boxShadow: isActive || isPlaying ? `0 0 8px 2px ${glowColor}` : "none",
+                    transition: "background 0.2s, box-shadow 0.2s",
+                  }} />
                   {isPlaying && (
-                    <span style={{ marginLeft: 4, fontSize: "0.625rem", verticalAlign: "middle" }}>
+                    <div style={{ position: "absolute", right: 12, fontSize: "0.625rem", color: "#E6A817", letterSpacing: "0.06em" }}>
                       ♪
-                    </span>
+                    </div>
+                  )}
+                  {isActive && !isPlaying && (
+                    <div style={{ position: "absolute", right: 12, fontSize: "0.625rem", color: "#4CAF84", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      ✓
+                    </div>
                   )}
                 </div>
-                <div style={{ fontSize: "0.5625rem", color: isPlaying ? "#E6A81788" : "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>
-                  {isPlaying ? "tap to stop" : `${sOctave} · str ${s.stringNum}`}
+
+                {/* Octave + cents */}
+                <div style={{
+                  width: 52, flexShrink: 0, textAlign: "center",
+                  padding: "0.875rem 0",
+                  borderLeft: "1px solid rgba(255,255,255,0.06)",
+                }}>
+                  <div style={{ fontSize: "0.625rem", color: isActive ? "#4CAF84" : "rgba(255,255,255,0.2)", letterSpacing: "0.04em" }}>
+                    {isActive && noteInfo ? (
+                      <span style={{ fontWeight: 600 }}>{noteInfo.cents > 0 ? "+" : ""}{noteInfo.cents}¢</span>
+                    ) : (
+                      sOctave
+                    )}
+                  </div>
                 </div>
               </button>
             );
