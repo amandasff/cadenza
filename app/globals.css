@@ -792,6 +792,15 @@ html[data-theme="fun"] .student-shell {
   flex-direction: column;
 }
 
+/* Perform/annotate page — fill full viewport, no scroll chrome or padding */
+.student-shell:has([data-perform-page]) {
+  height: 100dvh;
+}
+.student-scroll-area:has([data-perform-page]) {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
 /* ── Teacher responsive ── */
 .teacher-nav-tabs {
   display: flex;

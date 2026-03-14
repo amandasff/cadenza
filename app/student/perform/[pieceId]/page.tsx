@@ -617,11 +617,12 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
 
   return (
     <div
+      data-perform-page
       ref={containerRef}
       style={{
         position: "relative",
         background: "#111",
-        minHeight: "100%",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         userSelect: "none",
