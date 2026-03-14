@@ -6,13 +6,13 @@ const DEFAULT_EMOJIS = ["🎵", "🎶", "✨", "⭐", "🎸", "🎹"];
 
 /* ── particle helpers ─────────────────────────────────── */
 
-function spawnEmoji(x: number, y: number, emoji: string, scale = 1) {
+function spawnEmoji(x: number, y: number, emoji: string) {
   const el = document.createElement("span");
   el.textContent = emoji;
-  const size = (14 + Math.random() * 12) * scale;
-  const angle = (Math.random() - 0.5) * 50;
-  const dy = -(20 + Math.random() * 30);
-  const dx = (Math.random() - 0.5) * 36;
+  const size = 20 + Math.random() * 16; // 20–36px — large enough to see
+  const angle = (Math.random() - 0.5) * 60;
+  const dy = -(30 + Math.random() * 40);
+  const dx = (Math.random() - 0.5) * 40;
 
   el.style.cssText = [
     "position:fixed",
@@ -20,8 +20,37 @@ function spawnEmoji(x: number, y: number, emoji: string, scale = 1) {
     `font-size:${size}px`,
     "pointer-events:none", "z-index:9990",
     `transform:translate(-50%,-50%) rotate(${angle}deg)`,
-    "opacity:0.9", "line-height:1",
-    "transition:transform 0.7s cubic-bezier(.1,.8,.3,1),opacity 0.7s ease-out",
+    "opacity:1", "line-height:1",
+    "transition:transform 0.9s cubic-bezier(.1,.85,.3,1),opacity 0.9s ease-out",
+    "will-change:transform,opacity",
+  ].join(";");
+  document.body.appendChild(el);
+
+  requestAnimationFrame(() => {
+    el.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) rotate(${angle + (Math.random() - 0.5) * 40}deg) scale(0.15)`;
+    el.style.opacity = "0";
+  });
+  setTimeout(() => el.remove(), 950);
+}
+
+function spawnDoodleStamp(x: number, y: number, src: string) {
+  const el = document.createElement("img");
+  el.src = src;
+  const size = 36 + Math.random() * 20; // 36–56px
+  const angle = (Math.random() - 0.5) * 50;
+  const dy = -(25 + Math.random() * 35);
+  const dx = (Math.random() - 0.5) * 40;
+
+  el.style.cssText = [
+    "position:fixed",
+    `left:${x}px`, `top:${y}px`,
+    `width:${size}px`, `height:${size}px`,
+    "object-fit:contain",
+    "pointer-events:none", "z-index:9990",
+    "border-radius:4px",
+    `transform:translate(-50%,-50%) rotate(${angle}deg)`,
+    "opacity:0.85",
+    "transition:transform 0.9s cubic-bezier(.1,.85,.3,1),opacity 0.9s ease-out",
     "will-change:transform,opacity",
   ].join(";");
   document.body.appendChild(el);
@@ -30,36 +59,64 @@ function spawnEmoji(x: number, y: number, emoji: string, scale = 1) {
     el.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) rotate(${angle + (Math.random() - 0.5) * 30}deg) scale(0.2)`;
     el.style.opacity = "0";
   });
-  setTimeout(() => el.remove(), 720);
+  setTimeout(() => el.remove(), 950);
 }
 
-function spawnClickBurst(x: number, y: number, emojis: string[]) {
-  const count = 8;
+function spawnClickBurst(x: number, y: number, emojis: string[], doodleSrc: string | null) {
+  const count = 9;
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2;
-    const dist = 50 + Math.random() * 50;
-    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-    const el = document.createElement("span");
-    el.textContent = emoji;
-    const size = 16 + Math.random() * 10;
-    el.style.cssText = [
-      "position:fixed",
-      `left:${x}px`, `top:${y}px`,
-      `font-size:${size}px`,
-      "pointer-events:none", "z-index:9991",
-      "transform:translate(-50%,-50%) scale(1)",
-      "opacity:1", "line-height:1",
-      "transition:transform 0.75s cubic-bezier(.1,.9,.3,1),opacity 0.75s ease-out",
-      "will-change:transform,opacity",
-    ].join(";");
-    document.body.appendChild(el);
-    const tx = Math.cos(angle) * dist;
-    const ty = Math.sin(angle) * dist;
-    requestAnimationFrame(() => {
-      el.style.transform = `translate(calc(-50% + ${tx}px),calc(-50% + ${ty}px)) scale(0.1)`;
-      el.style.opacity = "0";
-    });
-    setTimeout(() => el.remove(), 780);
+    const dist = 55 + Math.random() * 55;
+
+    // Every 3rd item is a doodle stamp if available
+    if (i % 3 === 0 && doodleSrc) {
+      const el = document.createElement("img");
+      el.src = doodleSrc;
+      const size = 30 + Math.random() * 18;
+      const rot = (Math.random() - 0.5) * 60;
+      el.style.cssText = [
+        "position:fixed",
+        `left:${x}px`, `top:${y}px`,
+        `width:${size}px`, `height:${size}px`,
+        "object-fit:contain", "border-radius:3px",
+        "pointer-events:none", "z-index:9991",
+        `transform:translate(-50%,-50%) rotate(${rot}deg) scale(1)`,
+        "opacity:1",
+        "transition:transform 0.8s cubic-bezier(.1,.9,.3,1),opacity 0.8s ease-out",
+        "will-change:transform,opacity",
+      ].join(";");
+      document.body.appendChild(el);
+      const tx = Math.cos(angle) * dist;
+      const ty = Math.sin(angle) * dist;
+      requestAnimationFrame(() => {
+        el.style.transform = `translate(calc(-50% + ${tx}px),calc(-50% + ${ty}px)) rotate(${rot + 30}deg) scale(0.1)`;
+        el.style.opacity = "0";
+      });
+      setTimeout(() => el.remove(), 850);
+    } else {
+      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+      const el = document.createElement("span");
+      el.textContent = emoji;
+      const size = 18 + Math.random() * 12;
+      el.style.cssText = [
+        "position:fixed",
+        `left:${x}px`, `top:${y}px`,
+        `font-size:${size}px`,
+        "pointer-events:none", "z-index:9991",
+        "transform:translate(-50%,-50%) scale(1)",
+        "opacity:1", "line-height:1",
+        "transition:transform 0.8s cubic-bezier(.1,.9,.3,1),opacity 0.8s ease-out",
+        "will-change:transform,opacity",
+      ].join(";");
+      document.body.appendChild(el);
+      const tx = Math.cos(angle) * dist;
+      const ty = Math.sin(angle) * dist;
+      requestAnimationFrame(() => {
+        el.style.transform = `translate(calc(-50% + ${tx}px),calc(-50% + ${ty}px)) scale(0.1)`;
+        el.style.opacity = "0";
+      });
+      setTimeout(() => el.remove(), 850);
+    }
   }
 }
 
@@ -73,47 +130,62 @@ function injectAmbientStyles() {
   style.id = AMBIENT_STYLE_ID;
   style.textContent = `
     @keyframes cadenza-drift-a {
-      0%   { transform: translateY(0)   translateX(0)  rotate(0deg);   opacity: 0; }
-      10%  { opacity: 0.55; }
-      90%  { opacity: 0.55; }
-      100% { transform: translateY(-100vh) translateX(40px)  rotate(180deg); opacity: 0; }
+      0%   { transform: translateY(0) translateX(0) rotate(0deg);    opacity:0; }
+      8%   { opacity:0.65; }
+      92%  { opacity:0.65; }
+      100% { transform: translateY(-105vh) translateX(40px) rotate(180deg); opacity:0; }
     }
     @keyframes cadenza-drift-b {
-      0%   { transform: translateY(0)   translateX(0)  rotate(0deg);   opacity: 0; }
-      10%  { opacity: 0.45; }
-      90%  { opacity: 0.45; }
-      100% { transform: translateY(-100vh) translateX(-60px) rotate(-120deg); opacity: 0; }
+      0%   { transform: translateY(0) translateX(0) rotate(0deg);    opacity:0; }
+      8%   { opacity:0.55; }
+      92%  { opacity:0.55; }
+      100% { transform: translateY(-105vh) translateX(-60px) rotate(-140deg); opacity:0; }
     }
     @keyframes cadenza-drift-c {
-      0%   { transform: translateY(0)   translateX(0)  rotate(0deg);   opacity: 0; }
-      15%  { opacity: 0.50; }
-      85%  { opacity: 0.50; }
-      100% { transform: translateY(-100vh) translateX(20px)  rotate(90deg);  opacity: 0; }
+      0%   { transform: translateY(0) translateX(0) rotate(0deg);    opacity:0; }
+      10%  { opacity:0.60; }
+      90%  { opacity:0.60; }
+      100% { transform: translateY(-105vh) translateX(25px) rotate(100deg);  opacity:0; }
     }
     @keyframes cadenza-drift-d {
-      0%   { transform: translateY(0)   translateX(0)  rotate(0deg);   opacity: 0; }
-      12%  { opacity: 0.40; }
-      88%  { opacity: 0.40; }
-      100% { transform: translateY(-100vh) translateX(-30px) rotate(-200deg); opacity: 0; }
+      0%   { transform: translateY(0) translateX(0) rotate(0deg);    opacity:0; }
+      10%  { opacity:0.50; }
+      90%  { opacity:0.50; }
+      100% { transform: translateY(-105vh) translateX(-35px) rotate(-210deg); opacity:0; }
     }
     .cadenza-ambient {
-      position: fixed; bottom: -40px; pointer-events: none;
-      z-index: 1; font-size: 1.75rem; line-height: 1; user-select: none;
+      position:fixed; bottom:-48px; pointer-events:none;
+      z-index:1; font-size:2rem; line-height:1; user-select:none;
+    }
+    .cadenza-ambient-img {
+      position:fixed; bottom:-48px; pointer-events:none;
+      z-index:1; width:44px; height:44px; object-fit:contain;
+      border-radius:4px; opacity:0;
     }
   `;
   document.head.appendChild(style);
 }
 
-function createAmbientDrifters(emojis: string[]): HTMLSpanElement[] {
+function createAmbientDrifters(emojis: string[], doodleSrc: string | null): (HTMLSpanElement | HTMLImageElement)[] {
   injectAmbientStyles();
   const configs = [
-    { left: "8%",  delay: "0s",    dur: "9s",  anim: "cadenza-drift-a", idx: 0 },
-    { left: "28%", delay: "2.5s",  dur: "12s", anim: "cadenza-drift-b", idx: 1 },
-    { left: "55%", delay: "1s",    dur: "10s", anim: "cadenza-drift-c", idx: 2 },
-    { left: "78%", delay: "4s",    dur: "11s", anim: "cadenza-drift-d", idx: 3 },
-    { left: "42%", delay: "6.5s",  dur: "13s", anim: "cadenza-drift-a", idx: 4 },
+    { left: "7%",  delay: "0s",   dur: "10s",  anim: "cadenza-drift-a", idx: 0 },
+    { left: "25%", delay: "2.2s", dur: "13s",  anim: "cadenza-drift-b", idx: 1 },
+    { left: "50%", delay: "1s",   dur: "11s",  anim: "cadenza-drift-c", idx: 2 }, // doodle slot
+    { left: "72%", delay: "4.5s", dur: "12s",  anim: "cadenza-drift-d", idx: 3 },
+    { left: "88%", delay: "7s",   dur: "9.5s", anim: "cadenza-drift-a", idx: 4 },
   ];
   return configs.map(({ left, delay, dur, anim, idx }) => {
+    // Middle slot (idx 2) uses the doodle if available
+    if (idx === 2 && doodleSrc) {
+      const el = document.createElement("img");
+      el.src = doodleSrc;
+      el.className = "cadenza-ambient-img";
+      el.style.left = left;
+      el.style.animation = `${anim} ${dur} ${delay} infinite linear`;
+      document.body.appendChild(el);
+      return el;
+    }
     const el = document.createElement("span");
     el.className = "cadenza-ambient";
     el.textContent = emojis[idx % emojis.length];
@@ -129,7 +201,7 @@ function createAmbientDrifters(emojis: string[]): HTMLSpanElement[] {
 export default function FloatingDrawing() {
   const { theme, openDrawModal, funTheme } = useTheme();
   const drawingSrcRef = useRef<string | null>(null);
-  const ambientEls = useRef<HTMLSpanElement[]>([]);
+  const ambientEls = useRef<(HTMLSpanElement | HTMLImageElement)[]>([]);
 
   // Keep drawing src ref in sync
   useEffect(() => {
@@ -145,35 +217,41 @@ export default function FloatingDrawing() {
     return () => window.removeEventListener("cadenza-drawing-saved", onDrawSaved);
   }, [theme]);
 
-  // Ambient drifters — recreate whenever emojis change
+  // Ambient drifters — recreate when emojis or drawing changes
+  const emojiKey = funTheme?.emojis?.join("") ?? "";
   useEffect(() => {
     if (theme !== "fun") return;
     const emojis = funTheme?.emojis ?? DEFAULT_EMOJIS;
-    ambientEls.current = createAmbientDrifters(emojis);
+    ambientEls.current = createAmbientDrifters(emojis, drawingSrcRef.current);
     return () => {
       ambientEls.current.forEach(el => el.remove());
       ambientEls.current = [];
     };
-  }, [theme, funTheme?.emojis?.join("")]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, emojiKey]);
 
-  // Cursor trail
+  // Cursor trail + click bursts
   useEffect(() => {
     if (theme !== "fun") return;
-    const emojis = () => funTheme?.emojis ?? DEFAULT_EMOJIS;
-    let last = 0;
 
+    let last = 0;
     function onMove(e: MouseEvent | TouchEvent) {
       const now = Date.now();
-      if (now - last < 85) return;
+      if (now - last < 60) return; // 60ms throttle — responsive but not overwhelming
       last = now;
       const x = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
       const y = "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-      const pool = emojis();
-      spawnEmoji(x, y, pool[Math.floor(Math.random() * pool.length)]);
+      const pool = funTheme?.emojis ?? DEFAULT_EMOJIS;
+      // 25% chance to spawn doodle stamp if drawing exists
+      if (drawingSrcRef.current && Math.random() < 0.25) {
+        spawnDoodleStamp(x, y, drawingSrcRef.current);
+      } else {
+        spawnEmoji(x, y, pool[Math.floor(Math.random() * pool.length)]);
+      }
     }
 
     function onClick(e: MouseEvent) {
-      spawnClickBurst(e.clientX, e.clientY, emojis());
+      spawnClickBurst(e.clientX, e.clientY, funTheme?.emojis ?? DEFAULT_EMOJIS, drawingSrcRef.current);
     }
 
     document.addEventListener("mousemove", onMove);
@@ -184,7 +262,8 @@ export default function FloatingDrawing() {
       document.removeEventListener("touchmove", onMove);
       document.removeEventListener("click", onClick);
     };
-  }, [theme, funTheme?.emojis?.join("")]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, emojiKey]);
 
   if (theme !== "fun") return null;
 

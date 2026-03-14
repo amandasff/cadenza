@@ -681,10 +681,10 @@ html[data-theme="dark"] .progress-fill {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FUN THEME  — northern lights / aurora borealis
-   Strategy: vivid dark aurora background, all surfaces become
-   frosted-glass white — so dark text still reads perfectly and
-   no inline colours need to change.
+   FUN THEME  — aurora background only, light-mode UI
+   All colors, borders, scrollbars etc. stay identical to light mode.
+   Only the page background animates; interactive emoji effects
+   are handled in JS (FloatingDrawing).
    ═══════════════════════════════════════════════════════════════ */
 
 @keyframes aurora-shift {
@@ -694,85 +694,25 @@ html[data-theme="dark"] .progress-fill {
 }
 
 html[data-theme="fun"] {
-  /*
-   * Rich dark aurora — near-black base with deep teal, violet,
-   * magenta, and green flowing through it.
-   * When --fun-bg-override is set by AI theme, it takes priority.
-   */
+  /* Aurora background — AI theme can override via --fun-bg-override */
   background: var(--fun-bg-override, linear-gradient(
     -45deg,
-    #06030f,   /* near-black */
-    #0c1e42,   /* deep ocean navy */
-    #130438,   /* deep violet */
-    #041e26,   /* dark teal-jade */
-    #200336,   /* deep magenta-violet */
-    #031820,   /* midnight teal */
+    #06030f,
+    #0c1e42,
+    #130438,
+    #041e26,
+    #200336,
+    #031820,
     #06030f
   ));
   background-size: 400% 400%;
   animation: aurora-shift 14s ease infinite;
-
-  /*
-   * Keep charcoal and muted neutral so nav text doesn't go purple.
-   * The aurora background provides the fun — text stays warm charcoal.
-   */
-  --charcoal:      #1A1714;                    /* standard warm dark — legible on white glass */
-  --muted:         #6B6460;                    /* warm neutral gray — no purple tint */
-
-  /* Surfaces: translucent white glass — aurora glows through */
-  --white:         rgba(255, 255, 255, 0.88);  /* cards, modals */
-  --cream:         rgba(255, 255, 255, 0.58);  /* page-level sections */
-  --cream-deep:    rgba(255, 255, 255, 0.22);  /* active-state tint */
-
-  /* Borders: soft aurora purple */
-  --border:        rgba(155, 110, 255, 0.22);
-  --border-strong: rgba(155, 110, 255, 0.44);
-
-  /* Category accents — vivid but not garish */
-  --sage:     #1B8A5A;
-  --rose:     #C2185B;
-  --sky:      #1565C0;
-  --butter:   #E65100;
-  --peach:    #BF360C;
-  --lavender: #6A1B9A;
+  /* No CSS variable overrides — everything else is light mode */
 }
 
-/* Shell transparent — aurora shows through everything */
+/* Shell transparent so aurora peeks around content areas */
 html[data-theme="fun"] .student-shell {
   background: transparent;
-}
-
-/* Sidebar — frosted white glass (dark text reads fine) */
-html[data-theme="fun"] .student-sidebar {
-  background: rgba(255, 255, 255, 0.82) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right-color: rgba(155, 110, 255, 0.20) !important;
-}
-
-/* Mobile header + bottom nav — frosted white glass */
-html[data-theme="fun"] .student-mobile-header {
-  background: rgba(255, 255, 255, 0.84) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom-color: rgba(155, 110, 255, 0.18) !important;
-}
-
-html[data-theme="fun"] .student-bottom-nav {
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top-color: rgba(155, 110, 255, 0.18) !important;
-}
-
-/* Skeleton shimmer — aurora purple glow */
-html[data-theme="fun"] .skeleton {
-  background: linear-gradient(90deg,
-    rgba(180, 140, 255, 0.18) 25%,
-    rgba(220, 200, 255, 0.35) 50%,
-    rgba(180, 140, 255, 0.18) 75%
-  ) !important;
-  background-size: 200% 100% !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
