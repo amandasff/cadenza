@@ -3,6 +3,25 @@ import crypto from "crypto";
 import { getSupabaseServerClient } from "../../../../lib/supabase/server";
 import { getSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
+// Simple in-memory rate limiter: max 5 PIN attempts per (userId+targetId) per 5 minutes
+const pinAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = pinAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    pinAttempts.set(key, { count: 1, resetAt: now + 5 * 60 * 1000 });
+    return true; // allowed
+  }
+  if (entry.count >= 5) return false; // blocked
+  entry.count++;
+  return true; // allowed
+}
+
+function clearRateLimit(key: string) {
+  pinAttempts.delete(key);
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -35,11 +54,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sibling hasn't set a switch PIN yet" }, { status: 400 });
   }
 
+  // Rate limit: max 5 attempts per user+target pair per 5 minutes
+  const rateLimitKey = `${user.id}:${targetId}`;
+  if (!checkRateLimit(rateLimitKey)) {
+    return NextResponse.json({ error: "Too many PIN attempts — try again in 5 minutes" }, { status: 429 });
+  }
+
   // Verify PIN
   const hashed = crypto.createHash("sha256").update(pin + targetId).digest("hex");
   if (hashed !== targetProfile.switch_pin) {
     return NextResponse.json({ error: "Wrong PIN" }, { status: 401 });
   }
+
+  // Clear rate limit on successful verification
+  clearRateLimit(rateLimitKey);
 
   // Look up target user's email via admin API
   const admin = getSupabaseAdminClient();

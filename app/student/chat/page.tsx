@@ -44,6 +44,7 @@ export default function StudentChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [sendingImage, setSendingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -211,6 +212,7 @@ export default function StudentChat() {
   async function handleSendImage(file: File) {
     if (!student?.studioId || !teacherId) return;
     setSendingImage(true);
+    setImageError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const ext = file.name.split('.').pop() ?? 'jpg';
@@ -223,7 +225,10 @@ export default function StudentChat() {
       const fresh = await svc.getPrivateThread(student.studioId, student.id, teacherId);
       setPrivateMessages(fresh);
       setTab('private');
-    } catch (err) { console.error('Image upload failed:', err); }
+    } catch (err) {
+      console.error('Image upload failed:', err);
+      setImageError('Failed to send image — please try again.');
+    }
     finally { setSendingImage(false); }
   }
 
@@ -232,7 +237,8 @@ export default function StudentChat() {
   }
 
   function videoUploadPath() {
-    return `${student?.studioId}/${student?.id}/${Date.now()}.webm`;
+    if (!student?.studioId || !student?.id) return "";
+    return `${student.studioId}/${student.id}/${Date.now()}.webm`;
   }
 
   async function handleSendVideo(publicUrl: string) {
@@ -463,6 +469,12 @@ export default function StudentChat() {
         <div style={{ padding: "0.375rem 1rem", background: "var(--error-bg, #fff0f0)", borderTop: "1px solid var(--error, #d00)", fontSize: "0.75rem", color: "var(--error, #d00)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <span>{audioError}</span>
           <button onClick={clearError} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
+        </div>
+      )}
+      {tab === "private" && imageError && (
+        <div style={{ padding: "0.375rem 1rem", background: "var(--error-bg, #fff0f0)", borderTop: "1px solid var(--error, #d00)", fontSize: "0.75rem", color: "var(--error, #d00)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <span>{imageError}</span>
+          <button onClick={() => setImageError(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
         </div>
       )}
       {tab === "private" && (

@@ -19,6 +19,18 @@ export async function POST(request: Request) {
       return Response.json({ error: "studentId and studioId required" }, { status: 400 });
     }
 
+    // Verify the authenticated user owns this studio
+    const { data: studio } = await supabase
+      .from("studios")
+      .select("id")
+      .eq("id", studioId)
+      .eq("owner_id", user.id)
+      .single();
+
+    if (!studio) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     // Create Daily.co room (expires in 4 hours)
     const exp = Math.floor(Date.now() / 1000) + 4 * 60 * 60;
     const dailyRes = await fetch(`${DAILY_BASE}/rooms`, {

@@ -22,6 +22,38 @@ export async function POST(
 
   const db = getDbClient() ?? server;
 
+  // Verify the message exists and the user is in its studio (as sender or recipient)
+  const { data: message } = await db
+    .from('messages')
+    .select('id, studio_id, sender_id, recipient_id')
+    .eq('id', messageId)
+    .single();
+
+  if (!message) {
+    return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+  }
+
+  // Verify user belongs to this studio (as a studio member, sender, or recipient)
+  const { data: membership } = await server
+    .from('studio_students')
+    .select('id')
+    .eq('studio_id', message.studio_id)
+    .eq('student_id', user.id)
+    .maybeSingle();
+
+  const { data: studioOwner } = await server
+    .from('studios')
+    .select('id')
+    .eq('id', message.studio_id)
+    .eq('owner_id', user.id)
+    .maybeSingle();
+
+  const isParticipant = message.sender_id === user.id || message.recipient_id === user.id;
+
+  if (!membership && !studioOwner && !isParticipant) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   // Check if already hearted
   const { data: existing } = await db
     .from('message_hearts')

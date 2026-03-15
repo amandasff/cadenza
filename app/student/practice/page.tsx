@@ -264,7 +264,7 @@ function PracticeInner() {
           description: portfolioDesc.trim() || undefined,
           recordingUrl,
           sessionId: sessionData.id,
-        }).catch(() => {});
+        }).catch((err) => { console.error("Portfolio save failed:", err); });
       }
 
       if (teacherId) {
