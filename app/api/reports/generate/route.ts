@@ -120,12 +120,14 @@ Use formal but warm language appropriate for a music studio progress report. Ref
   });
 
   let reportFields: Record<string, string> = {};
+  const firstBlock = message.content[0];
+  const rawText = firstBlock?.type === "text" ? firstBlock.text : "";
   try {
-    const raw = message.content[0].type === "text" ? message.content[0].text : "{}";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (jsonMatch) reportFields = JSON.parse(jsonMatch[0]);
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+    reportFields = JSON.parse(jsonMatch[0]);
   } catch {
-    reportFields = { overall_summary: message.content[0].type === "text" ? message.content[0].text : "" };
+    reportFields = { overall_summary: rawText || "Report could not be generated." };
   }
 
   // Save draft report to DB

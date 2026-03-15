@@ -518,7 +518,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         setSessions(sessionData);
 
         const { data: sgData } = await supabase
-          .from("goals").select("*").eq("student_id", id).is("piece_id", null)
+          .from("goals").select("*").eq("student_id", id).eq("teacher_id", teacher.id).is("piece_id", null)
           .order("path_order", { ascending: true });
         setStandaloneGoals((sgData ?? []) as GoalRow[]);
 
