@@ -85,6 +85,13 @@ export default function JourneyPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+
+  // Followers/following modal
+  const [followModal, setFollowModal] = useState<"followers" | "following" | null>(null);
+  const [followList, setFollowList] = useState<{ id: string; display_name: string; avatar_url: string | null }[]>([]);
+  const [followListLoading, setFollowListLoading] = useState(false);
+  const [myFollows, setMyFollows] = useState<Set<string>>(new Set());
+
   const [editingProfile, setEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
@@ -153,10 +160,65 @@ export default function JourneyPage() {
         ]);
         setFollowerCount(fc ?? 0);
         setFollowingCount(ing ?? 0);
+        // Preload who I follow for follow-back buttons
+        const { data: mf } = await supabase.from("follows").select("following_id").eq("follower_id", student.id);
+        setMyFollows(new Set((mf ?? []).map((r: { following_id: string }) => r.following_id)));
       } catch { /* follows table may not exist */ }
     };
     load();
   }, [student?.id]);
+
+  async function openFollowModal(type: "followers" | "following") {
+    if (!student?.id) return;
+    setFollowModal(type);
+    setFollowList([]);
+    setFollowListLoading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      if (type === "followers") {
+        // People who follow me — join to their profile
+        type FU = { id: string; display_name: string; avatar_url: string | null };
+        const { data } = await supabase
+          .from("follows")
+          .select("follower_id, profiles!follows_follower_id_fkey(id, display_name, avatar_url)")
+          .eq("following_id", student.id)
+          .order("created_at", { ascending: false });
+        setFollowList((data ?? []).map((r: { profiles: FU | FU[] | null }) => {
+          const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+          return p as FU;
+        }).filter(Boolean));
+      } else {
+        type FU = { id: string; display_name: string; avatar_url: string | null };
+        // People I follow — join to their profile
+        const { data } = await supabase
+          .from("follows")
+          .select("following_id, profiles!follows_following_id_fkey(id, display_name, avatar_url)")
+          .eq("follower_id", student.id)
+          .order("created_at", { ascending: false });
+        setFollowList((data ?? []).map((r: { profiles: FU | FU[] | null }) => {
+          const p = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+          return p as FU;
+        }).filter(Boolean));
+      }
+    } catch { /* ignore */ }
+    setFollowListLoading(false);
+  }
+
+  async function toggleFollow(targetId: string) {
+    if (!student?.id) return;
+    const supabase = getSupabaseBrowserClient();
+    const isFollowing = myFollows.has(targetId);
+    setMyFollows(prev => { const n = new Set(prev); isFollowing ? n.delete(targetId) : n.add(targetId); return n; });
+    if (isFollowing) {
+      await supabase.from("follows").delete().eq("follower_id", student.id).eq("following_id", targetId);
+      if (followModal === "following") {
+        setFollowList(prev => prev.filter(u => u.id !== targetId));
+        setFollowingCount(c => c - 1);
+      }
+    } else {
+      await supabase.from("follows").insert({ follower_id: student.id, following_id: targetId });
+    }
+  }
 
   async function saveProfile() {
     if (!student?.id || savingProfile) return;
@@ -435,15 +497,26 @@ export default function JourneyPage() {
         {/* Stats row */}
         <div style={{ display: "flex", gap: "0", borderTop: "1px solid var(--border)", margin: "0 -1rem", padding: "0.5rem 1rem 0" }}>
           {[
-            { label: "followers", value: followerCount },
-            { label: "following", value: followingCount },
-            { label: "streak", value: `${profile?.streak_days ?? 0}🔥` },
-            { label: "clips", value: publicClipCount },
-          ].map(({ label, value }, i, arr) => (
-            <div key={label} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.375rem 0" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
-            </div>
+            { label: "followers", value: followerCount, clickable: true },
+            { label: "following", value: followingCount, clickable: true },
+            { label: "streak", value: `${profile?.streak_days ?? 0}🔥`, clickable: false },
+            { label: "clips", value: publicClipCount, clickable: false },
+          ].map(({ label, value, clickable }, i, arr) => (
+            clickable ? (
+              <button
+                key={label}
+                onClick={() => openFollowModal(label as "followers" | "following")}
+                style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.375rem 0", background: "none", border: "none", cursor: "pointer" }}
+              >
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
+              </button>
+            ) : (
+              <div key={label} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.375rem 0" }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
+              </div>
+            )
           ))}
         </div>
 
@@ -691,6 +764,89 @@ export default function JourneyPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Followers / Following Modal */}
+      {followModal && (
+        <div
+          onClick={() => setFollowModal(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "var(--white)", borderRadius: "16px 16px 0 0", width: "100%", maxWidth: 480, maxHeight: "70dvh", display: "flex", flexDirection: "column" }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.25rem 0.875rem", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", gap: "0" }}>
+                {(["followers", "following"] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => openFollowModal(tab)}
+                    style={{
+                      padding: "0.375rem 1rem", borderRadius: 99, border: "none", cursor: "pointer",
+                      background: followModal === tab ? "var(--charcoal)" : "transparent",
+                      color: followModal === tab ? "var(--white)" : "var(--muted)",
+                      fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: followModal === tab ? 600 : 400,
+                    }}
+                  >
+                    {tab === "followers" ? `${followerCount} followers` : `${followingCount} following`}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setFollowModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1.25rem", lineHeight: 1, padding: "0 0.25rem" }}>×</button>
+            </div>
+
+            {/* List */}
+            <div style={{ overflowY: "auto", flex: 1, padding: "0.5rem 0" }}>
+              {followListLoading ? (
+                <div style={{ padding: "2rem", textAlign: "center", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>Loading…</div>
+              ) : followList.length === 0 ? (
+                <div style={{ padding: "2.5rem 1.25rem", textAlign: "center" }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>
+                    {followModal === "followers" ? "No followers yet" : "Not following anyone yet"}
+                  </div>
+                </div>
+              ) : (
+                followList.map(u => {
+                  const isMe = u.id === student?.id;
+                  const amFollowing = myFollows.has(u.id);
+                  const initials = (u.display_name ?? "?").split(" ").map((w: string) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+                  return (
+                    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.625rem 1.25rem" }}>
+                      {/* Avatar */}
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: u.avatar_url ? "transparent" : "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 600, color: "var(--white)", overflow: "hidden", flexShrink: 0 }}>
+                        {u.avatar_url ? <img src={u.avatar_url} alt={u.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
+                      </div>
+                      {/* Name */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500, color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {u.display_name}
+                        </div>
+                      </div>
+                      {/* Follow/unfollow button (hide for self) */}
+                      {!isMe && (
+                        <button
+                          onClick={() => toggleFollow(u.id)}
+                          style={{
+                            padding: "0.3rem 0.875rem", borderRadius: 99, cursor: "pointer",
+                            border: amFollowing ? "1px solid var(--border-strong)" : "none",
+                            background: amFollowing ? "transparent" : "var(--charcoal)",
+                            color: amFollowing ? "var(--charcoal)" : "var(--white)",
+                            fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {amFollowing ? "Following" : "Follow"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       )}
 
