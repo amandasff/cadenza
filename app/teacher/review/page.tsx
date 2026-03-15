@@ -6,25 +6,27 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PracticeService } from "../../../lib/services/PracticeService";
 import { StudioService } from "../../../lib/services/StudioService";
 import { Teacher } from "../../../lib/models/Teacher";
+import { useI18n } from "../../../lib/context/I18nContext";
 import type { PracticeSessionRow, ProfileRow } from "../../../lib/types";
-
-function timeAgo(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
-  if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
-}
 
 export default function ReviewQueue() {
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
 
   const [sessions, setSessions] = useState<PracticeSessionRow[]>([]);
   const [studentMap, setStudentMap] = useState<Record<string, ProfileRow>>({});
   const [loading, setLoading] = useState(true);
+
+  function timeAgo(iso: string) {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (diffDays === 1) return t.teacher.yesterday;
+    if (diffDays < 7) return t.schedule.daysAgo.replace("{n}", String(diffDays));
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
 
   const loadData = useCallback(async () => {
     if (!teacher?.studioId) return;
@@ -50,10 +52,10 @@ export default function ReviewQueue() {
   return (
     <div>
       <h1 style={{ fontWeight: 800, fontSize: "1.4rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
-        Review Queue
+        {t.teacher.reviewQueueTitle}
       </h1>
       <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.5rem" }}>
-        {loading ? "Loading…" : `${sessions.length} session${sessions.length !== 1 ? "s" : ""}`}
+        {loading ? t.common.loading : `${sessions.length} session${sessions.length !== 1 ? "s" : ""}`}
       </p>
 
       {loading ? (
@@ -65,9 +67,9 @@ export default function ReviewQueue() {
       ) : sessions.length === 0 ? (
         <div className="empty-state" style={{ padding: "3rem 0" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
-          <p style={{ fontWeight: 700, color: "var(--charcoal)", margin: 0 }}>No sessions yet</p>
+          <p style={{ fontWeight: 700, color: "var(--charcoal)", margin: 0 }}>{t.teacher.reviewNoSessions}</p>
           <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
-            Sessions will appear here when students practice
+            {t.teacher.reviewSessionsWillAppear}
           </p>
         </div>
       ) : (
@@ -97,7 +99,7 @@ export default function ReviewQueue() {
                     </div>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--charcoal)" }}>
-                        {profile?.display_name ?? "Unknown Student"}
+                        {profile?.display_name ?? t.teacher.reviewUnknownStudent}
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
                         {timeAgo(s.created_at)}
@@ -109,7 +111,7 @@ export default function ReviewQueue() {
                       {mins} min
                     </div>
                     <div style={{ fontSize: "0.72rem", color: "var(--muted)" }}>
-                      {segCount > 0 ? `${segCount} segment${segCount !== 1 ? "s" : ""}` : "No segments"}
+                      {segCount > 0 ? `${segCount} segment${segCount !== 1 ? "s" : ""}` : t.teacher.reviewNoSegments}
                     </div>
                   </div>
                 </div>
@@ -117,16 +119,16 @@ export default function ReviewQueue() {
                 <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                   {s.recording_url && (
                     <span style={{ background: "var(--sky-bg)", color: "var(--sky)", padding: "0.2rem 0.6rem", borderRadius: 100, fontSize: "0.7rem", fontWeight: 700 }}>
-                      🎙 Recording
+                      {t.teacher.reviewRecording}
                     </span>
                   )}
                   {s.notes && (
                     <span style={{ background: "var(--cream-deep)", color: "var(--muted)", padding: "0.2rem 0.6rem", borderRadius: 100, fontSize: "0.7rem", fontWeight: 700 }}>
-                      💬 Notes
+                      {t.teacher.reviewNotes}
                     </span>
                   )}
                   <span style={{ marginLeft: "auto", color: "var(--sky)", fontWeight: 700, fontSize: "0.8rem" }}>
-                    Review →
+                    {t.teacher.reviewArrowBtn}
                   </span>
                 </div>
               </Link>

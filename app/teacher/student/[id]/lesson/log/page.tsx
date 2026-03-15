@@ -5,18 +5,8 @@ import { useAuth } from "../../../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../../../lib/supabase/client";
 import { LessonService } from "../../../../../../lib/services/LessonService";
 import { Teacher } from "../../../../../../lib/models/Teacher";
+import { useI18n } from "../../../../../../lib/context/I18nContext";
 import type { LessonRow } from "../../../../../../lib/types";
-
-const ATTENDANCE_LABEL: Record<string, string> = {
-  attended: "Attended",
-  cancelled: "Cancelled",
-  no_show: "No show",
-};
-const ATTENDANCE_COLOR: Record<string, string> = {
-  attended: "var(--sage)",
-  cancelled: "var(--muted)",
-  no_show: "var(--rose)",
-};
 
 export default function LessonLogPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: studentId } = use(params);
@@ -24,6 +14,18 @@ export default function LessonLogPage({ params }: { params: Promise<{ id: string
   const { user } = useAuth();
   const teacher = user as Teacher;
   const supabase = getSupabaseBrowserClient();
+  const { t } = useI18n();
+
+  const ATTENDANCE_LABEL: Record<string, string> = {
+    attended: t.teacher.lessonLogAttendanceAttended,
+    cancelled: t.teacher.lessonLogAttendanceCancelled,
+    no_show: t.teacher.lessonLogAttendanceNoShow,
+  };
+  const ATTENDANCE_COLOR: Record<string, string> = {
+    attended: "var(--sage)",
+    cancelled: "var(--muted)",
+    no_show: "var(--rose)",
+  };
 
   const [studentName, setStudentName] = useState("");
   const [lessons, setLessons] = useState<LessonRow[]>([]);
@@ -63,19 +65,19 @@ export default function LessonLogPage({ params }: { params: Promise<{ id: string
         onClick={() => router.back()}
         style={{ background: "none", border: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: "1.25rem" }}
       >
-        ← Back
+        ← {t.common.back}
       </button>
 
       <div style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-          Lesson Log
+          {t.teacher.lessonLogTitle}
         </h1>
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>{studentName}</div>
       </div>
 
       {lessons.length === 0 ? (
         <div className="card-base" style={{ padding: "2rem", textAlign: "center" }}>
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>No completed lessons yet.</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>{t.teacher.lessonLogNoLessons}</div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -110,25 +112,25 @@ export default function LessonLogPage({ params }: { params: Promise<{ id: string
 
                 {lesson.covered_notes && (
                   <div style={{ marginTop: "0.5rem" }}>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Covered</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.teacher.lessonLogCovered}</span>
                     <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.2rem 0 0", lineHeight: 1.55 }}>{lesson.covered_notes}</p>
                   </div>
                 )}
                 {lesson.focus_notes && (
                   <div style={{ marginTop: "0.5rem" }}>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Focus</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.teacher.lessonLogFocus}</span>
                     <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.2rem 0 0", lineHeight: 1.55 }}>{lesson.focus_notes}</p>
                   </div>
                 )}
                 {lesson.next_lesson_notes && (
                   <div style={{ marginTop: "0.5rem" }}>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Next lesson</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.teacher.lessonLogNextLesson}</span>
                     <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.2rem 0 0", lineHeight: 1.55 }}>{lesson.next_lesson_notes}</p>
                   </div>
                 )}
                 {!lesson.covered_notes && !lesson.focus_notes && !lesson.next_lesson_notes && (
                   <div style={{ marginTop: "0.375rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", fontStyle: "italic" }}>
-                    No notes recorded — click to add
+                    {t.teacher.lessonLogNoNotes}
                   </div>
                 )}
               </div>

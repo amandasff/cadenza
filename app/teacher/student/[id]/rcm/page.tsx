@@ -5,18 +5,8 @@ import { useAuth } from "../../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import { RcmService, RCM_GRADE_LEVELS } from "../../../../../lib/services/RcmService";
 import { Teacher } from "../../../../../lib/models/Teacher";
+import { useI18n } from "../../../../../lib/context/I18nContext";
 import type { RcmExamRow, RcmChecklistItemRow, RcmCategory } from "../../../../../lib/types";
-
-const CATEGORY_LABELS: Record<RcmCategory, string> = {
-  list_a: "List A",
-  list_b: "List B",
-  list_c: "List C",
-  etudes: "Études",
-  technical: "Technical",
-  theory: "Theory",
-  ear_training: "Ear Training",
-  sight_reading: "Sight Reading",
-};
 
 const CATEGORY_ORDER: RcmCategory[] = ["list_a", "list_b", "list_c", "etudes", "technical", "theory", "ear_training", "sight_reading"];
 
@@ -39,6 +29,18 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
   const teacher = user as Teacher;
   const supabase = getSupabaseBrowserClient();
   const rcm = RcmService.create(supabase);
+  const { t } = useI18n();
+
+  const CATEGORY_LABELS: Record<RcmCategory, string> = {
+    list_a: "List A",
+    list_b: "List B",
+    list_c: "List C",
+    etudes: t.teacher.rcmCategoryEtudes,
+    technical: t.teacher.rcmCategoryTechnical,
+    theory: t.teacher.rcmCategoryTheory,
+    ear_training: t.teacher.rcmCategoryEarTraining,
+    sight_reading: t.teacher.rcmCategorySightReading,
+  };
 
   const [studentName, setStudentName] = useState("");
   const [exam, setExam] = useState<RcmExamRow | null>(null);
@@ -169,12 +171,12 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "2rem 1.5rem" }}>
       <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: "1.25rem" }}>
-        ← Back
+        ← {t.common.back}
       </button>
 
       <div style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-          RCM Exam Prep
+          {t.teacher.rcmPageTitle}
         </h1>
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>{studentName}</div>
       </div>
@@ -183,17 +185,17 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
         /* Setup form */
         <div className="card-base" style={{ padding: "1.5rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", marginBottom: "1.25rem" }}>
-            Set up an RCM exam for {studentName} to track their preparation.
+            {t.teacher.rcmPageSetup.replace("{name}", studentName)}
           </div>
           <form onSubmit={createExam} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             <div>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>Grade level</label>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.teacher.rcmGradeLevel}</label>
               <select value={grade} onChange={e => setGrade(e.target.value)} style={INP}>
                 {RCM_GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>Exam date (optional)</label>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.teacher.rcmExamDate}</label>
               <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)} style={INP} />
             </div>
             <button type="submit" disabled={creating} style={{
@@ -202,7 +204,7 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
               fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500,
               cursor: "pointer", opacity: creating ? 0.5 : 1, alignSelf: "flex-start",
             }}>
-              {creating ? "Setting up…" : "Set up exam"}
+              {creating ? t.teacher.rcmSettingUp : t.teacher.rcmSetupExam}
             </button>
           </form>
         </div>
@@ -217,12 +219,16 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
                 </div>
                 {exam.exam_date ? (
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: days !== null && days < 14 ? "#c0392b" : "var(--muted)", marginTop: "0.25rem" }}>
-                    {days !== null && days > 0 ? `${days} days until exam` : days === 0 ? "Exam is today!" : "Exam passed"}
+                    {days !== null && days > 0
+                      ? `${days} ${t.teacher.rcmDaysUntil}`
+                      : days === 0
+                        ? t.teacher.rcmExamToday
+                        : t.teacher.rcmExamPassed}
                     {" · "}
                     {new Date(exam.exam_date + "T12:00:00").toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
                   </div>
                 ) : (
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", marginTop: "0.25rem" }}>No exam date set</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", marginTop: "0.25rem" }}>{t.teacher.rcmNoExamDate}</div>
                 )}
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -230,13 +236,13 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
                   padding: "0.25rem 0.75rem", borderRadius: 3, border: "1px solid var(--border-strong)",
                   background: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", cursor: "pointer",
                 }}>
-                  Edit date
+                  {t.teacher.rcmEditDate}
                 </button>
                 <button onClick={markExamComplete} style={{
                   padding: "0.25rem 0.75rem", borderRadius: 3, border: "1px solid var(--sage)",
                   background: "none", color: "var(--sage)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", cursor: "pointer",
                 }}>
-                  Mark done
+                  {t.teacher.rcmMarkDone}
                 </button>
               </div>
             </div>
@@ -249,7 +255,7 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
                   background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif",
                   fontSize: "0.8125rem", cursor: "pointer", opacity: savingDate ? 0.5 : 1, whiteSpace: "nowrap",
                 }}>
-                  {savingDate ? "Saving…" : "Save"}
+                  {savingDate ? t.teacher.rcmSaving : t.common.save}
                 </button>
               </form>
             )}
@@ -257,7 +263,7 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
             {/* Progress bar */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.375rem" }}>
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>Overall progress</span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>{t.teacher.rcmOverallProgress}</span>
                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--charcoal)" }}>{completedCount}/{totalCount} · {pct}%</span>
               </div>
               <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
@@ -333,21 +339,21 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
 
                 {addingCategory === cat && (
                   <form onSubmit={addItem} style={{ marginTop: "0.625rem", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                    <input required value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Title" style={INP} />
-                    <input value={newComposer} onChange={e => setNewComposer(e.target.value)} placeholder="Composer (optional)" style={INP} />
+                    <input required value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder={t.teacher.rcmTitleLabel} style={INP} />
+                    <input value={newComposer} onChange={e => setNewComposer(e.target.value)} placeholder={t.teacher.rcmComposer} style={INP} />
                     <div style={{ display: "flex", gap: "0.375rem" }}>
                       <button type="submit" disabled={addingItem} style={{
                         flex: 1, padding: "0.375rem", borderRadius: 3, border: "none",
                         background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif",
                         fontSize: "0.75rem", cursor: "pointer", opacity: addingItem ? 0.5 : 1,
                       }}>
-                        {addingItem ? "Adding…" : "Add"}
+                        {addingItem ? t.teacher.rcmAdding : t.common.add}
                       </button>
                       <button type="button" onClick={() => setAddingCategory(null)} style={{
                         padding: "0.375rem 0.75rem", borderRadius: 3, border: "1px solid var(--border)",
                         background: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", cursor: "pointer",
                       }}>
-                        Cancel
+                        {t.common.cancel}
                       </button>
                     </div>
                   </form>

@@ -2,6 +2,7 @@
 import React, { useEffect, useState, use } from "react";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import { BillingService } from "../../../../../lib/services/BillingService";
+import { useI18n } from "../../../../../lib/context/I18nContext";
 import type { BillingConfigRow, TuitionRecordRow, BillingChargeRow } from "../../../../../lib/types";
 
 function fmt(cents: number) {
@@ -17,6 +18,7 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
   const { studentId } = use(params);
   const supabase = getSupabaseBrowserClient();
   const billing = BillingService.create(supabase);
+  const { t } = useI18n();
 
   const [studentName, setStudentName] = useState("");
   const [studioName, setStudioName] = useState("");
@@ -55,7 +57,7 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
   const total = [...unpaidTuition.map(r => r.amount_cents), ...unpaidCharges.map(c => c.amount_cents)].reduce((s, x) => s + x, 0);
 
   if (loading) {
-    return <div style={{ padding: "3rem", fontFamily: "Inter, sans-serif", color: "#666" }}>Loading…</div>;
+    return <div style={{ padding: "3rem", fontFamily: "Inter, sans-serif", color: "#666" }}>{t.common.loading}</div>;
   }
 
   return (
@@ -64,7 +66,7 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "2.5rem" }}>
         <div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.25rem" }}>Invoice</h1>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.25rem" }}>{t.teacher.invoiceTitle}</h1>
           <div style={{ fontSize: "0.875rem", color: "#666" }}>{new Date().toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}</div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -73,7 +75,7 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
       </div>
 
       <div style={{ marginBottom: "2rem", padding: "1rem 1.25rem", background: "#f5f5f0", borderRadius: 4 }}>
-        <div style={{ fontSize: "0.75rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>Bill to</div>
+        <div style={{ fontSize: "0.75rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>{t.teacher.invoiceBillTo}</div>
         <div style={{ fontWeight: 600, fontSize: "1rem" }}>{studentName}</div>
         {config?.notes && <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.25rem" }}>{config.notes}</div>}
       </div>
@@ -81,7 +83,7 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
       {/* Unpaid tuition */}
       {unpaidTuition.length > 0 && (
         <div style={{ marginBottom: "1.5rem" }}>
-          <div style={{ fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#888", marginBottom: "0.5rem" }}>Tuition</div>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#888", marginBottom: "0.5rem" }}>{t.teacher.invoiceTuition}</div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
               {unpaidTuition.map(r => (
@@ -98,7 +100,7 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
       {/* Unpaid charges */}
       {unpaidCharges.length > 0 && (
         <div style={{ marginBottom: "1.5rem" }}>
-          <div style={{ fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#888", marginBottom: "0.5rem" }}>Additional Charges</div>
+          <div style={{ fontSize: "0.6875rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "#888", marginBottom: "0.5rem" }}>{t.teacher.invoiceAdditionalCharges}</div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
               {unpaidCharges.map(c => (
@@ -120,13 +122,13 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
       {/* Total */}
       <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "1rem", borderTop: "2px solid #1a1a1a" }}>
         <div style={{ display: "flex", gap: "3rem", alignItems: "center" }}>
-          <div style={{ fontWeight: 600, fontSize: "1rem" }}>Total due</div>
+          <div style={{ fontWeight: 600, fontSize: "1rem" }}>{t.teacher.invoiceTotalDue}</div>
           <div style={{ fontWeight: 700, fontSize: "1.5rem" }}>{fmt(total)}</div>
         </div>
       </div>
 
       <div style={{ marginTop: "3rem", paddingTop: "1.5rem", borderTop: "1px solid #e8e8e0", fontSize: "0.8125rem", color: "#999" }}>
-        Thank you for your business.
+        {t.teacher.invoiceThankYou}
       </div>
 
       <button
@@ -138,7 +140,7 @@ export default function InvoicePage({ params }: { params: Promise<{ studentId: s
           cursor: "pointer",
         }}
       >
-        Print / Save as PDF
+        {t.teacher.invoicePrint}
       </button>
     </div>
   );

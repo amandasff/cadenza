@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import { Teacher } from "../../../../../lib/models/Teacher";
+import { useI18n } from "../../../../../lib/context/I18nContext";
 import type { ProgressReportRow } from "../../../../../lib/types";
 
 export default function ReportsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,6 +13,7 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   const { user } = useAuth();
   const teacher = user as Teacher;
   const supabase = getSupabaseBrowserClient();
+  const { t } = useI18n();
 
   const [studentName, setStudentName] = useState("");
   const [reports, setReports] = useState<ProgressReportRow[]>([]);
@@ -70,7 +72,7 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
   }
 
   const statusColor = (s: string) => s === "sent" ? "var(--sage)" : s === "archived" ? "var(--muted)" : "var(--butter)";
-  const statusLabel = (s: string) => s === "sent" ? "Sent" : s === "archived" ? "Archived" : "Draft";
+  const statusLabel = (s: string) => s === "sent" ? t.teacher.reportsStatusSent : s === "archived" ? t.teacher.reportsStatusArchived : t.teacher.reportsStatusDraft;
 
   if (loading) {
     return (
@@ -86,13 +88,13 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
         onClick={() => router.back()}
         style={{ background: "none", border: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: "1.25rem" }}
       >
-        ← Back
+        ← {t.common.back}
       </button>
 
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "1.5rem" }}>
         <div>
           <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-            Progress Reports
+            {t.teacher.reportsTitle}
           </h1>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>{studentName}</div>
         </div>
@@ -100,14 +102,14 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
           onClick={() => setShowForm(v => !v)}
           style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
         >
-          + Generate Report
+          {t.teacher.reportsGenerateBtn}
         </button>
       </div>
 
       {showForm && (
         <form onSubmit={generate} className="card-base" style={{ padding: "1.25rem", marginBottom: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-            Generate AI Report
+            {t.teacher.reportsGenerateAI}
           </div>
           <input
             required
@@ -118,12 +120,12 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
           />
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Period start</label>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>{t.teacher.reportsPeriodStart}</label>
               <input type="date" required value={periodStart} onChange={e => setPeriodStart(e.target.value)}
                 style={{ width: "100%", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--white)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Period end</label>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>{t.teacher.reportsPeriodEnd}</label>
               <input type="date" required value={periodEnd} onChange={e => setPeriodEnd(e.target.value)}
                 style={{ width: "100%", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--white)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
             </div>
@@ -131,10 +133,10 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
           {genError && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--rose)" }}>{genError}</div>}
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button type="submit" disabled={generating} style={{ flex: 1, padding: "0.5625rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", opacity: generating ? 0.5 : 1 }}>
-              {generating ? "Generating…" : "Generate with AI"}
+              {generating ? t.teacher.reportsGenerating : t.teacher.reportsGenerateWithAI}
             </button>
             <button type="button" onClick={() => setShowForm(false)} style={{ padding: "0.5625rem 1rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", cursor: "pointer" }}>
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </form>
@@ -143,7 +145,7 @@ export default function ReportsPage({ params }: { params: Promise<{ id: string }
       {reports.length === 0 ? (
         <div className="card-base" style={{ padding: "2rem", textAlign: "center" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>
-            No reports yet. Generate the first one above.
+            {t.teacher.reportsNoReports}
           </div>
         </div>
       ) : (

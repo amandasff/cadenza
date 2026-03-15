@@ -5,18 +5,20 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { StudioService } from "../../../lib/services/StudioService";
 import { GoalService } from "../../../lib/services/GoalService";
 import { Teacher } from "../../../lib/models/Teacher";
+import { useI18n } from "../../../lib/context/I18nContext";
 import type { ProfileRow, GoalRow } from "../../../lib/types";
-
-const AREAS = [
-  { value: "technique", label: "Technique", color: "var(--sage)", bg: "var(--sage-bg)", icon: "🌿" },
-  { value: "repertoire", label: "Repertoire", color: "var(--rose)", bg: "var(--rose-bg)", icon: "🌸" },
-  { value: "ear_training", label: "Ear Training", color: "var(--sky)", bg: "var(--sky-bg)", icon: "🎧" },
-  { value: "theory", label: "Theory", color: "var(--butter)", bg: "var(--butter-bg)", icon: "⭐" },
-];
 
 export default function GoalBuilder() {
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
+
+  const AREAS = [
+    { value: "technique", label: t.teacher.categoryTechnique, color: "var(--sage)", bg: "var(--sage-bg)", icon: "🌿" },
+    { value: "repertoire", label: t.teacher.categoryRepertoire, color: "var(--rose)", bg: "var(--rose-bg)", icon: "🌸" },
+    { value: "ear_training", label: t.teacher.categoryEarTraining, color: "var(--sky)", bg: "var(--sky-bg)", icon: "🎧" },
+    { value: "theory", label: t.teacher.categoryTheory, color: "var(--butter)", bg: "var(--butter-bg)", icon: "⭐" },
+  ];
 
   const [students, setStudents] = useState<ProfileRow[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -104,7 +106,7 @@ export default function GoalBuilder() {
       await loadStudentGoals();
       setTimeout(() => setSaved(false), 2500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not create goal.");
+      setError(err instanceof Error ? err.message : t.teacher.goalCouldNotCreate);
     } finally {
       setSaving(false);
     }
@@ -113,10 +115,10 @@ export default function GoalBuilder() {
   return (
     <div>
       <h1 style={{ fontWeight: 900, fontSize: "1.5rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
-        Goal Builder
+        {t.teacher.goalBuilderTitle}
       </h1>
       <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.75rem" }}>
-        Create goals that become nodes on your student's learning path.
+        {t.teacher.goalBuilderSubtitle}
       </p>
 
       <div className="r-two-col" style={{ gridTemplateColumns: "1fr 320px" }}>
@@ -127,13 +129,13 @@ export default function GoalBuilder() {
           {/* Student picker */}
           <div>
             <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Student
+              {t.teacher.goalStudent}
             </label>
             {loadingStudents ? (
               <div className="skeleton" style={{ height: 42, borderRadius: 4 }} />
             ) : students.length === 0 ? (
               <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
-                No students in your studio yet.
+                {t.teacher.goalNoStudents}
               </p>
             ) : (
               <select
@@ -162,7 +164,7 @@ export default function GoalBuilder() {
           {/* Title */}
           <div>
             <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Goal Title
+              {t.teacher.goalTitle}
             </label>
             <input
               value={title}
@@ -175,7 +177,7 @@ export default function GoalBuilder() {
           {/* Description */}
           <div>
             <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Instructions (optional)
+              {t.teacher.goalInstructions}
             </label>
             <textarea
               value={desc}
@@ -189,7 +191,7 @@ export default function GoalBuilder() {
           {/* Practice area */}
           <div>
             <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Practice Area
+              {t.teacher.goalPracticeArea}
             </label>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               {AREAS.map(a => (
@@ -219,7 +221,7 @@ export default function GoalBuilder() {
           <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Points
+                {t.teacher.goalPoints}
               </label>
               <input
                 type="number"
@@ -232,7 +234,7 @@ export default function GoalBuilder() {
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", paddingBottom: "0.65rem" }}>
               <input type="checkbox" checked={isBoss} onChange={e => setIsBoss(e.target.checked)} style={{ width: 16, height: 16, accentColor: "var(--peach)" }} />
-              <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>⭐ Boss Node</span>
+              <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>{t.teacher.goalBossNode}</span>
             </label>
           </div>
 
@@ -243,7 +245,7 @@ export default function GoalBuilder() {
               onClick={() => setHasBonus(b => !b)}
               style={{ width: "100%", padding: "0.75rem 1rem", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)" }}
             >
-              <span>⭐ Bonus Challenge</span>
+              <span>{t.teacher.goalBonusChallenge}</span>
               <span style={{ color: "var(--butter)" }}>{hasBonus ? "▲" : "▼"}</span>
             </button>
             {hasBonus && (
@@ -251,7 +253,7 @@ export default function GoalBuilder() {
                 <input
                   value={bonusTitle}
                   onChange={e => setBonusTitle(e.target.value)}
-                  placeholder="Bonus description"
+                  placeholder={t.teacher.goalBonusDesc}
                   style={{ width: "100%", borderRadius: 4, border: "1px solid var(--butter-light)", padding: "0.6rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--white)", boxSizing: "border-box" }}
                 />
                 <input
@@ -276,19 +278,19 @@ export default function GoalBuilder() {
             className="btn btn-primary"
             style={{ padding: "0.9rem", fontSize: "0.95rem", opacity: (saving || !title.trim() || !selectedStudentId) ? 0.65 : 1, background: saved ? "var(--sage)" : undefined }}
           >
-            {saved ? "✓ Goal Added!" : saving ? "Saving..." : "Add to Path"}
+            {saved ? t.teacher.goalAdded : saving ? t.common.saving : t.teacher.goalAddToPath}
           </button>
         </div>
 
         {/* Path preview */}
         <div className="card-base" style={{ padding: "1.25rem" }}>
           <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-            {students.find(s => s.id === selectedStudentId)?.display_name || "Student"}'s Path
+            {t.teacher.goalPathPreview.replace("{name}", students.find(s => s.id === selectedStudentId)?.display_name || "Student")}
           </div>
           {studentGoals.length === 0 && !title ? (
             <div style={{ textAlign: "center", padding: "2rem 0" }}>
               <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🗺</div>
-              <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>No goals yet</p>
+              <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>{t.teacher.goalNoGoalsYet}</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>

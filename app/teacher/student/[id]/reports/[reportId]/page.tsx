@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../../../lib/supabase/client";
 import { Teacher } from "../../../../../../lib/models/Teacher";
+import { useI18n } from "../../../../../../lib/context/I18nContext";
 import type { ProgressReportRow } from "../../../../../../lib/types";
 
 const TA: React.CSSProperties = {
@@ -13,22 +14,23 @@ const TA: React.CSSProperties = {
   resize: "vertical", minHeight: 80, boxSizing: "border-box", lineHeight: 1.6,
 };
 
-const FIELDS: { key: keyof ProgressReportRow; label: string; hint: string }[] = [
-  { key: "overall_summary",    label: "Overall Summary",       hint: "2–3 sentence overview of the student's progress" },
-  { key: "strengths",          label: "Strengths",             hint: "Specific strengths observed this term" },
-  { key: "areas_for_growth",   label: "Areas for Growth",      hint: "Focus areas for next term with concrete suggestions" },
-  { key: "practice_summary",   label: "Practice Summary",      hint: "Assessment of practice consistency and quality" },
-  { key: "repertoire_summary", label: "Repertoire Summary",    hint: "Summary of pieces studied" },
-  { key: "goals_summary",      label: "Goals Summary",         hint: "Progress on goals and achievements" },
-  { key: "teacher_comments",   label: "Teacher Comments",      hint: "Warm closing comment and encouragement" },
-];
-
 export default function ReportDetailPage({ params }: { params: Promise<{ id: string; reportId: string }> }) {
   const { id: studentId, reportId } = use(params);
   const router = useRouter();
   const { user } = useAuth();
   const teacher = user as Teacher;
   const supabase = getSupabaseBrowserClient();
+  const { t } = useI18n();
+
+  const FIELDS: { key: keyof ProgressReportRow; label: string; hint: string }[] = [
+    { key: "overall_summary",    label: t.teacher.reportsFieldOverallSummaryLabel,    hint: t.teacher.reportsFieldOverallSummaryHint },
+    { key: "strengths",          label: t.teacher.reportsFieldStrengthsLabel,          hint: t.teacher.reportsFieldStrengthsHint },
+    { key: "areas_for_growth",   label: t.teacher.reportsFieldAreasForGrowthLabel,     hint: t.teacher.reportsFieldAreasForGrowthHint },
+    { key: "practice_summary",   label: t.teacher.reportsFieldPracticeSummaryLabel,    hint: t.teacher.reportsFieldPracticeSummaryHint },
+    { key: "repertoire_summary", label: t.teacher.reportsFieldRepertoireSummaryLabel,  hint: t.teacher.reportsFieldRepertoireSummaryHint },
+    { key: "goals_summary",      label: t.teacher.reportsFieldGoalsSummaryLabel,       hint: t.teacher.reportsFieldGoalsSummaryHint },
+    { key: "teacher_comments",   label: t.teacher.reportsFieldTeacherCommentsLabel,    hint: t.teacher.reportsFieldTeacherCommentsHint },
+  ];
 
   const [report, setReport] = useState<ProgressReportRow | null>(null);
   const [studentName, setStudentName] = useState("");
@@ -109,7 +111,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   if (!report) {
     return (
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "2rem 1.5rem" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)" }}>Report not found.</p>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)" }}>{t.teacher.reportsNotFound}</p>
       </div>
     );
   }
@@ -122,7 +124,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
         onClick={() => router.back()}
         style={{ background: "none", border: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: "1.25rem" }}
       >
-        ← Back
+        ← {t.common.back}
       </button>
 
       {/* Header */}
@@ -173,7 +175,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
             alignSelf: "flex-start",
           }}
         >
-          {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
+          {saving ? t.teacher.reportsSaving : saved ? t.teacher.reportsSaved : t.teacher.reportsSaveChanges}
         </button>
       </div>
 
@@ -181,14 +183,14 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
       {report.status !== "sent" && (
         <div className="card-base" style={{ padding: "1.25rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
-            Share Report
+            {t.teacher.reportsShareReport}
           </div>
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.625rem" }}>
             <input
               type="email"
               value={sendEmail}
               onChange={e => setSendEmail(e.target.value)}
-              placeholder="Parent / student email (optional)"
+              placeholder={t.teacher.reportsEmailOptional}
               style={{ flex: 1, border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--white)", color: "var(--charcoal)", outline: "none" }}
             />
             <button
@@ -196,19 +198,19 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               disabled={sending || sendSuccess}
               style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: sendSuccess ? "var(--sage)" : "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", opacity: sending ? 0.5 : 1, whiteSpace: "nowrap" }}
             >
-              {sendSuccess ? "Marked as sent ✓" : sending ? "Saving…" : "Mark as Sent"}
+              {sendSuccess ? t.teacher.reportsMarkedSent : sending ? t.teacher.reportsSaving : t.teacher.reportsMarkSent}
             </button>
           </div>
           {sendError && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--rose)" }}>{sendError}</div>}
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-            This marks the report as sent in your records. Email delivery is handled externally.
+            {t.teacher.reportsEmailNote}
           </div>
         </div>
       )}
 
       {report.status === "sent" && report.sent_at && (
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center", padding: "0.75rem" }}>
-          Sent {new Date(report.sent_at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}
+          {t.teacher.reportsSentOn.replace("{date}", new Date(report.sent_at).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }))}
           {report.sent_to_email ? ` · ${report.sent_to_email}` : ""}
         </div>
       )}

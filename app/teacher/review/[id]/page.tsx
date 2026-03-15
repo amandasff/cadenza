@@ -6,15 +6,9 @@ import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
 import { GoalService } from "../../../../lib/services/GoalService";
 import { ChatService } from "../../../../lib/services/ChatService";
 import { Teacher } from "../../../../lib/models/Teacher";
+import { useI18n } from "../../../../lib/context/I18nContext";
 import type { PracticeSessionRow, GoalRow, ProfileRow, PracticeSegment } from "../../../../lib/types";
 import AudioPlayer from "../../../../components/AudioPlayer";
-
-const AREAS: Record<string, { label: string; color: string; icon: string }> = {
-  technique:    { label: "Technique",    color: "var(--sage)",   icon: "🌿" },
-  repertoire:   { label: "Repertoire",   color: "var(--rose)",   icon: "🌸" },
-  ear_training: { label: "Ear Training", color: "var(--sky)",    icon: "🎧" },
-  theory:       { label: "Theory",       color: "var(--butter)", icon: "⭐" },
-};
 
 function fmt(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -24,6 +18,22 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
+
+  const AREAS: Record<string, { label: string; color: string; icon: string }> = {
+    technique:    { label: t.teacher.categoryTechnique,    color: "var(--sage)",   icon: "🌿" },
+    repertoire:   { label: t.teacher.categoryRepertoire,   color: "var(--rose)",   icon: "🌸" },
+    ear_training: { label: t.teacher.categoryEarTraining,  color: "var(--sky)",    icon: "🎧" },
+    theory:       { label: t.teacher.categoryTheory,       color: "var(--butter)", icon: "⭐" },
+  };
+
+  const MOOD_DISPLAY: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+    great:      { label: t.student.moodGreat,      emoji: "😄", color: "var(--sage)",   bg: "var(--sage-bg)" },
+    good:       { label: t.student.moodGood,       emoji: "🙂", color: "var(--sky)",    bg: "var(--sky-bg)" },
+    okay:       { label: t.student.moodOkay,       emoji: "😐", color: "var(--butter)", bg: "var(--butter-bg)" },
+    tired:      { label: "Tired",                  emoji: "😴", color: "var(--muted)",  bg: "var(--cream)" },
+    frustrated: { label: "Frustrated",             emoji: "😤", color: "var(--rose)",   bg: "var(--rose-bg)" },
+  };
 
   const [session, setSession] = useState<PracticeSessionRow | null>(null);
   const [student, setStudent] = useState<ProfileRow | null>(null);
@@ -98,7 +108,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (streamRef.current) streamRef.current.getTracks().forEach(tk => tk.stop());
       if (recordingUrl) URL.revokeObjectURL(recordingUrl);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,7 +126,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         setRecordingBlob(blob);
         setRecordingUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach(tk => tk.stop());
       };
       recorder.start();
       mediaRecorderRef.current = recorder;
@@ -230,13 +240,6 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
   const moodMatch = session?.notes?.match(/\[mood:(\w+)\]/);
   const mood = moodMatch?.[1] ?? null;
   const notesText = session?.notes?.replace(/\[mood:\w+\]\s*/g, "").trim() || null;
-  const MOOD_DISPLAY: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-    great:   { label: "Great",   emoji: "😄", color: "var(--sage)",    bg: "var(--sage-bg)" },
-    good:    { label: "Good",    emoji: "🙂", color: "var(--sky)",     bg: "var(--sky-bg)" },
-    okay:    { label: "Okay",    emoji: "😐", color: "var(--butter)",  bg: "var(--butter-bg)" },
-    tired:   { label: "Tired",   emoji: "😴", color: "var(--muted)",   bg: "var(--cream)" },
-    frustrated: { label: "Frustrated", emoji: "😤", color: "var(--rose)", bg: "var(--rose-bg)" },
-  };
   const mins = session ? Math.max(1, Math.round(session.duration_seconds / 60)) : 0;
 
   if (loading) {
@@ -253,9 +256,9 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
     return (
       <div className="empty-state" style={{ padding: "3rem 0" }}>
         <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>😕</div>
-        <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, color: "var(--charcoal)", margin: 0 }}>Session not found</p>
+        <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, color: "var(--charcoal)", margin: 0 }}>{t.teacher.reviewSessionNotFound}</p>
         <Link href="/teacher/review" style={{ marginTop: "1rem", display: "inline-block", color: "var(--peach)", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.875rem", textDecoration: "none" }}>
-          ← Back to queue
+          {t.teacher.reviewBackToQueue}
         </Link>
       </div>
     );
@@ -267,10 +270,10 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
         <Link href="/teacher/review" style={{ color: "var(--muted)", textDecoration: "none", fontSize: "1.1rem" }}>←</Link>
         <div>
           <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1.2rem", color: "var(--charcoal)", margin: 0 }}>
-            {student?.display_name ?? "Student"} — Session Review
+            {student?.display_name ?? "Student"} — {t.teacher.reviewSessionReview}
           </h1>
           <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: "0.125rem 0 0" }}>
-            {new Date(session.created_at).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })} · {mins} minutes
+            {new Date(session.created_at).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })} · {mins} {t.teacher.reviewMinutes}
           </p>
         </div>
       </div>
@@ -283,7 +286,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           {goal && (
             <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
               <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.625rem" }}>
-                Goal Being Practiced
+                {t.teacher.reviewGoalBeingPracticed}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
@@ -305,13 +308,13 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           {/* Recording */}
           <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
             <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-              Student Recording
+              {t.teacher.reviewStudentRecording}
             </div>
             {session.recording_url ? (
               <AudioPlayer src={session.recording_url} />
             ) : (
               <div style={{ background: "var(--cream)", borderRadius: 12, padding: "1.25rem", textAlign: "center", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", fontSize: "0.85rem" }}>
-                No recording for this session
+                {t.teacher.reviewNoRecording}
               </div>
             )}
           </div>
@@ -320,7 +323,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           {session.recording_url && (
             <div style={{ background: "var(--cream)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
               <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
-                AI Analysis
+                {t.teacher.reviewAiAnalysis}
               </div>
               {session.ai_feedback ? (
                 <p style={{ fontSize: "0.875rem", lineHeight: 1.75, color: "var(--charcoal)", fontFamily: "DM Sans, sans-serif", margin: 0, whiteSpace: "pre-wrap" }}>
@@ -328,7 +331,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                 </p>
               ) : (
                 <div style={{ color: "var(--muted)", fontSize: "0.8125rem", fontFamily: "DM Sans, sans-serif" }}>
-                  Generating coaching notes… check back shortly.
+                  {t.teacher.reviewGeneratingNotes}
                 </div>
               )}
             </div>
@@ -338,7 +341,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           {segments.length > 0 && (
             <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
               <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-                Segments ({segments.length})
+                {t.teacher.reviewSegmentsLabel.replace("{n}", String(segments.length))}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {segments.map((seg, i) => {
@@ -361,14 +364,14 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           {(mood || notesText) && (
             <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
               <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.75rem" }}>
-                Student Notes
+                {t.teacher.reviewStudentNotes}
               </div>
               {mood && (() => {
                 const m = MOOD_DISPLAY[mood] ?? { label: mood, emoji: "🙂", color: "var(--muted)", bg: "var(--cream)" };
                 return (
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.3rem 0.75rem", borderRadius: 999, background: m.bg, border: `1px solid ${m.color}`, marginBottom: notesText ? "0.75rem" : 0 }}>
                     <span style={{ fontSize: "1rem" }}>{m.emoji}</span>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: m.color, fontFamily: "Nunito, sans-serif" }}>Feeling {m.label}</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: m.color, fontFamily: "Nunito, sans-serif" }}>{t.teacher.reviewFeelingLabel.replace("{label}", m.label)}</span>
                   </div>
                 );
               })()}
@@ -383,7 +386,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
           {/* Teacher Voice Note */}
           <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
             <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-              Record Voice Note
+              {t.teacher.reviewRecordVoiceNote}
             </div>
 
             {recordError && (
@@ -416,14 +419,14 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                   {recording ? (
                     <>
                       <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--rose)", animation: "pulse 1s infinite" }} />
-                      Stop Recording
+                      {t.teacher.reviewStopRecording}
                     </>
                   ) : (
-                    <>🎙 Start Recording</>
+                    <>{t.teacher.reviewStartRecording}</>
                   )}
                 </button>
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.5rem", margin: "0.5rem 0 0" }}>
-                  Record a voice note to send directly to {student?.display_name?.split(" ")[0] ?? "the student"} via chat.
+                  {t.teacher.reviewVoiceNoteHint.replace("{name}", student?.display_name?.split(" ")[0] ?? "the student")}
                 </p>
               </div>
             ) : (
@@ -444,7 +447,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                       cursor: "pointer",
                     }}
                   >
-                    Discard
+                    {t.teacher.reviewDiscard}
                   </button>
                   <button
                     onClick={sendVoiceNote}
@@ -463,7 +466,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                       transition: "background 0.15s",
                     }}
                   >
-                    {voiceSent ? "✓ Sent!" : sendingVoice ? "Sending…" : "Send to Student"}
+                    {voiceSent ? t.teacher.reviewSent : sendingVoice ? t.common.sending : t.teacher.reviewSendToStudent}
                   </button>
                 </div>
               </div>
@@ -484,7 +487,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                   transition: "all 0.15s", opacity: approving ? 0.7 : 1,
                 }}
               >
-                {approved ? "✓ Goal Approved" : approving ? "Approving…" : "✓ Approve Goal"}
+                {approved ? t.teacher.reviewGoalApproved : approving ? t.teacher.reviewApproving : t.teacher.reviewApproveGoal}
               </button>
             </div>
           )}
@@ -493,7 +496,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
         {/* Right column — feedback */}
         <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)" }}>
           <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-            {goal ? "Feedback on Goal" : "Notes"}
+            {goal ? t.teacher.reviewFeedbackOnGoal : t.teacher.reviewNotesLabel}
           </div>
           <textarea
             value={feedback}
@@ -517,11 +520,11 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
               transition: "background 0.15s",
             }}
           >
-            {feedbackSaved ? "✓ Sent!" : savingFeedback ? "Sending…" : "Send Feedback"}
+            {feedbackSaved ? t.teacher.reviewSent : savingFeedback ? t.common.sending : t.teacher.reviewSendFeedback}
           </button>
           {!goal && (
             <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.5rem", textAlign: "center" }}>
-              No goal linked — note will be sent via chat
+              {t.teacher.reviewNoGoalLinked}
             </p>
           )}
 
@@ -543,7 +546,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                 textDecoration: "none",
               }}
             >
-              View {student.display_name.split(" ")[0]}&apos;s Profile →
+              {t.teacher.reviewViewProfile.replace("{name}", student.display_name.split(" ")[0])}
             </Link>
           )}
         </div>

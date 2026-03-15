@@ -3,6 +3,7 @@ import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
+import { useI18n } from "../../../lib/context/I18nContext";
 import type { LessonRow, AssignmentRow, ProgressReportRow, PracticeSessionRow } from "../../../lib/types";
 
 export default function ParentChildPage({ params }: { params: Promise<{ childId: string }> }) {
@@ -10,6 +11,7 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
   const router = useRouter();
   const { user } = useAuth();
   const supabase = getSupabaseBrowserClient();
+  const { t } = useI18n();
 
   const [studentName, setStudentName] = useState("");
   const [recentLessons, setRecentLessons] = useState<LessonRow[]>([]);
@@ -68,7 +70,7 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
   if (!authorized) {
     return (
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "2rem 1.5rem" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem" }}>You don't have access to this student's information.</p>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem" }}>{t.parent.noAccess}</p>
       </div>
     );
   }
@@ -83,7 +85,7 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
         onClick={() => router.back()}
         style={{ background: "none", border: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: "1.25rem" }}
       >
-        ← Back
+        ← {t.common.back}
       </button>
 
       <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 1.5rem", letterSpacing: "-0.01em" }}>
@@ -93,9 +95,9 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
       {/* Practice summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
         {[
-          { value: practiceMinutes, label: "Practice min (2 wks)" },
-          { value: sessions.length, label: "Sessions (2 wks)" },
-          { value: assignments.length, label: "Active assignments" },
+          { value: practiceMinutes, label: t.parent.practiceMin },
+          { value: sessions.length, label: t.parent.sessions },
+          { value: assignments.length, label: t.parent.activeAssignments },
         ].map(stat => (
           <div key={stat.label} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem", textAlign: "center" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.75rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>{stat.value}</div>
@@ -108,7 +110,7 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
       {upcomingLessons.length > 0 && (
         <div className="card-base" style={{ padding: "1.25rem", marginBottom: "1rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
-            Upcoming Lessons
+            {t.parent.upcomingLessons}
           </div>
           {upcomingLessons.slice(0, 3).map(l => (
             <div key={l.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)" }}>
@@ -123,7 +125,7 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
       {assignments.length > 0 && (
         <div className="card-base" style={{ padding: "1.25rem", marginBottom: "1rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
-            Current Assignments
+            {t.parent.currentAssignments}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {assignments.map(a => (
@@ -146,7 +148,7 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
       {completedLessons.filter(l => l.covered_notes).length > 0 && (
         <div className="card-base" style={{ padding: "1.25rem", marginBottom: "1rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
-            Recent Lesson Notes
+            {t.parent.recentLessonNotes}
           </div>
           {completedLessons.filter(l => l.covered_notes).slice(0, 3).map(l => (
             <div key={l.id} style={{ marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1px solid var(--border)" }}>
@@ -155,13 +157,13 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
               </div>
               {l.covered_notes && (
                 <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0 0 0.25rem", lineHeight: 1.55 }}>
-                  <strong style={{ fontSize: "0.625rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>Covered </strong>
+                  <strong style={{ fontSize: "0.625rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>{t.parent.covered} </strong>
                   {l.covered_notes}
                 </p>
               )}
               {l.focus_notes && (
                 <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0", lineHeight: 1.55 }}>
-                  <strong style={{ fontSize: "0.625rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>Focus </strong>
+                  <strong style={{ fontSize: "0.625rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>{t.parent.focus} </strong>
                   {l.focus_notes}
                 </p>
               )}
@@ -174,7 +176,7 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
       {reports.length > 0 && (
         <div className="card-base" style={{ padding: "1.25rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
-            Progress Reports
+            {t.parent.progressReports}
           </div>
           {reports.map(r => (
             <div key={r.id} style={{ marginBottom: "1.25rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
@@ -185,19 +187,19 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
               {r.overall_summary && <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", margin: "0 0 0.5rem", lineHeight: 1.6 }}>{r.overall_summary}</p>}
               {r.strengths && (
                 <div style={{ marginBottom: "0.5rem" }}>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Strengths</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.parent.strengths}</div>
                   <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.125rem 0 0", lineHeight: 1.55 }}>{r.strengths}</p>
                 </div>
               )}
               {r.areas_for_growth && (
                 <div style={{ marginBottom: "0.5rem" }}>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Areas for Growth</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.parent.areasForGrowth}</div>
                   <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.125rem 0 0", lineHeight: 1.55 }}>{r.areas_for_growth}</p>
                 </div>
               )}
               {r.teacher_comments && (
                 <div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Teacher's Note</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{t.parent.teacherNote}</div>
                   <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0.125rem 0 0", lineHeight: 1.55, fontStyle: "italic" }}>{r.teacher_comments}</p>
                 </div>
               )}
