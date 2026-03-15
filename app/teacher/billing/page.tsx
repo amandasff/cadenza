@@ -50,7 +50,7 @@ export default function BillingPage() {
       // Get all unpaid tuition and charges for this teacher
       const [allTuition, allCharges] = await Promise.all([
         billing.getAllRecords(teacher.id),
-        supabase.from("billing_charges").select().eq("teacher_id", teacher.id).eq("status", "unpaid").then(r => (r.data ?? []) as BillingChargeRow[]),
+        supabase.from("billing_charges").select().eq("teacher_id", teacher.id).eq("status", "unpaid").then((r: { data: BillingChargeRow[] | null }) => (r.data ?? []) as BillingChargeRow[]),
       ]);
 
       const unpaidTuition = allTuition.filter((r: TuitionRecordRow) => r.status === "unpaid");

@@ -82,7 +82,7 @@ export default function ParentDashboard() {
         assignmentMap.set(a.student_id, (assignmentMap.get(a.student_id) ?? 0) + 1);
       }
 
-      const childInfos: ChildInfo[] = studentIds.map(sid => {
+      const childInfos: ChildInfo[] = studentIds.map((sid: string) => {
         const p = profiles.find(pr => pr.id === sid);
         const practice = practiceMap.get(sid);
         return {
