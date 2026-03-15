@@ -149,12 +149,11 @@ export default function FunModeCanvas({ onClose }: Props) {
     pushHistory();
 
     try {
-      // Pollinations.AI — completely free, no API key needed
+      // Route through our server-side proxy to avoid CORS entirely
       const seed = Math.floor(Math.random() * 99999);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(aiPrompt + ", colorful, music themed, digital art")}?width=800&height=500&seed=${seed}&nologo=true&model=flux`;
+      const proxyUrl = `/api/generate-image?seed=${seed}&prompt=${encodeURIComponent(aiPrompt + ", colorful, music themed, digital art")}`;
 
-      // Fetch as blob — avoids CORS issues and keeps canvas exportable via toDataURL
-      const resp = await fetch(url);
+      const resp = await fetch(proxyUrl);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();
       const objectUrl = URL.createObjectURL(blob);
@@ -171,7 +170,7 @@ export default function FunModeCanvas({ onClose }: Props) {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     } catch {
-      setAiError("Couldn't generate image — check your connection and try again.");
+      setAiError("Couldn't generate image — the AI server may be busy, try again in a moment.");
     } finally {
       setAiLoading(false);
     }
