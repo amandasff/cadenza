@@ -5,19 +5,20 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PortfolioService, type PortfolioItemRow } from "../../../lib/services/PortfolioService";
 import { Student } from "../../../lib/models/Student";
 import AudioPlayer from "../../../components/AudioPlayer";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" });
 }
 
-function formatRelative(iso: string) {
+function formatRelative(iso: string, todayLabel: string, yesterdayLabel: string, daysAgoLabel: string, weekAgoLabel: string, monthAgoLabel: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  if (days < 30) return `${Math.floor(days / 7)} week${Math.floor(days / 7) > 1 ? "s" : ""} ago`;
-  return `${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? "s" : ""} ago`;
+  if (days === 0) return todayLabel;
+  if (days === 1) return yesterdayLabel;
+  if (days < 7) return `${days} ${daysAgoLabel}`;
+  if (days < 30) return `${Math.floor(days / 7)} ${weekAgoLabel}`;
+  return `${Math.floor(days / 30)} ${monthAgoLabel}`;
 }
 
 function groupByMonth(items: PortfolioItemRow[]): { label: string; items: PortfolioItemRow[] }[] {
@@ -66,6 +67,7 @@ type ProfileData = {
 };
 
 export default function JourneyPage() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const student = user as Student;
 
@@ -279,7 +281,7 @@ export default function JourneyPage() {
 
   async function deleteItem(id: string) {
     if (deletingId) return;
-    if (!confirm("Remove this from your journey?")) return;
+    if (!confirm(t.student.removeFromJourneyConfirm)) return;
     setDeletingId(id);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -350,8 +352,8 @@ export default function JourneyPage() {
       recordTimerRef.current = setInterval(() => setRecordSeconds(s => s + 1), 1000);
     } catch {
       setRecordError(recordMode === "audio"
-        ? "Mic access denied. Check your browser permissions."
-        : "Camera/mic access denied. Check your browser permissions.");
+        ? t.student.micDenied
+        : t.student.cameraDenied);
     }
   }
 
@@ -424,11 +426,11 @@ export default function JourneyPage() {
   if (noTable) {
     return (
       <div style={{ padding: "1.5rem 1.25rem" }}>
-        <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.75rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>My Profile</h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.8125rem", marginBottom: "1.5rem", fontFamily: "Inter, sans-serif" }}>Your musical story, one recording at a time</p>
+        <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.75rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>{t.student.myProfile}</h1>
+        <p style={{ color: "var(--muted)", fontSize: "0.8125rem", marginBottom: "1.5rem", fontFamily: "Inter, sans-serif" }}>{t.student.musicalStory}</p>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.5rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.625rem" }}>
-            One-time setup needed
+            {t.student.setupNeeded}
           </div>
           <pre style={{ background: "var(--cream-deep)", border: "1px solid var(--border)", borderRadius: 6, padding: "1rem", fontSize: "0.7rem", fontFamily: "monospace", color: "var(--charcoal)", overflowX: "auto", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{SETUP_SQL}</pre>
         </div>
@@ -484,7 +486,7 @@ export default function JourneyPage() {
               )}
               {profile?.music_since && (
                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", background: "transparent", color: "var(--muted)", letterSpacing: "0.01em" }}>
-                  since {profile.music_since}
+                  {t.student.since} {profile.music_since}
                 </span>
               )}
             </div>
@@ -497,22 +499,22 @@ export default function JourneyPage() {
         {/* Stats row */}
         <div style={{ display: "flex", gap: "0", borderTop: "1px solid var(--border)", margin: "0 -1rem", padding: "0.5rem 1rem 0" }}>
           {[
-            { label: "followers", value: followerCount, clickable: true },
-            { label: "following", value: followingCount, clickable: true },
-            { label: "streak", value: `${profile?.streak_days ?? 0}🔥`, clickable: false },
-            { label: "clips", value: publicClipCount, clickable: false },
-          ].map(({ label, value, clickable }, i, arr) => (
+            { label: t.student.followers, value: followerCount, clickable: true, key: "followers" as const },
+            { label: t.student.following, value: followingCount, clickable: true, key: "following" as const },
+            { label: t.student.streak, value: `${profile?.streak_days ?? 0}🔥`, clickable: false, key: "streak" as const },
+            { label: t.student.clips, value: publicClipCount, clickable: false, key: "clips" as const },
+          ].map(({ label, value, clickable, key }, i, arr) => (
             clickable ? (
               <button
-                key={label}
-                onClick={() => openFollowModal(label as "followers" | "following")}
+                key={key}
+                onClick={() => openFollowModal(key as "followers" | "following")}
                 style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.375rem 0", background: "none", border: "none", cursor: "pointer" }}
               >
                 <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
               </button>
             ) : (
-              <div key={label} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.375rem 0" }}>
+              <div key={key} style={{ flex: 1, textAlign: "center", borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none", padding: "0.375rem 0" }}>
                 <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{label}</div>
               </div>
@@ -524,39 +526,39 @@ export default function JourneyPage() {
         {!editingProfile ? (
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.875rem" }}>
             <button onClick={() => { setEditName(profile?.display_name ?? student?.displayName ?? ""); setEditBio(profile?.bio ?? ""); setEditInstrument(profile?.instrument ?? ""); setEditSince(profile?.music_since ?? ""); setEditingProfile(true); }} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", cursor: "pointer", letterSpacing: "0.005em" }}>
-              Edit Profile
+              {t.student.editProfile}
             </button>
             <button onClick={() => setShowUploadModal(true)} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem", letterSpacing: "0.005em" }}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-              Add Clip
+              {t.student.addClip}
             </button>
           </div>
         ) : (
           <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
               <div>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Name</label>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>{t.student.labelName}</label>
                 <input value={editName} onChange={e => setEditName(e.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
               </div>
               <div>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Instrument</label>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>{t.student.labelInstrument}</label>
                 <input value={editInstrument} onChange={e => setEditInstrument(e.target.value)} placeholder="Piano, Guitar…" style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
               </div>
             </div>
             <div>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Bio</label>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>{t.student.labelBio}</label>
               <textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Tell your musical story…" maxLength={160} rows={2} style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", resize: "none", lineHeight: 1.5 }} />
             </div>
             <div>
-              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>Practicing since</label>
+              <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: "0.25rem", letterSpacing: "0.02em" }}>{t.student.labelPracticingSince}</label>
               <input value={editSince} onChange={e => setEditSince(e.target.value)} placeholder="e.g. 2019, age 6, last year…" style={{ width: "100%", boxSizing: "border-box", padding: "0.4375rem 0.625rem", borderRadius: 5, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }} />
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button onClick={saveProfile} disabled={savingProfile} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "none", background: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--white)", cursor: "pointer" }}>
-                {savingProfile ? "Saving…" : "Save"}
+                {savingProfile ? t.common.saving : t.common.save}
               </button>
               <button onClick={() => setEditingProfile(false)} style={{ flex: 1, padding: "0.4375rem", borderRadius: 5, border: "1px solid var(--border)", background: "transparent", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}>
-                Cancel
+                {t.common.cancel}
               </button>
             </div>
           </div>
@@ -565,7 +567,7 @@ export default function JourneyPage() {
         {/* Privacy hint */}
         <div style={{ marginTop: "0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", display: "flex", alignItems: "center", gap: "0.3rem", letterSpacing: "0.01em" }}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Toggle each clip public or private below. Public clips appear on Discover.
+          {t.student.toggleClipsHint}
         </div>
       </div>
 
@@ -580,10 +582,10 @@ export default function JourneyPage() {
             🎵
           </div>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>
-            No recordings yet
+            {t.student.noRecordingsYet}
           </div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 280, margin: "0 auto 1.5rem" }}>
-            After a practice session, toggle &ldquo;Save to Journey&rdquo; to keep a memento of your progress. Or tap <strong>Add Cover</strong> to upload a video performance.
+            {t.student.noRecordingsDesc}
           </p>
         </div>
       ) : (
@@ -647,8 +649,8 @@ export default function JourneyPage() {
                                 {item.title}
                               </div>
                               <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>
-                                {formatDate(item.created_at)} · {formatRelative(item.created_at)}
-                                {isVideo && <span style={{ marginLeft: "0.4rem", color: "var(--lavender)", fontWeight: 600 }}>· Video cover</span>}
+                                {formatDate(item.created_at)} · {formatRelative(item.created_at, t.schedule.today, t.schedule.yesterday, t.schedule.daysAgo, t.student.weekAgo, t.student.monthAgo)}
+                                {isVideo && <span style={{ marginLeft: "0.4rem", color: "var(--lavender)", fontWeight: 600 }}>· {t.student.videocover}</span>}
                               </div>
                             </>
                           )}
@@ -657,12 +659,12 @@ export default function JourneyPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
                           {isLatest && editingId !== item.id && (
                             <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "rgba(61,107,85,0.1)", color: "var(--sage)", fontFamily: "Inter, sans-serif" }}>
-                              Latest
+                              {t.student.latest}
                             </span>
                           )}
                           {isPublic && editingId !== item.id && (
                             <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "var(--lavender-bg)", color: "var(--lavender)", fontFamily: "Inter, sans-serif" }}>
-                              Public
+                              {t.student.publicLabel}
                             </span>
                           )}
                           {editingId !== item.id && (
@@ -679,13 +681,13 @@ export default function JourneyPage() {
                               <textarea
                                 value={editDesc}
                                 onChange={e => setEditDesc(e.target.value)}
-                                placeholder="Add a reflection about this recording..."
+                                placeholder={t.student.reflectionPlaceholder}
                                 style={{ borderRadius: 4, border: "1px solid var(--border)", padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", width: "100%", boxSizing: "border-box", resize: "none", minHeight: 72 }}
                               />
                               <div style={{ display: "flex", gap: "0.5rem" }}>
-                                <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: "0.5rem", borderRadius: 6, border: "1px solid var(--border)", background: "var(--cream)", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>Cancel</button>
+                                <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: "0.5rem", borderRadius: 6, border: "1px solid var(--border)", background: "var(--cream)", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>{t.common.cancel}</button>
                                 <button onClick={() => saveEdit(item.id)} disabled={saving || !editTitle.trim()} style={{ flex: 1, padding: "0.5rem", borderRadius: 6, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer" }}>
-                                  {saving ? "Saving..." : "Save"}
+                                  {saving ? t.common.saving : t.common.save}
                                 </button>
                               </div>
                             </div>
@@ -717,11 +719,11 @@ export default function JourneyPage() {
                               <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.875rem", paddingTop: "0.75rem", borderTop: "1px solid var(--border)", alignItems: "center" }}>
                                 <button onClick={() => startEdit(item)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 500, padding: 0, display: "flex", alignItems: "center", gap: "0.3rem" }}>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                  Edit
+                                  {t.common.edit}
                                 </button>
                                 <button onClick={() => deleteItem(item.id)} disabled={deletingId === item.id} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 500, padding: 0, opacity: deletingId === item.id ? 0.5 : 1, display: "flex", alignItems: "center", gap: "0.3rem" }}>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                                  Remove
+                                  {t.common.remove}
                                 </button>
 
                                 {/* Public toggle */}
@@ -744,13 +746,13 @@ export default function JourneyPage() {
                                       : <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>
                                     }
                                   </svg>
-                                  {isPublic ? "Public" : "Private"}
+                                  {isPublic ? t.student.publicLabel : t.student.privateLabel}
                                 </button>
 
                                 {item.recording_url && (
                                   <a href={item.recording_url} download={`${item.title}`} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 500, textDecoration: "none", display: "flex", alignItems: "center", gap: "0.3rem", marginLeft: "auto" }}>
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Download
+                                    {t.student.download}
                                   </a>
                                 )}
                               </div>
@@ -791,7 +793,7 @@ export default function JourneyPage() {
                       fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: followModal === tab ? 600 : 400,
                     }}
                   >
-                    {tab === "followers" ? `${followerCount} followers` : `${followingCount} following`}
+                    {tab === "followers" ? `${followerCount} ${t.student.followers}` : `${followingCount} ${t.student.following}`}
                   </button>
                 ))}
               </div>
@@ -801,11 +803,11 @@ export default function JourneyPage() {
             {/* List */}
             <div style={{ overflowY: "auto", flex: 1, padding: "0.5rem 0" }}>
               {followListLoading ? (
-                <div style={{ padding: "2rem", textAlign: "center", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>Loading…</div>
+                <div style={{ padding: "2rem", textAlign: "center", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>{t.common.loading}…</div>
               ) : followList.length === 0 ? (
                 <div style={{ padding: "2.5rem 1.25rem", textAlign: "center" }}>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>
-                    {followModal === "followers" ? "No followers yet" : "Not following anyone yet"}
+                    {followModal === "followers" ? t.student.noFollowersYet : t.student.notFollowingYet}
                   </div>
                 </div>
               ) : (
@@ -838,7 +840,7 @@ export default function JourneyPage() {
                             flexShrink: 0,
                           }}
                         >
-                          {amFollowing ? "Following" : "Follow"}
+                          {amFollowing ? t.student.followingAction : t.student.followAction}
                         </button>
                       )}
                     </div>
@@ -860,14 +862,14 @@ export default function JourneyPage() {
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
               <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "var(--charcoal)" }}>
-                Add Cover
+                {t.student.addCoverTitle}
               </div>
               <button onClick={closeModal} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: 0 }}>×</button>
             </div>
 
             {/* Tabs */}
             <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: "1.25rem" }}>
-              {([["upload", "📁 Upload file"], ["record", "🎥 Record now"]] as const).map(([tab, label]) => (
+              {([["upload", t.student.uploadFileTab], ["record", t.student.recordNowTab]] as const).map(([tab, label]) => (
                 <button key={tab} type="button" onClick={() => { setCoverTab(tab); setRecordError(""); setUploadError(""); }}
                   style={{ flex: 1, padding: "0.5rem", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", transition: "all 0.15s", background: coverTab === tab ? "var(--charcoal)" : "transparent", color: coverTab === tab ? "var(--white)" : "var(--muted)" }}>
                   {label}
@@ -878,12 +880,12 @@ export default function JourneyPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
               {/* Title + note (shared) */}
               <div>
-                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", display: "block", marginBottom: "0.3rem" }}>Title</label>
+                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", display: "block", marginBottom: "0.3rem" }}>{t.student.titleLabel}</label>
                 <input type="text" placeholder="e.g. Understand — Keshi cover" value={uploadTitle} onChange={e => setUploadTitle(e.target.value)}
                   style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
               </div>
               <div>
-                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", display: "block", marginBottom: "0.3rem" }}>Note (optional)</label>
+                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", display: "block", marginBottom: "0.3rem" }}>{t.student.noteOptionalLabel}</label>
                 <textarea placeholder="What were you working on? How did it feel?" value={uploadDesc} onChange={e => setUploadDesc(e.target.value)} rows={2}
                   style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border)", padding: "0.625rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none" }} />
               </div>
@@ -901,7 +903,7 @@ export default function JourneyPage() {
                     ) : (
                       <>
                         <div style={{ fontSize: "1.5rem", marginBottom: "0.375rem" }}>📹</div>
-                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>Tap to choose a video</div>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>{t.student.tapToChooseVideo}</div>
                         <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>MP4, MOV, WebM</div>
                       </>
                     )}
@@ -923,7 +925,7 @@ export default function JourneyPage() {
                           cursor: "pointer", transition: "all 0.15s",
                           boxShadow: recordMode === mode ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                         }}>
-                          {mode === "video" ? "🎥 Video" : "🎙 Audio only"}
+                          {mode === "video" ? t.student.videoMode : t.student.audioOnly}
                         </button>
                       ))}
                     </div>
@@ -942,7 +944,7 @@ export default function JourneyPage() {
                           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem" }}>
                               <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📷</div>
-                              Camera preview will appear here
+                              {t.student.cameraPreview}
                             </div>
                           </div>
                         )}
@@ -957,7 +959,7 @@ export default function JourneyPage() {
                       <div>
                         <video ref={previewVideoRef} src={recordedUrl ?? undefined} controls playsInline style={{ width: "100%", borderRadius: 10, background: "#111", maxHeight: 240 }} />
                         <button onClick={discardRecording} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", padding: 0, textDecoration: "underline" }}>
-                          Re-record
+                          {t.student.reRecord}
                         </button>
                       </div>
                     )
@@ -972,7 +974,7 @@ export default function JourneyPage() {
                           </div>
                         ) : (
                           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-                            Ready to record audio
+                            {t.student.readyToRecordAudio}
                           </div>
                         )}
                       </div>
@@ -980,7 +982,7 @@ export default function JourneyPage() {
                       <div>
                         <audio controls src={recordedUrl ?? undefined} style={{ width: "100%" }} />
                         <button onClick={discardRecording} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", padding: 0, textDecoration: "underline" }}>
-                          Re-record
+                          {t.student.reRecord}
                         </button>
                       </div>
                     )
@@ -992,9 +994,9 @@ export default function JourneyPage() {
                       style={{ padding: "0.75rem", borderRadius: 8, border: recording ? "2px solid var(--error)" : "2px solid var(--charcoal)", background: recording ? "var(--error-bg)" : "var(--charcoal)", color: recording ? "var(--error)" : "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", cursor: "pointer", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
                     >
                       {recording ? (
-                        <><span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--error)", flexShrink: 0 }} /> Stop</>
+                        <><span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--error)", flexShrink: 0 }} /> {t.common.done}</>
                       ) : (
-                        <>{recordMode === "video" ? "🎥 Start Recording" : "🎙 Start Recording"}</>
+                        <>{recordMode === "video" ? `🎥 ${t.student.startRecordingBtn}` : `🎙 ${t.student.startRecordingBtn}`}</>
                       )}
                     </button>
                   )}
@@ -1011,8 +1013,8 @@ export default function JourneyPage() {
                   <div style={{ position: "absolute", top: 2, left: sharePublic ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "var(--white)", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
                 </div>
                 <div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Share to Discover</div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Let others on Cadenza see and like this cover</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{t.student.shareToDiscover}</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{t.student.shareToDiscoverDesc}</div>
                 </div>
               </button>
 
@@ -1027,7 +1029,7 @@ export default function JourneyPage() {
                 disabled={(coverTab === "upload" ? !uploadFile : !recordedBlob) || !uploadTitle.trim() || uploading}
                 style={{ padding: "0.75rem", borderRadius: 8, border: "none", background: ((coverTab === "upload" ? !uploadFile : !recordedBlob) || !uploadTitle.trim() || uploading) ? "var(--border)" : "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", cursor: ((coverTab === "upload" ? !uploadFile : !recordedBlob) || !uploadTitle.trim() || uploading) ? "default" : "pointer", transition: "background 0.15s" }}
               >
-                {uploading ? "Saving…" : "Save to Journey"}
+                {uploading ? t.common.saving : t.student.saveToJourney}
               </button>
             </div>
           </div>

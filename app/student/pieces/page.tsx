@@ -9,28 +9,30 @@ import { usePlayer } from "../../../lib/context/PlayerContext";
 import Link from "next/link";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import type { YouTubeResult, PieceRecording } from "../../../lib/types";
-
-const SECTIONS: { category: string; label: string; color: string }[] = [
-  { category: "technique",     label: "Technique",     color: "var(--sage)" },
-  { category: "etude",         label: "Études",        color: "var(--sky)" },
-  { category: "repertoire",    label: "Repertoire",    color: "var(--rose)" },
-  { category: "theory",        label: "Theory",        color: "var(--butter)" },
-  { category: "ear_training",  label: "Ear Training",  color: "var(--peach)" },
-  { category: "sight_reading", label: "Sight Reading", color: "var(--muted)" },
-  { category: "free",          label: "Other",         color: "var(--muted)" },
-];
-
-const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-  learning:          { label: "Learning",          emoji: "📖", color: "var(--butter)", bg: "rgba(230,168,23,0.12)" },
-  polishing:         { label: "Polishing",         emoji: "✨", color: "var(--sky)", bg: "rgba(74,123,196,0.12)" },
-  performance_ready: { label: "Ready to perform!", emoji: "🎭", color: "var(--sage)", bg: "rgba(91,158,121,0.14)" },
-  completed:         { label: "Completed",         emoji: "🏆", color: "#7A6A5A", bg: "rgba(138,122,106,0.1)" },
-};
+import { useI18n } from "../../../lib/context/I18nContext";
 
 export default function MyPieces() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const student = user as Student;
   const player = usePlayer();
+
+  const SECTIONS: { category: string; label: string; color: string }[] = [
+    { category: "technique",     label: t.student.sectionTechnique,     color: "var(--sage)" },
+    { category: "etude",         label: t.student.sectionEtude,         color: "var(--sky)" },
+    { category: "repertoire",    label: t.student.sectionRepertoire,    color: "var(--rose)" },
+    { category: "theory",        label: t.student.sectionTheory,        color: "var(--butter)" },
+    { category: "ear_training",  label: t.student.sectionEarTraining,   color: "var(--peach)" },
+    { category: "sight_reading", label: t.student.sectionSightReading,  color: "var(--muted)" },
+    { category: "free",          label: t.student.sectionOther,         color: "var(--muted)" },
+  ];
+
+  const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+    learning:          { label: t.student.statusLearning,          emoji: "📖", color: "var(--butter)", bg: "rgba(230,168,23,0.12)" },
+    polishing:         { label: t.student.statusPolishing,         emoji: "✨", color: "var(--sky)", bg: "rgba(74,123,196,0.12)" },
+    performance_ready: { label: t.student.statusPerformanceReady,  emoji: "🎭", color: "var(--sage)", bg: "rgba(91,158,121,0.14)" },
+    completed:         { label: t.student.statusCompleted,         emoji: "🏆", color: "#7A6A5A", bg: "rgba(138,122,106,0.1)" },
+  };
 
   const [pieces, setPieces]               = useState<PieceWithGoals[]>([]);
   const [loading, setLoading]             = useState(true);
@@ -309,11 +311,11 @@ export default function MyPieces() {
       <div style={{ marginBottom: "1.75rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.25rem" }}>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>My Pieces</span>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t.student.myPieces}</span>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
         </div>
         <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center", margin: "0.5rem 0 0", lineHeight: 1.5 }}>
-          Your teacher&apos;s assignments — tap a piece to explore sheet music, find recordings, and more.
+          {t.student.myPiecesDesc}
         </p>
       </div>
 
@@ -331,8 +333,8 @@ export default function MyPieces() {
         </div>
       ) : pieces.length === 0 ? (
         <div className="empty-state" style={{ paddingTop: "2rem" }}>
-          <div className="empty-state-title">No pieces yet</div>
-          <p className="empty-state-desc">Your teacher will add pieces and assignments here.</p>
+          <div className="empty-state-title">{t.student.noPiecesTitle}</div>
+          <p className="empty-state-desc">{t.student.noPiecesDesc}</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
@@ -402,8 +404,8 @@ export default function MyPieces() {
                           <div style={{ marginTop: "0.875rem" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", marginBottom: "0.35rem" }}>
                               <span style={{ color: "var(--charcoal)", fontWeight: 500 }}>
-                                {done === total ? "🎉 All goals done!" : `${done} of ${total} goals done`}
-                                {current > 0 && done < total && <span style={{ color: "var(--muted)", fontWeight: 400 }}> · {current} in progress</span>}
+                                {done === total ? t.student.allGoalsDone : t.student.goalsProgress.replace("{done}", String(done)).replace("{total}", String(total))}
+                                {current > 0 && done < total && <span style={{ color: "var(--muted)", fontWeight: 400 }}> · {t.student.goalsInProgress.replace("{n}", String(current))}</span>}
                               </span>
                               <span style={{ color: "var(--muted)", fontWeight: 500 }}>{pct}%</span>
                             </div>
@@ -414,7 +416,7 @@ export default function MyPieces() {
                         )}
                         {total === 0 && (
                           <div style={{ marginTop: "0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", fontStyle: "italic" }}>
-                            No goals assigned yet
+                            {t.student.noGoalsYet}
                           </div>
                         )}
                       </div>
@@ -427,7 +429,7 @@ export default function MyPieces() {
                             onClick={() => playing ? player.stop() : handlePlayPiece(piece)}
                             style={playing ? { ...btnPrimary, background: "#3A6B55" } : btnPrimary}
                           >
-                            {playing ? "⏸ Pause" : "▶ Listen"}
+                            {playing ? t.student.pause : t.student.listen}
                             {piece.recordings.length > 1 && !playing && (
                               <span style={{ opacity: 0.6, fontWeight: 400 }}>({piece.recordings.length})</span>
                             )}
@@ -437,7 +439,7 @@ export default function MyPieces() {
                             onClick={() => setSearchOpenFor(searchOpenFor === piece.id ? null : piece.id)}
                             style={btnOutline}
                           >
-                            🎬 Find on YouTube
+                            {t.student.findOnYouTube}
                           </button>
                         )}
 
@@ -447,7 +449,7 @@ export default function MyPieces() {
                             href={`/student/perform/${piece.id}`}
                             style={{ ...btnOutline, textDecoration: "none" }}
                           >
-                            📄 Annotate
+                            {t.student.annotate}
                           </Link>
                         ) : (
                           <button
@@ -455,7 +457,7 @@ export default function MyPieces() {
                             disabled={uploadingFor === piece.id}
                             style={btnGhost}
                           >
-                            {uploadingFor === piece.id ? "⏳ Uploading…" : "📄 Upload sheet music"}
+                            {uploadingFor === piece.id ? t.student.uploadingLabel : t.student.uploadSheetMusicBtn}
                           </button>
                         )}
 
@@ -464,7 +466,7 @@ export default function MyPieces() {
                           href={`/student/perform/${piece.id}`}
                           style={{ ...btnOutline, textDecoration: "none" }}
                         >
-                          🎭 Perform
+                          {t.student.perform}
                         </Link>
 
                         {/* More toggle */}
@@ -477,7 +479,7 @@ export default function MyPieces() {
                             color: managing ? "var(--charcoal)" : "var(--muted)",
                           }}
                         >
-                          {managing ? "▲ Close" : "··· More"}
+                          {managing ? `▲ ${t.common.close}` : `··· ${t.student.more}`}
                         </button>
                       </div>
 
@@ -486,10 +488,10 @@ export default function MyPieces() {
                         <div style={{ padding: "0 1.25rem 1rem" }}>
                           <div style={{ background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)", padding: "0.875rem" }}>
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.25rem" }}>
-                              🎬 Search YouTube for a recording
+                              {t.student.searchYouTubeTitle}
                             </div>
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem" }}>
-                              Find a professional performance to listen to while you practice.
+                              {t.student.searchYouTubeDesc}
                             </div>
                             <YouTubeSearch
                               placeholder={`${piece.title}${piece.composer ? ` ${piece.composer}` : ""}…`}
@@ -511,10 +513,10 @@ export default function MyPieces() {
                           {/* ── Sheet Music ── */}
                           <div>
                             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
-                              📄 Sheet Music
+                              {t.pieces.sheetMusicTitle}
                             </div>
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                              ✏️ You and your teacher can annotate this together
+                              {t.student.sheetMusicAnnotateNote}
                             </div>
 
                             {piece.sheet_music_url && (
@@ -523,9 +525,9 @@ export default function MyPieces() {
                                   href={`/student/perform/${piece.id}`}
                                   style={{ ...btnOutline, textDecoration: "none", fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
                                 >
-                                  📄 Open &amp; Annotate
+                                  {t.student.openAnnotate}
                                 </Link>
-                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--sage)" }}>✓ Uploaded</span>
+                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--sage)" }}>{t.student.uploadedCheck}</span>
                               </div>
                             )}
 
@@ -535,7 +537,7 @@ export default function MyPieces() {
                                 disabled={uploadingFor === piece.id}
                                 style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
                               >
-                                {uploadingFor === piece.id ? "⏳ Uploading…" : piece.sheet_music_url ? "🔄 Replace file" : "📤 Upload PDF or image"}
+                                {uploadingFor === piece.id ? t.student.uploadingLabel : piece.sheet_music_url ? t.student.replaceFile : t.student.uploadPdfOrImage}
                               </button>
                               <button
                                 onClick={() => isPasting ? cancelPasteMode() : startPasteMode(piece.id)}
@@ -547,7 +549,7 @@ export default function MyPieces() {
                                 }}
                                 title="Paste a screenshot from your clipboard (Ctrl+V / ⌘V)"
                               >
-                                📋 Paste image
+                                {t.student.pasteImage}
                               </button>
                             </div>
 
@@ -562,15 +564,15 @@ export default function MyPieces() {
                               }}>
                                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--white)", flex: 1 }}>
                                   {pendingPastes.length === 0
-                                    ? <>Press <strong>Ctrl+V</strong> / <strong>⌘V</strong> to paste a screenshot — paste again to add more pages</>
-                                    : <>{pendingPastes.length} image{pendingPastes.length > 1 ? "s" : ""} ready — paste more or upload</>}
+                                    ? t.student.pasteHint
+                                    : t.student.imagesReadyUpload.replace("{n}", String(pendingPastes.length))}
                                 </span>
                                 {pendingPastes.length > 0 && (
                                   <button
                                     onClick={() => uploadPastes(piece.id)}
                                     style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 6, cursor: "pointer", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, padding: "0.25rem 0.625rem", whiteSpace: "nowrap" }}
                                   >
-                                    Upload {pendingPastes.length}
+                                    {t.student.uploadCount.replace("{n}", String(pendingPastes.length))}
                                   </button>
                                 )}
                                 <button onClick={cancelPasteMode} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
@@ -581,18 +583,18 @@ export default function MyPieces() {
                           {/* ── Playable Score (MusicXML / Guitar Pro) ── */}
                           <div>
                             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
-                              🎵 Playable Score
+                              {t.student.playableScoreTitle}
                             </div>
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem" }}>
-                              MusicXML or Guitar Pro file — play it back note-by-note in the app.
+                              {t.student.playableScoreDesc}
                             </div>
 
                             {scoreUrl && (
                               <div style={{ marginBottom: "0.625rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <a href={scoreUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnOutline, textDecoration: "none", fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}>
-                                  🎵 Open Score
+                                  {t.student.openScore}
                                 </a>
-                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--sage)" }}>✓ Uploaded</span>
+                                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--sage)" }}>{t.student.uploadedCheck}</span>
                               </div>
                             )}
 
@@ -602,7 +604,7 @@ export default function MyPieces() {
                                 disabled={uploadingScoreFor === piece.id}
                                 style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
                               >
-                                {uploadingScoreFor === piece.id ? "⏳ Uploading…" : scoreUrl ? "🔄 Replace score" : "🎵 Upload score file"}
+                                {uploadingScoreFor === piece.id ? t.student.uploadingLabel : scoreUrl ? t.student.replaceScore : t.student.uploadScoreFile}
                               </button>
                               <button
                                 onClick={() => openAiConvertPicker(piece.id)}
@@ -610,7 +612,7 @@ export default function MyPieces() {
                                 style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
                                 title="Take a photo or screenshot of your sheet music and convert it to a playable score with AI"
                               >
-                                {aiConvertingFor === piece.id ? "⏳ Converting…" : "🤖 AI convert from photo"}
+                                {aiConvertingFor === piece.id ? t.student.convertingLabel : t.student.aiConvertPhoto}
                               </button>
                             </div>
                           </div>
@@ -618,10 +620,10 @@ export default function MyPieces() {
                           {/* ── YouTube Recordings ── */}
                           <div>
                             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
-                              🎬 YouTube Recordings
+                              {t.student.youtubeRecordingsTitle}
                             </div>
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.625rem" }}>
-                              Search YouTube for professional performances to listen to while you practice.
+                              {t.student.youtubeRecordingsDesc}
                             </div>
 
                             {piece.recordings.length > 0 && (
@@ -636,7 +638,7 @@ export default function MyPieces() {
                                         {rec.title}
                                       </div>
                                       {rec.is_primary && (
-                                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--butter)", marginTop: "0.125rem" }}>★ Main recording</div>
+                                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--butter)", marginTop: "0.125rem" }}>{t.student.mainRecording}</div>
                                       )}
                                     </div>
                                     <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0 }}>
@@ -659,7 +661,7 @@ export default function MyPieces() {
                             )}
 
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.5rem" }}>
-                              {piece.recordings.length === 0 ? "Search YouTube to add a recording:" : "Add another YouTube recording:"}
+                              {piece.recordings.length === 0 ? t.student.searchToAddRecording : t.student.addAnotherRecording}
                             </div>
                             <YouTubeSearch
                               placeholder={`Search YouTube for "${piece.title}"…`}

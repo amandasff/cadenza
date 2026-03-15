@@ -12,29 +12,12 @@ import AudioPlayer from "../../../components/AudioPlayer";
 import { usePractice } from "../../../lib/context/PracticeContext";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 import Metronome from "../../../components/Metronome";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 type PracticeStep = "practice" | "reflect";
 type SegmentWithId = PracticeSegment & { id: string };
 
-const AREAS: Record<string, { label: string }> = {
-  technique:    { label: "Technique" },
-  repertoire:   { label: "Repertoire" },
-  ear_training: { label: "Ear Training" },
-  theory:       { label: "Theory" },
-};
-
-const MOODS = [
-  { key: "hard",  emoji: "😓", label: "Hard" },
-  { key: "okay",  emoji: "😐", label: "Okay" },
-  { key: "good",  emoji: "😊", label: "Good" },
-  { key: "great", emoji: "🌟", label: "Great" },
-];
-
 const CATEGORY_ORDER = ["technique", "etude", "repertoire", "theory", "ear_training", "sight_reading", "free"];
-const CATEGORY_LABELS: Record<string, string> = {
-  technique: "Technique", etude: "Études", repertoire: "Repertoire",
-  theory: "Theory", ear_training: "Ear Training", sight_reading: "Sight Reading", free: "Other",
-};
 
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -45,8 +28,33 @@ function PracticeInner() {
   const { user } = useAuth();
   const student = user as Student;
   const practice = usePractice();
+  const { t } = useI18n();
   const { isActive, recording, elapsed, analyserNode } = practice;
   const hasStarted = isActive;
+
+  const AREAS: Record<string, { label: string }> = {
+    technique:    { label: t.teacher.categoryTechnique },
+    repertoire:   { label: t.teacher.categoryRepertoire },
+    ear_training: { label: t.teacher.categoryEarTraining },
+    theory:       { label: t.teacher.categoryTheory },
+  };
+
+  const MOODS = [
+    { key: "hard",  emoji: "😓", label: t.student.moodHard },
+    { key: "okay",  emoji: "😐", label: t.student.moodOkay },
+    { key: "good",  emoji: "😊", label: t.student.moodGood },
+    { key: "great", emoji: "🌟", label: t.student.moodGreat },
+  ];
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    technique:    t.teacher.categoryTechnique,
+    etude:        t.teacher.categoryEtude,
+    repertoire:   t.teacher.categoryRepertoire,
+    theory:       t.teacher.categoryTheory,
+    ear_training: t.teacher.categoryEarTraining,
+    sight_reading:t.teacher.categorySightReading,
+    free:         t.teacher.categoryOther,
+  };
 
   const [step, setStep] = useState<PracticeStep>("practice");
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
@@ -316,14 +324,14 @@ function PracticeInner() {
         <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <button onClick={() => router.push("/student")} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
           <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {selectedPiece ? selectedPiece.title : "Practice Session"}
+            {selectedPiece ? selectedPiece.title : t.student.practiceSession}
           </span>
           {selectedPiece?.sheet_music_url && (
             <button
               onClick={() => window.open(selectedPiece.sheet_music_url!, "_blank")}
               style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.2rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase" }}
             >
-              📄 Sheet
+              📄 {t.student.sheet}
             </button>
           )}
         </div>
@@ -337,7 +345,7 @@ function PracticeInner() {
               {fmt(elapsed)}
             </div>
             <div style={{ fontSize: "0.75rem", color: recording ? "#3D6B55" : "var(--muted)", marginTop: "0.5rem", fontFamily: "Inter, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500 }}>
-              {recording ? "● Recording" : hasStarted ? "Paused" : "Ready to play"}
+              {recording ? `● ${t.student.recording}` : hasStarted ? t.student.paused : t.student.readyToPlay}
             </div>
           </div>
 
@@ -389,7 +397,7 @@ function PracticeInner() {
                 onClick={handleStopPractice}
                 style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.04em", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                Done
+                {t.common.done}
               </button>
             )}
           </div>
@@ -410,16 +418,16 @@ function PracticeInner() {
               <span style={{ fontSize: "1rem" }}>🎵</span>
               <div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                  {selectedPiece ? selectedPiece.title : "What are you working on?"}
+                  {selectedPiece ? selectedPiece.title : t.student.whatWorkingOn}
                 </div>
                 {segments.length > 0 && (
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>
-                    {segments.length} segment{segments.length !== 1 ? "s" : ""} logged
+                    {segments.length} {t.student.segmentsLogged}
                   </div>
                 )}
                 {!selectedPiece && segments.length === 0 && (
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>
-                    Tap to add a piece or notes
+                    {t.student.tapToAddPiece}
                   </div>
                 )}
               </div>
@@ -438,7 +446,7 @@ function PracticeInner() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
                 <span style={{ fontSize: "1rem" }}>🎚</span>
                 <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                  Metronome
+                  {t.student.metronome}
                 </span>
               </div>
               <span style={{ color: "var(--muted)", fontSize: "0.875rem", transition: "transform 0.2s", display: "inline-block", transform: showMetronome ? "rotate(90deg)" : "none" }}>›</span>
@@ -466,14 +474,14 @@ function PracticeInner() {
               <div style={{ width: 36, height: 4, borderRadius: 2, background: "var(--border-strong)", margin: "0 auto 1.25rem" }} />
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>What I&apos;m working on</span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>{t.student.whatsWorkingOn}</span>
                 <button onClick={() => setShowWorkingOn(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1.25rem", padding: "0 0.25rem" }}>×</button>
               </div>
 
               {/* Piece selector */}
               <div style={{ marginBottom: "1.25rem" }}>
                 <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "0.5rem" }}>
-                  Piece
+                  {t.student.piece}
                 </label>
                 {loadingPieces ? (
                   <div className="skeleton" style={{ height: 40, borderRadius: 4 }} />
@@ -493,7 +501,7 @@ function PracticeInner() {
                     }}
                     style={{ width: "100%", borderRadius: 6, border: "1px solid var(--border-strong)", padding: "0.75rem 0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}
                   >
-                    <option value="">— no piece selected —</option>
+                    <option value="">{t.student.noPieceSelected}</option>
                     {grouped.map(g => (
                       <optgroup key={g.cat} label={g.label}>
                         {g.items.map(p => (
@@ -510,7 +518,7 @@ function PracticeInner() {
               {/* Reference recording (if piece has one) */}
               {selectedPiece && selectedPiece.recordings.length > 0 && (
                 <div style={{ marginBottom: "1.25rem" }}>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>Reference</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>{t.student.reference}</div>
                   <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap", marginBottom: practiceYouTubeId ? "0.625rem" : 0 }}>
                     {selectedPiece.recordings.map(r => (
                       <button
@@ -534,11 +542,11 @@ function PracticeInner() {
               <div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                   <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                    Segments {segments.length > 0 && `(${segments.length})`}
+                    {t.student.segments} {segments.length > 0 && `(${segments.length})`}
                   </span>
                   {!showAddSeg && (
                     <button onClick={() => setShowAddSeg(true)} style={{ background: "none", border: "1px solid var(--border)", borderRadius: 4, padding: "0.25rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--muted)" }}>
-                      + Add
+                      + {t.common.add}
                     </button>
                   )}
                 </div>
@@ -567,7 +575,7 @@ function PracticeInner() {
                       <select value={newSegArea} onChange={e => setNewSegArea(e.target.value)} style={{ flex: 1, borderRadius: 6, border: "1px solid var(--border)", padding: "0.5rem 0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}>
                         {Object.entries(AREAS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                       </select>
-                      <button onClick={handleAddSegment} style={{ borderRadius: 6, border: "none", background: "var(--charcoal)", color: "var(--white)", padding: "0.5rem 1rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem" }}>Add</button>
+                      <button onClick={handleAddSegment} style={{ borderRadius: 6, border: "none", background: "var(--charcoal)", color: "var(--white)", padding: "0.5rem 1rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem" }}>{t.common.add}</button>
                       <button onClick={() => setShowAddSeg(false)} style={{ borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", padding: "0.5rem 0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>✕</button>
                     </div>
                   </div>
@@ -578,7 +586,7 @@ function PracticeInner() {
                 onClick={() => setShowWorkingOn(false)}
                 style={{ marginTop: "1.5rem", width: "100%", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 6, padding: "0.875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", cursor: "pointer" }}
               >
-                Done
+                {t.common.done}
               </button>
             </div>
           </div>
@@ -593,7 +601,7 @@ function PracticeInner() {
   return (
     <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem", textAlign: "center" }}>
       <h2 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "2rem", color: "var(--charcoal)", marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>
-        Session complete.
+        {t.student.sessionComplete}
       </h2>
       <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.75rem", fontFamily: "Inter, sans-serif" }}>
         {fmt(finalElapsed)}{selectedPiece ? ` · ${selectedPiece.title}` : ""}
@@ -601,7 +609,7 @@ function PracticeInner() {
 
       {/* Mood picker */}
       <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1.25rem", marginBottom: "1rem", textAlign: "left" }}>
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>How did it feel?</div>
+        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>{t.student.howDidItFeel}</div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           {MOODS.map(m => (
             <button
@@ -618,21 +626,21 @@ function PracticeInner() {
 
       {/* Reflection textareas */}
       <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1.25rem", marginBottom: "1rem", textAlign: "left" }}>
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>What went well?</div>
+        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>{t.student.wentWell}</div>
         <textarea value={wentWell} onChange={e => setWentWell(e.target.value)} placeholder="e.g. The tricky passage in bar 8 is clicking…" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>Focus next time</div>
+        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>{t.student.focusNext}</div>
         <textarea value={focusNext} onChange={e => setFocusNext(e.target.value)} placeholder="e.g. Work on the dynamics in the second section…" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
       </div>
 
       {/* Audio recording review */}
       {audioBlobUrl && (
         <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1rem 1.25rem", marginBottom: "1rem", textAlign: "left" }}>
-          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>Your recording</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>{t.student.yourRecording}</div>
           <AudioPlayer src={audioBlobUrl} />
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.875rem" }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.125rem" }}>Save to Journey</div>
-              <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>Add to your portfolio</div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.125rem" }}>{t.student.saveToJourney}</div>
+              <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif" }}>{t.student.addToPortfolio}</div>
             </div>
             <button onClick={() => setPortfolioSave(v => !v)} style={{ width: 40, height: 22, borderRadius: 100, border: "none", flexShrink: 0, background: portfolioSave ? "var(--charcoal)" : "var(--border)", position: "relative", cursor: "pointer", transition: "background 0.15s" }}>
               <div style={{ width: 16, height: 16, borderRadius: "50%", background: "white", position: "absolute", top: 3, left: portfolioSave ? 21 : 3, transition: "left 0.15s", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
@@ -649,12 +657,12 @@ function PracticeInner() {
 
       {saveError && (
         <div style={{ width: "100%", maxWidth: 320, marginBottom: "0.75rem", background: "#fff1f0", border: "1px solid #ffccc7", borderRadius: 6, padding: "0.75rem 1rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b", textAlign: "left", lineHeight: 1.5 }}>
-          <strong>Could not save:</strong> {saveError}
+          <strong>{t.student.couldNotSave}</strong> {saveError}
         </div>
       )}
 
       <button onClick={handleSubmit} disabled={saving || (portfolioSave && !portfolioTitle.trim())} className="btn btn-primary" style={{ width: "100%", maxWidth: 320, padding: "0.875rem", fontSize: "0.9375rem" }}>
-        {saving ? "Saving…" : "Save & Send Report"}
+        {saving ? t.common.saving : t.student.saveAndSend}
       </button>
     </div>
   );
