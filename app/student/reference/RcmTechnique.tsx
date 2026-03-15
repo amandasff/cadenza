@@ -1,6 +1,267 @@
 "use client";
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { GRADES, type GradeData, type TechItem } from "./rcm-data";
+
+// ── Scale audio + notation helpers ────────────────────────────────────────────
+
+const KEY_MIDI: Record<string, number> = {
+  C:60, D:62, E:64, F:65, G:67, A:69, B:71,
+  "C#":61, "Db":61, "D#":63, "Eb":63, "F#":66, "Gb":66,
+  "G#":68, "Ab":68, "A#":70, "Bb":70,
+};
+
+const SCALE_PATTERNS: Record<string, number[]> = {
+  major:         [0, 2, 4, 5, 7, 9, 11, 12],
+  minor:         [0, 2, 3, 5, 7, 8, 10, 12],
+  harmonicMinor: [0, 2, 3, 5, 7, 8, 11, 12],
+  chromatic:     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  arpeggio:      [0, 4, 7, 12],
+  arpeggioMinor: [0, 3, 7, 12],
+  pentascale:    [0, 2, 4, 5, 7],
+  triad:         [0, 4, 7],
+};
+
+function parseKey(keys: string): string {
+  if (!keys || keys.toLowerCase().includes("all")) return "C";
+  const m = keys.match(/[A-G][b#]?/);
+  return m ? m[0] : "C";
+}
+
+function inferPattern(sectionTitle: string, label: string): number[] {
+  const t = sectionTitle.toLowerCase();
+  const l = label.toLowerCase();
+  if (t.includes("chromatic")) return SCALE_PATTERNS.chromatic;
+  if (t.includes("arpeg") || l.includes("arpeg")) {
+    return l.includes("minor") || l.includes(" min") ? SCALE_PATTERNS.arpeggioMinor : SCALE_PATTERNS.arpeggio;
+  }
+  if (t.includes("broken") || t.includes("solid") || t.includes("triad")) {
+    return l.includes("minor") ? SCALE_PATTERNS.arpeggioMinor : SCALE_PATTERNS.triad;
+  }
+  if (t.includes("penta") || t.includes("5-finger")) return SCALE_PATTERNS.pentascale;
+  if (l.includes("harmonic")) return SCALE_PATTERNS.harmonicMinor;
+  if (l.includes("minor") || l.includes(" min") || t.includes("minor")) return SCALE_PATTERNS.minor;
+  return SCALE_PATTERNS.major;
+}
+
+function getScaleMidi(sectionTitle: string, item: TechItem): number[] {
+  const key = parseKey(item.keys);
+  const root = (KEY_MIDI[key] ?? 60);
+  // Shift root into a comfortable octave: keep in C4–B4 range
+  const rootInRange = root < 60 ? root + 12 : root;
+  return inferPattern(sectionTitle, item.label).map(iv => rootInRange + iv);
+}
+
+function midiToHz(midi: number): number {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+// Treble clef staff position (pos 0 = bottom line E4)
+// Each diatonic step = +1 position
+const CHROMATIC_TO_DIATONIC: {letter: string; acc: string}[] = [
+  {letter:"C", acc:""},   // 0
+  {letter:"C", acc:"#"},  // 1
+  {letter:"D", acc:""},   // 2
+  {letter:"D", acc:"#"},  // 3
+  {letter:"E", acc:""},   // 4
+  {letter:"F", acc:""},   // 5
+  {letter:"F", acc:"#"},  // 6
+  {letter:"G", acc:""},   // 7
+  {letter:"G", acc:"#"},  // 8
+  {letter:"A", acc:""},   // 9
+  {letter:"A", acc:"#"},  // 10
+  {letter:"B", acc:""},   // 11
+];
+const LETTER_TO_IDX: Record<string, number> = {C:0, D:1, E:2, F:3, G:4, A:5, B:6};
+
+function midiToStaff(midi: number): {pos: number; label: string; acc: string} {
+  const nc = ((midi % 12) + 12) % 12;
+  const octave = Math.floor(midi / 12) - 1;
+  const {letter, acc} = CHROMATIC_TO_DIATONIC[nc];
+  const letterIdx = LETTER_TO_IDX[letter];
+  // pos 0 = E4; E has letterIdx=2, octave 4
+  const pos = (letterIdx - 2) + (octave - 4) * 7;
+  return {pos, label: letter + acc, acc};
+}
+
+// ── Mini staff SVG component ───────────────────────────────────────────────────
+
+function MiniStaff({ midiNotes, currentNote }: { midiNotes: number[]; currentNote: number }) {
+  const LS = 9;           // px per half-step (line spacing = 2*LS = 18)
+  const BOT = 58;         // y of bottom staff line
+  const H = 88;
+  const NOTE_SPACING = 26;
+  const START_X = 32;
+  const W = Math.max(200, START_X + (midiNotes.length - 1) * NOTE_SPACING + 24);
+
+  const posY = (pos: number) => BOT - pos * LS;
+
+  const noteInfos = midiNotes.map(midi => midiToStaff(midi));
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <svg width={W} height={H} style={{ display: "block", background: "var(--white)", borderRadius: 6, border: "1px solid var(--border)" }}>
+        {/* Staff lines */}
+        {[0, 2, 4, 6, 8].map(p => (
+          <line key={p} x1={6} y1={posY(p)} x2={W - 6} y2={posY(p)} stroke="#CCC" strokeWidth={1} />
+        ))}
+
+        {/* Treble clef glyph */}
+        <text x={4} y={posY(-2) + 6} fontSize={44} fontFamily="'Times New Roman', Georgia, serif"
+          fill="#BBB" dominantBaseline="auto" style={{userSelect:"none"}}>𝄞</text>
+
+        {/* Notes */}
+        {noteInfos.map(({pos, label, acc}, i) => {
+          const x = START_X + i * NOTE_SPACING;
+          const y = posY(pos);
+          const isActive = i === currentNote;
+          const fill = isActive ? "#B85C3A" : "var(--charcoal)";
+
+          // Ledger lines below
+          const ledgersBelow: number[] = [];
+          if (pos <= -2) for (let p = -2; p >= pos; p -= 2) ledgersBelow.push(p);
+          // Ledger lines above
+          const ledgersAbove: number[] = [];
+          if (pos >= 10) for (let p = 10; p <= pos; p += 2) ledgersAbove.push(p);
+
+          const stemUp = pos <= 4;
+
+          return (
+            <g key={i}>
+              {ledgersBelow.map(p => (
+                <line key={p} x1={x - 9} y1={posY(p)} x2={x + 9} y2={posY(p)} stroke="#AAA" strokeWidth={1} />
+              ))}
+              {ledgersAbove.map(p => (
+                <line key={p} x1={x - 9} y1={posY(p)} x2={x + 9} y2={posY(p)} stroke="#AAA" strokeWidth={1} />
+              ))}
+              {acc === "#" && (
+                <text x={x - 11} y={y + 4} fontSize={11} fontFamily="serif" fill={fill} textAnchor="middle">♯</text>
+              )}
+              {acc === "b" && (
+                <text x={x - 10} y={y + 3} fontSize={11} fontFamily="serif" fill={fill} textAnchor="middle">♭</text>
+              )}
+              {/* Note head */}
+              <ellipse cx={x} cy={y} rx={6} ry={4.5} fill={fill}
+                transform={`rotate(-16, ${x}, ${y})`} />
+              {/* Stem */}
+              {stemUp
+                ? <line x1={x + 6} y1={y} x2={x + 6} y2={y - 22} stroke={fill} strokeWidth={1.4} />
+                : <line x1={x - 6} y1={y} x2={x - 6} y2={y + 22} stroke={fill} strokeWidth={1.4} />
+              }
+              {/* Note name below */}
+              <text x={x} y={H - 4} textAnchor="middle" fontSize={8}
+                fill={isActive ? "#B85C3A" : "#999"} fontFamily="Inter,sans-serif"
+                fontWeight={isActive ? 700 : 400}>
+                {label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+// ── Scale player component ─────────────────────────────────────────────────────
+
+function ScalePlayer({ sectionTitle, item }: { sectionTitle: string; item: TechItem }) {
+  const [playing, setPlaying] = useState(false);
+  const [currentNote, setCurrentNote] = useState(-1);
+  const ctxRef = useRef<AudioContext | null>(null);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      ctxRef.current?.close();
+      timeoutsRef.current.forEach(t => clearTimeout(t));
+    };
+  }, []);
+
+  const midiNotes = useMemo(() => getScaleMidi(sectionTitle, item), [sectionTitle, item]);
+  const keyName = parseKey(item.keys);
+  const showsAllKeys = item.keys.toLowerCase().includes("all");
+
+  const handlePlay = useCallback(() => {
+    if (playing) {
+      ctxRef.current?.close();
+      ctxRef.current = null;
+      timeoutsRef.current.forEach(t => clearTimeout(t));
+      timeoutsRef.current = [];
+      setPlaying(false);
+      setCurrentNote(-1);
+      return;
+    }
+
+    const ctx = new AudioContext();
+    ctxRef.current = ctx;
+    const beatSec = 60 / item.bpm;
+    const noteDur = item.beatUnit.includes("♪") ? beatSec * 0.5 : beatSec;
+
+    midiNotes.forEach((midi, i) => {
+      const hz = midiToHz(midi);
+      const when = ctx.currentTime + i * noteDur;
+      [[1, 0.4], [2, 0.15], [3, 0.07]].forEach(([h, a]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = hz * (h as number);
+        gain.gain.setValueAtTime(0, when);
+        gain.gain.linearRampToValueAtTime((a as number) / (h as number), when + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, when + noteDur * 0.85);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(when);
+        osc.stop(when + noteDur);
+      });
+      const t = setTimeout(() => {
+        if (mountedRef.current) setCurrentNote(i);
+      }, (when - ctx.currentTime) * 1000);
+      timeoutsRef.current.push(t);
+    });
+
+    setPlaying(true);
+    setCurrentNote(0);
+
+    const doneMs = midiNotes.length * noteDur * 1000 + 400;
+    const doneT = setTimeout(() => {
+      if (mountedRef.current) {
+        setPlaying(false);
+        setCurrentNote(-1);
+      }
+      try { ctx.close(); } catch {}
+    }, doneMs);
+    timeoutsRef.current.push(doneT);
+  }, [playing, midiNotes, item.bpm, item.beatUnit]);
+
+  return (
+    <div style={{ marginTop: "0.875rem" }}>
+      <div style={{
+        fontFamily: "Inter,sans-serif", fontSize: "0.625rem", color: "var(--muted)",
+        fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em",
+        marginBottom: "0.5rem",
+      }}>
+        {showsAllKeys ? `Scale preview — C major (same pattern in all keys)` : `Scale preview — ${keyName}`}
+      </div>
+      <MiniStaff midiNotes={midiNotes} currentNote={currentNote} />
+      <button
+        onClick={handlePlay}
+        style={{
+          marginTop: "0.5rem",
+          padding: "0.3rem 0.875rem", borderRadius: 4,
+          border: "none", cursor: "pointer",
+          background: playing ? "#C0392B" : "#1E8449",
+          color: "#fff", fontFamily: "Inter,sans-serif",
+          fontSize: "0.6875rem", fontWeight: 600,
+          display: "flex", alignItems: "center", gap: "0.3rem",
+        }}
+      >
+        {playing ? "⏹ Stop" : "▶ Play"}
+      </button>
+    </div>
+  );
+}
 
 // ── Metronome ─────────────────────────────────────────────────────────────────
 
@@ -96,7 +357,7 @@ const nudgeBtn: React.CSSProperties = {
 
 // ── Tech item card ────────────────────────────────────────────────────────────
 
-function TechCard({ item, color }: { item: TechItem; color: string }) {
+function TechCard({ item, color, sectionTitle }: { item: TechItem; color: string; sectionTitle: string }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -135,6 +396,7 @@ function TechCard({ item, color }: { item: TechItem; color: string }) {
             Minimum tempo: <strong style={{ color: "var(--charcoal)" }}>{item.beatUnit} = {item.bpm}</strong>
           </p>
           <MetronomeWidget defaultBpm={item.bpm} />
+          <ScalePlayer sectionTitle={sectionTitle} item={item} />
         </div>
       )}
     </div>
@@ -176,7 +438,7 @@ function TechSection({ section }: { section: GradeData["sections"][0] }) {
       {open && (
         <div style={{ padding: "0 0.75rem 0.75rem", background: "var(--cream)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {section.items.map((item, i) => (
-            <TechCard key={i} item={item} color={section.color} />
+            <TechCard key={i} item={item} color={section.color} sectionTitle={section.title} />
           ))}
         </div>
       )}

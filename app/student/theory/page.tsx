@@ -120,10 +120,10 @@ const TREBLE_NOTES = [
   { name: "E5", pos:  7  }, { name: "F5", pos:  8  }, { name: "G5", pos:  9 },
 ];
 const BASS_NOTES = [
-  { name: "E2", pos: 0 }, { name: "F2", pos: 1 }, { name: "G2", pos: 2 },
-  { name: "A2", pos: 3 }, { name: "B2", pos: 4 }, { name: "C3", pos: 5 },
-  { name: "D3", pos: 6 }, { name: "E3", pos: 7 }, { name: "F3", pos: 8 },
-  { name: "G3", pos: 9 }, { name: "A3", pos: 10 },
+  { name: "G2", pos: 0 }, { name: "A2", pos: 1 }, { name: "B2", pos: 2 },
+  { name: "C3", pos: 3 }, { name: "D3", pos: 4 }, { name: "E3", pos: 5 },
+  { name: "F3", pos: 6 }, { name: "G3", pos: 7 }, { name: "A3", pos: 8 },
+  { name: "B3", pos: 9 }, { name: "C4", pos: 10 },
 ];
 const NOTE_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
 
