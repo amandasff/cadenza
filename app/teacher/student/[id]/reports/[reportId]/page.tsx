@@ -52,7 +52,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     setLoading(true);
     try {
       const [profileRes, reportRes] = await Promise.all([
-        supabase.from("profiles").select("display_name, contact_email").eq("id", studentId).maybeSingle(),
+        supabase.from("profiles").select("display_name").eq("id", studentId).maybeSingle(),
         supabase.from("progress_reports").select("*").eq("id", reportId).eq("teacher_id", teacher.id).single(),
       ]);
       const r = reportRes.data as ProgressReportRow | null;
@@ -62,9 +62,8 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
         for (const f of FIELDS) init[f.key as string] = (r[f.key] as string | null) ?? "";
         setFields(init);
       }
-      const profile = profileRes.data as { display_name: string; contact_email?: string } | null;
+      const profile = profileRes.data as { display_name: string } | null;
       setStudentName(profile?.display_name ?? "Student");
-      if (profile?.contact_email) setSendEmail(profile.contact_email);
     } finally {
       setLoading(false);
     }

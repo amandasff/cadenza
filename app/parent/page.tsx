@@ -61,16 +61,16 @@ export default function ParentDashboard() {
       const studioMap = new Map<string, string>();
       if (studioIds.length > 0) {
         const { data: studios } = await supabase.from("studios").select("id, name").in("id", studioIds);
-        for (const s of studios ?? []) studioMap.set(s.id, s.name);
+        for (const s of (studios ?? []) as { id: string; name: string }[]) studioMap.set(s.id, s.name);
       }
 
       const nextLessonMap = new Map<string, string>();
-      for (const l of lessonsRes.data ?? []) {
+      for (const l of (lessonsRes.data ?? []) as { student_id: string; scheduled_at: string }[]) {
         if (!nextLessonMap.has(l.student_id)) nextLessonMap.set(l.student_id, l.scheduled_at);
       }
 
       const practiceMap = new Map<string, { minutes: number; lastAt: string | null }>();
-      for (const s of sessionsRes.data ?? []) {
+      for (const s of (sessionsRes.data ?? []) as { student_id: string; duration_seconds: number; created_at: string }[]) {
         const cur = practiceMap.get(s.student_id) ?? { minutes: 0, lastAt: null };
         cur.minutes += Math.round(s.duration_seconds / 60);
         if (!cur.lastAt || s.created_at > cur.lastAt) cur.lastAt = s.created_at;
@@ -78,11 +78,11 @@ export default function ParentDashboard() {
       }
 
       const assignmentMap = new Map<string, number>();
-      for (const a of assignmentsRes.data ?? []) {
+      for (const a of (assignmentsRes.data ?? []) as { student_id: string }[]) {
         assignmentMap.set(a.student_id, (assignmentMap.get(a.student_id) ?? 0) + 1);
       }
 
-      const childInfos: ChildInfo[] = studentIds.map(sid => {
+      const childInfos: ChildInfo[] = studentIds.map((sid: string) => {
         const p = profiles.find(pr => pr.id === sid);
         const practice = practiceMap.get(sid);
         return {

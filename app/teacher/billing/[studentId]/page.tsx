@@ -418,7 +418,7 @@ function ParentLinkSection({ studentId, teacherId: _teacherId, supabase }: { stu
     setLoading(true);
     const { data } = await supabase
       .from("parent_student_links")
-      .select("id, parent_id, profiles(display_name)")
+      .select("id, parent_id, profiles!parent_id(display_name)")
       .eq("student_id", studentId);
     const rows = (data ?? []).map((r: { id: string; parent_id: string; profiles: { display_name: string } | null }) => ({
       id: r.id,

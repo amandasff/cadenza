@@ -38,7 +38,6 @@ export default function ParentChildPage({ params }: { params: Promise<{ childId:
       if (!link) { setAuthorized(false); setLoading(false); return; }
 
       const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString();
-      const now = new Date().toISOString();
 
       const [profileRes, lessonsRes, assignmentsRes, sessionsRes, reportsRes] = await Promise.all([
         supabase.from("profiles").select("display_name, instrument").eq("id", childId).single(),
