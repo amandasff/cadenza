@@ -290,30 +290,37 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
       try {
         const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Accidental, StaveConnector } = VF;
 
-        const STAVE_WIDTH = Math.max(380, displayNotes.length * 30 + 80);
-        const TOP_STAVE_Y = 20;
-        const STAVE_GAP = 90;
+        // ── Layout constants ──
+        // Each note gets ~38px; enough horizontal room for ledger-line accidentals
+        const NOTE_W = 38;
+        const STAVE_WIDTH = Math.max(500, displayNotes.length * NOTE_W + 120);
+        // Extra vertical space above staff to avoid clipping high ledger lines
+        const TOP_STAVE_Y = 60;
+        const STAVE_GAP = 105;
         const showGrandStaff = item.hands === "HT";
-        const totalH = showGrandStaff ? TOP_STAVE_Y + STAVE_GAP + 80 : TOP_STAVE_Y + 80;
+        // Extra space below: bass staff needs room for low ledger lines
+        const BOTTOM_PAD = showGrandStaff ? 70 : 55;
+        const totalH = showGrandStaff
+          ? TOP_STAVE_Y + STAVE_GAP + BOTTOM_PAD
+          : TOP_STAVE_Y + BOTTOM_PAD;
 
         const renderer = new Renderer(div, Renderer.Backends.SVG);
-        renderer.resize(STAVE_WIDTH + 20, totalH);
+        renderer.resize(STAVE_WIDTH + 24, totalH);
         const ctx = renderer.getContext();
         ctx.setFont("Arial", 10);
 
         // ── Treble stave ──
-        const trebleStave = new Stave(10, TOP_STAVE_Y, STAVE_WIDTH);
+        const trebleStave = new Stave(12, TOP_STAVE_Y, STAVE_WIDTH);
         trebleStave.addClef("treble").addKeySignature(info.vfKeySig);
         trebleStave.setContext(ctx).draw();
 
         // ── Bass stave (HT only) ──
         let bassStave: InstanceType<typeof Stave> | null = null;
         if (showGrandStaff) {
-          bassStave = new Stave(10, TOP_STAVE_Y + STAVE_GAP, STAVE_WIDTH);
+          bassStave = new Stave(12, TOP_STAVE_Y + STAVE_GAP, STAVE_WIDTH);
           bassStave.addClef("bass").addKeySignature(info.vfKeySig);
           bassStave.setContext(ctx).draw();
 
-          // Connector brace
           const connector = new StaveConnector(trebleStave, bassStave);
           connector.setType(StaveConnector.type.BRACE);
           connector.setContext(ctx).draw();
@@ -322,52 +329,43 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
           lineConn.setContext(ctx).draw();
         }
 
-        // ── Build treble notes ──
-        const rhNotes = displayNotes.map((vfNote, i) => {
-          const isTop = i === Math.floor(displayNotes.length / 2);
-          const dur = isTop ? "q" : "16";
-          return new StaveNote({ keys: [vfNote], duration: dur });
-        });
+        // ── Build treble notes (all 8th notes — standard scale notation) ──
+        const rhNotes = displayNotes.map((vfNote) =>
+          new StaveNote({ keys: [vfNote], duration: "8" })
+        );
 
-        const totalTicks = rhNotes.reduce((s, n) => s + (n.getDuration() === "q" ? 4 : 1), 0);
-        const rhVoice = new Voice({ numBeats: totalTicks, beatValue: 16 });
+        const rhVoice = new Voice({ numBeats: displayNotes.length, beatValue: 8 });
         rhVoice.setStrict(false);
         rhVoice.addTickables(rhNotes);
-
-        // Apply accidentals to the already-constructed voice (notes must belong to one voice only)
         try { Accidental.applyAccidentals([rhVoice], info.vfKeySig); } catch { /* ignore */ }
 
-        // Format
+        // ── Format + draw ──
         const formatter = new Formatter();
         if (showGrandStaff && bassStave) {
-          // Build bass notes (two octaves lower than treble)
-          const lhNotes = displayNotes.map((vfNote, i) => {
+          const lhNotes = displayNotes.map((vfNote) => {
             const [note, octStr] = vfNote.split("/");
             const lhNote = `${note}/${parseInt(octStr) - 2}`;
-            const isTop = i === Math.floor(displayNotes.length / 2);
-            const dur = isTop ? "q" : "16";
-            return new StaveNote({ keys: [lhNote], duration: dur, clef: "bass" });
+            return new StaveNote({ keys: [lhNote], duration: "8", clef: "bass" });
           });
 
-          const lhVoice = new Voice({ numBeats: totalTicks, beatValue: 16 });
+          const lhVoice = new Voice({ numBeats: displayNotes.length, beatValue: 8 });
           lhVoice.setStrict(false);
           lhVoice.addTickables(lhNotes);
           try { Accidental.applyAccidentals([lhVoice], info.vfKeySig); } catch { /* ignore */ }
 
-          formatter.joinVoices([rhVoice, lhVoice]).format([rhVoice, lhVoice], STAVE_WIDTH - 60);
+          formatter.joinVoices([rhVoice, lhVoice]).format([rhVoice, lhVoice], STAVE_WIDTH - 70);
           lhVoice.draw(ctx, bassStave);
 
-          // Beam LH
-          const lhBeams = Beam.generateBeams(lhNotes.filter(n => n.getDuration() === "16"));
+          const lhBeams = Beam.generateBeams(lhNotes);
           lhBeams.forEach(b => b.setContext(ctx).draw());
         } else {
-          formatter.joinVoices([rhVoice]).format([rhVoice], STAVE_WIDTH - 60);
+          formatter.joinVoices([rhVoice]).format([rhVoice], STAVE_WIDTH - 70);
         }
 
         rhVoice.draw(ctx, trebleStave);
 
-        // Beam RH 16th notes
-        const rhBeams = Beam.generateBeams(rhNotes.filter(n => n.getDuration() === "16"));
+        // Beam 8th notes in natural groups
+        const rhBeams = Beam.generateBeams(rhNotes);
         rhBeams.forEach(b => b.setContext(ctx).draw());
 
         // Store note X positions for playback highlight
@@ -485,7 +483,7 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
       </div>
 
       {/* Staff container */}
-      <div style={{ position: "relative", overflowX: "auto", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "0 0 4px" }}>
+      <div style={{ position: "relative", overflowX: "auto", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 4px 8px" }}>
         {vfError ? (
           <div style={{ padding: "1rem", fontFamily: "Inter,sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
             Could not render notation. Try refreshing.

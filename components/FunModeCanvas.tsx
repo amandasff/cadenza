@@ -153,13 +153,19 @@ export default function FunModeCanvas({ onClose }: Props) {
       const seed = Math.floor(Math.random() * 99999);
       const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(aiPrompt + ", colorful, music themed, digital art")}?width=800&height=500&seed=${seed}&nologo=true&model=flux`;
 
+      // Fetch as blob — avoids CORS issues and keeps canvas exportable via toDataURL
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
       const img = new Image();
-      img.crossOrigin = "anonymous";
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error("Image failed to load"));
-        img.src = url;
+        img.src = objectUrl;
       });
+      URL.revokeObjectURL(objectUrl);
 
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
