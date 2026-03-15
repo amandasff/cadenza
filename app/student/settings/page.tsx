@@ -5,9 +5,10 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { useTheme } from "../../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { Student } from "../../../lib/models/Student";
-
+import { useI18n } from "../../../lib/context/I18nContext";
 
 export default function StudentSettings() {
+  const { t } = useI18n();
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
@@ -87,7 +88,7 @@ export default function StudentSettings() {
     router.replace("/");
   }
 
-  const themeLabel = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "🎨 Fun";
+  const themeLabel = theme === "light" ? t.settings.themeLight : theme === "dark" ? t.settings.themeDark : t.settings.themeFun;
   const initials = displayName.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase() || "?";
 
   return (
@@ -96,8 +97,8 @@ export default function StudentSettings() {
 
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 500, color: "var(--charcoal)", letterSpacing: "-0.01em" }}>Settings</div>
-          <div style={{ fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.25rem" }}>Manage your account and preferences</div>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 500, color: "var(--charcoal)", letterSpacing: "-0.01em" }}>{t.settings.title}</div>
+          <div style={{ fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.25rem" }}>{t.settings.accountSubtitle}</div>
         </div>
 
         {error && (
@@ -107,7 +108,7 @@ export default function StudentSettings() {
         )}
 
         {/* ── Profile ── */}
-        <Section title="Profile">
+        <Section title={t.settings.profile}>
           {/* Avatar */}
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
             <button
@@ -118,14 +119,14 @@ export default function StudentSettings() {
             </button>
             <div>
               <button onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{ background: "none", border: "1px solid var(--border-strong)", borderRadius: 6, padding: "0.375rem 0.75rem", cursor: "pointer", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500 }}>
-                {uploading ? "Uploading…" : "Change photo"}
+                {uploading ? t.student.uploadingLabel : t.settings.changePhoto}
               </button>
-              <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>JPG or PNG, shown in your profile</div>
+              <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>{t.settings.photoHint}</div>
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) void handleAvatarUpload(f); }} />
           </div>
 
-          <Field label="Display name">
+          <Field label={t.settings.displayName}>
             <input
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
@@ -134,7 +135,7 @@ export default function StudentSettings() {
             />
           </Field>
 
-          <Field label="Instrument">
+          <Field label={t.student.labelInstrument}>
             <input
               value={instrument}
               onChange={e => setInstrument(e.target.value)}
@@ -144,60 +145,60 @@ export default function StudentSettings() {
           </Field>
 
           <button onClick={handleSaveProfile} disabled={saving} style={{ ...btnPrimary, marginTop: "0.25rem" }}>
-            {saved ? "Saved!" : saving ? "Saving…" : "Save changes"}
+            {saved ? t.settings.savedSuccess : saving ? t.common.saving : t.settings.saveChanges}
           </button>
         </Section>
 
         {/* ── Account ── */}
-        <Section title="Account">
-          <Field label="Email">
+        <Section title={t.settings.account}>
+          <Field label={t.auth.labelEmail}>
             <input value={student?.email ?? ""} readOnly style={{ ...inputStyle, opacity: 0.6, cursor: "default" }} />
           </Field>
           <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-            To change your email or password, use the link below.
+            {t.settings.emailChangeNote}
           </div>
           <button
             onClick={async () => {
               if (!student?.email) return;
               await supabase.auth.resetPasswordForEmail(student.email, { redirectTo: `${window.location.origin}/auth/reset-password` });
-              alert("Password reset email sent!");
+              alert(t.settings.passwordResetSent);
             }}
             style={{ ...btnOutline, marginTop: "0.75rem" }}
           >
-            Send password reset email
+            {t.settings.sendPasswordReset}
           </button>
         </Section>
 
         {/* ── Appearance ── */}
-        <Section title="Appearance">
+        <Section title={t.settings.appearance}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div style={{ fontSize: "0.875rem", color: "var(--charcoal)", fontWeight: 500 }}>Theme</div>
-              <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>Currently: {themeLabel}</div>
+              <div style={{ fontSize: "0.875rem", color: "var(--charcoal)", fontWeight: 500 }}>{t.settings.theme}</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>{t.settings.currentlyTheme.replace("{label}", themeLabel)}</div>
             </div>
             <button onClick={toggleTheme} style={btnOutline}>
-              Switch to {theme === "light" ? "Dark" : theme === "dark" ? "🎨 Fun" : "Light"}
+              {t.settings.switchTo.replace("{mode}", theme === "light" ? t.settings.themeDark : theme === "dark" ? t.settings.themeFun : t.settings.themeLight)}
             </button>
           </div>
         </Section>
 
         {/* ── Billing ── */}
-        <Section title="Billing">
+        <Section title={t.nav.billing}>
           <div style={{ fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.875rem", lineHeight: 1.6 }}>
-            Manage your subscription, view invoices, and update your payment method through the billing portal.
+            {t.settings.billingDesc}
           </div>
           <button onClick={handleBillingPortal} disabled={billingLoading} style={btnOutline}>
-            {billingLoading ? "Opening…" : "Open billing portal →"}
+            {billingLoading ? t.settings.openingBillingPortal : t.settings.openBillingPortal}
           </button>
         </Section>
 
         {/* ── Danger zone ── */}
-        <Section title="Danger zone" danger>
+        <Section title={t.settings.dangerZone} danger>
           <div style={{ fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.875rem", lineHeight: 1.6 }}>
-            Permanently delete your account and all data — practice sessions, recordings, and progress. This cannot be undone.
+            {t.settings.dangerZoneDesc}
           </div>
           <button onClick={() => setDeleteModalOpen(true)} style={{ ...btnOutline, borderColor: "rgba(192,80,80,0.4)", color: "#b05050" }}>
-            Delete account
+            {t.common.deleteAccount}
           </button>
         </Section>
 
@@ -207,11 +208,11 @@ export default function StudentSettings() {
       {deleteModalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "1rem" }}>
           <div style={{ background: "var(--white)", borderRadius: 12, padding: "2rem", maxWidth: 380, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
-            <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", marginBottom: "0.75rem" }}>Delete account</div>
+            <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", marginBottom: "0.75rem" }}>{t.common.deleteAccount}</div>
             <p style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "1.25rem", lineHeight: 1.6 }}>
-              This will permanently delete your account and all your data. <strong>This cannot be undone.</strong>
+              {t.settings.deleteModalBody}
             </p>
-            <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.5rem", fontWeight: 500 }}>Type DELETE to confirm</p>
+            <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.5rem", fontWeight: 500 }}>{t.teacher.deleteAccountConfirmLabel}</p>
             <input
               value={deleteText}
               onChange={e => setDeleteText(e.target.value)}
@@ -219,9 +220,9 @@ export default function StudentSettings() {
               style={{ ...inputStyle, marginBottom: "1rem", letterSpacing: "0.1em" }}
             />
             <div style={{ display: "flex", gap: "0.625rem" }}>
-              <button onClick={() => { setDeleteModalOpen(false); setDeleteText(""); }} style={{ ...btnOutline, flex: 1 }}>Cancel</button>
+              <button onClick={() => { setDeleteModalOpen(false); setDeleteText(""); }} style={{ ...btnOutline, flex: 1 }}>{t.common.cancel}</button>
               <button onClick={handleDelete} disabled={deleteText !== "DELETE" || deleting} style={{ flex: 2, padding: "0.7rem", borderRadius: 8, border: "none", background: deleteText === "DELETE" ? "#b05050" : "var(--border)", color: "var(--white)", cursor: deleteText === "DELETE" ? "pointer" : "default", fontWeight: 600, fontSize: "0.875rem" }}>
-                {deleting ? "Deleting…" : "Delete forever"}
+                {deleting ? t.common.deleting : t.settings.deleteForever}
               </button>
             </div>
           </div>

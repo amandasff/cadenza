@@ -5,8 +5,10 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import type { Inspiration, YouTubeResult } from "../../../lib/types";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import { usePlayer } from "../../../lib/context/PlayerContext";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 export default function InspirationPage() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const player = usePlayer();
   const supabase = getSupabaseBrowserClient();
@@ -148,23 +150,23 @@ export default function InspirationPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.625rem" }}>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
           <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Inspirations
+            {t.student.inspirationsTitle}
           </span>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
         </div>
         <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center", margin: 0 }}>
-          Save pieces you love, leave notes, organise into playlists, and share with your teacher
+          {t.student.inspirationsDesc}
         </p>
       </div>
 
       {/* Search */}
       <div style={{ marginBottom: "1.5rem" }}>
         <YouTubeSearch
-          placeholder="Search YouTube for pieces, composers, RCM grades…"
+          placeholder={t.student.searchInspirations}
           onSelect={handleSave}
         />
         {saving && (
-          <div style={{ marginTop: "0.375rem", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>Saving…</div>
+          <div style={{ marginTop: "0.375rem", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>{t.common.saving}</div>
         )}
       </div>
 
@@ -186,7 +188,7 @@ export default function InspirationPage() {
                   cursor: "pointer", transition: "all 0.12s",
                 }}
               >
-                {col === "all" ? `All (${inspirations.length})` : col}
+                {col === "all" ? t.student.allCount.replace("{n}", String(inspirations.length)) : col}
               </button>
             ))}
           </div>
@@ -207,17 +209,17 @@ export default function InspirationPage() {
                   fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
                 }}
               >
-                Share entire "{activeCollection}" with teacher
+                {t.student.sharePlaylistWithTeacher.replace("{name}", activeCollection)}
               </button>
               <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                or toggle individual songs below
+                {t.student.orToggleBelow}
               </span>
             </div>
           )}
           {activeCollection === "all" && (
             <div style={{ marginTop: "0.625rem" }}>
               <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                Use the toggle on each card, or select a playlist to share it all at once
+                {t.student.useToggleHint}
               </span>
             </div>
           )}
@@ -231,13 +233,13 @@ export default function InspirationPage() {
         </div>
       ) : showEmptyAll ? (
         <div className="empty-state" style={{ paddingTop: "2rem" }}>
-          <div className="empty-state-title">Nothing saved yet</div>
-          <p className="empty-state-desc">Search above to find pieces you're curious about — RCM repertoire, composers, anything. Save them here to listen, take notes, and organise.</p>
+          <div className="empty-state-title">{t.student.nothingSavedYet}</div>
+          <p className="empty-state-desc">{t.student.nothingSavedDesc}</p>
         </div>
       ) : showEmptyCollection ? (
         <div className="empty-state" style={{ paddingTop: "2rem" }}>
-          <div className="empty-state-title">No pieces in "{activeCollection}"</div>
-          <p className="empty-state-desc">Click "Add to playlist" on any piece card to add it here.</p>
+          <div className="empty-state-title">{t.student.noPiecesInPlaylist.replace("{name}", activeCollection)}</div>
+          <p className="empty-state-desc">{t.student.addToPlaylistHint}</p>
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "0.875rem" }}>
@@ -326,7 +328,7 @@ export default function InspirationPage() {
                         color: saveStatus.state === "error" ? "#C0392B" : saveStatus.state === "saved" ? "#2E7D52" : "var(--muted)",
                         textAlign: "center",
                       }}>
-                        {saveStatus.state === "saving" ? "Saving…" : saveStatus.state === "saved" ? "✓ Saved" : "⚠ Couldn't save — DB column missing (see below)"}
+                        {saveStatus.state === "saving" ? t.common.saving : saveStatus.state === "saved" ? t.student.savedCheck : "⚠ Couldn't save — DB column missing (see below)"}
                       </div>
                     )}
                     {/* Note + remove row */}
@@ -335,14 +337,14 @@ export default function InspirationPage() {
                         onClick={() => { setEditingNoteFor(ins.id); setNoteText(ins.notes ?? ""); }}
                         style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", padding: 0, textAlign: "left" }}
                       >
-                        {ins.notes ? "✏️ Edit note" : "📝 Add note"}
+                        {ins.notes ? t.student.editNote : t.student.addNote}
                       </button>
                       <button
                         onClick={() => handleRemove(ins)}
                         style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", padding: 0 }}
                         title="Remove from inspirations"
                       >
-                        Remove
+                        {t.common.remove}
                       </button>
                     </div>
 
@@ -360,7 +362,7 @@ export default function InspirationPage() {
                         display: "flex", alignItems: "center", gap: "0.35rem",
                       }}
                     >
-                      {ins.is_public ? "👁 Visible to teacher" : "🔒 Private — share with teacher?"}
+                      {ins.is_public ? t.student.visibleToTeacher : t.student.privateShareWithTeacher}
                     </button>
 
                     {/* Playlist row */}
@@ -375,7 +377,7 @@ export default function InspirationPage() {
                           display: "flex", alignItems: "center", justifyContent: "space-between",
                         }}
                       >
-                        <span>📂 {ins.collection_name ? `In "${ins.collection_name}"` : "Add to playlist"}</span>
+                        <span>📂 {ins.collection_name ? t.student.inPlaylist.replace("{name}", ins.collection_name) : t.student.addToPlaylist}</span>
                         <span style={{ color: "var(--muted)" }}>▾</span>
                       </button>
 
@@ -416,7 +418,7 @@ export default function InspirationPage() {
                               onClick={() => assignCollection(ins.id, null)}
                               style={{ display: "block", width: "100%", textAlign: "left", padding: "0.5rem 0.875rem", border: "none", background: "none", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}
                             >
-                              Remove from playlist
+                              {t.student.removeFromPlaylist}
                             </button>
                           )}
 
@@ -435,7 +437,7 @@ export default function InspirationPage() {
                                 onClick={() => confirmNewCollection(ins.id)}
                                 style={{ padding: "0.25rem 0.5rem", borderRadius: 4, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", cursor: "pointer" }}
                               >
-                                Save
+                                {t.common.save}
                               </button>
                             </div>
                           ) : (
@@ -443,7 +445,7 @@ export default function InspirationPage() {
                               onClick={() => { setShowNewCollectionInput(true); setTimeout(() => newCollectionInputRef.current?.focus(), 30); }}
                               style={{ display: "block", width: "100%", textAlign: "left", padding: "0.5rem 0.875rem", border: "none", background: "none", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, cursor: "pointer" }}
                             >
-                              + Create new playlist
+                              {t.student.createNewPlaylist}
                             </button>
                           )}
                         </div>
