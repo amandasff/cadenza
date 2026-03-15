@@ -246,7 +246,7 @@ function PracticeInner() {
       const { session: sessionData } = await logRes.json() as { session: { id: string } };
 
       // Fire AI analysis in background — don't block submit flow
-      if (recordingUrl && sessionData?.id) {
+      if (sessionData?.id) {
         fetch("/api/practice/analyze-recording", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

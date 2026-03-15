@@ -24,9 +24,7 @@ export async function POST(request: Request) {
     if (sessionErr || !session) {
       return Response.json({ error: "Session not found" }, { status: 404 });
     }
-    if (!session.recording_url) {
-      return Response.json({ error: "No recording" }, { status: 400 });
-    }
+    // recording_url is optional — we can still generate text feedback from session context
 
     // Fetch student profile
     const { data: profile } = await supabase
@@ -46,14 +44,6 @@ export async function POST(request: Request) {
       goalTitle = goal?.title ?? "";
     }
 
-    // Fetch audio from Supabase storage
-    const audioRes = await fetch(session.recording_url);
-    if (!audioRes.ok) {
-      return Response.json({ error: "Could not fetch audio" }, { status: 500 });
-    }
-    const audioBuffer = await audioRes.arrayBuffer();
-    const base64Audio = Buffer.from(audioBuffer).toString("base64");
-
     // Build context
     const studentName = profile?.display_name ?? "the student";
     const grade = profile?.grade_level ?? "";
@@ -62,48 +52,6 @@ export async function POST(request: Request) {
     const durationMins = Math.max(1, Math.round((session.duration_seconds ?? 0) / 60));
     const segments: Array<{ title: string; practice_area: string }> = session.segments_json ?? [];
 
-    // ── Step 1: Gemini 2.0 Flash listens to the audio and extracts observations ──
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-    const analysisPrompt = `Listen carefully to this music practice recording and extract detailed observations as JSON.
-
-Return ONLY a JSON object with these fields:
-{
-  "tempo_quality": "description of rhythm/timing accuracy and consistency",
-  "technical_observations": ["specific observation 1", "specific observation 2", ...],
-  "tone_quality": "description of tone, dynamics, and expression",
-  "notable_moments": ["any standout moments — good or needs work"],
-  "overall_impression": "1-2 sentence overall summary of the performance",
-  "improvement_areas": ["specific area 1", "specific area 2"],
-  "strengths": ["specific strength 1", "specific strength 2"]
-}
-
-Be specific and musical. Note actual musical details you hear.`;
-
-    const geminiResult = await model.generateContent([
-      {
-        inlineData: {
-          data: base64Audio,
-          mimeType: "audio/webm",
-        },
-      },
-      analysisPrompt,
-    ]);
-
-    let audioAnalysis: Record<string, unknown> = {};
-    try {
-      const raw = geminiResult.response.text();
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        audioAnalysis = JSON.parse(jsonMatch[0]);
-      } else {
-        audioAnalysis = { overall_impression: raw };
-      }
-    } catch {
-      audioAnalysis = { overall_impression: geminiResult.response.text() };
-    }
-
-    // ── Step 2: Claude writes the actual feedback using the audio analysis ──
     const contextLines: string[] = [];
     contextLines.push(`Student: ${studentName}${grade ? ` (${grade})` : ""}`);
     contextLines.push(`Session length: ${durationMins} minute${durationMins !== 1 ? "s" : ""}`);
@@ -114,7 +62,53 @@ Be specific and musical. Note actual musical details you hear.`;
     }
     if (notes) contextLines.push(`Student's own notes: ${notes}`);
 
-    const claudePrompt = `You are Cadenza AI — a warm, encouraging music teacher giving feedback to a student after their practice session.
+    let audioAnalysis: Record<string, unknown> | null = null;
+
+    // ── Step 1 (optional): Gemini 2.0 Flash listens to the audio ──
+    if (session.recording_url) {
+      try {
+        const audioRes = await fetch(session.recording_url);
+        if (audioRes.ok) {
+          const audioBuffer = await audioRes.arrayBuffer();
+          const base64Audio = Buffer.from(audioBuffer).toString("base64");
+          const mimeType = session.recording_url.includes(".ogg")
+            ? "audio/ogg"
+            : session.recording_url.includes(".mp4")
+            ? "audio/mp4"
+            : "audio/webm";
+
+          const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+          const analysisPrompt = `Listen carefully to this music practice recording and extract detailed observations as JSON.
+
+Return ONLY a JSON object with these fields:
+{
+  "tempo_quality": "description of rhythm/timing accuracy and consistency",
+  "technical_observations": ["specific observation 1", "specific observation 2"],
+  "tone_quality": "description of tone, dynamics, and expression",
+  "overall_impression": "1-2 sentence overall summary",
+  "improvement_areas": ["specific area 1", "specific area 2"],
+  "strengths": ["specific strength 1", "specific strength 2"]
+}
+
+Be specific and musical.`;
+
+          const geminiResult = await model.generateContent([
+            { inlineData: { data: base64Audio, mimeType } },
+            analysisPrompt,
+          ]);
+
+          const raw = geminiResult.response.text();
+          const jsonMatch = raw.match(/\{[\s\S]*\}/);
+          audioAnalysis = jsonMatch ? JSON.parse(jsonMatch[0]) : { overall_impression: raw };
+        }
+      } catch (err) {
+        console.error("Gemini audio analysis failed, falling back to text-only:", err);
+      }
+    }
+
+    // ── Step 2: Claude writes the feedback ──
+    const claudePrompt = audioAnalysis
+      ? `You are Cadenza AI — a warm, encouraging music teacher giving feedback to a student after their practice session.
 
 Session context:
 ${contextLines.join("\n")}
@@ -123,9 +117,20 @@ Audio analysis (from listening to the recording):
 ${JSON.stringify(audioAnalysis, null, 2)}
 
 Write personalized coaching feedback in 2–3 short paragraphs. No bullet points, no headers.
-- Address what you actually heard (reference specific details from the audio analysis)
+- Reference specific details from the audio analysis
 - Be encouraging but honest
-- End with 1-2 concrete next steps they can work on
+- End with 1-2 concrete next steps
+- Keep it under 200 words
+- Use the student's first name`
+      : `You are Cadenza AI — a warm, encouraging music teacher giving feedback to a student after their practice session.
+
+Session context:
+${contextLines.join("\n")}
+
+Write personalized coaching feedback in 2–3 short paragraphs. No bullet points, no headers.
+- Base your feedback on the session context (duration, piece, notes, goals)
+- Acknowledge their effort and encourage consistency
+- End with 1-2 concrete, specific next steps based on what they practiced
 - Keep it under 200 words
 - Use the student's first name`;
 
