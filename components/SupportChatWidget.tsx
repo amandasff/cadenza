@@ -104,19 +104,19 @@ export default function SupportChatWidget() {
 
   return (
     <div style={{ position: "fixed", bottom: 130, right: 16, zIndex: 1000 }}>
-      {/* Chat panel */}
+      {/* Chat panel — hardcoded light colors so it looks right in both light and dark mode */}
       {open && (
         <div style={{
           position: "absolute", bottom: "calc(100% + 10px)", right: 0,
           width: 320, height: 440,
-          background: "var(--white)", border: "1px solid var(--border)",
-          borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.16)",
+          background: "#fff", border: "1px solid #e5e2dc",
+          borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
           display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
           {/* Header */}
           <div style={{
             padding: "0.75rem 1rem",
-            background: "var(--charcoal)",
+            background: "#2C2824",
             display: "flex", alignItems: "center", justifyContent: "space-between",
             flexShrink: 0,
           }}>
@@ -131,14 +131,14 @@ export default function SupportChatWidget() {
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, color: "#fff" }}>
                   Cadenza Support
                 </div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "rgba(255,255,255,0.6)" }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "rgba(255,255,255,0.55)" }}>
                   AI assistant · usually instant
                 </div>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", padding: 0, lineHeight: 1 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.55)", fontSize: "1rem", padding: 0, lineHeight: 1 }}
             >
               ✕
             </button>
@@ -148,6 +148,7 @@ export default function SupportChatWidget() {
           <div style={{
             flex: 1, overflowY: "auto", padding: "0.75rem",
             display: "flex", flexDirection: "column", gap: "0.625rem",
+            background: "#f7f5f2",
           }}>
             {messages.map((msg, i) => (
               <div key={i} style={{
@@ -158,17 +159,17 @@ export default function SupportChatWidget() {
                   maxWidth: "82%",
                   padding: "0.5rem 0.75rem",
                   borderRadius: msg.role === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                  background: msg.role === "user" ? "var(--charcoal)" : "var(--cream)",
-                  border: msg.role === "user" ? "none" : "1px solid var(--border)",
+                  background: msg.role === "user" ? "#2C2824" : "#fff",
+                  border: msg.role === "user" ? "none" : "1px solid #e5e2dc",
                   fontFamily: "Inter, sans-serif",
                   fontSize: "0.8125rem",
-                  lineHeight: 1.5,
-                  color: msg.role === "user" ? "var(--white)" : "var(--charcoal)",
+                  lineHeight: 1.55,
+                  color: msg.role === "user" ? "#fff" : "#2C2824",
                   whiteSpace: "pre-wrap",
                 }}>
                   {msg.content}
                   {streaming && i === messages.length - 1 && msg.role === "assistant" && msg.content === "" && (
-                    <span style={{ opacity: 0.5 }}>●●●</span>
+                    <span style={{ opacity: 0.4 }}>●●●</span>
                   )}
                 </div>
               </div>
@@ -179,9 +180,9 @@ export default function SupportChatWidget() {
           {/* Input */}
           <div style={{
             padding: "0.625rem 0.75rem",
-            borderTop: "1px solid var(--border)",
+            borderTop: "1px solid #e5e2dc",
             display: "flex", gap: "0.5rem", alignItems: "center",
-            flexShrink: 0, background: "var(--white)",
+            flexShrink: 0, background: "#fff",
           }}>
             <input
               ref={inputRef}
@@ -192,9 +193,9 @@ export default function SupportChatWidget() {
               disabled={streaming}
               style={{
                 flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
-                border: "1px solid var(--border)", borderRadius: 20,
+                border: "1px solid #ddd", borderRadius: 20,
                 padding: "0.4rem 0.875rem", outline: "none",
-                background: "var(--cream)", color: "var(--charcoal)",
+                background: "#f7f5f2", color: "#2C2824",
                 opacity: streaming ? 0.6 : 1,
               }}
             />
@@ -203,8 +204,8 @@ export default function SupportChatWidget() {
               disabled={!input.trim() || streaming}
               style={{
                 width: 32, height: 32, borderRadius: "50%", border: "none",
-                background: input.trim() && !streaming ? "var(--charcoal)" : "var(--border)",
-                color: "var(--white)", cursor: input.trim() && !streaming ? "pointer" : "default",
+                background: input.trim() && !streaming ? "#2C2824" : "#ccc",
+                color: "#fff", cursor: input.trim() && !streaming ? "pointer" : "default",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "0.875rem", transition: "background 0.12s", flexShrink: 0,
               }}
