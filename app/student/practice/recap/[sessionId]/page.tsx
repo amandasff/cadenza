@@ -41,7 +41,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
         // Load piece name if present
         if (s.piece_id) {
           supabase.from("pieces").select("title").eq("id", s.piece_id).single()
-            .then(({ data: p }) => { if (p) setPieceName(p.title); });
+            .then((r: { data: { title: string } | null }) => { if (r.data) setPieceName(r.data.title); });
         }
       });
   }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
