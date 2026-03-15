@@ -32,9 +32,9 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
       .select("*")
       .eq("id", sessionId)
       .single()
-      .then(({ data }) => {
-        if (!data) return;
-        const s = data as PracticeSessionRow;
+      .then((result: { data: PracticeSessionRow | null; error: unknown }) => {
+        if (!result.data) return;
+        const s = result.data;
         setSession(s);
         if (s.ai_feedback) { setFeedback(s.ai_feedback); setPolling(false); }
 
