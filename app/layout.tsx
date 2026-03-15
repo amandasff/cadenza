@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
 import LessonProviderClient from "@/components/LessonProviderClient";
+import FeedbackWidget from "@/components/FeedbackWidget";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <ThemeProvider>
             <LessonProviderClient>{children}</LessonProviderClient>
+            <FeedbackWidget />
           </ThemeProvider>
         </AuthProvider>
         <Analytics />
