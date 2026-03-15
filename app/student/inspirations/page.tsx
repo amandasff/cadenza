@@ -191,11 +191,36 @@ export default function InspirationPage() {
             ))}
           </div>
 
-          <div style={{ marginTop: "0.625rem" }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-              Use the "Visible to teacher" toggle on each card to share individual picks
-            </span>
-          </div>
+          {/* Playlist-level sharing */}
+          {activeCollection !== "all" && (
+            <div style={{ marginTop: "0.625rem", display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
+              <button
+                onClick={async () => {
+                  const ids = filtered.filter(i => !i.is_public).map(i => i.id);
+                  if (!ids.length) return;
+                  await supabase.from("inspirations").update({ is_public: true }).in("id", ids);
+                  setInspirations(prev => prev.map(i => ids.includes(i.id) ? { ...i, is_public: true } : i));
+                }}
+                style={{
+                  padding: "0.3rem 0.875rem", borderRadius: 99, border: "none",
+                  background: "var(--charcoal)", color: "var(--white)",
+                  fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Share entire "{activeCollection}" with teacher
+              </button>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
+                or toggle individual songs below
+              </span>
+            </div>
+          )}
+          {activeCollection === "all" && (
+            <div style={{ marginTop: "0.625rem" }}>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
+                Use the toggle on each card, or select a playlist to share it all at once
+              </span>
+            </div>
+          )}
         </div>
       )}
 
