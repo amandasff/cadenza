@@ -483,7 +483,7 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
       </div>
 
       {/* Staff container */}
-      <div style={{ position: "relative", overflowX: "auto", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 4px 8px" }}>
+      <div style={{ position: "relative", overflowX: "auto", background: "#fff", border: "1px solid #ddd", borderRadius: 8, padding: "4px 4px 8px" }}>
         {vfError ? (
           <div style={{ padding: "1rem", fontFamily: "Inter,sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
             Could not render notation. Try refreshing.

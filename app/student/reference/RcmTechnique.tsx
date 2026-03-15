@@ -103,14 +103,15 @@ function TechCard({ item, color, sectionTitle }: { item: TechItem; color: string
   return (
     <div style={{
       background: "var(--white)", border: "1px solid var(--border)",
-      borderRadius: 8, overflow: "hidden",
+      borderRadius: 8,
     }}>
       <div
         onClick={() => setOpen(o => !o)}
         style={{
           padding: "0.75rem 1rem", cursor: "pointer",
           display: "flex", alignItems: "center", gap: "0.75rem",
-          userSelect: "none",
+          userSelect: "none", overflow: "hidden",
+          borderRadius: open ? "8px 8px 0 0" : "8px",
         }}
       >
         <div style={{ width: 4, borderRadius: 2, alignSelf: "stretch", background: color, flexShrink: 0 }} />
@@ -131,7 +132,7 @@ function TechCard({ item, color, sectionTitle }: { item: TechItem; color: string
       </div>
 
       {open && (
-        <div style={{ padding: "0.75rem 1rem 1rem", borderTop: "1px solid var(--border)", background: "var(--cream)" }}>
+        <div style={{ padding: "0.75rem 1rem 1rem", borderTop: "1px solid var(--border)", background: "var(--cream)", borderRadius: "0 0 8px 8px" }}>
           <p style={{ fontFamily: "Inter,sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 0.75rem" }}>
             Minimum tempo: <strong style={{ color: "var(--charcoal)" }}>{item.beatUnit} = {item.bpm}</strong>
           </p>
@@ -160,7 +161,7 @@ function Tag({ children, color }: { children: React.ReactNode; color: string }) 
 function TechSection({ section }: { section: GradeData["sections"][0] }) {
   const [open, setOpen] = useState(true);
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: "0.875rem" }}>
+    <div style={{ border: "1px solid var(--border)", borderRadius: 10, marginBottom: "0.875rem" }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -176,7 +177,7 @@ function TechSection({ section }: { section: GradeData["sections"][0] }) {
         <span style={{ color: "var(--muted)", fontSize: "0.75rem" }}>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div style={{ padding: "0 0.75rem 0.75rem", background: "var(--cream)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <div style={{ padding: "0 0.75rem 0.75rem", background: "var(--cream)", display: "flex", flexDirection: "column", gap: "0.5rem", borderRadius: "0 0 10px 10px" }}>
           {section.items.map((item, i) => (
             <TechCard key={i} item={item} color={section.color} sectionTitle={section.title} />
           ))}
