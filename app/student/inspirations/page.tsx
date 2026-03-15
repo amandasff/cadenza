@@ -26,6 +26,7 @@ export default function InspirationPage() {
   // Notes
   const [editingNoteFor, setEditingNoteFor] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [saveStatus, setSaveStatus] = useState<{ id: string; state: "saving" | "saved" | "error" } | null>(null);
 
   // Share-to-teacher
   const [teacherId, setTeacherId] = useState<string | null>(null);
@@ -97,8 +98,16 @@ export default function InspirationPage() {
   }
 
   async function assignCollection(insId: string, name: string | null) {
-    await supabase.from("inspirations").update({ collection_name: name }).eq("id", insId);
-    setInspirations(prev => prev.map(i => i.id === insId ? { ...i, collection_name: name } : i));
+    setSaveStatus({ id: insId, state: "saving" });
+    const { error } = await supabase.from("inspirations").update({ collection_name: name }).eq("id", insId);
+    if (error) {
+      setSaveStatus({ id: insId, state: "error" });
+      setTimeout(() => setSaveStatus(null), 4000);
+    } else {
+      setInspirations(prev => prev.map(i => i.id === insId ? { ...i, collection_name: name } : i));
+      setSaveStatus({ id: insId, state: "saved" });
+      setTimeout(() => setSaveStatus(null), 1500);
+    }
     setCollectionPickerFor(null);
     setShowNewCollectionInput(false);
     setNewCollectionName("");
@@ -113,9 +122,17 @@ export default function InspirationPage() {
 
   async function saveNote(ins: Inspiration) {
     const text = noteText.trim() || null;
-    await supabase.from("inspirations").update({ notes: text }).eq("id", ins.id);
-    setInspirations(prev => prev.map(i => i.id === ins.id ? { ...i, notes: text } : i));
-    setEditingNoteFor(null);
+    setSaveStatus({ id: ins.id, state: "saving" });
+    const { error } = await supabase.from("inspirations").update({ notes: text }).eq("id", ins.id);
+    if (error) {
+      setSaveStatus({ id: ins.id, state: "error" });
+      setTimeout(() => setSaveStatus(null), 4000);
+    } else {
+      setInspirations(prev => prev.map(i => i.id === ins.id ? { ...i, notes: text } : i));
+      setSaveStatus({ id: ins.id, state: "saved" });
+      setTimeout(() => setSaveStatus(null), 1500);
+      setEditingNoteFor(null);
+    }
   }
 
   // ── Share playlist to teacher ───────────────────────────────────────────────
@@ -318,6 +335,16 @@ export default function InspirationPage() {
 
                   {/* Action row */}
                   <div style={{ marginTop: "auto", paddingTop: "0.375rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                    {/* Save status */}
+                    {saveStatus?.id === ins.id && (
+                      <div style={{
+                        fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600,
+                        color: saveStatus.state === "error" ? "#C0392B" : saveStatus.state === "saved" ? "#2E7D52" : "var(--muted)",
+                        textAlign: "center",
+                      }}>
+                        {saveStatus.state === "saving" ? "Saving…" : saveStatus.state === "saved" ? "✓ Saved" : "⚠ Couldn't save — DB column missing (see below)"}
+                      </div>
+                    )}
                     {/* Note + remove row */}
                     <div style={{ display: "flex", gap: "0.375rem", alignItems: "center", justifyContent: "space-between" }}>
                       <button
