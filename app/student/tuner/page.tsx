@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 // ── Pitch detection ──────────────────────────────────────────────────────────
 function autoCorrelate(buffer: Float32Array<ArrayBuffer>, sampleRate: number): number {
@@ -159,15 +160,16 @@ const INSTRUMENTS: Record<string, Instrument> = {
 const INSTRUMENT_ORDER = ["guitar", "ukulele", "violin", "viola", "cello", "bass", "mandolin", "banjo"];
 
 // ── Tuning status ─────────────────────────────────────────────────────────────
-function getTuningStatus(cents: number): { label: string; color: string } {
+function getTuningStatus(cents: number, inTune: string, slightlySharp: string, slightlyFlat: string, sharp: string, flat: string, tooSharp: string, tooFlat: string): { label: string; color: string } {
   const abs = Math.abs(cents);
-  if (abs <= 5)  return { label: "In tune", color: "#4CAF84" };
-  if (abs <= 15) return { label: cents > 0 ? "Slightly sharp" : "Slightly flat", color: "#A8C96E" };
-  if (abs <= 35) return { label: cents > 0 ? "Sharp" : "Flat", color: "#E6A817" };
-  return { label: cents > 0 ? "Too sharp" : "Too flat", color: "#E05252" };
+  if (abs <= 5)  return { label: inTune, color: "#4CAF84" };
+  if (abs <= 15) return { label: cents > 0 ? slightlySharp : slightlyFlat, color: "#A8C96E" };
+  if (abs <= 35) return { label: cents > 0 ? sharp : flat, color: "#E6A817" };
+  return { label: cents > 0 ? tooSharp : tooFlat, color: "#E05252" };
 }
 
 export default function TunerPage() {
+  const { t } = useI18n();
   const [listening, setListening] = useState(false);
   const [noteInfo, setNoteInfo] = useState<{ note: string; octave: number; cents: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +216,7 @@ export default function TunerPage() {
       setListening(true);
       rafRef.current = requestAnimationFrame(detect);
     } catch {
-      setError("Microphone access denied. Please allow mic access and try again.");
+      setError(t.student.tunerMicDenied);
     }
   }
 
@@ -302,7 +304,7 @@ export default function TunerPage() {
   }, []);
 
   const instrument = INSTRUMENTS[instrumentKey];
-  const status = noteInfo ? getTuningStatus(noteInfo.cents) : null;
+  const status = noteInfo ? getTuningStatus(noteInfo.cents, t.student.tunerInTune, t.student.tunerSlightlySharp, t.student.tunerSlightlyFlat, t.student.tunerSharp, t.student.tunerFlat, t.student.tunerTooSharp, t.student.tunerTooFlat) : null;
   const needlePct = noteInfo ? Math.min(100, Math.max(0, ((noteInfo.cents + 50) / 100) * 100)) : 50;
 
   // Find closest string to current note
@@ -334,7 +336,7 @@ export default function TunerPage() {
           Cadenza
         </div>
         <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 500, color: "#FDFCFA", letterSpacing: "-0.01em" }}>
-          Tuner
+          {t.student.tunerTitle}
         </div>
       </div>
 
@@ -381,7 +383,7 @@ export default function TunerPage() {
         {/* Closest string hint */}
         {closestString && (
           <div style={{ marginBottom: "0.75rem", fontSize: "0.6875rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            String {closestString.stringNum} · {closestString.label}
+            {t.student.tunerStringLabel} {closestString.stringNum} · {closestString.label}
           </div>
         )}
 
@@ -413,8 +415,8 @@ export default function TunerPage() {
         {/* Cents gauge */}
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>FLAT</span>
-            <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>SHARP</span>
+            <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>{t.student.tunerFlatGauge}</span>
+            <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>{t.student.tunerSharpGauge}</span>
           </div>
 
           <div style={{
@@ -441,7 +443,7 @@ export default function TunerPage() {
             {noteInfo ? (
               <>{noteInfo.cents > 0 ? "+" : ""}{noteInfo.cents} cents &nbsp;·&nbsp; {status?.label}</>
             ) : (
-              listening ? "Listening…" : "—"
+              listening ? t.student.tunerListening : "—"
             )}
           </div>
         </div>
@@ -483,7 +485,7 @@ export default function TunerPage() {
       {/* String visualizer — Yousician-style stacked strings */}
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.875rem", textAlign: "center" }}>
-          {instrument.name} · Standard Tuning · tap a string to hear it
+          {instrument.name} · {t.student.tunerStandardTuning} · {t.student.tunerTapToHear}
         </div>
         <div style={{ background: "#2C2C2E", borderRadius: 14, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.35)" }}>
           {[...instrument.strings].reverse().map((s, idx, arr) => {
@@ -526,7 +528,7 @@ export default function TunerPage() {
                     {sNote}
                   </div>
                   <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.3)", marginTop: 3, letterSpacing: "0.06em" }}>
-                    STR {s.stringNum}
+                    {t.student.tunerStringLabel} {s.stringNum}
                   </div>
                 </div>
 

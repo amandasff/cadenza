@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import RcmTechnique from "./RcmTechnique";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 // ── Audio ──────────────────────────────────────────────────────────────────────
 
@@ -352,8 +353,8 @@ function PianoKeyboard({ highlightedNotes }: { highlightedNotes: number[] }) {
 
 // ── Chord diagram component ────────────────────────────────────────────────────
 
-function ChordDiagram({ chord, strings = 6, openFreqs, onPlay }: {
-  chord: GChord; strings?: number; openFreqs: number[]; onPlay: () => void;
+function ChordDiagram({ chord, strings = 6, openFreqs, onPlay, playLabel = "▶ Play" }: {
+  chord: GChord; strings?: number; openFreqs: number[]; onPlay: () => void; playLabel?: string;
 }) {
   const FRETS = 5;
   const SW = strings === 4 ? 26 : 24;   // spacing between strings
@@ -411,7 +412,7 @@ function ChordDiagram({ chord, strings = 6, openFreqs, onPlay }: {
         marginLeft: SIDE, padding:"0.25rem 0.625rem", borderRadius:5,
         border:"1px solid var(--border-strong)", background:"transparent",
         color:"var(--muted)", fontSize:"0.6875rem", cursor:"pointer", fontFamily:"Inter,sans-serif",
-      }}>▶ Play</button>
+      }}>{playLabel}</button>
     </div>
   );
 }
@@ -541,6 +542,7 @@ type MainTab = "chords" | "practice" | "theory" | "rcm";
 type InstrumentTab = "piano" | "guitar" | "ukulele" | "bass";
 
 export default function ReferencePage() {
+  const { t } = useI18n();
   const [mainTab, setMainTab] = useState<MainTab>("chords");
   const [instrument, setInstrument] = useState<InstrumentTab>("guitar");
 
@@ -593,16 +595,16 @@ export default function ReferencePage() {
     <div style={{ maxWidth:860, margin:"0 auto", padding:"2rem 1.25rem 4rem", fontFamily:"Inter,sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom:"1.75rem" }}>
-        <h1 style={{ fontFamily:"Cormorant Garamond,serif", fontWeight:600, fontSize:"1.75rem", color:"var(--charcoal)", margin:0 }}>Reference</h1>
-        <p style={{ fontSize:"0.8125rem", color:"var(--muted)", margin:"0.25rem 0 0" }}>Chords · Practice guides · Music theory · RCM Technique</p>
+        <h1 style={{ fontFamily:"Cormorant Garamond,serif", fontWeight:600, fontSize:"1.75rem", color:"var(--charcoal)", margin:0 }}>{t.student.referenceTitle}</h1>
+        <p style={{ fontSize:"0.8125rem", color:"var(--muted)", margin:"0.25rem 0 0" }}>{t.student.referenceSubtitle}</p>
       </div>
 
       {/* Main tabs */}
       <div style={{ display:"flex", gap:"0.25rem", background:"var(--cream)", borderRadius:8, padding:"0.25rem", marginBottom:"1.75rem", overflowX:"auto", width:"fit-content", maxWidth:"100%" }}>
-        {tabBtn("chords","Chords")}
-        {tabBtn("practice","Practice")}
-        {tabBtn("theory","Theory")}
-        {tabBtn("rcm","RCM Technique")}
+        {tabBtn("chords", t.student.referenceChordsTab)}
+        {tabBtn("practice", t.student.referencePracticeTab)}
+        {tabBtn("theory", t.student.referenceTheoryTab)}
+        {tabBtn("rcm", t.student.referenceRcmTab)}
       </div>
 
       {/* ── CHORDS TAB ── */}
@@ -610,10 +612,10 @@ export default function ReferencePage() {
         <div>
           {/* Instrument picker */}
           <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap", marginBottom:"1.5rem" }}>
-            {instBtn("guitar","🎸 Guitar")}
-            {instBtn("ukulele","🪕 Ukulele")}
-            {instBtn("bass","🎸 Bass")}
-            {instBtn("piano","🎹 Piano")}
+            {instBtn("guitar", "🎸 Guitar")}
+            {instBtn("ukulele", "🪕 Ukulele")}
+            {instBtn("bass", "🎸 Bass")}
+            {instBtn("piano", "🎹 Piano")}
           </div>
 
           {/* Guitar */}
@@ -621,7 +623,7 @@ export default function ReferencePage() {
             <div>
               {qualityBtns(Object.keys(GUITAR_CHORDS), GUITAR_QUALITY_LABELS, gQuality, setGQuality)}
               <div style={{ marginBottom:"1rem" }}>
-                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search chords…"
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t.student.referenceSearchChords}
                   style={{ padding:"0.5rem 0.75rem", border:"1px solid var(--border-strong)", borderRadius:6, fontFamily:"Inter,sans-serif", fontSize:"0.875rem", color:"var(--charcoal)", background:"var(--cream)", width:"100%", maxWidth:280, boxSizing:"border-box" }} />
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:"1rem" }}>
@@ -631,7 +633,7 @@ export default function ReferencePage() {
                 ).map(chord => (
                   <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1rem 0.75rem", display:"flex", justifyContent:"center" }}>
                     <ChordDiagram chord={chord} strings={6} openFreqs={GUITAR_OPEN_FREQS}
-                      onPlay={() => playSound(chordFreqs(chord.frets, GUITAR_OPEN_FREQS), "pluck")} />
+                      onPlay={() => playSound(chordFreqs(chord.frets, GUITAR_OPEN_FREQS), "pluck")} playLabel={t.student.referencePlay} />
                   </div>
                 ))}
               </div>
@@ -643,7 +645,7 @@ export default function ReferencePage() {
             <div>
               {qualityBtns(Object.keys(UKULELE_CHORDS), UKE_QUALITY_LABELS, uQuality, setUQuality)}
               <div style={{ marginBottom:"1rem" }}>
-                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search chords…"
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t.student.referenceSearchChords}
                   style={{ padding:"0.5rem 0.75rem", border:"1px solid var(--border-strong)", borderRadius:6, fontFamily:"Inter,sans-serif", fontSize:"0.875rem", color:"var(--charcoal)", background:"var(--cream)", width:"100%", maxWidth:280, boxSizing:"border-box" }} />
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(115px,1fr))", gap:"1rem" }}>
@@ -653,7 +655,7 @@ export default function ReferencePage() {
                 ).map(chord => (
                   <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1rem 0.75rem", display:"flex", justifyContent:"center" }}>
                     <ChordDiagram chord={chord} strings={4} openFreqs={UKE_OPEN_FREQS}
-                      onPlay={() => playSound(chordFreqs(chord.frets, UKE_OPEN_FREQS), "pluck")} />
+                      onPlay={() => playSound(chordFreqs(chord.frets, UKE_OPEN_FREQS), "pluck")} playLabel={t.student.referencePlay} />
                   </div>
                 ))}
               </div>
@@ -663,12 +665,12 @@ export default function ReferencePage() {
           {/* Bass */}
           {instrument === "bass" && (
             <div>
-              <p style={{ fontSize:"0.8125rem", color:"var(--muted)", marginBottom:"1.25rem" }}>Power chords (root + 5th) — the foundation of bass playing in most genres.</p>
+              <p style={{ fontSize:"0.8125rem", color:"var(--muted)", marginBottom:"1.25rem" }}>{t.student.referenceBassDesc}</p>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(115px,1fr))", gap:"1rem" }}>
                 {BASS_CHORDS.map(chord => (
                   <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1rem 0.75rem", display:"flex", justifyContent:"center" }}>
                     <ChordDiagram chord={chord} strings={4} openFreqs={BASS_OPEN_FREQS}
-                      onPlay={() => playSound(chordFreqs(chord.frets, BASS_OPEN_FREQS), "pluck")} />
+                      onPlay={() => playSound(chordFreqs(chord.frets, BASS_OPEN_FREQS), "pluck")} playLabel={t.student.referencePlay} />
                   </div>
                 ))}
               </div>
@@ -680,7 +682,7 @@ export default function ReferencePage() {
             <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:8, padding:"1.5rem" }}>
               {/* Root picker */}
               <div style={{ marginBottom:"1rem" }}>
-                <p style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 0.625rem" }}>Root note</p>
+                <p style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 0.625rem" }}>{t.student.referencePianoRootNote}</p>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:"0.375rem" }}>
                   {NOTE_NAMES.map((note, idx) => (
                     <button key={idx} onClick={() => setRoot(idx)} style={{
@@ -697,7 +699,7 @@ export default function ReferencePage() {
               </div>
               {/* Chord type */}
               <div style={{ marginBottom:"1.5rem" }}>
-                <p style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 0.625rem" }}>Chord type</p>
+                <p style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 0.625rem" }}>{t.student.referencePianoChordType}</p>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:"0.375rem" }}>
                   {PIANO_CHORD_TYPES.map(ct => (
                     <button key={ct.id} onClick={() => setChordType(ct.id)} style={{
@@ -723,7 +725,7 @@ export default function ReferencePage() {
                   padding:"0.5rem 1rem", borderRadius:6, border:"1px solid var(--border-strong)",
                   background:"var(--charcoal)", color:"var(--white)", fontFamily:"Inter,sans-serif",
                   fontSize:"0.875rem", cursor:"pointer",
-                }}>▶ Play</button>
+                }}>{t.student.referencePlay}</button>
               </div>
               <PianoKeyboard highlightedNotes={highlightedNotes} />
             </div>
@@ -752,11 +754,11 @@ export default function ReferencePage() {
 
           {/* Intervals */}
           <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
-            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>Intervals</div>
+            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>{t.student.referenceIntervalsTitle}</div>
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"0.8125rem" }}>
                 <thead><tr style={{ background:"var(--cream)" }}>
-                  {["Semitones","Name","Symbol","Distance"].map(h=>(
+                  {[t.student.referenceSemitonesCol, t.student.referenceNameCol, t.student.referenceSymbolCol, t.student.referenceDistanceCol].map(h=>(
                     <th key={h} style={{ padding:"0.5rem 1rem", textAlign:"left", fontWeight:500, color:"var(--muted)", fontSize:"0.75rem", letterSpacing:"0.04em" }}>{h}</th>
                   ))}
                 </tr></thead>
@@ -777,7 +779,7 @@ export default function ReferencePage() {
           {/* Key signatures + Tempo side by side */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" }}>
             <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
-              <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>Key signatures</div>
+              <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>{t.student.referenceKeySigsTitle}</div>
               {KEY_SIGS.map(([key,sig],i) => (
                 <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"0.5rem 1.25rem", borderTop: i>0 ? "1px solid var(--border)" : "none" }}>
                   <span style={{ fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)", minWidth:32 }}>{key}</span>
@@ -786,7 +788,7 @@ export default function ReferencePage() {
               ))}
             </div>
             <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
-              <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>Tempo markings</div>
+              <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>{t.student.referenceTempoTitle}</div>
               {TEMPO_MARKS.map(([term,bpm,desc],i) => (
                 <div key={i} style={{ padding:"0.5rem 1.25rem", borderTop: i>0 ? "1px solid var(--border)" : "none" }}>
                   <div style={{ display:"flex", justifyContent:"space-between" }}>
@@ -801,7 +803,7 @@ export default function ReferencePage() {
 
           {/* Dynamics */}
           <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
-            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>Dynamics</div>
+            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid var(--border)", fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>{t.student.referenceDynamicsTitle}</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))" }}>
               {DYNAMICS.map(([sym,name,desc],i) => (
                 <div key={i} style={{ padding:"0.75rem 1.25rem", borderTop:"1px solid var(--border)" }}>
@@ -814,7 +816,7 @@ export default function ReferencePage() {
 
           {/* Scales */}
           <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1.25rem" }}>
-            <div style={{ fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)", marginBottom:"1rem" }}>Scale formulas (semitone steps)</div>
+            <div style={{ fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)", marginBottom:"1rem" }}>{t.student.referenceScalesTitle}</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:"0.75rem" }}>
               {[
                 ["Major (Ionian)","W W H W W W H","2 2 1 2 2 2 1"],
