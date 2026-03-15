@@ -356,46 +356,61 @@ function ChordDiagram({ chord, strings = 6, openFreqs, onPlay }: {
   chord: GChord; strings?: number; openFreqs: number[]; onPlay: () => void;
 }) {
   const FRETS = 5;
-  const SW = strings === 4 ? 24 : 22;
-  const FH = 18; const PAD = 14;
-  const LABEL_W = 18; // extra right space for "Xfr" label
-  const W = (strings - 1) * SW + PAD * 2 + LABEL_W;
-  const H = FRETS * FH + PAD * 2 + 14;
+  const SW = strings === 4 ? 26 : 24;   // spacing between strings
+  const FH = 22;                          // spacing between frets
+  const SIDE  = 18;                       // left padding (room for dots at edge)
+  const TOP   = 26;                       // space above nut for ○/× symbols
+  const BOT   = 12;                       // space below last fret
+  const RIGHT = 32;                       // space to right of grid for "Xfr" label
+  const gridW = (strings - 1) * SW;
+  const W = SIDE + gridW + RIGHT;
+  const H = TOP + FRETS * FH + BOT;
   const baseFret = chord.baseFret ?? 1;
   const maxFret = Math.max(...chord.frets.filter(f => f > 0), 0);
   const displayBase = maxFret > FRETS ? baseFret : 1;
+  const DOT_R = strings === 4 ? 7 : 7;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-      <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--charcoal)", fontFamily: "Inter,sans-serif" }}>{chord.name}</div>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+      <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--charcoal)", fontFamily: "Inter,sans-serif", paddingLeft: SIDE }}>{chord.name}</div>
       <svg width={W} height={H}>
-        {displayBase === 1 && <rect x={PAD} y={PAD} width={(strings-1)*SW} height={3} fill="var(--charcoal)" rx={1} />}
-        {Array.from({ length: FRETS }, (_, f) => (
-          <line key={f} x1={PAD} y1={PAD+f*FH} x2={PAD+(strings-1)*SW} y2={PAD+f*FH}
-            stroke="#CCC" strokeWidth={f===0 && displayBase===1 ? 0 : 1} />
+        {/* Nut (thick bar at top when starting from fret 1) */}
+        {displayBase === 1 && <rect x={SIDE} y={TOP} width={gridW} height={4} fill="var(--charcoal)" rx={1.5} />}
+        {/* Fret lines */}
+        {Array.from({ length: FRETS + 1 }, (_, f) => (
+          <line key={f} x1={SIDE} y1={TOP + f*FH} x2={SIDE + gridW} y2={TOP + f*FH}
+            stroke={f === 0 && displayBase === 1 ? "none" : "#D0D0D0"} strokeWidth={1} />
         ))}
+        {/* String lines */}
         {Array.from({ length: strings }, (_, s) => (
-          <line key={s} x1={PAD+s*SW} y1={PAD} x2={PAD+s*SW} y2={PAD+FRETS*FH} stroke="#CCC" strokeWidth={1} />
+          <line key={s} x1={SIDE + s*SW} y1={TOP} x2={SIDE + s*SW} y2={TOP + FRETS*FH} stroke="#D0D0D0" strokeWidth={1} />
         ))}
-        {chord.frets.map((fret, s) => (
-          <text key={s} x={PAD+s*SW} y={PAD-4} textAnchor="middle" fontSize={10} fill={fret===-1?"#BBB":"#777"} fontFamily="Inter,sans-serif">
-            {fret===-1 ? "×" : fret===0 ? "○" : ""}
+        {/* Open / muted string symbols */}
+        {chord.frets.map((fret, s) => fret === -1 || fret === 0 ? (
+          <text key={s} x={SIDE + s*SW} y={TOP - 9} textAnchor="middle"
+            fontSize={12} fill={fret === -1 ? "#BBBBBB" : "#666"} fontFamily="Inter,sans-serif" fontWeight={fret === -1 ? 400 : 300}>
+            {fret === -1 ? "×" : "○"}
           </text>
-        ))}
+        ) : null)}
+        {/* Finger dots */}
         {chord.frets.map((fret, s) => {
           if (fret <= 0) return null;
           const df = fret - displayBase + 1;
           if (df < 1 || df > FRETS) return null;
-          return <circle key={s} cx={PAD+s*SW} cy={PAD+(df-0.5)*FH} r={7} fill="var(--charcoal)" />;
+          return <circle key={s} cx={SIDE + s*SW} cy={TOP + (df - 0.5)*FH} r={DOT_R} fill="var(--charcoal)" />;
         })}
+        {/* Fret position label ("4fr") — right of grid, vertically centred on first fret row */}
         {displayBase > 1 && (
-          <text x={PAD+(strings-1)*SW+5} y={PAD+FH*0.75} fontSize={9} fill="var(--muted)" fontFamily="Inter,sans-serif">{displayBase}fr</text>
+          <text x={SIDE + gridW + 7} y={TOP + FH * 0.72}
+            fontSize={10} fill="#888" fontFamily="Inter,sans-serif" fontWeight={500}>
+            {displayBase}fr
+          </text>
         )}
       </svg>
       <button onClick={onPlay} style={{
-        padding:"0.2rem 0.5rem", borderRadius:4, border:"1px solid var(--border-strong)",
-        background:"transparent", color:"var(--muted)", fontSize:"0.625rem",
-        cursor:"pointer", fontFamily:"Inter,sans-serif",
+        marginLeft: SIDE, padding:"0.25rem 0.625rem", borderRadius:5,
+        border:"1px solid var(--border-strong)", background:"transparent",
+        color:"var(--muted)", fontSize:"0.6875rem", cursor:"pointer", fontFamily:"Inter,sans-serif",
       }}>▶ Play</button>
     </div>
   );
@@ -609,12 +624,12 @@ export default function ReferencePage() {
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search chords…"
                   style={{ padding:"0.5rem 0.75rem", border:"1px solid var(--border-strong)", borderRadius:6, fontFamily:"Inter,sans-serif", fontSize:"0.875rem", color:"var(--charcoal)", background:"var(--cream)", width:"100%", maxWidth:280, boxSizing:"border-box" }} />
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))", gap:"0.875rem" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:"1rem" }}>
                 {(search
                   ? Object.values(GUITAR_CHORDS).flat().filter(c=>c.name.toLowerCase().includes(search.toLowerCase()))
                   : GUITAR_CHORDS[gQuality]
                 ).map(chord => (
-                  <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:8, padding:"0.875rem 0.625rem", display:"flex", justifyContent:"center" }}>
+                  <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1rem 0.75rem", display:"flex", justifyContent:"center" }}>
                     <ChordDiagram chord={chord} strings={6} openFreqs={GUITAR_OPEN_FREQS}
                       onPlay={() => playSound(chordFreqs(chord.frets, GUITAR_OPEN_FREQS), "pluck")} />
                   </div>
@@ -631,12 +646,12 @@ export default function ReferencePage() {
                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search chords…"
                   style={{ padding:"0.5rem 0.75rem", border:"1px solid var(--border-strong)", borderRadius:6, fontFamily:"Inter,sans-serif", fontSize:"0.875rem", color:"var(--charcoal)", background:"var(--cream)", width:"100%", maxWidth:280, boxSizing:"border-box" }} />
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))", gap:"0.875rem" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(115px,1fr))", gap:"1rem" }}>
                 {(search
                   ? Object.values(UKULELE_CHORDS).flat().filter(c=>c.name.toLowerCase().includes(search.toLowerCase()))
                   : UKULELE_CHORDS[uQuality]
                 ).map(chord => (
-                  <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:8, padding:"0.875rem 0.625rem", display:"flex", justifyContent:"center" }}>
+                  <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1rem 0.75rem", display:"flex", justifyContent:"center" }}>
                     <ChordDiagram chord={chord} strings={4} openFreqs={UKE_OPEN_FREQS}
                       onPlay={() => playSound(chordFreqs(chord.frets, UKE_OPEN_FREQS), "pluck")} />
                   </div>
@@ -649,9 +664,9 @@ export default function ReferencePage() {
           {instrument === "bass" && (
             <div>
               <p style={{ fontSize:"0.8125rem", color:"var(--muted)", marginBottom:"1.25rem" }}>Power chords (root + 5th) — the foundation of bass playing in most genres.</p>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))", gap:"0.875rem" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(115px,1fr))", gap:"1rem" }}>
                 {BASS_CHORDS.map(chord => (
-                  <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:8, padding:"0.875rem 0.625rem", display:"flex", justifyContent:"center" }}>
+                  <div key={chord.name} style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1rem 0.75rem", display:"flex", justifyContent:"center" }}>
                     <ChordDiagram chord={chord} strings={4} openFreqs={BASS_OPEN_FREQS}
                       onPlay={() => playSound(chordFreqs(chord.frets, BASS_OPEN_FREQS), "pluck")} />
                   </div>
