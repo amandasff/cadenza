@@ -13,6 +13,7 @@ import MiniPlayer from "../../components/MiniPlayer";
 import PracticePip from "../../components/PracticePip";
 import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
+import { useI18n } from "../../lib/context/I18nContext";
 
 
 interface SiblingProfile {
@@ -22,42 +23,42 @@ interface SiblingProfile {
   hasPin: boolean;
 }
 
-const tabs = [
-  { href: "/student",                  label: "Home" },
-  { href: "/student/practice",         label: "Practice" },
-  { href: "/student/pieces",           label: "Pieces" },
-  { href: "/student/theory",           label: "Games" },
-  { href: "/student/reference",        label: "Reference" },
-  { href: "/student/ai-tutor",         label: "AI" },
-  { href: "/student/chat",             label: "Chat" },
-  { href: "/student/journey",          label: "Profile" },
-  { href: "/student/discover",         label: "Discover" },
-  { href: "/student/rewards",          label: "Awards" },
-  { href: "/student/inspirations",     label: "Inspire" },
-];
-
-// Mobile bottom nav: 5 primary tabs + "More" sheet for the rest
-const primaryMobileTabs = [
-  { href: "/student",          label: "Home" },
-  { href: "/student/practice", label: "Practice" },
-  { href: "/student/journey",  label: "Profile" },
-  { href: "/student/discover", label: "Discover" },
-];
-const moreMobileTabs = [
-  { href: "/student/chat",           label: "Chat" },
-  { href: "/student/pieces",         label: "Pieces" },
-  { href: "/student/theory",         label: "Games" },
-  { href: "/student/reference",      label: "Reference" },
-  { href: "/student/ai-tutor",       label: "AI Tutor" },
-  { href: "/student/rewards",        label: "Awards" },
-  { href: "/student/inspirations",   label: "Inspire" },
-];
-
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
+
+  const tabs = [
+    { href: "/student",              label: t.nav.home },
+    { href: "/student/practice",     label: t.nav.practice },
+    { href: "/student/pieces",       label: t.nav.pieces },
+    { href: "/student/theory",       label: t.nav.games },
+    { href: "/student/reference",    label: t.nav.reference },
+    { href: "/student/ai-tutor",     label: t.nav.ai },
+    { href: "/student/chat",         label: t.nav.chat },
+    { href: "/student/journey",      label: t.nav.profile },
+    { href: "/student/discover",     label: t.nav.discover },
+    { href: "/student/rewards",      label: t.nav.awards },
+    { href: "/student/inspirations", label: t.nav.inspire },
+  ];
+
+  const primaryMobileTabs = [
+    { href: "/student",          label: t.nav.home },
+    { href: "/student/practice", label: t.nav.practice },
+    { href: "/student/journey",  label: t.nav.profile },
+    { href: "/student/discover", label: t.nav.discover },
+  ];
+  const moreMobileTabs = [
+    { href: "/student/chat",         label: t.nav.chat },
+    { href: "/student/pieces",       label: t.nav.pieces },
+    { href: "/student/theory",       label: t.nav.games },
+    { href: "/student/reference",    label: t.nav.reference },
+    { href: "/student/ai-tutor",     label: t.student.aiTutor },
+    { href: "/student/rewards",      label: t.nav.awards },
+    { href: "/student/inspirations", label: t.nav.inspire },
+  ];
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -292,7 +293,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     return (
       <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream)" }}>
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>Loading</p>
+          <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.common.loading}</p>
         </div>
       </div>
     );
@@ -501,7 +502,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            {theme === "light" ? "Light mode" : theme === "dark" ? "Dark mode" : "🎨 Fun mode"}
+            {theme === "light" ? t.common.lightMode : theme === "dark" ? t.common.darkMode : t.common.funMode}
           </button>
           <LanguageSwitcher />
           <Link
@@ -514,7 +515,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               display: "block", textDecoration: "none",
             }}
           >
-            Settings
+            {t.common.settings}
           </Link>
           <button
             onClick={() => signOut()}
@@ -525,7 +526,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            Sign out
+            {t.common.signOut}
           </button>
           <button
             onClick={() => { setDeleteModalOpen(true); setDeleteConfirmText(""); }}
@@ -536,7 +537,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            Delete account
+            {t.common.deleteAccount}
           </button>
         </div>
       </aside>
@@ -602,7 +603,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             fontWeight: moreMobileTabs.some(t => path.startsWith(t.href)) ? 600 : 400,
             letterSpacing: "0.07em", textTransform: "uppercase", position: "relative",
           }}>
-            More
+            {t.student.more}
             {hasUnread && !path.startsWith("/student/chat") && (
               <span style={{
                 position: "absolute", top: -2, right: -7,

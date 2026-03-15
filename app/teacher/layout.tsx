@@ -9,25 +9,26 @@ import { Teacher } from "../../lib/models/Teacher";
 import { RecordingProvider } from "../../lib/context/RecordingContext";
 import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
-
-
-const tabs = [
-  { href: "/teacher",                label: "Students" },
-  { href: "/teacher/schedule",       label: "Schedule" },
-  { href: "/teacher/billing",        label: "Billing" },
-  { href: "/teacher/goals",          label: "Goals" },
-  { href: "/teacher/review",         label: "Review" },
-  { href: "/teacher/chat",           label: "Chat" },
-  { href: "/teacher/inspirations",   label: "Inspire" },
-  { href: "/teacher/studio",         label: "Studio" },
-  { href: "/student",                label: "Practice" },
-];
+import { useI18n } from "../../lib/context/I18nContext";
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
+
+  const tabs = [
+    { href: "/teacher",              label: t.nav.students },
+    { href: "/teacher/schedule",     label: t.nav.schedule },
+    { href: "/teacher/billing",      label: t.nav.billing },
+    { href: "/teacher/goals",        label: t.nav.goals },
+    { href: "/teacher/review",       label: t.nav.review },
+    { href: "/teacher/chat",         label: t.nav.chat },
+    { href: "/teacher/inspirations", label: t.nav.inspire },
+    { href: "/teacher/studio",       label: t.nav.studio },
+    { href: "/student",              label: t.nav.practice },
+  ];
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -152,7 +153,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   if (loading) {
     return (
       <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream)" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>Loading</p>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.common.loading}</p>
       </div>
     );
   }
@@ -177,7 +178,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           cursor: uploading ? "default" : "pointer",
           overflow: "hidden", position: "relative",
         }}
-        title="Click to change photo"
+        title={t.teacher.photoTooltip}
       >
         {avatarUrl ? (
           <img src={avatarUrl} alt={teacher.displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -327,7 +328,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            {theme === "light" ? "Light mode" : theme === "dark" ? "Dark mode" : "🎨 Fun mode"}
+            {theme === "light" ? t.common.lightMode : theme === "dark" ? t.common.darkMode : t.common.funMode}
           </button>
           <LanguageSwitcher />
           <Link
@@ -340,7 +341,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               display: "block", textDecoration: "none",
             }}
           >
-            Settings
+            {t.common.settings}
           </Link>
           <button
             onClick={() => signOut()}
@@ -351,7 +352,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            Sign out
+            {t.common.signOut}
           </button>
           <button
             onClick={() => { setDeleteModalOpen(true); setDeleteConfirmText(""); }}
@@ -362,7 +363,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase", transition: "all 0.15s",
             }}
           >
-            Delete account
+            {t.common.deleteAccount}
           </button>
         </div>
       </aside>
@@ -382,7 +383,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           borderRadius: 3, fontSize: "0.8125rem", fontFamily: "Inter, sans-serif",
           zIndex: 9999, maxWidth: 340, textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
         }}>
-          Photo upload failed: {uploadError}
+          {t.teacher.uploadFailed}: {uploadError}
           <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "0.875rem" }}>×</button>
         </div>
       )}
@@ -399,19 +400,19 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             width: "100%", maxWidth: 400, boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
           }}>
             <h2 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", margin: "0 0 0.75rem" }}>
-              Delete account
+              {t.teacher.deleteAccountTitle}
             </h2>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 1.25rem", lineHeight: 1.6 }}>
-              This will permanently delete your account and all your studio data — students, goals, recordings, and chat history. <strong>This cannot be undone.</strong>
+              {t.teacher.deleteAccountBody}
             </p>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: "0 0 0.5rem", fontWeight: 500 }}>
-              Type <strong>DELETE</strong> to confirm
+              {t.teacher.deleteAccountConfirmLabel}
             </p>
             <input
               type="text"
               value={deleteConfirmText}
               onChange={e => setDeleteConfirmText(e.target.value)}
-              placeholder="DELETE"
+              placeholder={t.teacher.deleteAccountConfirmPlaceholder}
               autoFocus
               style={{
                 width: "100%", boxSizing: "border-box",
@@ -431,7 +432,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                   color: "var(--muted)", cursor: "pointer",
                 }}
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleDeleteAccount}
@@ -444,7 +445,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                   transition: "background 0.15s",
                 }}
               >
-                {deleting ? "Deleting…" : "Delete forever"}
+                {deleting ? t.common.deleting : t.teacher.deleteAccountButton}
               </button>
             </div>
           </div>

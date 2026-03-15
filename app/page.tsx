@@ -6,6 +6,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AuthService } from "@/lib/services/AuthService";
 import type { UserRole } from "@/lib/types";
 import { useTheme } from "@/lib/context/ThemeContext";
+import { useI18n } from "@/lib/context/I18nContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Home() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export default function Home() {
   const [dashboardUrl, setDashboardUrl] = useState<string | null>(null);
 
   const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
   const demoStudentEmail = process.env.NEXT_PUBLIC_DEMO_STUDENT_EMAIL;
   const demoStudentPassword = process.env.NEXT_PUBLIC_DEMO_STUDENT_PASSWORD;
   const demoTeacherEmail = process.env.NEXT_PUBLIC_DEMO_TEACHER_EMAIL;
@@ -493,12 +496,15 @@ export default function Home() {
         <span style={{ fontSize: "0.5625rem", color: "rgba(248,246,242,0.2)" }}>&copy; {new Date().getFullYear()}</span>
       </div>
 
-      {/* ── Fixed theme toggle ── */}
+      {/* ── Fixed language + theme toggles ── */}
+      <div style={{ position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div style={{ width: 110 }}>
+          <LanguageSwitcher />
+        </div>
       <button
         onClick={toggleTheme}
         title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
         style={{
-          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
           width: 40, height: 40, borderRadius: "50%",
           background: "var(--white)", border: "1px solid var(--border-strong)",
           boxShadow: "0 2px 12px rgba(44,40,36,0.12)",
@@ -509,6 +515,7 @@ export default function Home() {
       >
         {theme === "light" ? "🌙" : theme === "dark" ? "☀️" : "🎨"}
       </button>
+      </div>
     </div>
   );
 }

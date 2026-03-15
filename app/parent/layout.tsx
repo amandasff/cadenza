@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
+import { useI18n } from "../../lib/context/I18nContext";
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
   const router = useRouter();
   const path = usePathname();
 
@@ -25,7 +27,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   if (loading || !user || user.role !== "parent") {
     return (
       <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream)" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>Loading</p>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.common.loading}</p>
       </div>
     );
   }
@@ -49,18 +51,18 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         </Link>
 
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.25rem" }}>
-          Parent Portal
+          {t.nav.parent} Portal
         </div>
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "2rem" }}>
           {user.displayName}
         </div>
 
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
-          {[{ href: "/parent", label: "My Children" }].map(t => {
-            const active = path === t.href;
+          {[{ href: "/parent", label: t.nav.myChildren }].map(tab => {
+            const active = path === tab.href;
             return (
-              <Link key={t.href} href={t.href} style={{ display: "flex", alignItems: "center", padding: "0.5rem 0.75rem", borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent", background: active ? "var(--cream-deep)" : "transparent", color: active ? "var(--charcoal)" : "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400, fontSize: "0.875rem", textDecoration: "none", transition: "all 0.15s" }}>
-                {t.label}
+              <Link key={tab.href} href={tab.href} style={{ display: "flex", alignItems: "center", padding: "0.5rem 0.75rem", borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent", background: active ? "var(--cream-deep)" : "transparent", color: active ? "var(--charcoal)" : "var(--muted)", fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400, fontSize: "0.875rem", textDecoration: "none", transition: "all 0.15s" }}>
+                {tab.label}
               </Link>
             );
           })}
@@ -68,11 +70,11 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
         <div style={{ paddingTop: "1.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
           <button onClick={toggleTheme} style={{ width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)", textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            {theme === "light" ? "Light mode" : theme === "dark" ? "Dark mode" : "🎨 Fun mode"}
+            {theme === "light" ? t.common.lightMode : theme === "dark" ? t.common.darkMode : t.common.funMode}
           </button>
           <LanguageSwitcher />
           <button onClick={() => signOut()} style={{ width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)", textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            Sign out
+            {t.common.signOut}
           </button>
         </div>
       </aside>
