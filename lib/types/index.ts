@@ -180,6 +180,7 @@ export interface Inspiration {
   title: string;
   thumbnail_url: string | null;
   notes: string | null;
+  collection_name: string | null;
   created_at: string;
 }
 

@@ -771,11 +771,11 @@ export default function JourneyPage() {
       {followModal && (
         <div
           onClick={() => setFollowModal(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000 }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: "var(--white)", borderRadius: "16px 16px 0 0", width: "100%", maxWidth: 480, maxHeight: "70dvh", display: "flex", flexDirection: "column" }}
+            style={{ background: "var(--white)", borderRadius: 16, width: "100%", maxWidth: 440, maxHeight: "70dvh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}
           >
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.25rem 0.875rem", borderBottom: "1px solid var(--border)" }}>
