@@ -457,6 +457,12 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [customAward, setCustomAward] = useState("");
   const [awardNote, setAwardNote] = useState("");
   const [awarding, setAwarding] = useState(false);
+
+  // Pre-lesson brief
+  const [brief, setBrief] = useState<string | null>(null);
+  const [briefStats, setBriefStats] = useState<{ sessionCount: number; totalMinutes: number; lastPracticed: string } | null>(null);
+  const [briefLoading, setBriefLoading] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState("");
 
@@ -533,6 +539,26 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
     };
     load();
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadBrief() {
+    if (briefLoading) return;
+    setBriefLoading(true);
+    setBriefOpen(true);
+    try {
+      const res = await fetch("/api/practice/pre-lesson-brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: id }),
+      });
+      if (res.ok) {
+        const data = await res.json() as { brief: string; stats: { sessionCount: number; totalMinutes: number; lastPracticed: string } };
+        setBrief(data.brief);
+        setBriefStats(data.stats);
+      }
+    } catch { /* ignore */ } finally {
+      setBriefLoading(false);
+    }
+  }
 
   async function handleAward(points: number) {
     if (!student || awarding || points <= 0) return;
@@ -941,6 +967,60 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Pre-lesson AI brief */}
+      <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+        <button
+          onClick={() => briefOpen ? setBriefOpen(false) : loadBrief()}
+          style={{
+            width: "100%", background: "none", border: "none", cursor: "pointer",
+            padding: "0.875rem 1.125rem",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            textAlign: "left",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+            <span style={{ fontSize: "1rem" }}>🤖</span>
+            <div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                Pre-lesson brief
+              </div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                {briefStats ? `${briefStats.sessionCount} sessions · ${briefStats.totalMinutes} min last 2 weeks` : "AI summary of recent practice"}
+              </div>
+            </div>
+          </div>
+          <span style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
+            {briefLoading ? "…" : briefOpen ? "▲" : "▼"}
+          </span>
+        </button>
+
+        {briefOpen && (
+          <div style={{ padding: "0 1.125rem 1rem", borderTop: "1px solid var(--border)" }}>
+            {briefLoading ? (
+              <div style={{ paddingTop: "0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
+                Generating brief…
+              </div>
+            ) : brief ? (
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, margin: "0.875rem 0 0" }}>
+                {brief}
+              </p>
+            ) : (
+              <div style={{ paddingTop: "0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
+                Could not generate brief.
+              </div>
+            )}
+            {brief && (
+              <button
+                onClick={() => { setBrief(null); setBriefStats(null); loadBrief(); }}
+                style={{ marginTop: "0.75rem", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", padding: 0, textDecoration: "underline" }}
+              >
+                Refresh
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Upcoming lesson + pre-lesson report */}

@@ -289,7 +289,7 @@ function PracticeInner() {
         }
       }
 
-      router.replace("/student");
+      router.replace(`/student/practice/recap/${sessionData.id}`);
     } catch (err) {
       const msg = err instanceof Error
         ? err.message
