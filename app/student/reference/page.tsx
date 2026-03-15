@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import RcmTechnique from "./RcmTechnique";
 
 // ── Audio ──────────────────────────────────────────────────────────────────────
 
@@ -520,7 +521,7 @@ const DYNAMICS = [
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-type MainTab = "chords" | "practice" | "theory";
+type MainTab = "chords" | "practice" | "theory" | "rcm";
 type InstrumentTab = "piano" | "guitar" | "ukulele" | "bass";
 
 export default function ReferencePage() {
@@ -577,14 +578,15 @@ export default function ReferencePage() {
       {/* Header */}
       <div style={{ marginBottom:"1.75rem" }}>
         <h1 style={{ fontFamily:"Cormorant Garamond,serif", fontWeight:600, fontSize:"1.75rem", color:"var(--charcoal)", margin:0 }}>Reference</h1>
-        <p style={{ fontSize:"0.8125rem", color:"var(--muted)", margin:"0.25rem 0 0" }}>Chords · Practice guides · Music theory</p>
+        <p style={{ fontSize:"0.8125rem", color:"var(--muted)", margin:"0.25rem 0 0" }}>Chords · Practice guides · Music theory · RCM Technique</p>
       </div>
 
       {/* Main tabs */}
-      <div style={{ display:"flex", gap:"0.25rem", background:"var(--cream)", borderRadius:8, padding:"0.25rem", marginBottom:"1.75rem", width:"fit-content" }}>
+      <div style={{ display:"flex", gap:"0.25rem", background:"var(--cream)", borderRadius:8, padding:"0.25rem", marginBottom:"1.75rem", overflowX:"auto", width:"fit-content", maxWidth:"100%" }}>
         {tabBtn("chords","Chords")}
         {tabBtn("practice","Practice")}
         {tabBtn("theory","Theory")}
+        {tabBtn("rcm","RCM Technique")}
       </div>
 
       {/* ── CHORDS TAB ── */}
@@ -822,6 +824,9 @@ export default function ReferencePage() {
 
         </div>
       )}
+
+      {/* ── RCM TECHNIQUE TAB ── */}
+      {mainTab === "rcm" && <RcmTechnique />}
     </div>
   );
 }
