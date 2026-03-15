@@ -334,26 +334,72 @@ export default function ThisWeek() {
             {recentMessages.length > 0 ? (
               recentMessages.map((msg) => {
                 const isMe = msg.sender_id === student?.id;
-                const isSystem = msg.message_type === "system";
-                const text = isSystem
-                  ? msg.content.split("\n").filter((l: string) => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:")).join(" ").slice(0, 100)
-                  : msg.content.length > 100 ? msg.content.slice(0, 100) + "..." : msg.content;
+
+                // ── System message (practice log, lesson invite, audio note) ──
+                if (msg.message_type === "system") {
+                  const lines = msg.content.split("\n");
+                  const audioUrl = lines.find((l: string) => l.startsWith("AUDIO:"))?.slice(6);
+                  const lessonRoom = lines.find((l: string) => l.startsWith("LESSON_ROOM:"))?.slice(12);
+                  const text = lines.filter((l: string) => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:")).join(" ").trim().slice(0, 120);
+                  return (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: "center" }}>
+                      <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.625rem 0.875rem", maxWidth: "92%", width: "100%" }}>
+                        {text && <div style={{ fontSize: "0.75rem", color: "var(--charcoal)", lineHeight: 1.6, marginBottom: (audioUrl || lessonRoom) ? "0.5rem" : 0, overflowWrap: "break-word", wordBreak: "break-word" }}>{text}</div>}
+                        {lessonRoom && (
+                          <a href={`/lesson/${lessonRoom}`} onClick={e => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", borderRadius: 5, background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", textDecoration: "none" }}>
+                            📹 Join Lesson
+                          </a>
+                        )}
+                        {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", height: 28, marginTop: lessonRoom ? "0.375rem" : 0 }} />}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ── Video message ──
+                const videoLine = msg.content.split("\n").find((l: string) => l.startsWith("VIDEO:"));
+                const videoSrc = videoLine?.slice(6);
+                if (videoSrc) {
+                  return (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                      <div style={{ maxWidth: "80%", borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px", overflow: "hidden", border: isMe ? "none" : "1px solid var(--border-strong)" }}>
+                        <video controls src={videoSrc} onClick={e => e.stopPropagation()} style={{ display: "block", width: "100%", maxWidth: 200 }} />
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ── Image message ──
+                if (msg.content.startsWith("IMAGE:")) {
+                  return (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                      <div style={{ maxWidth: "80%", borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px", overflow: "hidden" }}>
+                        <img src={msg.content.slice(6)} alt="shared image" onClick={e => e.stopPropagation()} style={{ display: "block", width: "100%", maxWidth: 200, borderRadius: "inherit" }} />
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ── Audio voice note ──
+                const audioLine = msg.content.split("\n").find((l: string) => l.startsWith("AUDIO:"));
+                const audioSrc = audioLine?.slice(6);
+                if (audioSrc) {
+                  const audioLabel = msg.content.split("\n").filter((l: string) => !l.startsWith("AUDIO:")).join(" ").trim();
+                  return (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                      <div style={{ maxWidth: "80%", padding: "0.5rem 0.75rem", background: isMe ? "var(--charcoal)" : "var(--white)", borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px", border: isMe ? "none" : "1px solid var(--border-strong)" }}>
+                        {audioLabel && <p style={{ margin: "0 0 0.3rem", fontSize: "0.75rem", color: isMe ? "var(--cream)" : "var(--charcoal)" }}>{audioLabel}</p>}
+                        <audio controls src={audioSrc} onClick={e => e.stopPropagation()} style={{ height: 28, maxWidth: "100%" }} />
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ── Regular text ──
+                const text = msg.content.length > 100 ? msg.content.slice(0, 100) + "…" : msg.content;
                 return (
-                  <div key={msg.id} style={{
-                    display: "flex", justifyContent: isMe ? "flex-end" : "flex-start",
-                  }}>
-                    <div style={{
-                      maxWidth: "80%",
-                      padding: "0.5rem 0.75rem",
-                      borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
-                      background: isMe ? "var(--charcoal)" : "var(--white)",
-                      color: isMe ? "var(--cream)" : "var(--charcoal)",
-                      fontSize: "0.8125rem",
-                      fontFamily: "Inter, sans-serif",
-                      lineHeight: 1.45,
-                      border: isMe ? "none" : "1px solid var(--border-strong)",
-                      overflowWrap: "break-word", wordBreak: "break-word",
-                    }}>
+                  <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
+                    <div style={{ maxWidth: "80%", padding: "0.5rem 0.75rem", borderRadius: isMe ? "12px 12px 4px 12px" : "12px 12px 12px 4px", background: isMe ? "var(--charcoal)" : "var(--white)", color: isMe ? "var(--cream)" : "var(--charcoal)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", lineHeight: 1.45, border: isMe ? "none" : "1px solid var(--border-strong)", overflowWrap: "break-word", wordBreak: "break-word" }}>
                       {text}
                     </div>
                   </div>

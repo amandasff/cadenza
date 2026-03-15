@@ -33,6 +33,7 @@
     "react-dom": "19.2.3",
     "stripe": "^20.4.1",
     "tailwind-merge": "^3.5.0",
+    "vexflow": "^5.0.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
