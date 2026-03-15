@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 // ── Audio engine ──────────────────────────────────────────────────────────────
 
@@ -156,6 +157,7 @@ const REAL_SONGS: SongEntry[] = [
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ProgressionsPage() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<GameTab>("progressions");
   return (
     <div style={{ minHeight: "100%", background: "var(--cream)", paddingBottom: "5.5rem" }}>
@@ -163,27 +165,27 @@ export default function ProgressionsPage() {
       <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1.25rem 1rem 0" }}>
         <div style={{ marginBottom: "0.25rem" }}>
           <Link href="/student/theory" style={{ color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", textDecoration: "none" }}>
-            ← Games
+            ← {t.nav.games}
           </Link>
         </div>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.625rem", color: "var(--charcoal)", margin: "0 0 0.125rem", letterSpacing: "-0.01em" }}>
-          Ear Training
+          {t.student.earTrainingTitle}
         </h1>
         <p style={{ color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", margin: "0 0 0.875rem" }}>
-          Identify progressions and keys — essential for playing by ear
+          {t.student.earTrainingSubtitle}
         </p>
         {/* Tabs */}
         <div style={{ display: "flex" }}>
-          {(["progressions", "key", "songs"] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
+          {(["progressions", "key", "songs"] as const).map(tabKey => (
+            <button key={tabKey} onClick={() => setTab(tabKey)} style={{
               background: "none", border: "none", cursor: "pointer",
               padding: "0.4rem 0.875rem 0.625rem", fontFamily: "Inter, sans-serif",
-              fontWeight: tab === t ? 600 : 400, fontSize: "0.8125rem",
-              color: tab === t ? "var(--charcoal)" : "var(--muted)",
-              borderBottom: `2px solid ${tab === t ? "var(--charcoal)" : "transparent"}`,
+              fontWeight: tab === tabKey ? 600 : 400, fontSize: "0.8125rem",
+              color: tab === tabKey ? "var(--charcoal)" : "var(--muted)",
+              borderBottom: `2px solid ${tab === tabKey ? "var(--charcoal)" : "transparent"}`,
               transition: "all 0.15s", whiteSpace: "nowrap",
             }}>
-              {t === "progressions" ? "Progressions" : t === "key" ? "Key ID" : "Real Songs"}
+              {tabKey === "progressions" ? t.student.progressionsTab : tabKey === "key" ? t.student.keyIdTab : t.student.realSongsTab}
             </button>
           ))}
         </div>
@@ -199,6 +201,7 @@ export default function ProgressionsPage() {
 // ── Progression game ──────────────────────────────────────────────────────────
 
 function ProgressionGame() {
+  const { t } = useI18n();
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [phase, setPhase]           = useState<Phase>("idle");
   const [started, setStarted]       = useState(false);
@@ -293,7 +296,7 @@ function ProgressionGame() {
     <>
       {started && (
         <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
-          {[{ l: "Score", v: score }, { l: "Streak", v: `${streak}🔥` }, { l: "Best", v: bestStreak }, { l: "Round", v: round }].map(({ l, v }) => (
+          {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: `${streak}🔥` }, { l: t.student.bestLabel, v: bestStreak }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
             <div key={l} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{v}</div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{l}</div>
@@ -330,7 +333,7 @@ function ProgressionGame() {
             width: "100%", padding: "0.75rem", borderRadius: 24, border: "none",
             background: "var(--charcoal)", color: "var(--white)",
             fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", cursor: "pointer",
-          }}>Start</button>
+          }}>{t.student.startGame}</button>
         </div>
       ) : (
         <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1.25rem" }}>
@@ -369,7 +372,7 @@ function ProgressionGame() {
               color: guess.label === current.label ? "#27ae60" : "#c0392b",
             }}>
               {guess.label === current.label
-                ? streak >= 3 ? `${streak} in a row!` : "Correct!"
+                ? streak >= 3 ? t.student.inARow.replace("{n}", String(streak)) : t.student.correctFeedback
                 : `That was ${current.label}`}
               {guess.label === current.label && (
                 <span style={{ marginLeft: "0.375rem", fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)" }}>({current.style})</span>
@@ -384,7 +387,7 @@ function ProgressionGame() {
                 padding: "0.4rem 1.25rem", borderRadius: 20, border: "1.5px solid var(--border)",
                 background: "transparent", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
                 fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer",
-              }}>Play again</button>
+              }}>{t.student.playAgain}</button>
             </div>
           )}
 
@@ -415,7 +418,7 @@ function ProgressionGame() {
           </div>
 
           <button onClick={() => { clearTimer(); setStarted(false); setPhase("idle"); }} style={{ marginTop: "1rem", width: "100%", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "underline" }}>
-            End session
+            {t.student.endSession}
           </button>
         </div>
       )}
@@ -431,6 +434,7 @@ function ProgressionGame() {
 // ── Key ID game ───────────────────────────────────────────────────────────────
 
 function KeyIdGame() {
+  const { t } = useI18n();
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [phase, setPhase]           = useState<Phase>("idle");
   const [started, setStarted]       = useState(false);
@@ -510,7 +514,7 @@ function KeyIdGame() {
     <>
       {started && (
         <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
-          {[{ l: "Score", v: score }, { l: "Streak", v: `${streak}🔥` }, { l: "Best", v: bestStreak }, { l: "Round", v: round }].map(({ l, v }) => (
+          {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: `${streak}🔥` }, { l: t.student.bestLabel, v: bestStreak }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
             <div key={l} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{v}</div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{l}</div>
@@ -547,7 +551,7 @@ function KeyIdGame() {
             width: "100%", padding: "0.75rem", borderRadius: 24, border: "none",
             background: "var(--charcoal)", color: "var(--white)",
             fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", cursor: "pointer",
-          }}>Start</button>
+          }}>{t.student.startGame}</button>
         </div>
       ) : (
         <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1.25rem" }}>
@@ -564,7 +568,7 @@ function KeyIdGame() {
                   {current.name}
                 </div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: guess.name === current.name ? "#27ae60" : "#c0392b", fontWeight: 600, marginTop: "0.25rem" }}>
-                  {guess.name === current.name ? (streak >= 3 ? `${streak} in a row!` : "Correct!") : `You guessed ${guess.name}`}
+                  {guess.name === current.name ? (streak >= 3 ? t.student.inARow.replace("{n}", String(streak)) : t.student.correctFeedback) : `You guessed ${guess.name}`}
                 </div>
               </div>
             ) : null}
@@ -576,7 +580,7 @@ function KeyIdGame() {
                 padding: "0.4rem 1.25rem", borderRadius: 20, border: "1.5px solid var(--border)",
                 background: "transparent", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
                 fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer",
-              }}>Play again</button>
+              }}>{t.student.playAgain}</button>
             </div>
           )}
 
@@ -607,7 +611,7 @@ function KeyIdGame() {
           </div>
 
           <button onClick={() => { clearTimer(); setStarted(false); setPhase("idle"); }} style={{ marginTop: "1rem", width: "100%", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "underline" }}>
-            End session
+            {t.student.endSession}
           </button>
         </div>
       )}
@@ -634,6 +638,7 @@ function KeyIdGame() {
 // ── Real Songs game ───────────────────────────────────────────────────────────
 
 function RealSongsGame() {
+  const { t } = useI18n();
   const [songIndex, setSongIndex] = useState(() => Math.floor(Math.random() * REAL_SONGS.length));
   const [phase, setPhase]         = useState<"active" | "answered">("active");
   const [guess, setGuess]         = useState<string | null>(null);
@@ -685,7 +690,7 @@ function RealSongsGame() {
     <>
       {/* Stats */}
       <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
-        {[{ l: "Score", v: score }, { l: "Streak", v: `${streak}🔥` }, { l: "Round", v: round }].map(({ l, v }) => (
+        {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: `${streak}🔥` }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
           <div key={l} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{v}</div>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{l}</div>
@@ -720,7 +725,7 @@ function RealSongsGame() {
           {/* Feedback */}
           {phase === "answered" && (
             <div style={{ textAlign: "center", marginBottom: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: guess === song.label ? "#27ae60" : "#c0392b" }}>
-              {guess === song.label ? (streak >= 3 ? `${streak} in a row!` : "Correct!") : `It was ${song.label}`}
+              {guess === song.label ? (streak >= 3 ? t.student.inARow.replace("{n}", String(streak)) : t.student.correctFeedback) : `It was ${song.label}`}
             </div>
           )}
           {phase === "active" && (
@@ -751,7 +756,7 @@ function RealSongsGame() {
           </div>
 
           <button onClick={() => nextSong(songIndex)} style={{ marginTop: "0.875rem", width: "100%", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "underline" }}>
-            Skip →
+            {t.student.skipArrow}
           </button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { PieceService } from "../../../../lib/services/PieceService";
 import { PracticeService } from "../../../../lib/services/PracticeService";
 import { Student } from "../../../../lib/models/Student";
 import type { PieceRow, StrokeData } from "../../../../lib/types";
+import { useI18n } from "../../../../lib/context/I18nContext";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,7 @@ function useMetronome(
 export default function PerformerMode({ params }: { params: Promise<{ pieceId: string }> }) {
   const { pieceId } = use(params);
   const { user } = useAuth();
+  const { t } = useI18n();
   const student = user as Student;
   const supabase = getSupabaseBrowserClient();
 
@@ -599,7 +601,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   if (loading) {
     return (
       <div style={{ minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream)" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>Loading…</p>
+        <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>{t.student.performLoading}</p>
       </div>
     );
   }
@@ -607,8 +609,8 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   if (!piece?.sheet_music_url) {
     return (
       <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", background: "var(--cream)" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem" }}>No sheet music uploaded for this piece yet.</p>
-        <Link href="/student/pieces" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", textDecoration: "underline" }}>← Back to pieces</Link>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem" }}>{t.student.performNoSheetMusic}</p>
+        <Link href="/student/pieces" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", textDecoration: "underline" }}>{t.student.performBackToPieces}</Link>
       </div>
     );
   }
@@ -670,7 +672,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         </div>
 
         {numPages === 0 && (
-          <p style={{ color: "#888", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>Loading…</p>
+          <p style={{ color: "#888", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>{t.student.performLoading}</p>
         )}
       </div>
 
@@ -683,7 +685,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
           border: "1px solid rgba(255,255,255,0.1)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, color: "#eee", letterSpacing: "0.04em", textTransform: "uppercase" }}>Metronome</span>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, color: "#eee", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.student.performMetronome}</span>
             <button onClick={() => setMetronomeOpen(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>×</button>
           </div>
 
@@ -692,7 +694,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
             onClick={() => { if (!metronome && !audioCtxRef.current) audioCtxRef.current = new AudioContext(); setMetronome(m => !m); }}
             style={{ width: "100%", padding: "0.375rem", borderRadius: 4, border: "none", marginBottom: "0.75rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, background: metronome ? "#4CAF50" : "#333", color: "#fff", letterSpacing: "0.05em" }}
           >
-            {metronome ? "ON" : "OFF"}
+            {metronome ? t.student.performMetronomeOn : t.student.performMetronomeOff}
           </button>
 
           {/* BPM */}
@@ -732,7 +734,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
           border: "1px solid rgba(255,255,255,0.1)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, color: "#eee", letterSpacing: "0.04em", textTransform: "uppercase" }}>Record</span>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, color: "#eee", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.student.performRecord}</span>
             <button onClick={() => setRecOpen(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>×</button>
           </div>
 
@@ -745,19 +747,19 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
               onClick={recording ? stopRec : startRec}
               style={{ width: "100%", padding: "0.5rem", borderRadius: 4, border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, background: recording ? "#8A3030" : "#c0392b", color: "#fff" }}
             >
-              {recording ? "⏹ Stop" : "⏺ Start"}
+              {recording ? t.student.performStop : t.student.performStart}
             </button>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
               <audio src={recUrl!} controls style={{ width: "100%", height: 32 }} />
               {!recSaved ? (
                 <button onClick={saveRec} disabled={recSaving} style={{ width: "100%", padding: "0.4rem", borderRadius: 4, border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, background: "#2471A3", color: "#fff", opacity: recSaving ? 0.6 : 1 }}>
-                  {recSaving ? "Saving…" : "Save to Journey"}
+                  {recSaving ? t.common.saving : t.student.performSaveToJourney}
                 </button>
               ) : (
-                <div style={{ textAlign: "center", fontSize: "0.6875rem", color: "#7ec87e", fontFamily: "Inter, sans-serif" }}>✓ Saved!</div>
+                <div style={{ textAlign: "center", fontSize: "0.6875rem", color: "#7ec87e", fontFamily: "Inter, sans-serif" }}>{t.student.performSavedConfirm}</div>
               )}
-              <button onClick={() => { setRecBlob(null); setRecUrl(null); setElapsed(0); setRecSaved(false); }} style={{ width: "100%", padding: "0.4rem", borderRadius: 4, border: "1px solid #444", background: "transparent", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "#888" }}>Discard</button>
+              <button onClick={() => { setRecBlob(null); setRecUrl(null); setElapsed(0); setRecSaved(false); }} style={{ width: "100%", padding: "0.4rem", borderRadius: 4, border: "1px solid #444", background: "transparent", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "#888" }}>{t.student.performDiscard}</button>
             </div>
           )}
         </div>
@@ -767,7 +769,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
       {webcamActive && (
         <div style={{ position: "absolute", bottom: 72, right: 12, zIndex: 30, borderRadius: 6, overflow: "hidden", border: "2px solid #444", background: "#222" }}>
           <div style={{ width: 100, height: 75, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: "0.55rem", color: "#7ec87e", fontFamily: "Inter, sans-serif", textAlign: "center" }}>Head tilt{"\n"}active</span>
+            <span style={{ fontSize: "0.55rem", color: "#7ec87e", fontFamily: "Inter, sans-serif", textAlign: "center" }}>{t.student.performHeadTiltActive}</span>
           </div>
         </div>
       )}
@@ -782,14 +784,14 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
             onClick={e => e.stopPropagation()}
             style={{ background: "#1a1a1a", borderRadius: "12px 12px 0 0", padding: "1.5rem", width: "100%", maxHeight: "60vh", overflowY: "auto" }}
           >
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "#eee", marginBottom: "1.25rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>Page Turn Settings</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "#eee", marginBottom: "1.25rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>{t.student.performPageTurnSettings}</div>
 
             {([
-              { id: "tap" as PageTurnMethod, label: "Tap Zones", desc: "Tap left/right third of screen" },
-              { id: "keyboard" as PageTurnMethod, label: "Keyboard", desc: "← → Arrow keys or Space" },
-              { id: "device" as PageTurnMethod, label: "Device Tilt", desc: "Tilt phone left/right (mobile)" },
-              { id: "webcam" as PageTurnMethod, label: "Head Tilt (Webcam)", desc: "Tilt head — requires camera" },
-            ] as const).map(({ id, label, desc }) => (
+              { id: "tap" as PageTurnMethod, label: t.student.performTapZones, desc: t.student.performTapZonesDesc },
+              { id: "keyboard" as PageTurnMethod, label: t.student.performKeyboard, desc: t.student.performKeyboardDesc },
+              { id: "device" as PageTurnMethod, label: t.student.performDeviceTilt, desc: t.student.performDeviceTiltDesc },
+              { id: "webcam" as PageTurnMethod, label: t.student.performHeadTilt, desc: t.student.performHeadTiltDesc },
+            ]).map(({ id, label, desc }) => (
               <div key={id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 0", borderBottom: "1px solid #2a2a2a" }}>
                 <div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#ddd", fontWeight: 500 }}>{label}</div>
@@ -812,8 +814,8 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
             ))}
 
             <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem" }}>
-              <Link href="/student/pieces" style={{ flex: 1, padding: "0.625rem", borderRadius: 4, border: "1px solid #333", color: "#888", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", textAlign: "center", textDecoration: "none" }}>← Back to Pieces</Link>
-              <button onClick={() => setShowSettings(false)} style={{ flex: 1, padding: "0.625rem", borderRadius: 4, border: "none", background: "#333", color: "#ddd", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", cursor: "pointer" }}>Close</button>
+              <Link href="/student/pieces" style={{ flex: 1, padding: "0.625rem", borderRadius: 4, border: "1px solid #333", color: "#888", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", textAlign: "center", textDecoration: "none" }}>{t.student.performBackToPieces}</Link>
+              <button onClick={() => setShowSettings(false)} style={{ flex: 1, padding: "0.625rem", borderRadius: 4, border: "none", background: "#333", color: "#ddd", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", cursor: "pointer" }}>{t.student.performClose}</button>
             </div>
           </div>
         </div>
