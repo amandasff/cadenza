@@ -130,7 +130,7 @@ export default function Home() {
               className="btn btn-primary"
               style={{ padding: "0.375rem 0.875rem", fontSize: "0.8125rem" }}
             >
-              Go to dashboard →
+              {t.landing.goToDashboard}
             </a>
           ) : (
             <button
@@ -138,7 +138,7 @@ export default function Home() {
               className="btn btn-secondary"
               style={{ padding: "0.375rem 0.875rem", fontSize: "0.8125rem" }}
             >
-              Sign in
+              {t.landing.signIn}
             </button>
           )}
         </div>
@@ -159,7 +159,7 @@ export default function Home() {
             letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600,
           }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--sage)", flexShrink: 0 }} />
-            Practice made personal. Studio made simple.
+            {t.landing.tagline}
           </div>
 
           <h1 style={{
@@ -168,25 +168,25 @@ export default function Home() {
             lineHeight: 0.98, letterSpacing: "-0.02em", marginBottom: "1.5rem",
           }}>
             {role === "teacher" ? (
-              <>Watch your students<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>fall in love with practice.</em></>
+              <>{t.landing.heroTeacher}<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>{t.landing.heroTeacherEmphasis}</em></>
             ) : (
-              <>Daily practice,<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>joyfully done.</em></>
+              <>{t.landing.heroStudent}<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>{t.landing.heroStudentEmphasis}</em></>
             )}
           </h1>
 
           <p style={{ color: "var(--muted)", fontSize: "1.0625rem", maxWidth: 440, marginBottom: "1.75rem", lineHeight: 1.75 }}>
-            Cadenza brings together lesson planning, student goals, practice tracking, and a community students genuinely love. Everything a music teacher needs — thoughtfully in one place.
+            {t.landing.heroDesc}
           </p>
 
           {/* Audience pills */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "2rem" }}>
             {[
-              { text: "🎹 AI lesson planner", bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)" },
-              { text: "📊 Practice tracking", bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)" },
-              { text: "🔥 Student streaks", bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)" },
-              { text: "🤖 AI tutor 24/7", bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)" },
-              { text: "👪 Parent updates", bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)" },
-              { text: "🎮 Music games", bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)" },
+              { text: t.landing.pillAiPlanner, bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)" },
+              { text: t.landing.pillPracticeTracking, bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)" },
+              { text: t.landing.pillStreaks, bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)" },
+              { text: t.landing.pillAiTutor, bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)" },
+              { text: t.landing.pillParentUpdates, bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)" },
+              { text: t.landing.pillMusicGames, bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)" },
             ].map(f => (
               <span key={f.text} style={{ fontSize: "0.75rem", fontWeight: 500, color: f.color, background: f.bg, border: `1px solid ${f.border}`, borderRadius: 999, padding: "0.25rem 0.75rem" }}>{f.text}</span>
             ))}
@@ -194,9 +194,9 @@ export default function Home() {
 
           <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
             {[
-              { val: "Free", sub: "for students" },
-              { val: "2 min", sub: "studio setup" },
-              { val: "10+", sub: "games & tools" },
+              { val: t.landing.statFreeLabel, sub: t.landing.statFreeFor },
+              { val: t.landing.statSetupTime, sub: t.landing.statSetupLabel },
+              { val: t.landing.statGamesCount, sub: t.landing.statGamesLabel },
             ].map((item, i) => (
               <div key={i}>
                 <div style={{ fontWeight: 600, fontSize: "1.5rem", color: "var(--charcoal)", lineHeight: 1 }}>{item.val}</div>
@@ -214,7 +214,7 @@ export default function Home() {
         }}>
           <div style={{ padding: "1.25rem 1.5rem 0" }}>
             <h2 style={{ fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.875rem" }}>
-              {mode === "signin" ? "Welcome back" : "Get started for free"}
+              {mode === "signin" ? t.landing.welcomeBack : t.landing.getStartedFree}
             </h2>
             {mode === "signup" && (
               <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", marginBottom: "0.25rem" }}>
@@ -225,7 +225,7 @@ export default function Home() {
                     fontWeight: 500, fontSize: "0.8125rem",
                     color: role === r ? "var(--white)" : "var(--muted)", transition: "all 0.15s", textTransform: "capitalize",
                   }}>
-                    {r === "student" ? "Student" : "Teacher"}
+                    {r === "student" ? t.landing.labelStudent : t.landing.labelTeacher}
                   </button>
                 ))}
               </div>
@@ -235,17 +235,17 @@ export default function Home() {
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.875rem", padding: "1rem 1.5rem 1.25rem" }}>
             {mode === "signup" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                <label style={labelStyle}>Name</label>
+                <label style={labelStyle}>{t.landing.labelName}</label>
                 <input type="text" placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"} value={displayName} onChange={e => setDisplayName(e.target.value)} required style={inputStyle} />
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-              <label style={labelStyle}>Email</label>
+              <label style={labelStyle}>{t.landing.labelEmail}</label>
               <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-              <label style={labelStyle}>Password</label>
-              <input type="password" placeholder={mode === "signin" ? "Your password" : "At least 6 characters"} value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+              <label style={labelStyle}>{t.landing.labelPassword}</label>
+              <input type="password" placeholder={mode === "signin" ? t.landing.passwordPlaceholder : t.landing.passwordPlaceholderNew} value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
             </div>
             {error && (
               <div style={{ border: "1px solid var(--peach-light)", borderRadius: 4, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "var(--peach)", background: "var(--peach-bg)" }}>{error}</div>
@@ -255,21 +255,23 @@ export default function Home() {
               opacity: loading ? 0.5 : 1,
               fontSize: "0.9375rem", fontWeight: 600, marginTop: "0.125rem", letterSpacing: "0.01em",
             }}>
-              {loading ? (mode === "signin" ? "Signing in..." : "Creating account...") : (mode === "signin" ? "Sign in" : `Create ${role} account`)}
+              {loading
+                ? (mode === "signin" ? t.landing.signingIn : t.landing.creatingAccount)
+                : (mode === "signin" ? t.landing.signInAction : t.landing.createAccount.replace("{role}", role))}
             </button>
           </form>
 
           <div style={{ padding: "0 1.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
               <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              <span style={{ fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500 }}>or</span>
+              <span style={{ fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500 }}>{t.common.or}</span>
               <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
             </div>
             <button type="button" onClick={handleGoogleSignup} className="btn btn-secondary" style={{
               width: "100%", gap: "0.625rem", padding: "0.625rem", fontSize: "0.8125rem",
             }}>
               <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-              Continue with Google
+              {t.landing.continueWithGoogle}
             </button>
           </div>
 
@@ -277,7 +279,7 @@ export default function Home() {
             <div style={{ padding: "0 1.5rem 0.75rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
                 <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                <span style={{ fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500 }}>or try a demo</span>
+                <span style={{ fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500 }}>{t.landing.orTryDemo}</span>
                 <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -286,7 +288,7 @@ export default function Home() {
                     flex: 1, padding: "0.5625rem", fontSize: "0.75rem",
                     opacity: demoLoading && demoLoading !== "student" ? 0.4 : 1,
                   }}>
-                    {demoLoading === "student" ? "Loading..." : "Student demo"}
+                    {demoLoading === "student" ? t.landing.loadingDemo : t.landing.studentDemo}
                   </button>
                 )}
                 {demoTeacherEmail && (
@@ -294,7 +296,7 @@ export default function Home() {
                     flex: 1, padding: "0.5625rem", fontSize: "0.75rem",
                     opacity: demoLoading && demoLoading !== "teacher" ? 0.4 : 1,
                   }}>
-                    {demoLoading === "teacher" ? "Loading..." : "Teacher demo"}
+                    {demoLoading === "teacher" ? t.landing.loadingDemo : t.landing.teacherDemo}
                   </button>
                 )}
               </div>
@@ -303,9 +305,9 @@ export default function Home() {
 
           <div style={{ padding: "1rem 1.5rem", textAlign: "center" }}>
             <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: 0 }}>
-              {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+              {mode === "signin" ? t.landing.noAccount : t.landing.alreadyHaveAccount}{" "}
               <button type="button" onClick={() => switchMode(mode === "signin" ? "signup" : "signin")} style={{ background: "none", border: "none", padding: 0, color: "var(--charcoal)", fontWeight: 500, fontSize: "0.75rem", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "2px" }}>
-                {mode === "signin" ? "Sign up" : "Sign in"}
+                {mode === "signin" ? t.landing.signUp : t.landing.signIn}
               </button>
             </p>
           </div>
@@ -315,7 +317,7 @@ export default function Home() {
       {/* ── Amanda's students note ── */}
       <div style={{ padding: "0 2rem 3rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box", textAlign: "center" }}>
         <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-          🎉 <strong style={{ color: "var(--sage)" }}>Amanda&apos;s students:</strong> Pro is already included with your lessons — just sign up free.
+          🎉 <strong style={{ color: "var(--sage)" }}>Amanda&apos;s students:</strong> {t.landing.amandaStudentsNote}
         </p>
       </div>
 
@@ -323,10 +325,10 @@ export default function Home() {
       <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", background: "var(--cream)", padding: "1.25rem 2rem" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "2.5rem" }}>
           {[
-            { val: "Free", label: "for every student" },
-            { val: "2 min", label: "studio setup" },
-            { val: "10+", label: "music games & tools" },
-            { val: "24/7", label: "AI practice tutor" },
+            { val: t.landing.statFreeLabel, label: t.landing.socialFreeFor },
+            { val: t.landing.statSetupTime, label: t.landing.socialSetupLabel },
+            { val: t.landing.statGamesCount, label: t.landing.socialGamesLabel },
+            { val: t.landing.statAiLabel, label: t.landing.socialAiLabel },
           ].map(s => (
             <div key={s.label} style={{ textAlign: "center" }}>
               <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 600, color: "var(--charcoal)", lineHeight: 1 }}>{s.val}</div>
@@ -340,9 +342,9 @@ export default function Home() {
       {process.env.NEXT_PUBLIC_DEMO_VIDEO_URL && (
         <div style={{ padding: "5rem 2rem", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
           <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-            <div style={{ fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>See it in action</div>
+            <div style={{ fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>{t.landing.seeInAction}</div>
             <h2 style={{ fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "var(--charcoal)", letterSpacing: "-0.015em", margin: 0 }}>
-              Cadenza in 90 seconds.
+              {t.landing.demoHeading}
             </h2>
           </div>
           <div style={{
@@ -359,7 +361,7 @@ export default function Home() {
             />
           </div>
           <p style={{ textAlign: "center", color: "var(--muted)", fontSize: "0.8125rem", marginTop: "1.25rem" }}>
-            See how teachers plan lessons with AI, and how students build their streak.
+            {t.landing.demoCaption}
           </p>
         </div>
       )}
@@ -369,17 +371,17 @@ export default function Home() {
         {/* For Teachers */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
           <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
-          <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--sage)", whiteSpace: "nowrap" }}>For Teachers</span>
+          <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--sage)", whiteSpace: "nowrap" }}>{t.landing.forTeachers}</span>
           <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "4rem" }}>
           {[
-            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "🎹", title: "AI lesson planner", desc: "Before every lesson, Cadenza reads your student's practice log and gently suggests where to focus. A thoughtful plan, ready in two minutes." },
-            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "📋", title: "Goal & piece tracking", desc: "Assign pieces and set intentions before each lesson. Your students always know what matters — and you'll see exactly how they're progressing." },
-            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "💰", title: "Payment log & invoices", desc: "Quietly track fees and mark payments as you go. A calm, clean record so admin never gets in the way of teaching." },
-            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "👪", title: "Parent updates", desc: "Parents see their child's progress unfold week by week — no emails needed from you. Families feel connected; you stay focused on teaching." },
-            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "📊", title: "Student progress dashboard", desc: "Walk into every lesson knowing exactly who practiced, how long, and how they felt. No surprises — only better teaching." },
-            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "📝", title: "Lesson notes & history", desc: "Jot down what clicked and what still needs work. Cadenza keeps every reflection organized and ready for when you need it." },
+            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "🎹", title: t.landing.featureAiPlannerTitle, desc: t.landing.featureAiPlannerDesc },
+            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "📋", title: t.landing.featureGoalTrackingTitle, desc: t.landing.featureGoalTrackingDesc },
+            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "💰", title: t.landing.featurePaymentsTitle, desc: t.landing.featurePaymentsDesc },
+            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "👪", title: t.landing.featureParentUpdatesTitle, desc: t.landing.featureParentUpdatesDesc },
+            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "📊", title: t.landing.featureDashboardTitle, desc: t.landing.featureDashboardDesc },
+            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "📝", title: t.landing.featureLessonNotesTitle, desc: t.landing.featureLessonNotesDesc },
           ].map((c, i) => (
             <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
               <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
@@ -392,17 +394,17 @@ export default function Home() {
         {/* For Students */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
           <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
-          <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--peach)", whiteSpace: "nowrap" }}>For Students</span>
+          <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--peach)", whiteSpace: "nowrap" }}>{t.landing.forStudents}</span>
           <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem" }}>
           {[
-            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "⏱", title: "One-tap practice timer", desc: "Open the app, press start, and just play. Your practice logs itself — no fuss, no forgetting." },
-            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "🔥", title: "Streaks & points", desc: "There's something wonderful about a streak worth protecting. Each day you practice, it grows — and so do you." },
-            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "🤖", title: "AI practice tutor", desc: "Stuck on a passage? Curious about a chord? Your AI tutor is always there — endlessly patient, at any hour." },
-            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "🎮", title: "Music games", desc: "Ear training, note reading, rhythm games — the kind of practice that doesn't feel like practice at all." },
-            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "🎤", title: "Share your covers", desc: "Record a cover and share it with your studio. Hearing each other play is one of the warmest parts of learning music." },
-            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "🌍", title: "Practice community", desc: "Follow other students, cheer on their progress, and let their dedication inspire yours. Music is always better together." },
+            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "⏱", title: t.landing.featureTimerTitle, desc: t.landing.featureTimerDesc },
+            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "🔥", title: t.landing.featureStreaksTitle, desc: t.landing.featureStreaksDesc },
+            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "🤖", title: t.landing.featureAiTutorTitle, desc: t.landing.featureAiTutorDesc },
+            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "🎮", title: t.landing.featureGamesTitle, desc: t.landing.featureGamesDesc },
+            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "🎤", title: t.landing.featureCoversTitle, desc: t.landing.featureCoversDesc },
+            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "🌍", title: t.landing.featureCommunityTitle, desc: t.landing.featureCommunityDesc },
           ].map((c, i) => (
             <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
               <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
@@ -415,18 +417,18 @@ export default function Home() {
 
       {/* ── How it works ── */}
       <div style={{ padding: "3rem 2rem 5rem", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem", textAlign: "center" }}>Getting started</div>
+        <div style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem", textAlign: "center" }}>{t.landing.gettingStarted}</div>
         <h2 style={{ fontWeight: 500, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", color: "var(--charcoal)", textAlign: "center", marginBottom: "3rem", letterSpacing: "-0.015em" }}>
-          Up and running in minutes.
+          {t.landing.upAndRunning}
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "3rem" }}>
           {/* Teacher track */}
           <div>
-            <h3 style={{ fontWeight: 600, fontSize: "1.125rem", color: "var(--sage)", marginBottom: "1.25rem" }}>For teachers</h3>
+            <h3 style={{ fontWeight: 600, fontSize: "1.125rem", color: "var(--sage)", marginBottom: "1.25rem" }}>{t.landing.forTeachersTrack}</h3>
             {[
-              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: "Create your studio", sub: "Sign up, name your studio, and set your first student's goals. You'll be ready in two minutes — we promise." },
-              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: "Invite students & parents", sub: "Share a simple link. Students join for free, and parents get a gentle window into their child's practice life." },
-              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: "Let the data come to you", sub: "See who practiced, plan your lessons with AI, and keep track of payments — all without switching apps." },
+              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: t.landing.teacherStep1Title, sub: t.landing.teacherStep1Sub },
+              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: t.landing.teacherStep2Title, sub: t.landing.teacherStep2Sub },
+              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: t.landing.teacherStep3Title, sub: t.landing.teacherStep3Sub },
             ].map((step, i) => (
               <div key={i} style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", padding: "1.375rem 0", borderTop: "1px solid var(--border)" }}>
                 <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: step.bg, border: `1px solid ${step.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>{step.n}</div>
@@ -440,11 +442,11 @@ export default function Home() {
           </div>
           {/* Student track */}
           <div>
-            <h3 style={{ fontWeight: 600, fontSize: "1.125rem", color: "var(--peach)", marginBottom: "1.25rem" }}>For students</h3>
+            <h3 style={{ fontWeight: 600, fontSize: "1.125rem", color: "var(--peach)", marginBottom: "1.25rem" }}>{t.landing.forStudentsTrack}</h3>
             {[
-              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: "Sign up & find your teacher", sub: "Create your account and find your teacher's studio. One tap to join — you're in." },
-              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: "Practice with intention", sub: "Your teacher's goals are there waiting. Start the timer, work through them with focus, and log your session." },
-              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: "Build your streak", sub: "Practice every day and watch your streak grow. Play games, earn points, share your progress — music was never this rewarding." },
+              { n: "1", bg: "var(--sage-bg)", border: "var(--sage-light)", title: t.landing.studentStep1Title, sub: t.landing.studentStep1Sub },
+              { n: "2", bg: "var(--peach-bg)", border: "var(--peach-light)", title: t.landing.studentStep2Title, sub: t.landing.studentStep2Sub },
+              { n: "3", bg: "var(--lavender-bg)", border: "var(--lavender-light)", title: t.landing.studentStep3Title, sub: t.landing.studentStep3Sub },
             ].map((step, i) => (
               <div key={i} style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", padding: "1.375rem 0", borderTop: "1px solid var(--border)" }}>
                 <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, background: step.bg, border: `1px solid ${step.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>{step.n}</div>
@@ -462,25 +464,25 @@ export default function Home() {
       {/* ── Bottom CTA ── */}
       <div style={{ background: "#1A1714", padding: "5rem 2rem", textAlign: "center" }}>
         <h2 style={{ fontWeight: 400, fontSize: "clamp(2.25rem, 6vw, 3.5rem)", color: "#F0EDE7", lineHeight: 1.1, letterSpacing: "-0.015em", marginBottom: "0.75rem" }}>
-          More music.<br />
-          <em style={{ color: "#D47050" }}>Less admin.</em>
+          {t.landing.ctaHeadingLine1}<br />
+          <em style={{ color: "#D47050" }}>{t.landing.ctaHeadingLine2}</em>
         </h2>
         <p style={{ color: "#F0EDE7", opacity: 0.45, fontSize: "0.9375rem", marginBottom: "2.25rem", maxWidth: 480, margin: "0 auto 2.25rem" }}>
-          Cadenza gives teachers their time back — and gives students a reason to practice every single day.
+          {t.landing.ctaBody}
         </p>
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
           <button onClick={() => { switchMode("signup"); setRole("teacher"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn" style={{
             background: "#F0EDE7", color: "#1A1714", padding: "0.9375rem 2.5rem",
             fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "0.01em",
           }}>
-            Set up your studio →
+            {t.landing.ctaSetupStudio}
           </button>
           <button onClick={() => { switchMode("signup"); setRole("student"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn" style={{
             background: "transparent", color: "#F0EDE7", opacity: 0.7, padding: "0.9375rem 2.5rem",
             fontWeight: 500, fontSize: "0.9375rem", border: "1px solid rgba(240,237,231,0.2)",
             letterSpacing: "0.01em",
           }}>
-            Join as a student
+            {t.landing.ctaJoinStudent}
           </button>
         </div>
       </div>
@@ -489,7 +491,7 @@ export default function Home() {
       <div style={{ padding: "1rem 2rem", background: "#111009", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
         <span style={{ fontWeight: 700, fontSize: "0.625rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(248,246,242,0.25)" }}>Cadenza</span>
         <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
-          {["Privacy", "Terms", "Contact"].map(l => (
+          {[t.landing.footerPrivacy, t.landing.footerTerms, t.landing.footerContact].map(l => (
             <span key={l} style={{ fontSize: "0.625rem", color: "rgba(248,246,242,0.2)", cursor: "pointer" }}>{l}</span>
           ))}
           <div style={{ width: 100 }}>
@@ -502,7 +504,7 @@ export default function Home() {
       {/* ── Fixed theme toggle ── */}
       <button
         onClick={toggleTheme}
-        title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+        title={theme === "light" ? t.landing.switchToDark : t.landing.switchToLight}
         style={{
           position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
           width: 40, height: 40, borderRadius: "50%",

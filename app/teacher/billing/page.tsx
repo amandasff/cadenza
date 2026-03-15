@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { BillingService } from "../../../lib/services/BillingService";
 import { Teacher } from "../../../lib/models/Teacher";
 import type { TuitionRecordRow, BillingChargeRow } from "../../../lib/types";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -23,6 +24,7 @@ interface StudentSummary {
 export default function BillingPage() {
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
   const supabase = getSupabaseBrowserClient();
   const billing = BillingService.create(supabase);
 
@@ -85,10 +87,10 @@ export default function BillingPage() {
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "2rem 1.5rem" }}>
       <div style={{ marginBottom: "2rem" }}>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-          Billing
+          {t.billing.title}
         </h1>
         <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
-          Track tuition and payments across your studio.
+          {t.billing.trackTuitionDesc}
         </p>
       </div>
 
@@ -96,7 +98,7 @@ export default function BillingPage() {
       <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem", display: "flex", gap: "2rem" }}>
         <div>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
-            Outstanding Balance
+            {t.billing.outstandingBalance}
           </div>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 600, color: totalOutstanding > 0 ? "#c0392b" : "var(--charcoal)" }}>
             {fmt(totalOutstanding)}
@@ -104,7 +106,7 @@ export default function BillingPage() {
         </div>
         <div>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
-            Students with Balance
+            {t.billing.studentsWithBalance}
           </div>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 600, color: "var(--charcoal)" }}>
             {studentsWithBalance.length}
@@ -119,7 +121,7 @@ export default function BillingPage() {
         </div>
       ) : students.length === 0 ? (
         <div style={{ textAlign: "center", padding: "3rem 1.5rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
-          No students yet. Add students to your studio first.
+          {t.billing.noStudentsYetBilling}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -147,8 +149,8 @@ export default function BillingPage() {
                   </div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.1rem" }}>
                     {s.total > 0
-                      ? `${s.unpaidTuition > 0 ? `${fmt(s.unpaidTuition)} tuition` : ""}${s.unpaidTuition > 0 && s.unpaidCharges > 0 ? " + " : ""}${s.unpaidCharges > 0 ? `${fmt(s.unpaidCharges)} other` : ""}`
-                      : "All paid up"
+                      ? `${s.unpaidTuition > 0 ? `${fmt(s.unpaidTuition)} ${t.teacher.tuition}` : ""}${s.unpaidTuition > 0 && s.unpaidCharges > 0 ? " + " : ""}${s.unpaidCharges > 0 ? `${fmt(s.unpaidCharges)} ${t.teacher.other}` : ""}`
+                      : t.billing.allPaidUp
                     }
                   </div>
                 </div>

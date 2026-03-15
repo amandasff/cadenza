@@ -8,20 +8,21 @@ import { GoalService } from "../../lib/services/GoalService";
 import { PracticeService } from "../../lib/services/PracticeService";
 import { Teacher } from "../../lib/models/Teacher";
 import type { ProfileRow, GoalRow, PracticeSessionRow } from "../../lib/types";
+import { useI18n } from "../../lib/context/I18nContext";
 
 interface StudentWithGoals {
   profile: ProfileRow;
   goals: GoalRow[];
 }
 
-function getGreeting() {
+function getGreetingKey() {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  return "evening";
 }
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, yesterday: string) {
   const d = new Date(iso);
   const now = new Date();
   const diffMins = Math.floor((now.getTime() - d.getTime()) / 60000);
@@ -29,7 +30,7 @@ function timeAgo(iso: string) {
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays === 1) return yesterday;
   if (diffDays < 7) return `${diffDays}d ago`;
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
@@ -37,6 +38,7 @@ function timeAgo(iso: string) {
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
 
   const [students, setStudents] = useState<StudentWithGoals[]>([]);
   const [recentSessions, setRecentSessions] = useState<PracticeSessionRow[]>([]);
@@ -160,7 +162,7 @@ export default function TeacherDashboard() {
           letterSpacing: "-0.01em",
           lineHeight: 1.1,
         }}>
-          {getGreeting()}, {teacher?.displayName?.split(" ")[0]}.
+          {getGreetingKey() === "morning" ? t.teacher.greetingMorning : getGreetingKey() === "afternoon" ? t.teacher.greetingAfternoon : t.teacher.greetingEvening}, {teacher?.displayName?.split(" ")[0]}.
         </h1>
         <p style={{
           color: "var(--muted)",
@@ -171,8 +173,8 @@ export default function TeacherDashboard() {
           letterSpacing: "0.005em",
         }}>
           {loading
-            ? "Loading studio data\u2026"
-            : `${students.length} student${students.length !== 1 ? "s" : ""} \u00b7 ${completedGoalsCount} goals completed`
+            ? t.teacher.loadingStudio
+            : `${students.length} ${students.length !== 1 ? t.teacher.studentsCount : t.teacher.studentsSingular} · ${completedGoalsCount} ${t.teacher.goalsCompleted}`
           }
         </p>
       </div>
@@ -196,7 +198,7 @@ export default function TeacherDashboard() {
             letterSpacing: "0.08em",
             textTransform: "uppercase",
           }}>
-            Invite students
+            {t.teacher.inviteStudents}
           </div>
 
           {/* Link row */}
@@ -223,14 +225,14 @@ export default function TeacherDashboard() {
               className="btn btn-primary"
               style={{ flexShrink: 0, padding: "0.5rem 1rem", fontSize: "0.8125rem" }}
             >
-              {copiedLink ? "Copied!" : "Copy link"}
+              {copiedLink ? t.teacher.copied : t.teacher.copyLink}
             </button>
           </div>
 
           {/* Code row */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-              Or share the code:
+              {t.teacher.orShareCode}
             </div>
             <div className="invite-code" style={{ fontSize: "1rem", letterSpacing: "0.2em" }}>
               {teacher.inviteCode.toUpperCase()}
@@ -240,7 +242,7 @@ export default function TeacherDashboard() {
               className="btn btn-secondary"
               style={{ padding: "0.25rem 0.75rem", fontSize: "0.75rem" }}
             >
-              {copied ? "Copied" : "Copy"}
+              {copied ? t.common.copied : t.common.copy}
             </button>
           </div>
         </div>
@@ -249,13 +251,13 @@ export default function TeacherDashboard() {
       {/* Quick actions */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
         <Link href="/teacher/goals" className="btn btn-primary" style={{ textDecoration: "none" }}>
-          Create Goal
+          {t.teacher.createGoal}
         </Link>
         <Link href="/teacher/review" className="btn btn-secondary" style={{ textDecoration: "none" }}>
-          Review Sessions
+          {t.teacher.reviewSessions}
         </Link>
         <Link href="/teacher/chat" className="btn btn-secondary" style={{ textDecoration: "none" }}>
-          Open Chat
+          {t.teacher.openChat}
         </Link>
       </div>
 
@@ -280,7 +282,7 @@ export default function TeacherDashboard() {
               textTransform: "uppercase",
               letterSpacing: "0.08em",
             }}>
-              Students ({students.length})
+              {students.length !== 1 ? t.teacher.studentsCount : t.teacher.studentsSingular} ({students.length})
             </span>
           </div>
 
@@ -292,8 +294,8 @@ export default function TeacherDashboard() {
             </div>
           ) : students.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-title">No students yet</div>
-              <p className="empty-state-desc">Share your invite code to get started.</p>
+              <div className="empty-state-title">{t.teacher.noStudentsTitle}</div>
+              <p className="empty-state-desc">{t.teacher.noStudentsDesc}</p>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
@@ -347,7 +349,7 @@ export default function TeacherDashboard() {
                           fontFamily: "Inter, sans-serif",
                           marginTop: "0.125rem",
                         }}>
-                          {total} goal{total !== 1 ? "s" : ""} · view repertoire →
+                          {total} {t.goals.goalsCount} · {t.teacher.viewRepertoire}
                         </div>
                       </div>
                     </div>
@@ -365,7 +367,7 @@ export default function TeacherDashboard() {
                           fontFamily: "Inter, sans-serif",
                           letterSpacing: "0.02em",
                         }}>
-                          {completed} of {total} complete
+                          {completed} / {total} {t.teacher.complete}
                         </div>
                       </div>
                     )}
@@ -395,7 +397,7 @@ export default function TeacherDashboard() {
                           textTransform: "uppercase",
                           marginTop: "0.125rem",
                         }}>
-                          Day streak
+                          {t.teacher.dayStreak}
                         </div>
                       </div>
                       <div style={{
@@ -421,7 +423,7 @@ export default function TeacherDashboard() {
                           textTransform: "uppercase",
                           marginTop: "0.125rem",
                         }}>
-                          Points
+                          {t.teacher.points}
                         </div>
                       </div>
                     </div>
@@ -475,7 +477,7 @@ export default function TeacherDashboard() {
               textTransform: "uppercase",
               letterSpacing: "0.08em",
             }}>
-              Recent Activity
+              {t.teacher.recentActivity}
             </span>
             <Link href="/teacher/review" style={{
               fontFamily: "Inter, sans-serif",
@@ -504,7 +506,7 @@ export default function TeacherDashboard() {
                 color: "var(--muted)",
                 margin: 0,
               }}>
-                No sessions yet
+                {t.teacher.noSessionsYet}
               </p>
             </div>
           ) : (
@@ -569,7 +571,7 @@ export default function TeacherDashboard() {
                         marginTop: "0.125rem",
                         letterSpacing: "0.01em",
                       }}>
-                        {mins} min · {timeAgo(s.created_at)}
+                        {mins} {t.schedule.min} · {timeAgo(s.created_at, t.teacher.yesterday)}
                       </div>
                     </div>
                     {s.recording_url && (
@@ -598,10 +600,10 @@ export default function TeacherDashboard() {
       >
         <div style={{ background: "var(--white)", borderRadius: 6, padding: "1.75rem", width: "100%", maxWidth: 380, boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
           <h2 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
-            Encourage {encourageTarget.display_name.split(" ")[0]}
+            {t.teacher.encourage} {encourageTarget.display_name.split(" ")[0]}
           </h2>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.25rem" }}>
-            Sends as a private message in chat + a push notification if they've enabled it.
+            {t.teacher.encourageSubtitle}
           </p>
           <textarea
             value={encourageMsg}
@@ -626,14 +628,14 @@ export default function TeacherDashboard() {
               onClick={() => setEncourageTarget(null)}
               style={{ flex: 1, padding: "0.625rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: "none", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", cursor: "pointer" }}
             >
-              Cancel
+              {t.common.cancel}
             </button>
             <button
               onClick={sendEncouragement}
               disabled={encourageSending || !encourageMsg.trim()}
               style={{ flex: 1, padding: "0.625rem", borderRadius: 3, border: "none", background: encourageMsg.trim() && !encourageSending ? "var(--charcoal)" : "var(--border)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500, color: "var(--white)", cursor: encourageMsg.trim() && !encourageSending ? "pointer" : "default", transition: "background 0.15s" }}
             >
-              {encourageSending ? "Sending…" : "Send 🔔"}
+              {encourageSending ? t.teacher.sending : t.teacher.sendEncourage}
             </button>
           </div>
         </div>

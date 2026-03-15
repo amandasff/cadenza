@@ -4,6 +4,7 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { Teacher } from "../../../lib/models/Teacher";
 import type { EnrollmentApplicationRow, ProfileRow } from "../../../lib/types";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 interface StudioTeacherMember {
   id: string;
@@ -40,6 +41,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function StudioManagementPage() {
   const { user } = useAuth();
   const teacher = user as Teacher | null;
+  const { t } = useI18n();
 
   const [studioSlug, setStudioSlug] = useState<string | null>(null);
   const [teacherInviteCode, setTeacherInviteCode] = useState<string | null>(null);
@@ -188,7 +190,7 @@ export default function StudioManagementPage() {
       });
       const body = await res.json() as { teacherName?: string; error?: string };
       if (!res.ok) throw new Error(body.error ?? "Failed");
-      setInviteMsg({ type: "ok", text: `${body.teacherName} has been added as a co-teacher.` });
+      setInviteMsg({ type: "ok", text: `${body.teacherName} ${t.teacher.addedCoTeacher}` });
       setInviteEmail("");
       loadAll();
     } catch (err) {
@@ -277,18 +279,18 @@ export default function StudioManagementPage() {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
       <h1 style={{ ...s, fontWeight: 700, fontSize: "1.375rem", color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
-        Studio Management
+        {t.teacher.studioManagement}
       </h1>
       <p style={{ ...s, color: "var(--muted)", fontSize: "0.875rem", margin: "0 0 2.5rem" }}>
-        {isDirector ? "You are the director of this studio." : "You are a co-teacher in this studio."}
+        {isDirector ? t.teacher.studioDirector : t.teacher.studioCoTeacher}
       </p>
 
       {/* Enrollment link */}
       {studioSlug && (
         <div style={card}>
-          <p style={sectionTitle}>Public Enrollment Form</p>
+          <p style={sectionTitle}>{t.teacher.enrollmentForm}</p>
           <p style={{ ...s, fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 0.75rem", lineHeight: 1.6 }}>
-            Share this link with prospective students. They can fill out an enrollment form and you&apos;ll see it below.
+            {t.teacher.enrollmentFormDesc}
           </p>
           <div style={{
             display: "flex", gap: "0.625rem", alignItems: "center",
@@ -306,7 +308,7 @@ export default function StudioManagementPage() {
                 fontSize: "0.75rem", fontWeight: 500, cursor: "pointer", letterSpacing: "0.04em",
               }}
             >
-              Copy
+              {t.common.copy}
             </button>
           </div>
         </div>
@@ -316,18 +318,18 @@ export default function StudioManagementPage() {
       {isDirector && (
         <div style={card}>
           <p style={sectionTitle}>
-            Enrollment Applications {pendingCount > 0 && (
+            {t.teacher.enrollmentApplications} {pendingCount > 0 && (
               <span style={{
                 background: "var(--error)", color: "#fff", borderRadius: 10,
                 padding: "0.125rem 0.5rem", fontSize: "0.6875rem", marginLeft: "0.5rem",
               }}>
-                {pendingCount} new
+                {pendingCount} {t.teacher.newBadge}
               </span>
             )}
           </p>
 
           {applications.length === 0 ? (
-            <p style={{ ...s, fontSize: "0.875rem", color: "var(--muted)" }}>No applications yet.</p>
+            <p style={{ ...s, fontSize: "0.875rem", color: "var(--muted)" }}>{t.teacher.noApplications}</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
               {applications.map(app => (
@@ -348,13 +350,13 @@ export default function StudioManagementPage() {
                       </p>
                       {app.parent_name && (
                         <p style={{ ...s, fontSize: "0.8125rem", color: "var(--muted)", margin: "0.125rem 0 0" }}>
-                          Parent: {app.parent_name}
+                          {t.teacher.parentLabel} {app.parent_name}
                           {app.contact_phone && ` · ${app.contact_phone}`}
                         </p>
                       )}
                       {app.preferred_days?.length ? (
                         <p style={{ ...s, fontSize: "0.8125rem", color: "var(--muted)", margin: "0.125rem 0 0" }}>
-                          Preferred days: {app.preferred_days.join(", ")}
+                          {t.teacher.preferredDays} {app.preferred_days.join(", ")}
                         </p>
                       ) : null}
                       {app.notes && (
@@ -380,19 +382,19 @@ export default function StudioManagementPage() {
                         onClick={() => handleApplicationStatus(app.id, "approved")}
                         style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 4, border: "none", background: "var(--success)", color: "#fff", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer" }}
                       >
-                        Approve
+                        {t.teacher.approve}
                       </button>
                       <button
                         onClick={() => handleApplicationStatus(app.id, "waitlisted")}
                         style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 4, border: "1px solid var(--border-strong)", background: "none", color: "var(--muted)", fontSize: "0.8125rem", cursor: "pointer" }}
                       >
-                        Waitlist
+                        {t.teacher.waitlist}
                       </button>
                       <button
                         onClick={() => handleApplicationStatus(app.id, "denied")}
                         style={{ ...s, padding: "0.375rem 0.875rem", borderRadius: 4, border: "1px solid var(--error)", background: "none", color: "var(--error)", fontSize: "0.8125rem", cursor: "pointer" }}
                       >
-                        Deny
+                        {t.teacher.deny}
                       </button>
                     </div>
                   )}
@@ -405,7 +407,7 @@ export default function StudioManagementPage() {
 
       {/* Co-teachers */}
       <div style={card}>
-        <p style={sectionTitle}>Teachers</p>
+        <p style={sectionTitle}>{t.teacher.teachers}</p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: isDirector ? "1.5rem" : 0 }}>
           {members.map(m => (
@@ -424,7 +426,7 @@ export default function StudioManagementPage() {
               <div style={{ flex: 1 }}>
                 <p style={{ ...s, fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", margin: 0 }}>
                   {m.display_name}
-                  {m.teacher_id === teacher?.id && " (you)"}
+                  {m.teacher_id === teacher?.id && ` ${t.teacher.you}`}
                 </p>
                 <p style={{ ...s, fontSize: "0.75rem", color: "var(--muted)", margin: 0, textTransform: "capitalize" }}>
                   {m.role}
@@ -435,7 +437,7 @@ export default function StudioManagementPage() {
                   onClick={() => handleRemoveTeacher(m.teacher_id, m.display_name)}
                   style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 4, padding: "0.25rem 0.625rem", fontSize: "0.75rem", color: "var(--muted)", cursor: "pointer" }}
                 >
-                  Remove
+                  {t.teacher.remove}
                 </button>
               )}
             </div>
@@ -465,7 +467,7 @@ export default function StudioManagementPage() {
                 cursor: inviting || !inviteEmail.trim() ? "default" : "pointer",
               }}
             >
-              {inviting ? "Adding…" : "Invite co-teacher"}
+              {inviting ? t.teacher.inviting : t.teacher.inviteCoTeacher}
             </button>
           </form>
         )}
@@ -480,16 +482,16 @@ export default function StudioManagementPage() {
         )}
 
         <p style={{ ...s, fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.75rem", lineHeight: 1.5 }}>
-          Co-teachers must already have a Cadenza teacher account.
+          {t.teacher.coTeacherNote}
         </p>
       </div>
 
       {/* Student assignments */}
       {isDirector && allStudents.length > 0 && (
         <div style={card}>
-          <p style={sectionTitle}>Student Assignments</p>
+          <p style={sectionTitle}>{t.teacher.studentAssignments}</p>
           <p style={{ ...s, fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1rem", lineHeight: 1.5 }}>
-            Reassign students between teachers. The full lesson history is preserved.
+            {t.teacher.studentAssignmentsDesc}
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
@@ -504,7 +506,7 @@ export default function StudioManagementPage() {
                     {student.display_name}
                   </span>
                   <span style={{ ...s, fontSize: "0.8125rem", color: "var(--muted)" }}>
-                    {asgn ? asgn.teacher_name : "Unassigned"}
+                    {asgn ? asgn.teacher_name : t.common.unassigned}
                   </span>
 
                   {reassigningStudent === student.id ? (
@@ -518,7 +520,7 @@ export default function StudioManagementPage() {
                           fontFamily: "Inter, sans-serif", background: "var(--cream)", color: "var(--charcoal)",
                         }}
                       >
-                        <option value="">Select teacher…</option>
+                        <option value="">{t.teacher.selectTeacher}</option>
                         {members.map(m => (
                           <option key={m.teacher_id} value={m.teacher_id}>{m.display_name}</option>
                         ))}
@@ -533,13 +535,13 @@ export default function StudioManagementPage() {
                           cursor: !reassignTeacherId || reassigning ? "default" : "pointer",
                         }}
                       >
-                        {reassigning ? "…" : "Save"}
+                        {reassigning ? "…" : t.common.save}
                       </button>
                       <button
                         onClick={() => { setReassigningStudent(null); setReassignTeacherId(""); }}
                         style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 4, padding: "0.375rem 0.625rem", fontSize: "0.8125rem", color: "var(--muted)", cursor: "pointer" }}
                       >
-                        Cancel
+                        {t.common.cancel}
                       </button>
                     </div>
                   ) : (
@@ -547,7 +549,7 @@ export default function StudioManagementPage() {
                       onClick={() => { setReassigningStudent(student.id); setReassignTeacherId(asgn?.teacher_id ?? ""); }}
                       style={{ ...s, background: "none", border: "1px solid var(--border-strong)", borderRadius: 4, padding: "0.25rem 0.625rem", fontSize: "0.75rem", color: "var(--muted)", cursor: "pointer" }}
                     >
-                      Reassign
+                      {t.teacher.reassign}
                     </button>
                   )}
                 </div>

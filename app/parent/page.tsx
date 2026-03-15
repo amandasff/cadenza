@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
+import { useI18n } from "../../lib/context/I18nContext";
 
 interface ChildInfo {
   studentId: string;
@@ -20,6 +21,7 @@ interface ChildInfo {
 export default function ParentDashboard() {
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
   const supabase = getSupabaseBrowserClient();
 
   const [children, setChildren] = useState<ChildInfo[]>([]);
@@ -116,19 +118,19 @@ export default function ParentDashboard() {
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "2rem 1.5rem" }}>
       <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.375rem", letterSpacing: "-0.01em" }}>
-        My Children
+        {t.student.myChildren}
       </h1>
       <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 1.75rem" }}>
-        Track practice and lesson updates from your teacher.
+        {t.student.trackPracticeDesc}
       </p>
 
       {children.length === 0 ? (
         <div className="card-base" style={{ padding: "2rem", textAlign: "center" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", marginBottom: "0.75rem" }}>
-            No students linked yet.
+            {t.student.noStudentsLinked}
           </div>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-            Ask your teacher to link your account to your child's profile.
+            {t.student.askTeacherToLink}
           </div>
         </div>
       ) : (
@@ -154,11 +156,11 @@ export default function ParentDashboard() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem" }}>
                 <div style={{ background: "var(--cream)", borderRadius: 3, padding: "0.625rem 0.75rem" }}>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "1.125rem", fontWeight: 300, color: "var(--charcoal)", lineHeight: 1 }}>{child.practiceMinutesThisWeek}</div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Min this week</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>{t.student.minThisWeek}</div>
                 </div>
                 <div style={{ background: "var(--cream)", borderRadius: 3, padding: "0.625rem 0.75rem" }}>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "1.125rem", fontWeight: 300, color: "var(--charcoal)", lineHeight: 1 }}>{child.pendingAssignments}</div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Assignments</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>{t.student.assignments}</div>
                 </div>
                 <div style={{ background: "var(--cream)", borderRadius: 3, padding: "0.625rem 0.75rem" }}>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 400, color: "var(--charcoal)", lineHeight: 1.3 }}>
@@ -166,7 +168,7 @@ export default function ParentDashboard() {
                       ? new Date(child.nextLessonAt).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })
                       : "—"}
                   </div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>Next lesson</div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>{t.student.nextLesson}</div>
                 </div>
               </div>
             </button>

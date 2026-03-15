@@ -12,22 +12,23 @@ import { useRouter } from "next/navigation";
 import PushSubscribeButton from "../../components/PushSubscribeButton";
 import { usePractice } from "../../lib/context/PracticeContext";
 import Metronome from "../../components/Metronome";
+import { useI18n } from "../../lib/context/I18nContext";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
-// The four always-visible sections
+// The four always-visible sections — labels resolved via i18n at render time
 const SECTIONS = [
-  { category: "technique",    label: "Technique",          color: "var(--sage)" },
-  { category: "etude",        label: "Études",             color: "var(--sky)" },
-  { category: "repertoire",   label: "Repertoire",         color: "var(--rose)" },
-  { category: "theory",       label: "Theory",             color: "var(--butter)" },
-  { category: "ear_training", label: "Ear & Sight Training", color: "var(--lavender)" },
+  { category: "technique",    color: "var(--sage)" },
+  { category: "etude",        color: "var(--sky)" },
+  { category: "repertoire",   color: "var(--rose)" },
+  { category: "theory",       color: "var(--butter)" },
+  { category: "ear_training", color: "var(--lavender)" },
 ];
 
-// Extra categories that appear only when populated
-const EXTRA_CATEGORIES: Record<string, { label: string; color: string }> = {
-  sight_reading: { label: "Sight Reading", color: "var(--muted)" },
-  free:          { label: "Other",         color: "var(--muted)" },
+// Extra categories that appear only when populated — labels resolved via i18n at render time
+const EXTRA_CATEGORY_COLORS: Record<string, string> = {
+  sight_reading: "var(--muted)",
+  free:          "var(--muted)",
 };
 
 function getSectionCategory(goal: GoalWithPiece): string {
@@ -88,6 +89,20 @@ export default function ThisWeek() {
   const student = user as Student;
   const router = useRouter();
   const practice = usePractice();
+  const { t } = useI18n();
+
+  function getSectionLabel(category: string): string {
+    const map: Record<string, string> = {
+      technique: t.student.sectionTechnique,
+      etude: t.student.sectionEtude,
+      repertoire: t.student.sectionRepertoire,
+      theory: t.student.sectionTheory,
+      ear_training: t.student.sectionEarTraining,
+      sight_reading: t.student.sectionSightReading,
+      free: t.student.sectionOther,
+    };
+    return map[category] ?? category;
+  }
 
   const [goals, setGoals] = useState<GoalWithPiece[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +224,7 @@ export default function ThisWeek() {
   const grouped = groupGoals(goals);
 
   // Collect extra categories (non-standard) that have goals
-  const extraCategories = Object.keys(EXTRA_CATEGORIES).filter(cat => grouped.has(cat));
+  const extraCategories = Object.keys(EXTRA_CATEGORY_COLORS).filter(cat => grouped.has(cat));
 
   const totalAssignments = goals.length;
 
@@ -251,17 +266,17 @@ export default function ThisWeek() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
             <div>
               <div style={{ fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.375rem" }}>
-                {practice.isActive ? "Session in progress" : "Ready to play?"}
+                {practice.isActive ? t.student.sessionInProgress : t.student.readyToPlay}
               </div>
               <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.875rem", lineHeight: 1, marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>
-                {practice.isActive ? "Continue practicing" : "Start practicing"}
+                {practice.isActive ? t.student.continuePracticing : t.student.startPracticing}
               </div>
               <div style={{ fontSize: "0.8125rem", opacity: 0.55, fontFamily: "Inter, sans-serif" }}>
                 {practice.isActive
                   ? `${String(Math.floor(practice.elapsed / 60)).padStart(2, "0")}:${String(practice.elapsed % 60).padStart(2, "0")} · ${practice.recording ? "Recording" : "Paused"}`
                   : totalAssignments > 0
-                    ? `${totalAssignments} goal${totalAssignments !== 1 ? "s" : ""} to work on`
-                    : "Tap to start recording"}
+                    ? `${totalAssignments} ${t.student.goalsToWorkOn}`
+                    : t.student.tapToStartRecording}
               </div>
             </div>
             <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, backdropFilter: "blur(4px)" }}>
@@ -312,7 +327,7 @@ export default function ThisWeek() {
                 {teacherName ?? "Your teacher"}
               </div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>
-                Tap to open chat
+                {t.student.tapToOpenChat}
               </div>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -438,7 +453,7 @@ export default function ThisWeek() {
               color: "var(--border-strong)",
               background: "var(--cream)",
             }}>
-              Type a message...
+              {t.student.typeAMessage}
             </div>
             <div style={{
               width: 30, height: 30, borderRadius: "50%",
@@ -517,7 +532,7 @@ export default function ThisWeek() {
             <span style={{ fontSize: "1.125rem", flexShrink: 0 }}>🎵</span>
             <div>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                Next lesson
+                {t.student.nextLesson}
               </div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>
                 {new Date(nextLesson.scheduled_at).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
@@ -560,7 +575,7 @@ export default function ThisWeek() {
               fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem",
               letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--charcoal)",
             }}>
-              Assignments this week
+              {t.student.assignmentsThisWeek}
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -624,7 +639,7 @@ export default function ThisWeek() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      Mark Complete
+                      {t.student.markComplete}
                     </button>
                   </div>
                 </div>
@@ -646,6 +661,7 @@ export default function ThisWeek() {
           <>
             {/* Always-visible sections */}
             {SECTIONS.map(section => {
+              const sectionLabel = getSectionLabel(section.category);
               const bookGroups = grouped.get(section.category) ?? [];
               const isEmpty = bookGroups.length === 0;
 
@@ -670,7 +686,7 @@ export default function ThisWeek() {
                       textTransform: "uppercase",
                       color: "var(--charcoal)",
                     }}>
-                      {section.label}
+                      {sectionLabel}
                     </span>
                   </div>
 
@@ -690,7 +706,7 @@ export default function ThisWeek() {
                         fontStyle: "italic",
                         letterSpacing: "0.01em",
                       }}>
-                        No assignments this week
+                        {t.student.noAssignmentsThisWeek}
                       </span>
                     </div>
                   ) : (
@@ -763,7 +779,7 @@ export default function ThisWeek() {
                                         padding: "0.125rem 0", whiteSpace: "nowrap",
                                       }}
                                     >
-                                      Practice →
+                                      {t.student.practiceArrow}
                                     </button>
                                   </div>
                                 )}
@@ -851,7 +867,7 @@ export default function ThisWeek() {
 
             {/* Extra categories (Sight Reading, Other) — only if populated */}
             {extraCategories.map(cat => {
-              const meta = EXTRA_CATEGORIES[cat];
+              const meta = { label: getSectionLabel(cat), color: EXTRA_CATEGORY_COLORS[cat] ?? "var(--muted)" };
               const bookGroups = grouped.get(cat) ?? [];
               return (
                 <div key={cat}>
@@ -975,7 +991,7 @@ export default function ThisWeek() {
             padding: "1.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
           }}>
             <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "1.25rem", fontWeight: 600, color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
-              How did it go?
+              {t.student.howDidItGo}
             </h3>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.25rem" }}>
               {ratingAssignment.title}
@@ -983,7 +999,7 @@ export default function ThisWeek() {
 
             <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1.25rem" }}>
               {(["struggling", "getting_there", "nailed_it"] as SelfRating[]).map(r => {
-                const config = { struggling: { emoji: "😓", label: "Still struggling" }, getting_there: { emoji: "🙂", label: "Getting there" }, nailed_it: { emoji: "🎉", label: "Nailed it!" } }[r];
+                const config = { struggling: { emoji: "😓", label: t.student.stillStruggling }, getting_there: { emoji: "🙂", label: t.student.gettingThere }, nailed_it: { emoji: "🎉", label: t.student.nailedIt } }[r];
                 const selected = ratingValue === r;
                 return (
                   <button
@@ -1007,7 +1023,7 @@ export default function ThisWeek() {
             <textarea
               value={ratingNote}
               onChange={e => setRatingNote(e.target.value)}
-              placeholder="Optional note for your teacher…"
+              placeholder={t.student.optionalNoteForTeacher}
               rows={2}
               style={{
                 width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)",
@@ -1026,7 +1042,7 @@ export default function ThisWeek() {
                   color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer",
                 }}
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleCompleteAssignment}
@@ -1039,7 +1055,7 @@ export default function ThisWeek() {
                   cursor: ratingValue ? "pointer" : "not-allowed",
                 }}
               >
-                {ratingSaving ? "Saving…" : "Save"}
+                {ratingSaving ? t.common.saving : t.common.save}
               </button>
             </div>
           </div>

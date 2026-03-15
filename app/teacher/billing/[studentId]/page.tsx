@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
 import { BillingService } from "../../../../lib/services/BillingService";
 import { Teacher } from "../../../../lib/models/Teacher";
 import type { BillingConfigRow, TuitionRecordRow, BillingChargeRow, PaymentMethod } from "../../../../lib/types";
+import { useI18n } from "../../../../lib/context/I18nContext";
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -24,6 +25,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
   const router = useRouter();
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
   const supabase = getSupabaseBrowserClient();
   const billing = BillingService.create(supabase);
 
@@ -181,7 +183,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
           fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", fontWeight: 600,
           color: outstanding > 0 ? "#c0392b" : "var(--sage)",
         }}>
-          {outstanding > 0 ? `${fmt(outstanding)} outstanding` : "All paid up ✓"}
+          {outstanding > 0 ? `${fmt(outstanding)} ${t.billing.outstanding}` : t.billing.allPaidUp}
         </div>
       </div>
 
@@ -192,22 +194,22 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
           {/* Billing config */}
           <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
-              Monthly Rate
+              {t.billing.monthlyRateSection}
             </div>
             <form onSubmit={saveConfig} style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
               <div style={{ flex: "0 0 120px" }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>Rate ($/month)</label>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.billing.ratePerMonth}</label>
                 <div style={{ position: "relative" }}>
                   <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>$</span>
                   <input value={rateInput} onChange={e => setRateInput(e.target.value)} type="number" min="0" step="0.01" required style={{ ...inp, paddingLeft: "1.5rem" }} />
                 </div>
               </div>
               <div style={{ flex: "0 0 100px" }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>Due on day</label>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.billing.dueOnDay}</label>
                 <input value={billingDay} onChange={e => setBillingDay(Number(e.target.value))} type="number" min="1" max="28" style={inp} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>Notes</label>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.billing.notes}</label>
                 <input value={configNotes} onChange={e => setConfigNotes(e.target.value)} placeholder="Optional" style={inp} />
               </div>
               <button type="submit" disabled={savingConfig} style={{
@@ -216,7 +218,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                 fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
                 whiteSpace: "nowrap", opacity: savingConfig ? 0.5 : 1,
               }}>
-                {savingConfig ? "Saving…" : config ? "Update" : "Set rate"}
+                {savingConfig ? t.common.saving : config ? t.billing.update : t.billing.setRate}
               </button>
             </form>
           </div>
@@ -225,7 +227,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
           <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                Tuition
+                {t.billing.tuitionSection}
               </div>
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <select value={payMethod} onChange={e => setPayMethod(e.target.value as PaymentMethod)}
@@ -238,7 +240,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                     background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
                     fontSize: "0.75rem", cursor: "pointer", whiteSpace: "nowrap", opacity: addingMonth ? 0.5 : 1,
                   }}>
-                    + This month
+                    {t.billing.thisMonth}
                   </button>
                 )}
               </div>
@@ -246,7 +248,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
 
             {records.length === 0 ? (
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", padding: "0.5rem 0" }}>
-                No tuition records yet. {config ? "Click \"+ This month\" to add one." : "Set a monthly rate first."}
+                {t.billing.noTuitionRecords} {config ? t.billing.noTuitionRecordsWithConfig : t.billing.setRateFirst}
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -263,7 +265,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                       </div>
                       {r.status === "paid" && r.paid_at && (
                         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                          Paid {new Date(r.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })} · {r.payment_method}
+                          {t.billing.paidOn} {new Date(r.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })} · {r.payment_method}
                         </div>
                       )}
                     </div>
@@ -281,7 +283,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                             fontSize: "0.6875rem", fontWeight: 500, cursor: "pointer", opacity: markingPaid === r.id ? 0.5 : 1,
                           }}
                         >
-                          Mark paid
+                          {t.billing.markPaid}
                         </button>
                       ) : (
                         <button
@@ -293,7 +295,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                             fontSize: "0.6875rem", cursor: "pointer", opacity: markingPaid === r.id ? 0.5 : 1,
                           }}
                         >
-                          Unpaid
+                          {t.billing.markUnpaid}
                         </button>
                       )}
                     </div>
@@ -307,14 +309,14 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
           <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                Additional Charges
+                {t.billing.additionalCharges}
               </div>
               <button onClick={() => setShowChargeForm(v => !v)} style={{
                 padding: "0.25rem 0.75rem", borderRadius: 3, border: "1px solid var(--border-strong)",
                 background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
                 fontSize: "0.75rem", cursor: "pointer",
               }}>
-                + Add charge
+                + {t.billing.addCharge}
               </button>
             </div>
 
@@ -335,14 +337,14 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                   fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
                   opacity: addingCharge ? 0.5 : 1, whiteSpace: "nowrap",
                 }}>
-                  {addingCharge ? "Adding…" : "Add"}
+                  {addingCharge ? t.billing.addingCharge : t.common.add}
                 </button>
               </form>
             )}
 
             {charges.length === 0 ? (
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", padding: "0.25rem 0" }}>
-                No additional charges.
+                {t.billing.noAdditionalCharges}
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -357,7 +359,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                       <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)" }}>{c.description}</div>
                       <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
                         {new Date(c.charge_date).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
-                        {c.status === "paid" && c.paid_at ? ` · Paid ${new Date(c.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
+                        {c.status === "paid" && c.paid_at ? ` · ${t.billing.paidOn} ${new Date(c.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
                       </div>
                     </div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
@@ -372,7 +374,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
                           fontSize: "0.6875rem", fontWeight: 500, cursor: "pointer",
                         }}
                       >
-                        Mark paid
+                        {t.billing.markPaid}
                       </button>
                     )}
                   </div>
@@ -394,7 +396,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
               cursor: "pointer",
             }}
           >
-            Print / view invoice →
+            {t.billing.printViewInvoice}
           </a>
         </>
       )}
@@ -406,6 +408,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
 }
 
 function ParentLinkSection({ studentId, teacherId: _teacherId, supabase }: { studentId: string; teacherId: string; supabase: ReturnType<typeof import("../../../../lib/supabase/client").getSupabaseBrowserClient> }) {
+  const { t } = useI18n();
   const [links, setLinks] = React.useState<{ id: string; parent_id: string; parent_name: string }[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [email, setEmail] = React.useState("");
@@ -464,10 +467,10 @@ function ParentLinkSection({ studentId, teacherId: _teacherId, supabase }: { stu
   return (
     <div className="card-base" style={{ padding: "1.25rem", marginTop: "1.25rem" }}>
       <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
-        Parent / Guardian Access
+        {t.billing.parentGuardianAccess}
       </div>
       {loading ? null : links.length === 0 ? (
-        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.875rem" }}>No parents linked yet.</div>
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.875rem" }}>{t.billing.noParentsLinked}</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.875rem" }}>
           {links.map(l => (
@@ -475,20 +478,20 @@ function ParentLinkSection({ studentId, teacherId: _teacherId, supabase }: { stu
               <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)" }}>
                 {l.parent_name}
               </span>
-              <button onClick={() => unlink(l.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", padding: 0 }}>Remove</button>
+              <button onClick={() => unlink(l.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", padding: 0 }}>{t.billing.removeParent}</button>
             </div>
           ))}
         </div>
       )}
       <form onSubmit={linkParent} style={{ display: "flex", gap: "0.5rem" }}>
-        <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Parent's email address" style={{ ...inp, flex: 1 }} />
+        <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder={t.billing.parentEmailPlaceholder} style={{ ...inp, flex: 1 }} />
         <button type="submit" disabled={linking} style={{ padding: "0.5rem 0.875rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer", opacity: linking ? 0.5 : 1, whiteSpace: "nowrap" }}>
-          {linking ? "Linking…" : "Link parent"}
+          {linking ? t.billing.linking : t.billing.linkParent}
         </button>
       </form>
       {linkError && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--rose)", marginTop: "0.5rem" }}>{linkError}</div>}
       <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-        The parent must first create an account at cadenza with the "Parent" role, then you can link them here.
+        {t.billing.parentAccountNote}
       </div>
     </div>
   );
