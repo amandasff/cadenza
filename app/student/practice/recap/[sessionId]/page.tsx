@@ -148,31 +148,9 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
             </div>
           </div>
 
-          {feedback ? (
-            <p style={{
-              fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
-              color: "var(--charcoal)", lineHeight: 1.7, margin: 0,
-              whiteSpace: "pre-wrap",
-            }}>
-              {feedback}
-            </p>
-          ) : polling ? (
-            <div>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", marginBottom: "0.625rem" }}>
-                Reviewing your recording…
-              </div>
-              <div style={{ fontFamily: "monospace", fontSize: "0.875rem", color: "var(--charcoal)", letterSpacing: "0.15em" }}>
-                {dots}
-              </div>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-                Usually takes 15–30 seconds
-              </div>
-            </div>
-          ) : (
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
-              Your recording has been sent to your teacher. Check back in a moment for coaching notes.
-            </p>
-          )}
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
+            Coming soon — AI coaching feedback after each session.
+          </p>
         </div>
 
         {/* Note about teacher */}
