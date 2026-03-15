@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
+import { I18nProvider } from "@/lib/context/I18nContext";
 import LessonProviderClient from "@/components/LessonProviderClient";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import SupportChatWidget from "@/components/SupportChatWidget";
@@ -49,11 +50,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body suppressHydrationWarning>
         <AuthProvider>
-          <ThemeProvider>
-            <LessonProviderClient>{children}</LessonProviderClient>
-            <SupportChatWidget />
-            <FeedbackWidget />
-          </ThemeProvider>
+          <I18nProvider>
+            <ThemeProvider>
+              <LessonProviderClient>{children}</LessonProviderClient>
+              <SupportChatWidget />
+              <FeedbackWidget />
+            </ThemeProvider>
+          </I18nProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

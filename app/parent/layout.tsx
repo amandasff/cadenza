@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
@@ -69,6 +70,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
           <button onClick={toggleTheme} style={{ width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)", textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase" }}>
             {theme === "light" ? "Light mode" : theme === "dark" ? "Dark mode" : "🎨 Fun mode"}
           </button>
+          <LanguageSwitcher />
           <button onClick={() => signOut()} style={{ width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2, padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 500, color: "var(--muted)", textAlign: "left", letterSpacing: "0.04em", textTransform: "uppercase" }}>
             Sign out
           </button>

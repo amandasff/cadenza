@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Teacher } from "../../lib/models/Teacher";
 import { RecordingProvider } from "../../lib/context/RecordingContext";
 import RecordingIndicator from "../../components/RecordingIndicator";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 
 const tabs = [
@@ -328,6 +329,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           >
             {theme === "light" ? "Light mode" : theme === "dark" ? "Dark mode" : "🎨 Fun mode"}
           </button>
+          <LanguageSwitcher />
           <Link
             href="/teacher/settings"
             style={{

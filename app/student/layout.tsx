@@ -12,6 +12,7 @@ import { RecordingProvider } from "../../lib/context/RecordingContext";
 import MiniPlayer from "../../components/MiniPlayer";
 import PracticePip from "../../components/PracticePip";
 import RecordingIndicator from "../../components/RecordingIndicator";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 
 interface SiblingProfile {
@@ -502,6 +503,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           >
             {theme === "light" ? "Light mode" : theme === "dark" ? "Dark mode" : "🎨 Fun mode"}
           </button>
+          <LanguageSwitcher />
           <Link
             href="/student/settings"
             style={{
