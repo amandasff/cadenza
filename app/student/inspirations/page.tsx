@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
-import type { Inspiration, YouTubeResult, Student } from "../../../lib/types";
+import type { Inspiration, YouTubeResult } from "../../../lib/types";
+import type { Student } from "../../../lib/models/Student";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import { usePlayer } from "../../../lib/context/PlayerContext";
 
