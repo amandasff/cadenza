@@ -33,7 +33,7 @@ export default function BillingPage() {
   useEffect(() => {
     if (!teacher?.studioId) return;
     loadData();
-  }, [teacher?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [teacher?.id, teacher?.studioId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadData() {
     setLoading(true);

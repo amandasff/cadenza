@@ -26,13 +26,11 @@ export async function POST(request: NextRequest) {
   // Since we don't have direct access, look up via a join on auth.users email
   const { data: matchedUsers } = await supabase.rpc("get_user_id_by_email", { email_input: email.trim().toLowerCase() });
 
-  let parentId: string | null = null;
-  if (matchedUsers && matchedUsers.length > 0) {
-    parentId = matchedUsers[0].id;
-  }
+  const users = (matchedUsers as Array<{ id: string }> | null) ?? [];
+  const parentId = users[0]?.id ?? null;
 
   if (!parentId) {
-    return Response.json({ error: "No account found with that email. The parent must sign up first with the Parent role." }, { status: 404 });
+    return Response.json({ error: "No account found with that email. Ask the parent to sign up at cadenza-rosy.vercel.app and choose the Parent role." }, { status: 404 });
   }
 
   // Verify the found user is a parent

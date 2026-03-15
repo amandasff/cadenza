@@ -450,7 +450,8 @@ function ParentLinkSection({ studentId, teacherId: _teacherId, supabase }: { stu
   }
 
   async function unlink(linkId: string) {
-    await supabase.from("parent_student_links").delete().eq("id", linkId);
+    const { error } = await supabase.from("parent_student_links").delete().eq("id", linkId);
+    if (error) { setLinkError("Failed to remove link: " + error.message); return; }
     await loadLinks();
   }
 
