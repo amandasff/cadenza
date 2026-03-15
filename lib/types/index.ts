@@ -181,6 +181,16 @@ export interface Inspiration {
   thumbnail_url: string | null;
   notes: string | null;
   collection_name: string | null;
+  is_public: boolean;
+  created_at: string;
+}
+
+export interface InspirationComment {
+  id: string;
+  inspiration_id: string;
+  user_id: string;
+  display_name: string;
+  content: string;
   created_at: string;
 }
 

@@ -3,7 +3,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import type { Inspiration, YouTubeResult } from "../../../lib/types";
-import type { Student } from "../../../lib/models/Student";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import { usePlayer } from "../../../lib/context/PlayerContext";
 
@@ -28,12 +27,6 @@ export default function InspirationPage() {
   const [noteText, setNoteText] = useState("");
   const [saveStatus, setSaveStatus] = useState<{ id: string; state: "saving" | "saved" | "error" } | null>(null);
 
-  // Share-to-teacher
-  const [teacherId, setTeacherId] = useState<string | null>(null);
-  const [sharing, setSharing] = useState(false);
-  const [shareSuccess, setShareSuccess] = useState(false);
-
-  const student = user as Student | null;
 
   // Load inspirations
   const load = useCallback(async () => {
@@ -49,13 +42,6 @@ export default function InspirationPage() {
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
-
-  // Fetch teacher ID for share feature
-  useEffect(() => {
-    if (!student?.studioId) return;
-    supabase.from("studios").select("owner_id").eq("id", student.studioId).single()
-      .then(({ data }: { data: { owner_id: string } | null }) => setTeacherId(data?.owner_id ?? null));
-  }, [student?.studioId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close collection picker on outside click
   useEffect(() => {
@@ -135,27 +121,18 @@ export default function InspirationPage() {
     }
   }
 
-  // ── Share playlist to teacher ───────────────────────────────────────────────
-
-  async function sharePlaylistWithTeacher() {
-    if (!student?.studioId || !teacherId) return;
-    const items = activeCollection === "all" ? inspirations : filtered;
-    if (items.length === 0) return;
-    setSharing(true);
-
-    const collectionLabel = activeCollection === "all" ? "my Inspirations" : `my "${activeCollection}" playlist`;
-    const lines = items.map(i => `• ${i.title}\n  https://www.youtube.com/watch?v=${i.youtube_id}`);
-    const content = `🎵 I wanted to share ${collectionLabel}!\n\n${lines.join("\n")}\n\nLet me know what you think!`;
-
-    await fetch("/api/messages/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studioId: student.studioId, content, recipientId: teacherId }),
-    });
-
-    setSharing(false);
-    setShareSuccess(true);
-    setTimeout(() => setShareSuccess(false), 3000);
+  async function togglePublic(ins: Inspiration) {
+    const next = !ins.is_public;
+    setSaveStatus({ id: ins.id, state: "saving" });
+    const { error } = await supabase.from("inspirations").update({ is_public: next }).eq("id", ins.id);
+    if (error) {
+      setSaveStatus({ id: ins.id, state: "error" });
+      setTimeout(() => setSaveStatus(null), 4000);
+    } else {
+      setInspirations(prev => prev.map(i => i.id === ins.id ? { ...i, is_public: next } : i));
+      setSaveStatus({ id: ins.id, state: "saved" });
+      setTimeout(() => setSaveStatus(null), 1500);
+    }
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -214,27 +191,9 @@ export default function InspirationPage() {
             ))}
           </div>
 
-          {/* Share + privacy row */}
-          <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.625rem", alignItems: "center", flexWrap: "wrap" }}>
-            {teacherId && (
-              <button
-                onClick={sharePlaylistWithTeacher}
-                disabled={sharing || filtered.length === 0}
-                style={{
-                  padding: "0.375rem 0.875rem", borderRadius: 99,
-                  border: "none",
-                  background: shareSuccess ? "#2E7D52" : "var(--charcoal)",
-                  color: "var(--white)",
-                  fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600,
-                  cursor: sharing ? "default" : "pointer", opacity: sharing ? 0.7 : 1,
-                  transition: "background 0.2s",
-                }}
-              >
-                {shareSuccess ? "✓ Sent to teacher!" : sharing ? "Sending…" : `Share ${activeCollection === "all" ? "all" : `"${activeCollection}"`} with teacher`}
-              </button>
-            )}
+          <div style={{ marginTop: "0.625rem" }}>
             <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-              Only you can see your playlists unless you share them
+              Use the "Visible to teacher" toggle on each card to share individual picks
             </span>
           </div>
         </div>
@@ -361,6 +320,23 @@ export default function InspirationPage() {
                         Remove
                       </button>
                     </div>
+
+                    {/* Visible to teacher toggle */}
+                    <button
+                      onClick={() => togglePublic(ins)}
+                      title={ins.is_public ? "Your teacher can see this — click to make private" : "Only you can see this — click to share with teacher"}
+                      style={{
+                        width: "100%", padding: "0.3rem 0.5rem", borderRadius: 6,
+                        border: `1px solid ${ins.is_public ? "#2E7D52" : "var(--border)"}`,
+                        background: ins.is_public ? "#F0FBF4" : "none",
+                        fontFamily: "Inter, sans-serif", fontSize: "0.6875rem",
+                        color: ins.is_public ? "#2E7D52" : "var(--muted)",
+                        cursor: "pointer", textAlign: "left", fontWeight: ins.is_public ? 600 : 400,
+                        display: "flex", alignItems: "center", gap: "0.35rem",
+                      }}
+                    >
+                      {ins.is_public ? "👁 Visible to teacher" : "🔒 Private — share with teacher?"}
+                    </button>
 
                     {/* Playlist row */}
                     <div style={{ position: "relative" }} data-col-picker>
