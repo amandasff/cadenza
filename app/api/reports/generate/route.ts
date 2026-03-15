@@ -43,12 +43,14 @@ export async function POST(request: NextRequest) {
     supabase.from("goals")
       .select("title, status, points, practice_area")
       .eq("student_id", studentId)
+      .eq("teacher_id", user.id)
       .in("status", ["current", "completed"])
       .order("created_at", { ascending: false })
       .limit(20),
     supabase.from("pieces")
       .select("title, composer, status, category")
       .eq("student_id", studentId)
+      .eq("teacher_id", user.id)
       .order("created_at", { ascending: false })
       .limit(15),
     supabase.from("practice_sessions")
@@ -76,8 +78,8 @@ export async function POST(request: NextRequest) {
     `- ${g.title} (${g.status}, ${g.practice_area})`
   ).join("\n") || "No goals recorded";
 
-  const piecesText = (pieces ?? []).map((p2: { title: string; composer: string | null; status: string; category: string }) =>
-    `- ${p2.title}${p2.composer ? ` — ${p2.composer}` : ""} (${p2.status?.replace(/_/g, " ")}, ${p2.category})`
+  const piecesText = (pieces ?? []).map((piece: { title: string; composer: string | null; status: string; category: string }) =>
+    `- ${piece.title}${piece.composer ? ` — ${piece.composer}` : ""} (${piece.status?.replace(/_/g, " ")}, ${piece.category})`
   ).join("\n") || "No pieces recorded";
 
   const prompt = `You are helping a music teacher write a formal progress report for a student.
