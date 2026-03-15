@@ -245,8 +245,8 @@ function PracticeInner() {
       if (!logRes.ok) throw new Error("Failed to save session");
       const { session: sessionData } = await logRes.json() as { session: { id: string } };
 
-      // Fire AI analysis in background — don't block submit flow
-      if (sessionData?.id) {
+      // Fire AI analysis in background — only if recording was captured
+      if (recordingUrl && sessionData?.id) {
         fetch("/api/practice/analyze-recording", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
