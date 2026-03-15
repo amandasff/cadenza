@@ -4,6 +4,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import type { PortfolioItemRow } from "../../../lib/services/PortfolioService";
 import AudioPlayer from "../../../components/AudioPlayer";
 import { usePlayer } from "../../../lib/context/PlayerContext";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 type Comment = {
   id: string;
@@ -33,14 +34,14 @@ type ProfileInfo = {
 };
 
 
-function formatRelative(iso: string) {
+function formatRelative(iso: string, todayLabel: string, yesterdayLabel: string, daysAgoLabel: string, weekAgoLabel: string, monthAgoLabel: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+  if (days === 0) return todayLabel;
+  if (days === 1) return yesterdayLabel;
+  if (days < 7) return `${days}${daysAgoLabel}`;
+  if (days < 30) return `${Math.floor(days / 7)}${weekAgoLabel}`;
+  return `${Math.floor(days / 30)}${monthAgoLabel}`;
 }
 
 function VideoThumbnail({ src }: { src: string }) {
@@ -64,6 +65,7 @@ const Avatar = ({ url, name, size }: { url?: string | null; name?: string | null
 
 export default function DiscoverPage() {
   const { playDiscover, stopDiscover, setSuppressMiniPlayer } = usePlayer();
+  const { t } = useI18n();
   const [tab, setTab] = useState<"everyone" | "following">("everyone");
 
   // When navigating away, release the mini-player suppression so audio keeps playing
@@ -407,10 +409,10 @@ export default function DiscoverPage() {
         <div style={{ padding: "1.25rem 1rem 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
             <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.625rem", color: "var(--charcoal)", letterSpacing: "-0.01em", margin: 0 }}>
-              Discover
+              {t.student.discoverTitle}
             </h1>
             <p style={{ color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", margin: "0.125rem 0 0.75rem" }}>
-              Raw, unedited practice — real musicians, real progress
+              {t.student.discoverSubtitle}
             </p>
           </div>
           {currentUserId && (
@@ -419,23 +421,23 @@ export default function DiscoverPage() {
               style={{ background: "none", border: "none", cursor: "pointer", padding: "0.25rem 0 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem" }}
             >
               <Avatar url={currentUserAvatar} name={currentUserName} size={32} />
-              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>My profile</span>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>{t.student.myProfile}</span>
             </button>
           )}
         </div>
         {/* Tabs */}
         <div style={{ display: "flex", padding: "0 1rem" }}>
-          {(["everyone", "following"] as const).map(t => (
-            <button key={t} onClick={() => switchTab(t)} style={{
+          {(["everyone", "following"] as const).map(tabKey => (
+            <button key={tabKey} onClick={() => switchTab(tabKey)} style={{
               background: "none", border: "none", cursor: "pointer", padding: "0.5rem 1rem 0.625rem",
-              fontFamily: "Inter, sans-serif", fontWeight: tab === t ? 600 : 400, fontSize: "0.875rem",
-              color: tab === t ? "var(--charcoal)" : "var(--muted)",
-              borderBottom: `2px solid ${tab === t ? "var(--charcoal)" : "transparent"}`,
+              fontFamily: "Inter, sans-serif", fontWeight: tab === tabKey ? 600 : 400, fontSize: "0.875rem",
+              color: tab === tabKey ? "var(--charcoal)" : "var(--muted)",
+              borderBottom: `2px solid ${tab === tabKey ? "var(--charcoal)" : "transparent"}`,
               transition: "all 0.15s",
               textTransform: "capitalize",
             }}>
-              {t === "everyone" ? "Everyone" : "Following"}
-              {t === "following" && myFollows.size > 0 && (
+              {tabKey === "everyone" ? t.student.everyoneTab : t.student.followingTab}
+              {tabKey === "following" && myFollows.size > 0 && (
                 <span style={{ marginLeft: "0.375rem", background: "var(--charcoal)", color: "var(--white)", borderRadius: 99, fontSize: "0.5625rem", fontWeight: 600, padding: "0.1rem 0.375rem" }}>
                   {myFollows.size}
                 </span>
@@ -449,7 +451,7 @@ export default function DiscoverPage() {
         <div style={{ padding: "1.5rem" }}>
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 10, padding: "1.25rem" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>
-              Setup required
+              {t.student.setupRequired}
             </div>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: 0 }}>
               Run <code>supabase/discover_social.sql</code> in your Supabase SQL editor to enable social features.
@@ -459,35 +461,35 @@ export default function DiscoverPage() {
       ) : queryError ? (
         <div style={{ padding: "1.5rem" }}>
           <div style={{ background: "var(--peach-bg)", border: "1px solid var(--peach-light)", borderRadius: 4, padding: "1.25rem" }}>
-            <div style={{ fontWeight: 500, fontSize: "0.875rem", color: "var(--peach)", marginBottom: "0.375rem" }}>Could not load feed</div>
+            <div style={{ fontWeight: 500, fontSize: "0.875rem", color: "var(--peach)", marginBottom: "0.375rem" }}>{t.student.couldNotLoadFeed}</div>
             <p style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "var(--peach)", margin: 0 }}>{queryError}</p>
           </div>
         </div>
       ) : tab === "following" && followingLoading ? (
         <div style={{ padding: "2rem", textAlign: "center" }}>
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>Loading…</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>{t.common.loading}…</div>
         </div>
       ) : tab === "following" && myFollows.size === 0 ? (
         <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
           <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--white)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", fontSize: "1.5rem" }}>👥</div>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.5rem" }}>Nobody followed yet</div>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.5rem" }}>{t.student.nobodyFollowedYet}</div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 260, margin: "0 auto" }}>
-            Switch to <strong>Everyone</strong> and tap a musician&rsquo;s avatar to follow them.
+            {t.student.nobodyFollowedDesc}
           </p>
         </div>
       ) : tab === "following" && followingItems.length === 0 && followingLoaded ? (
         <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.5rem" }}>Nothing posted yet</div>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.5rem" }}>{t.student.nothingPostedYet}</div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 260, margin: "0 auto" }}>
-            People you follow haven&rsquo;t shared any clips yet.
+            {t.student.nothingPostedDesc}
           </p>
         </div>
       ) : displayItems.length === 0 ? (
         <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--white)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem", fontSize: "1.75rem" }}>🎸</div>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>Nothing shared yet</div>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{t.student.nothingSharedYet}</div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 280, margin: "0 auto" }}>
-            Clips appear here when musicians share them from Journey.
+            {t.student.nothingSharedDesc}
           </p>
         </div>
       ) : (
@@ -512,15 +514,15 @@ export default function DiscoverPage() {
                       {item.title}
                     </div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", lineHeight: 1.3 }}>
-                      {item.display_name ?? "Musician"}
-                      {myFollows.has(item.student_id) && <span style={{ marginLeft: "0.3rem", color: "var(--sage)", fontWeight: 600 }}>· following</span>}
+                      {item.display_name ?? t.student.musicianFallback}
+                      {myFollows.has(item.student_id) && <span style={{ marginLeft: "0.3rem", color: "var(--sage)", fontWeight: 600 }}>· {t.student.followingBadge}</span>}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.2rem" }}>
                       <span style={{ fontSize: "0.5625rem" }}>{item.user_liked ? "✦" : "✧"}</span>
                       <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>{item.like_count}</span>
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                       <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>{item.comment_count}</span>
-                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", marginLeft: "auto" }}>{formatRelative(item.created_at)}</span>
+                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", marginLeft: "auto" }}>{formatRelative(item.created_at, t.schedule.today, t.schedule.yesterday, t.schedule.daysAgo, t.student.weekAgo, t.student.monthAgo)}</span>
                     </div>
                   </div>
                 </div>
@@ -551,14 +553,14 @@ export default function DiscoverPage() {
                   <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{profileInfo.name}</div>
                   <div style={{ display: "flex", gap: "1rem", marginTop: "0.375rem" }}>
                     <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                      <strong style={{ color: "var(--charcoal)" }}>{profileInfo.follower_count}</strong> followers
+                      <strong style={{ color: "var(--charcoal)" }}>{profileInfo.follower_count}</strong> {t.student.followersLabel}
                     </span>
                     <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                      <strong style={{ color: "var(--charcoal)" }}>{profileInfo.following_count}</strong> following
+                      <strong style={{ color: "var(--charcoal)" }}>{profileInfo.following_count}</strong> {t.student.followingLabel}
                     </span>
                     {profileInfo.streak_days > 0 && (
                       <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                        🔥 <strong style={{ color: "var(--charcoal)" }}>{profileInfo.streak_days}</strong>d streak
+                        🔥 <strong style={{ color: "var(--charcoal)" }}>{profileInfo.streak_days}</strong>{t.student.streakDaysLabel}
                       </span>
                     )}
                   </div>
@@ -578,7 +580,7 @@ export default function DiscoverPage() {
                       opacity: followLoading ? 0.6 : 1,
                     }}
                   >
-                    {followLoading ? "…" : myFollows.has(profileInfo.id) ? "Following" : "Follow"}
+                    {followLoading ? "…" : myFollows.has(profileInfo.id) ? t.student.followingAction : t.student.followAction}
                   </button>
                   {followError && <span style={{ fontSize: "0.625rem", color: "var(--error)", maxWidth: 120, textAlign: "right", lineHeight: 1.3 }}>{followError}</span>}
                   </div>
@@ -594,23 +596,23 @@ export default function DiscoverPage() {
                     <textarea
                       value={bioText}
                       onChange={e => setBioText(e.target.value)}
-                      placeholder="Tell people about your musical journey…"
+                      placeholder={t.student.bioPlaceholder}
                       maxLength={160}
                       rows={2}
                       style={{ width: "100%", boxSizing: "border-box", borderRadius: 8, border: "1px solid var(--border-strong)", padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", resize: "none", lineHeight: 1.5 }}
                     />
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <button onClick={saveBio} disabled={savingBio} style={{ padding: "0.375rem 1rem", borderRadius: 8, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", cursor: "pointer" }}>
-                        {savingBio ? "Saving…" : "Save"}
+                        {savingBio ? t.common.saving : t.common.save}
                       </button>
                       <button onClick={() => { setEditingBio(false); setBioText(profileInfo.bio ?? ""); }} style={{ padding: "0.375rem 0.875rem", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", cursor: "pointer" }}>
-                        Cancel
+                        {t.common.cancel}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button onClick={() => { setEditingBio(true); setBioText(profileInfo.bio ?? ""); }} style={{ background: "none", border: "1px dashed var(--border-strong)", borderRadius: 8, padding: "0.375rem 0.75rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: profileInfo.bio ? "var(--charcoal)" : "var(--muted)", textAlign: "left", width: "100%", lineHeight: 1.5 }}>
-                    {profileInfo.bio ?? "Add a bio…"}
+                    {profileInfo.bio ?? t.student.addABio}
                   </button>
                 )
               ) : profileInfo.bio ? (
@@ -621,7 +623,7 @@ export default function DiscoverPage() {
             {/* Grid */}
             <div style={{ overflowY: "auto", flex: 1, padding: profileItems.length === 0 ? "2rem 1rem" : 0 }}>
               {profileItems.length === 0 ? (
-                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", textAlign: "center", margin: 0, fontStyle: "italic" }}>No clips shared yet</p>
+                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", textAlign: "center", margin: 0, fontStyle: "italic" }}>{t.student.noClipsSharedYet}</p>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, background: "#111" }}>
                   {profileItems.map(pi => (
@@ -671,7 +673,7 @@ export default function DiscoverPage() {
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "#fff", lineHeight: 1.3 }}>{expandedItem.title}</div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "rgba(255,255,255,0.6)", marginTop: "0.25rem" }}>{expandedItem.display_name ?? "Musician"}</div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "rgba(255,255,255,0.6)", marginTop: "0.25rem" }}>{expandedItem.display_name ?? t.student.musicianFallback}</div>
                   </div>
                 </div>
               )}
@@ -688,10 +690,10 @@ export default function DiscoverPage() {
                   <div onClick={() => openProfile(expandedItem.student_id)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", flex: 1, minWidth: 0 }}>
                     <Avatar url={expandedItem.avatar_url} name={expandedItem.display_name} size={28} />
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px" }}>
-                      {expandedItem.display_name ?? "Musician"}
+                      {expandedItem.display_name ?? t.student.musicianFallback}
                     </div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-                      · {formatRelative(expandedItem.created_at)}
+                      · {formatRelative(expandedItem.created_at, t.schedule.today, t.schedule.yesterday, t.schedule.daysAgo, t.student.weekAgo, t.student.monthAgo)}
                     </div>
                   </div>
                   {currentUserId && currentUserId !== expandedItem.student_id && (
@@ -707,7 +709,7 @@ export default function DiscoverPage() {
                         flexShrink: 0, transition: "all 0.15s",
                       }}
                     >
-                      {followLoading ? "…" : myFollows.has(expandedItem.student_id) ? "Following" : "Follow"}
+                      {followLoading ? "…" : myFollows.has(expandedItem.student_id) ? t.student.followingAction : t.student.followAction}
                     </button>
                   )}
                 </div>
@@ -733,7 +735,7 @@ export default function DiscoverPage() {
                     }}
                   >
                     <span style={{ fontSize: "0.875rem" }}>{expandedItem.user_liked ? "✦" : "✧"}</span>
-                    {expandedItem.like_count > 0 ? `${expandedItem.like_count} love` : "Love"}
+                    {expandedItem.like_count > 0 ? `${expandedItem.like_count} ${t.student.loveAction}` : t.student.loveAction}
                   </button>
 
                   <button
@@ -751,7 +753,7 @@ export default function DiscoverPage() {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
-                    {expandedItem.comment_count > 0 ? `${expandedItem.comment_count}` : "Feedback"}
+                    {expandedItem.comment_count > 0 ? `${expandedItem.comment_count}` : t.student.feedbackAction}
                   </button>
 
                   {/* View count */}
@@ -769,7 +771,7 @@ export default function DiscoverPage() {
               {commentsOpen && (
                 <div style={{ padding: "0.875rem 1rem 1.5rem" }}>
                   {(commentsMap[expandedItem.id] ?? []).length === 0 && (
-                    <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 0.875rem", fontStyle: "italic" }}>No feedback yet — be the first!</p>
+                    <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 0.875rem", fontStyle: "italic" }}>{t.student.noFeedbackYet}</p>
                   )}
                   <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1rem" }}>
                     {(commentsMap[expandedItem.id] ?? []).map(c => (
@@ -777,8 +779,8 @@ export default function DiscoverPage() {
                         <Avatar url={null} name={c.display_name} size={30} />
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", gap: "0.4rem", alignItems: "baseline", marginBottom: "0.2rem" }}>
-                            <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{c.display_name ?? "Musician"}</span>
-                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{formatRelative(c.created_at)}</span>
+                            <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{c.display_name ?? t.student.musicianFallback}</span>
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{formatRelative(c.created_at, t.schedule.today, t.schedule.yesterday, t.schedule.daysAgo, t.student.weekAgo, t.student.monthAgo)}</span>
                           </div>
                           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", margin: 0, lineHeight: 1.5 }}>{c.content}</p>
                         </div>
@@ -789,7 +791,7 @@ export default function DiscoverPage() {
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <input
                         type="text"
-                        placeholder="Leave feedback or encouragement…"
+                        placeholder={t.student.leaveFeedbackPlaceholder}
                         value={commentText}
                         onChange={e => setCommentText(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(expandedItem.id); } }}
@@ -800,7 +802,7 @@ export default function DiscoverPage() {
                         disabled={!commentText.trim() || commentPosting}
                         style={{ padding: "0.5rem 1rem", borderRadius: 20, border: "none", background: commentText.trim() ? "var(--charcoal)" : "var(--border)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", cursor: commentText.trim() ? "pointer" : "default", transition: "background 0.15s", flexShrink: 0 }}
                       >
-                        Post
+                        {t.student.postComment}
                       </button>
                     </div>
                   )}
