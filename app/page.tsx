@@ -488,23 +488,23 @@ export default function Home() {
       {/* ── Footer ── */}
       <div style={{ padding: "1rem 2rem", background: "#111009", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
         <span style={{ fontWeight: 700, fontSize: "0.625rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(248,246,242,0.25)" }}>Cadenza</span>
-        <div style={{ display: "flex", gap: "1.5rem" }}>
+        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           {["Privacy", "Terms", "Contact"].map(l => (
             <span key={l} style={{ fontSize: "0.625rem", color: "rgba(248,246,242,0.2)", cursor: "pointer" }}>{l}</span>
           ))}
+          <div style={{ width: 100 }}>
+            <LanguageSwitcher />
+          </div>
         </div>
         <span style={{ fontSize: "0.5625rem", color: "rgba(248,246,242,0.2)" }}>&copy; {new Date().getFullYear()}</span>
       </div>
 
-      {/* ── Fixed language + theme toggles ── */}
-      <div style={{ position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <div style={{ width: 110 }}>
-          <LanguageSwitcher />
-        </div>
+      {/* ── Fixed theme toggle ── */}
       <button
         onClick={toggleTheme}
         title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
         style={{
+          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 100,
           width: 40, height: 40, borderRadius: "50%",
           background: "var(--white)", border: "1px solid var(--border-strong)",
           boxShadow: "0 2px 12px rgba(44,40,36,0.12)",
@@ -515,7 +515,6 @@ export default function Home() {
       >
         {theme === "light" ? "🌙" : theme === "dark" ? "☀️" : "🎨"}
       </button>
-      </div>
     </div>
   );
 }
