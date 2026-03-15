@@ -54,7 +54,7 @@ export default function InspirationPage() {
   useEffect(() => {
     if (!student?.studioId) return;
     supabase.from("studios").select("owner_id").eq("id", student.studioId).single()
-      .then(({ data }) => setTeacherId(data?.owner_id ?? null));
+      .then(({ data }: { data: { owner_id: string } | null }) => setTeacherId(data?.owner_id ?? null));
   }, [student?.studioId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close collection picker on outside click
