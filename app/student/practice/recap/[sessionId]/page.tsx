@@ -3,21 +3,23 @@ import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import type { PracticeSessionRow } from "../../../../../lib/types";
+import { useI18n } from "../../../../../lib/context/I18nContext";
 
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-
-const MOOD_DISPLAY: Record<string, { label: string; emoji: string }> = {
-  great: { label: "Great", emoji: "🌟" },
-  good:  { label: "Good",  emoji: "😊" },
-  okay:  { label: "Okay",  emoji: "😐" },
-  hard:  { label: "Hard",  emoji: "😓" },
-};
 
 export default function PracticeRecapPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = use(params);
   const router = useRouter();
   const supabase = getSupabaseBrowserClient();
+  const { t } = useI18n();
+
+  const MOOD_DISPLAY: Record<string, { label: string; emoji: string }> = {
+    great: { label: t.student.moodGreat, emoji: "🌟" },
+    good:  { label: t.student.moodGood,  emoji: "😊" },
+    okay:  { label: t.student.moodOkay,  emoji: "😐" },
+    hard:  { label: t.student.moodHard,  emoji: "😓" },
+  };
 
   const [session, setSession] = useState<PracticeSessionRow | null>(null);
   const [pieceName, setPieceName] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
             fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.375rem",
             letterSpacing: "-0.01em",
           }}>
-            Session complete
+            {t.student.recapSessionComplete}
           </h1>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
             {fmt(session.duration_seconds)}{pieceName ? ` · ${pieceName}` : ""}
@@ -122,13 +124,13 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           <div className="card-base" style={{ padding: "1rem 1.125rem", marginBottom: "1rem" }}>
             {wentWell && (
               <div style={{ marginBottom: focusNext ? "0.625rem" : 0 }}>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Went well</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>{t.student.recapWentWell}</div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.5 }}>{wentWell}</div>
               </div>
             )}
             {focusNext && (
               <div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>Focus next time</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>{t.student.recapFocusNext}</div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.5 }}>{focusNext}</div>
               </div>
             )}
@@ -144,12 +146,12 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
             <span style={{ fontSize: "1rem" }}>🤖</span>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--charcoal)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-              Cadenza AI Coach
+              {t.student.recapAiCoach}
             </div>
           </div>
 
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
-            Coming soon — AI coaching feedback after each session.
+            {t.student.recapAiComingSoon}
           </p>
         </div>
 
@@ -162,7 +164,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
         }}>
           <span style={{ fontSize: "1rem", flexShrink: 0 }}>📩</span>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.5 }}>
-            Your session report has been sent to your teacher.
+            {t.student.recapSentToTeacher}
           </div>
         </div>
 
@@ -172,7 +174,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           className="btn btn-primary"
           style={{ width: "100%", padding: "0.875rem", fontSize: "0.9375rem" }}
         >
-          Back to Home
+          {t.student.recapBackToHome}
         </button>
 
       </div>

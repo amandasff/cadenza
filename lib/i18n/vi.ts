@@ -569,6 +569,13 @@ const vi: Translations = {
     performHeadTiltDesc: "Nghiêng đầu — cần có camera",
     performClose: "Đóng",
     performHeadTiltActive: "Nhận dạng nghiêng đầu đang hoạt động",
+    recapSessionComplete: "Hoàn thành buổi tập",
+    recapWentWell: "Những gì diễn ra tốt",
+    recapFocusNext: "Trọng tâm lần sau",
+    recapAiCoach: "Huấn luyện viên AI Cadenza",
+    recapAiComingSoon: "Sắp ra mắt — phản hồi huấn luyện AI sau mỗi buổi tập.",
+    recapSentToTeacher: "Báo cáo buổi tập của bạn đã được gửi cho giáo viên.",
+    recapBackToHome: "Về trang chủ",
   },
   parent: {
     practiceMin: "Phút luyện tập (2 tuần)",

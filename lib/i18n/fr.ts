@@ -569,6 +569,13 @@ const fr: Translations = {
     performHeadTiltDesc: "Inclinez la tête — nécessite une caméra",
     performClose: "Fermer",
     performHeadTiltActive: "Inclinaison de tête active",
+    recapSessionComplete: "Séance terminée",
+    recapWentWell: "Ce qui s'est bien passé",
+    recapFocusNext: "À travailler la prochaine fois",
+    recapAiCoach: "Coach IA Cadenza",
+    recapAiComingSoon: "Bientôt disponible — retours de coaching IA après chaque séance.",
+    recapSentToTeacher: "Votre rapport de séance a été envoyé à votre professeur.",
+    recapBackToHome: "Retour à l'accueil",
   },
   parent: {
     practiceMin: "Min de pratique (2 sem.)",
