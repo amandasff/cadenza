@@ -326,43 +326,33 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
         const rhNotes = displayNotes.map((vfNote, i) => {
           const isTop = i === Math.floor(displayNotes.length / 2);
           const dur = isTop ? "q" : "16";
-          const sn = new StaveNote({ keys: [vfNote], duration: dur });
-          return sn;
+          return new StaveNote({ keys: [vfNote], duration: dur });
         });
-
-        // Apply accidentals based on key signature (VF auto-handles what to show)
-        try {
-          Accidental.applyAccidentals([
-            new Voice({ numBeats: rhNotes.reduce((s, n) => s + (n.getDuration() === "q" ? 4 : 1), 0), beatValue: 16 }).addTickables(rhNotes),
-          ], info.vfKeySig);
-        } catch { /* ignore accidental errors */ }
 
         const totalTicks = rhNotes.reduce((s, n) => s + (n.getDuration() === "q" ? 4 : 1), 0);
         const rhVoice = new Voice({ numBeats: totalTicks, beatValue: 16 });
         rhVoice.setStrict(false);
         rhVoice.addTickables(rhNotes);
 
+        // Apply accidentals to the already-constructed voice (notes must belong to one voice only)
+        try { Accidental.applyAccidentals([rhVoice], info.vfKeySig); } catch { /* ignore */ }
+
         // Format
         const formatter = new Formatter();
         if (showGrandStaff && bassStave) {
-          // Build bass notes (one octave lower)
+          // Build bass notes (two octaves lower than treble)
           const lhNotes = displayNotes.map((vfNote, i) => {
             const [note, octStr] = vfNote.split("/");
-            const lhNote = `${note}/${parseInt(octStr) - 2}`; // 2 octaves lower for LH
+            const lhNote = `${note}/${parseInt(octStr) - 2}`;
             const isTop = i === Math.floor(displayNotes.length / 2);
             const dur = isTop ? "q" : "16";
             return new StaveNote({ keys: [lhNote], duration: dur, clef: "bass" });
           });
 
-          try {
-            Accidental.applyAccidentals([
-              new Voice({ numBeats: totalTicks, beatValue: 16 }).setStrict(false).addTickables(lhNotes),
-            ], info.vfKeySig);
-          } catch { /* ignore */ }
-
           const lhVoice = new Voice({ numBeats: totalTicks, beatValue: 16 });
           lhVoice.setStrict(false);
           lhVoice.addTickables(lhNotes);
+          try { Accidental.applyAccidentals([lhVoice], info.vfKeySig); } catch { /* ignore */ }
 
           formatter.joinVoices([rhVoice, lhVoice]).format([rhVoice, lhVoice], STAVE_WIDTH - 60);
           lhVoice.draw(ctx, bassStave);
