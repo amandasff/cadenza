@@ -969,6 +969,30 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         ))}
       </div>
 
+      {/* Quick links to sub-pages */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.625rem" }}>
+        {[
+          { label: "Lesson Log", href: `/teacher/student/${id}/lesson/log`, icon: "📋" },
+          { label: "RCM Prep", href: `/teacher/student/${id}/rcm`, icon: "🎓" },
+          { label: "Reports", href: `/teacher/student/${id}/reports`, icon: "📄" },
+          { label: "Billing", href: `/teacher/billing/${id}`, icon: "💳" },
+        ].map(link => (
+          <Link
+            key={link.href}
+            href={link.href}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: "0.375rem", padding: "0.875rem 0.5rem",
+              background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4,
+              textDecoration: "none", color: "var(--charcoal)",
+            }}
+          >
+            <span style={{ fontSize: "1.125rem" }}>{link.icon}</span>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 500, letterSpacing: "0.02em" }}>{link.label}</span>
+          </Link>
+        ))}
+      </div>
+
       {/* Pre-lesson AI brief */}
       <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
         <button

@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'teacher';
+export type UserRole = 'student' | 'teacher' | 'parent';
 
 export interface ProfileRow {
   id: string;
@@ -240,6 +240,10 @@ export interface LessonRow {
   duration_minutes: number;
   status: LessonStatus;
   lesson_notes: string | null;
+  covered_notes: string | null;
+  focus_notes: string | null;
+  next_lesson_notes: string | null;
+  attendance: 'attended' | 'cancelled' | 'no_show' | null;
   recurrence_id: string | null;
   created_at: string;
 }
@@ -269,6 +273,8 @@ export interface AssignmentRow {
   focus: string | null;
   type: AssignmentType;
   target_minutes_per_day: number | null;
+  times_per_week: number | null;
+  week_start: string | null;  // "YYYY-MM-DD" Monday of the week
   due_date: string | null;    // "YYYY-MM-DD"
   status: AssignmentStatus;
   reference_audio_url: string | null;
@@ -312,5 +318,144 @@ export interface VideoRoomRow {
   status: 'waiting' | 'live' | 'ended';
   started_at: string | null;
   ended_at: string | null;
+  created_at: string;
+}
+
+// ============================================================
+// Billing & Payments
+// ============================================================
+
+export interface BillingConfigRow {
+  id: string;
+  studio_id: string;
+  student_id: string | null;
+  external_student_id: string | null;
+  teacher_id: string;
+  monthly_rate_cents: number;
+  billing_day: number;
+  notes: string | null;
+  created_at: string;
+}
+
+export type TuitionStatus = 'unpaid' | 'paid' | 'waived';
+export type PaymentMethod = 'cash' | 'e-transfer' | 'cheque' | 'other';
+
+export interface TuitionRecordRow {
+  id: string;
+  billing_config_id: string;
+  studio_id: string;
+  student_id: string | null;
+  external_student_id: string | null;
+  teacher_id: string;
+  period_month: string;   // "YYYY-MM-DD" (first of month)
+  amount_cents: number;
+  status: TuitionStatus;
+  paid_at: string | null;
+  payment_method: PaymentMethod | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface BillingChargeRow {
+  id: string;
+  studio_id: string;
+  student_id: string | null;
+  external_student_id: string | null;
+  teacher_id: string;
+  description: string;
+  amount_cents: number;
+  status: 'unpaid' | 'paid';
+  paid_at: string | null;
+  charge_date: string;
+  created_at: string;
+}
+
+// ============================================================
+// Parent Portal
+// ============================================================
+
+export interface ParentStudentLinkRow {
+  id: string;
+  parent_id: string;
+  student_id: string;
+  studio_id: string;
+  last_summary_sent_at: string | null;
+  created_at: string;
+}
+
+// ============================================================
+// Progress Reports
+// ============================================================
+
+export type ReportStatus = 'draft' | 'sent' | 'archived';
+
+export interface ProgressReportRow {
+  id: string;
+  studio_id: string;
+  student_id: string;
+  teacher_id: string;
+  term: string;
+  period_start: string;
+  period_end: string;
+  status: ReportStatus;
+  overall_summary: string | null;
+  strengths: string | null;
+  areas_for_growth: string | null;
+  goals_summary: string | null;
+  practice_summary: string | null;
+  repertoire_summary: string | null;
+  teacher_comments: string | null;
+  sent_at: string | null;
+  sent_to_email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================================
+// RCM Exam Prep
+// ============================================================
+
+export type RcmExamStatus = 'preparing' | 'completed' | 'withdrawn';
+export type RcmCategory = 'list_a' | 'list_b' | 'list_c' | 'etudes' | 'technical' | 'theory' | 'ear_training' | 'sight_reading';
+
+export interface RcmExamRow {
+  id: string;
+  studio_id: string;
+  student_id: string;
+  teacher_id: string;
+  grade_level: string;
+  instrument: string;
+  exam_date: string | null;
+  status: RcmExamStatus;
+  exam_result: string | null;
+  created_at: string;
+}
+
+export interface RcmChecklistItemRow {
+  id: string;
+  exam_id: string;
+  category: RcmCategory;
+  title: string;
+  composer: string | null;
+  notes: string | null;
+  piece_id: string | null;
+  completed: boolean;
+  completed_at: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+// ============================================================
+// Availability
+// ============================================================
+
+export interface AvailabilityBlockRow {
+  id: string;
+  teacher_id: string;
+  studio_id: string;
+  day_of_week: number;   // 0=Sunday
+  start_time: string;   // "HH:MM:SS"
+  end_time: string;
+  active: boolean;
   created_at: string;
 }

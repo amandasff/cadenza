@@ -247,6 +247,47 @@ export class LessonService {
     if (error) throw error;
   }
 
+  // Teacher: save structured post-lesson notes
+  async updateStructuredNotes(
+    lessonId: string,
+    fields: {
+      coveredNotes?: string;
+      focusNotes?: string;
+      nextLessonNotes?: string;
+      attendance?: 'attended' | 'cancelled' | 'no_show';
+    },
+    teacherId: string
+  ): Promise<void> {
+    const update: Record<string, unknown> = {};
+    if (fields.coveredNotes !== undefined) update.covered_notes = fields.coveredNotes;
+    if (fields.focusNotes !== undefined) update.focus_notes = fields.focusNotes;
+    if (fields.nextLessonNotes !== undefined) update.next_lesson_notes = fields.nextLessonNotes;
+    if (fields.attendance !== undefined) update.attendance = fields.attendance;
+
+    const { error } = await this.supabase
+      .from('lessons')
+      .update(update)
+      .eq('id', lessonId)
+      .eq('teacher_id', teacherId);
+
+    if (error) throw error;
+  }
+
+  // Teacher: get completed lessons for a student (lesson log)
+  async getCompletedLessonsForStudent(teacherId: string, studentId: string): Promise<import('../types').LessonRow[]> {
+    const { data, error } = await this.supabase
+      .from('lessons')
+      .select()
+      .eq('teacher_id', teacherId)
+      .eq('student_id', studentId)
+      .eq('status', 'completed')
+      .order('scheduled_at', { ascending: false })
+      .limit(30);
+
+    if (error) throw error;
+    return (data ?? []) as import('../types').LessonRow[];
+  }
+
   // Teacher: list active recurring templates
   async getRecurrences(teacherId: string): Promise<LessonRecurrenceRow[]> {
     const { data, error } = await this.supabase

@@ -51,7 +51,7 @@ export default function SignUpPage() {
           {/* Role selector */}
           <div style={{ padding: "1.25rem 1.75rem 0" }}>
             <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 3, overflow: "hidden" }}>
-              {(["student", "teacher"] as UserRole[]).map(r => (
+              {(["student", "teacher", "parent"] as UserRole[]).map(r => (
                 <button
                   key={r}
                   type="button"
@@ -71,7 +71,7 @@ export default function SignUpPage() {
                     letterSpacing: "0.01em",
                   }}
                 >
-                  {r === "student" ? "Student" : "Teacher"}
+                  {r === "student" ? "Student" : r === "teacher" ? "Teacher" : "Parent"}
                 </button>
               ))}
             </div>

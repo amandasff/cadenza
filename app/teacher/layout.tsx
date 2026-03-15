@@ -13,6 +13,7 @@ import RecordingIndicator from "../../components/RecordingIndicator";
 const tabs = [
   { href: "/teacher",                label: "Students" },
   { href: "/teacher/schedule",       label: "Schedule" },
+  { href: "/teacher/billing",        label: "Billing" },
   { href: "/teacher/goals",          label: "Goals" },
   { href: "/teacher/review",         label: "Review" },
   { href: "/teacher/chat",           label: "Chat" },

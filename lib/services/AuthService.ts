@@ -1,9 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Student } from '../models/Student';
 import { Teacher } from '../models/Teacher';
+import { Parent } from '../models/Parent';
 import type { ProfileRow, StudioRow, UserRole } from '../types';
 
-export type AuthUser = Student | Teacher;
+export type AuthUser = Student | Teacher | Parent;
 
 export class AuthService {
   private static instance: AuthService | null = null;
@@ -150,6 +151,9 @@ export class AuthService {
         .eq('owner_id', profile.id)
         .single<StudioRow>();
       return new Teacher(profile, email, studio ?? undefined);
+    }
+    if (profile.role === 'parent') {
+      return new Parent(profile, email);
     }
     return new Student(profile, email);
   }

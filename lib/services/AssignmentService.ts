@@ -19,6 +19,8 @@ interface CreateAssignmentInput {
   focus?: string;
   type?: AssignmentType;
   targetMinutesPerDay?: number;
+  timesPerWeek?: number;
+  weekStart?: string;         // "YYYY-MM-DD" Monday of the week
   dueDate?: string;           // "YYYY-MM-DD"
   referenceAudioUrl?: string;
   youtubeId?: string;
@@ -74,7 +76,19 @@ export class AssignmentService {
     }));
   }
 
-  // Teacher: all assignments for a lesson
+  // Teacher: all assignments for a lesson (with context, for lesson notes page)
+  async getAssignmentsForLesson(lessonId: string, teacherId: string): Promise<AssignmentWithContext[]> {
+    const { data, error } = await this.supabase
+      .from('assignments')
+      .select()
+      .eq('lesson_id', lessonId)
+      .eq('teacher_id', teacherId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as AssignmentWithContext[];
+  }
+
+  // Teacher: all assignments for a lesson (raw)
   async getAssignmentsByLesson(lessonId: string): Promise<AssignmentRow[]> {
     const { data, error } = await this.supabase
       .from('assignments')
@@ -141,6 +155,8 @@ export class AssignmentService {
         focus: input.focus ?? null,
         type: input.type ?? 'practice',
         target_minutes_per_day: input.targetMinutesPerDay ?? null,
+        times_per_week: input.timesPerWeek ?? null,
+        week_start: input.weekStart ?? null,
         due_date: input.dueDate ?? null,
         reference_audio_url: input.referenceAudioUrl ?? null,
         youtube_id: input.youtubeId ?? null,
