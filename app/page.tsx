@@ -9,7 +9,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   Timer, Flame, Bot, Gamepad2, Mic, MessageCircle,
   BarChart2, FileText, Users, ArrowRight, CheckCircle,
-  Circle, Music2, Play, Mic2,
+  Circle, Music2, Play,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────
@@ -191,84 +191,6 @@ function TeacherDashMockup() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────
-   CSS-accurate mockup: chat / announcements tab
-───────────────────────────────────────────────────────── */
-function ChatMockup() {
-  return (
-    <div style={{
-      background: "var(--white)", borderRadius: 16, border: "1px solid var(--border)",
-      boxShadow: "0 16px 48px rgba(44,40,36,0.10)", overflow: "hidden",
-      width: "100%", maxWidth: 340,
-    }}>
-      {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)" }}>
-        {["Announcements", "Messages"].map((tab, i) => (
-          <div key={tab} style={{
-            flex: 1, padding: "12px 16px", textAlign: "center",
-            fontSize: 12, fontWeight: i === 0 ? 600 : 400,
-            color: i === 0 ? "var(--charcoal)" : "var(--muted)",
-            borderBottom: i === 0 ? "2px solid var(--charcoal)" : "none",
-            cursor: "pointer",
-          }}>{tab}</div>
-        ))}
-      </div>
-
-      {/* Messages */}
-      <div style={{ padding: "16px" }}>
-        {/* Teacher announcement */}
-        <div style={{
-          background: "var(--cream)", border: "1px solid var(--border)",
-          borderRadius: 12, padding: "14px", marginBottom: 10,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: "50%",
-              background: "var(--sage-bg)", border: "1px solid var(--sage-light)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, fontWeight: 700, color: "var(--sage)",
-            }}>A</div>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--charcoal)" }}>Ms. Amanda</div>
-              <div style={{ fontSize: 10, color: "var(--muted)" }}>Mar 12</div>
-            </div>
-          </div>
-          <p style={{ fontSize: 13, color: "var(--charcoal)", lineHeight: 1.6, margin: 0 }}>
-            Hello everyone! Try to practice at least 20 minutes before our next lesson. Focus on the hands-together passage in bars 8–16.
-          </p>
-          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 4,
-              background: "var(--rose-bg)", border: "1px solid var(--rose-light)",
-              borderRadius: 20, padding: "3px 8px",
-              fontSize: 11, color: "var(--rose)", fontWeight: 500,
-            }}>
-              ♥ 4
-            </div>
-            <span style={{ fontSize: 11, color: "var(--muted)" }}>Emma, Sofia +2</span>
-          </div>
-        </div>
-
-        {/* Input area */}
-        <div style={{
-          display: "flex", gap: 8, alignItems: "center",
-          background: "var(--cream)", border: "1px solid var(--border)",
-          borderRadius: 24, padding: "8px 8px 8px 14px",
-        }}>
-          <span style={{ fontSize: 12, color: "var(--muted)", flex: 1 }}>Reply to Ms. Amanda…</span>
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%",
-            background: "var(--charcoal)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Mic2 size={14} color="white" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main page ─── */
 export default function Home() {
   const router = useRouter();
@@ -381,7 +303,7 @@ export default function Home() {
             color: "var(--muted)", fontSize: 17, maxWidth: 480,
             marginBottom: 40, lineHeight: 1.75,
           }}>
-            Cadenza helps students practice with purpose and gives teachers a window into every student&apos;s week — without the admin.
+            A practice app your students will actually use — with a timer, games, an AI tutor, and a community. Everything a music teacher needs, in one place.
           </p>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 48 }}>
@@ -539,52 +461,61 @@ export default function Home() {
             <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
           </div>
 
-          {/* Hero student feature: chat with teacher */}
+          {/* Hero student feature: practice tracker */}
           <div style={{
             display: "flex", flexWrap: "wrap", gap: 48, alignItems: "center",
             background: "var(--white)", border: "1px solid var(--border)",
             borderRadius: 20, padding: "48px", marginBottom: 24,
           }}>
-            <div style={{ flex: "0 1 340px", display: "flex", justifyContent: "center", order: 2 }}>
-              <ChatMockup />
+            <div style={{ flex: "0 1 320px", display: "flex", justifyContent: "center", order: 2 }}>
+              <PracticeMockup />
             </div>
             <div style={{ flex: "1 1 300px", minWidth: 260, order: 1 }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-                <MessageCircle size={20} color="var(--peach)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--peach)", letterSpacing: "0.04em", textTransform: "uppercase" }}>Teacher chat</span>
+                <Timer size={20} color="var(--peach)" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--peach)", letterSpacing: "0.04em", textTransform: "uppercase" }}>Practice tracker</span>
               </div>
               <h2 style={{ fontWeight: 500, fontSize: "clamp(1.5rem, 3vw, 2.25rem)", color: "var(--charcoal)", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: 16 }}>
-                Your teacher is always one message away.
+                Record your practice.<br />Earn points. Get feedback.
               </h2>
+              <p style={{ color: "var(--muted)", fontSize: 16, lineHeight: 1.75, marginBottom: 8, maxWidth: 400 }}>
+                Open the app, press start, and play. Each session is automatically logged — your teacher sees exactly what you worked on and gives feedback throughout the week.
+              </p>
               <p style={{ color: "var(--muted)", fontSize: 16, lineHeight: 1.75, marginBottom: 24, maxWidth: 400 }}>
-                Get announcements from your studio, ask questions between lessons, and share a quick audio or video clip when something&apos;s not clicking.
+                Points you earn can be redeemed for prizes at your next lesson.
               </p>
               <Link href="/auth/signup?role=student" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", fontSize: 14 }}>
-                Join your studio <ArrowRight size={15} />
+                Start practicing <ArrowRight size={15} />
               </Link>
             </div>
           </div>
 
-          {/* 3 supporting student features */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+          {/* 4 supporting student features */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
             {[
               {
-                icon: <Flame size={20} color="var(--peach)" />,
-                bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)",
-                title: "Streaks & levels",
-                desc: "Practice every day and build your streak. Earn points, unlock levels from Beginner to Maestro, and collect badges for milestones.",
+                icon: <MessageCircle size={20} color="var(--sky)" />,
+                bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)",
+                title: "Chat with your teacher",
+                desc: "Message your teacher anytime during the week. Ask questions, share audio clips, and stay connected between lessons.",
               },
               {
                 icon: <Bot size={20} color="var(--lavender)" />,
                 bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)",
                 title: "AI music tutor",
-                desc: "Stuck on a passage? Curious about a chord? Your AI tutor is available 24/7 — endlessly patient, at any hour.",
+                desc: "Stuck on a passage or curious about a chord? Your AI tutor is available 24/7 — ask anything about music, anytime.",
               },
               {
-                icon: <Gamepad2 size={20} color="var(--sky)" />,
-                bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)",
+                icon: <Gamepad2 size={20} color="var(--butter)" />,
+                bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)",
                 title: "Music games",
-                desc: "Train your ear, sharpen your note reading, and master rhythm — with games that make the hard stuff actually fun.",
+                desc: "Train your ear, sharpen note reading, and practise theory — the skills you need for your exams, made actually fun.",
+              },
+              {
+                icon: <Flame size={20} color="var(--peach)" />,
+                bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)",
+                title: "Streaks & levels",
+                desc: "Build a daily streak, earn points, and climb from Beginner to Maestro. Progress you can see and be proud of.",
               },
             ].map((c, i) => (
               <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: "28px", boxShadow: "var(--shadow-sm)" }}>
