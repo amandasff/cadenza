@@ -261,6 +261,48 @@ export class BillingService {
     return (data ?? []) as TuitionRecordRow[];
   }
 
+  // ── Family billing ───────────────────────────────────────
+
+  async linkSiblings(configIdA: string, configIdB: string, teacherId: string): Promise<string> {
+    const { data: cfgs, error: fetchErr } = await this.supabase
+      .from('billing_configs')
+      .select('id, family_id')
+      .in('id', [configIdA, configIdB])
+      .eq('teacher_id', teacherId);
+    if (fetchErr) throw fetchErr;
+    if (!cfgs || cfgs.length < 2) throw new Error('One or both students not found');
+
+    const existing = (cfgs as { id: string; family_id: string | null }[]).find(c => c.family_id);
+    const familyId = existing?.family_id ?? crypto.randomUUID();
+
+    const { error } = await this.supabase
+      .from('billing_configs')
+      .update({ family_id: familyId })
+      .in('id', [configIdA, configIdB])
+      .eq('teacher_id', teacherId);
+    if (error) throw error;
+    return familyId;
+  }
+
+  async unlinkFromFamily(configId: string, teacherId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('billing_configs')
+      .update({ family_id: null })
+      .eq('id', configId)
+      .eq('teacher_id', teacherId);
+    if (error) throw error;
+  }
+
+  async getFamilyConfigs(familyId: string, teacherId: string): Promise<BillingConfigRow[]> {
+    const { data, error } = await this.supabase
+      .from('billing_configs')
+      .select()
+      .eq('family_id', familyId)
+      .eq('teacher_id', teacherId);
+    if (error) throw error;
+    return (data ?? []) as BillingConfigRow[];
+  }
+
   // Legacy
   async getRecords(studentId: string, teacherId: string, months = 12): Promise<TuitionRecordRow[]> {
     const since = new Date();

@@ -77,6 +77,12 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
   const [contactSaved, setContactSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Family billing
+  const [familyMembers, setFamilyMembers] = useState<{ config: BillingConfigRow; name: string }[]>([]);
+  const [linkableStudents, setLinkableStudents] = useState<{ config: BillingConfigRow; name: string }[]>([]);
+  const [showLinkPicker, setShowLinkPicker] = useState(false);
+  const [linkingFamily, setLinkingFamily] = useState(false);
+
   // Invoice editing
   const [creditsToApply, setCreditsToApply] = useState(0);
   const [extraDesc, setExtraDesc] = useState("");
@@ -131,6 +137,38 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
       setLessons(lsns);
       setInvoice(inv);
       setInvoiceHistory(hist);
+
+      // Family billing: load siblings + students available to link
+      const allConfigs = await billing.getAllConfigs(teacher.id);
+      const otherConfigs = allConfigs.filter(c => c.id !== cfg?.id);
+
+      // Resolve names for other configs in parallel
+      const resolveNames = async (configs: BillingConfigRow[]) => {
+        return Promise.all(configs.map(async c => {
+          let name = "Student";
+          if (c.student_id) {
+            const { data } = await supabase.from("profiles").select("display_name").eq("id", c.student_id).maybeSingle();
+            name = (data as { display_name: string } | null)?.display_name ?? "Student";
+          } else if (c.external_student_id) {
+            const { data } = await supabase.from("external_students").select("name").eq("id", c.external_student_id).maybeSingle();
+            name = (data as { name: string } | null)?.name ?? "Student";
+          }
+          return { config: c, name };
+        }));
+      };
+
+      if (cfg?.family_id) {
+        const familyCfgs = allConfigs.filter(c => c.family_id === cfg.family_id && c.id !== cfg.id);
+        const [resolved, linkable] = await Promise.all([
+          resolveNames(familyCfgs),
+          resolveNames(otherConfigs.filter(c => c.family_id !== cfg.family_id)),
+        ]);
+        setFamilyMembers(resolved);
+        setLinkableStudents(linkable);
+      } else {
+        setFamilyMembers([]);
+        setLinkableStudents(await resolveNames(otherConfigs));
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to load billing data");
     } finally {
@@ -219,6 +257,31 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
       setSaveError(err instanceof Error ? err.message : "Failed to update invoice");
     } finally {
       setMarkingPaid(false);
+    }
+  }
+
+  async function handleLinkSibling(siblingConfigId: string) {
+    if (!config) return;
+    setLinkingFamily(true);
+    setSaveError(null);
+    try {
+      await billing.linkSiblings(config.id, siblingConfigId, teacher.id);
+      setShowLinkPicker(false);
+      await load();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to link sibling");
+    } finally {
+      setLinkingFamily(false);
+    }
+  }
+
+  async function handleUnlinkSibling(siblingConfigId: string) {
+    setSaveError(null);
+    try {
+      await billing.unlinkFromFamily(siblingConfigId, teacher.id);
+      await load();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to unlink sibling");
     }
   }
 
@@ -517,6 +580,81 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
             )}
           </div>
         </>
+      )}
+
+      {/* ── Family Billing ── */}
+      {config && (
+        <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 700, color: "var(--charcoal)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Family Billing
+            </div>
+            {config.family_id && (
+              <Link
+                href={`/teacher/billing/family/${config.family_id}`}
+                style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", textDecoration: "none", fontWeight: 500 }}
+              >
+                View family invoice →
+              </Link>
+            )}
+          </div>
+
+          {familyMembers.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.875rem" }}>
+              {familyMembers.map(m => (
+                <div key={m.config.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 0.75rem", background: "var(--cream)", borderRadius: 3, border: "1px solid var(--border)" }}>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)" }}>{m.name}</span>
+                  <button
+                    onClick={() => handleUnlinkSibling(m.config.id)}
+                    style={{ background: "none", border: "none", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", cursor: "pointer", padding: "0.125rem 0.375rem" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.875rem" }}>
+              No siblings linked yet. Link students who share a parent so you can invoice the family together.
+            </div>
+          )}
+
+          {!showLinkPicker ? (
+            <button
+              onClick={() => setShowLinkPicker(true)}
+              disabled={linkableStudents.length === 0}
+              style={{ ...ghostBtn, fontSize: "0.8125rem", opacity: linkableStudents.length === 0 ? 0.4 : 1 }}
+            >
+              + Add sibling
+            </button>
+          ) : (
+            <div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.5rem" }}>
+                Select a student to link as a sibling:
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.5rem" }}>
+                {linkableStudents.map(s => (
+                  <button
+                    key={s.config.id}
+                    onClick={() => handleLinkSibling(s.config.id)}
+                    disabled={linkingFamily}
+                    style={{ ...ghostBtn, textAlign: "left", opacity: linkingFamily ? 0.6 : 1 }}
+                  >
+                    {s.name}
+                    {s.config.parent_name && (
+                      <span style={{ color: "var(--muted)", fontWeight: 400, marginLeft: "0.5rem" }}>
+                        · {s.config.parent_name}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setShowLinkPicker(false)} style={{ ...ghostBtn, color: "var(--muted)", fontSize: "0.8125rem" }}>
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Invoice history ── */}

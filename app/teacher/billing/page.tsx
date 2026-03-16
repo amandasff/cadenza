@@ -215,6 +215,16 @@ export default function BillingPage() {
                       {row.student.instrument && <span>·</span>}
                       <span>{row.config.lesson_type === "online" ? "💻 Online" : "🏠 In-person"}</span>
                       {isStudio && <><span>·</span><span style={{ color: "var(--sage)", fontWeight: 500 }}>Studio billing</span></>}
+                      {row.config.family_id && (
+                        <><span>·</span>
+                        <Link
+                          href={`/teacher/billing/family/${row.config.family_id}`}
+                          onClick={e => e.stopPropagation()}
+                          style={{ color: "var(--charcoal)", fontWeight: 500, textDecoration: "none" }}
+                        >
+                          👨‍👩‍👧 Family
+                        </Link></>
+                      )}
                       {row.config.makeup_credits > 0 && !isStudio && (
                         <><span>·</span><span style={{ color: "#e09b3d" }}>🔄 {row.config.makeup_credits} makeup{row.config.makeup_credits !== 1 ? "s" : ""}</span></>
                       )}

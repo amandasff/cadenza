@@ -345,6 +345,7 @@ export interface BillingConfigRow {
   lesson_type: LessonType;
   billing_type: BillingType;
   makeup_credits: number;
+  family_id: string | null;
   created_at: string;
 }
 
