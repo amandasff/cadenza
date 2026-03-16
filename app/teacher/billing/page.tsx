@@ -1,169 +1,258 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { BillingService } from "../../../lib/services/BillingService";
 import { Teacher } from "../../../lib/models/Teacher";
-import type { TuitionRecordRow, BillingChargeRow } from "../../../lib/types";
-import { useI18n } from "../../../lib/context/I18nContext";
+import type { BillingConfigRow, TuitionRecordRow, LessonRow } from "../../../lib/types";
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-interface StudentSummary {
+function periodMonth(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
+const MONTH_NAMES = ["January","February","March","April","May","June",
+  "July","August","September","October","November","December"];
+
+interface StudentInfo {
   id: string;
   name: string;
   avatarUrl: string | null;
-  unpaidTuition: number;
-  unpaidCharges: number;
-  total: number;
+  instrument: string | null;
+  isExternal: boolean;
+}
+
+interface Row {
+  config: BillingConfigRow;
+  student: StudentInfo;
+  lessonCount: number;
+  invoice: TuitionRecordRow | null;
+  amountDue: number;
 }
 
 export default function BillingPage() {
   const { user } = useAuth();
   const teacher = user as Teacher;
-  const { t } = useI18n();
   const supabase = getSupabaseBrowserClient();
   const billing = BillingService.create(supabase);
 
-  const [students, setStudents] = useState<{ id: string; display_name: string; avatar_url: string | null }[]>([]);
-  const [summaries, setSummaries] = useState<StudentSummary[]>([]);
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!teacher?.studioId) return;
-    loadData();
-  }, [teacher?.id, teacher?.studioId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function loadData() {
+  const load = useCallback(async () => {
+    if (!teacher?.id || !teacher?.studioId) return;
     setLoading(true);
     try {
-      // Get all students in the studio
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_url")
-        .eq("studio_id", teacher.studioId!)
-        .eq("role", "student");
-
-      setStudents(profiles ?? []);
-
-      // Get all unpaid tuition and charges for this teacher
-      const [allTuition, allCharges] = await Promise.all([
-        billing.getAllRecords(teacher.id),
-        supabase.from("billing_charges").select().eq("teacher_id", teacher.id).eq("status", "unpaid").then((r: { data: BillingChargeRow[] | null }) => (r.data ?? []) as BillingChargeRow[]),
+      const [configs, allProfiles, allExternal] = await Promise.all([
+        billing.getAllConfigs(teacher.id),
+        supabase.from("profiles").select("id,display_name,avatar_url,instrument").eq("studio_id", teacher.studioId!).eq("role","student"),
+        supabase.from("external_students").select("id,name,instrument").eq("teacher_id", teacher.id),
       ]);
 
-      const unpaidTuition = allTuition.filter((r: TuitionRecordRow) => r.status === "unpaid");
-
-      const map: Record<string, StudentSummary> = {};
-      for (const p of profiles ?? []) {
-        map[p.id] = { id: p.id, name: p.display_name, avatarUrl: p.avatar_url, unpaidTuition: 0, unpaidCharges: 0, total: 0 };
+      const profileMap: Record<string, StudentInfo> = {};
+      for (const p of (allProfiles.data ?? [])) {
+        profileMap[p.id] = { id: p.id, name: p.display_name, avatarUrl: p.avatar_url ?? null, instrument: p.instrument ?? null, isExternal: false };
       }
-      for (const r of unpaidTuition) {
-        if (r.student_id && map[r.student_id]) {
-          map[r.student_id].unpaidTuition += r.amount_cents;
-          map[r.student_id].total += r.amount_cents;
-        }
-      }
-      for (const c of allCharges) {
-        if (c.student_id && map[c.student_id]) {
-          map[c.student_id].unpaidCharges += c.amount_cents;
-          map[c.student_id].total += c.amount_cents;
-        }
+      for (const e of (allExternal.data ?? [])) {
+        profileMap[`ext_${e.id}`] = { id: e.id, name: e.name, avatarUrl: null, instrument: e.instrument ?? null, isExternal: true };
       }
 
-      setSummaries(Object.values(map).sort((a, b) => b.total - a.total));
+      const pm = periodMonth(year, month);
+      const invoices = await billing.getAllInvoicesForMonth(teacher.id, pm);
+      const invoiceMap: Record<string, TuitionRecordRow> = {};
+      for (const inv of invoices) {
+        const k = inv.student_id ?? `ext_${inv.external_student_id}`;
+        invoiceMap[k] = inv;
+      }
+
+      const result: Row[] = [];
+      for (const cfg of configs) {
+        const sKey = cfg.student_id ?? `ext_${cfg.external_student_id}`;
+        const student = profileMap[sKey];
+        if (!student) continue;
+
+        const lessons: LessonRow[] = await billing.getBillableLessons(
+          teacher.id, cfg.student_id, cfg.external_student_id, year, month
+        );
+        const invoice = invoiceMap[sKey] ?? null;
+        const amountDue = invoice
+          ? invoice.amount_cents
+          : Math.max(0, lessons.length - 0) * cfg.lesson_rate_cents;
+
+        result.push({ config: cfg, student, lessonCount: lessons.length, invoice, amountDue });
+      }
+
+      result.sort((a, b) => a.student.name.localeCompare(b.student.name));
+      setRows(result);
     } finally {
       setLoading(false);
     }
+  }, [teacher?.id, teacher?.studioId, year, month]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { load(); }, [load]);
+
+  function prevMonth() {
+    if (month === 1) { setYear(y => y - 1); setMonth(12); }
+    else setMonth(m => m - 1);
+  }
+  function nextMonth() {
+    const n = new Date(); n.setHours(0,0,0,0);
+    const cur = new Date(year, month - 1, 1);
+    if (cur >= new Date(n.getFullYear(), n.getMonth(), 1)) return;
+    if (month === 12) { setYear(y => y + 1); setMonth(1); }
+    else setMonth(m => m + 1);
   }
 
-  const totalOutstanding = summaries.reduce((s, x) => s + x.total, 0);
-  const studentsWithBalance = summaries.filter(s => s.total > 0);
+  const privateRows = rows.filter(r => r.config.billing_type !== "studio");
+  const totalExpected = privateRows.reduce((s, r) => s + r.amountDue, 0);
+  const totalPaid = privateRows.filter(r => r.invoice?.status === "paid").reduce((s, r) => s + r.amountDue, 0);
+  const totalOwed = totalExpected - totalPaid;
+
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const isFutureMonth = new Date(year, month - 1, 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const inputStyle: React.CSSProperties = {
+    borderRadius: 3, border: "1px solid var(--border-strong)",
+    padding: "0.375rem 0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
+    background: "var(--white)", color: "var(--charcoal)", outline: "none",
+  };
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "2rem 1.5rem" }}>
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-          {t.billing.title}
-        </h1>
-        <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
-          {t.billing.trackTuitionDesc}
-        </p>
-      </div>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
-      {/* Summary card */}
-      <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem", display: "flex", gap: "2rem" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
-            {t.billing.outstandingBalance}
-          </div>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 600, color: totalOutstanding > 0 ? "#c0392b" : "var(--charcoal)" }}>
-            {fmt(totalOutstanding)}
-          </div>
+          <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.125rem", letterSpacing: "-0.01em" }}>
+            Billing
+          </h1>
+          <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
+            Track payments and generate invoices
+          </p>
         </div>
-        <div>
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>
-            {t.billing.studentsWithBalance}
-          </div>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 600, color: "var(--charcoal)" }}>
-            {studentsWithBalance.length}
-          </div>
+
+        {/* Month picker */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+          <button onClick={prevMonth} style={{ ...inputStyle, cursor: "pointer", padding: "0.375rem 0.625rem" }}>◀</button>
+          <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)", minWidth: 130, textAlign: "center" }}>
+            {MONTH_NAMES[month - 1]} {year}
+          </span>
+          <button onClick={nextMonth} disabled={isCurrentMonth} style={{ ...inputStyle, cursor: isCurrentMonth ? "default" : "pointer", opacity: isCurrentMonth ? 0.35 : 1, padding: "0.375rem 0.625rem" }}>▶</button>
         </div>
       </div>
 
-      {/* Student list */}
+      {/* Summary bar */}
+      {!loading && privateRows.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
+          {[
+            { label: isCurrentMonth ? "Expected this month" : "Total invoiced", value: fmt(totalExpected), color: "var(--charcoal)" },
+            { label: "Collected", value: fmt(totalPaid), color: "#2d8a4e" },
+            { label: "Outstanding", value: fmt(totalOwed), color: totalOwed > 0 ? "#c0392b" : "#2d8a4e" },
+          ].map(stat => (
+            <div key={stat.label} className="card-base" style={{ padding: "1rem 1.25rem" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.375rem" }}>
+                {stat.label}
+              </div>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.625rem", fontWeight: 600, color: stat.color }}>
+                {stat.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Student rows */}
       {loading ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 4 }} />)}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 68, borderRadius: 4 }} />)}
         </div>
-      ) : students.length === 0 ? (
+      ) : rows.length === 0 ? (
         <div style={{ textAlign: "center", padding: "3rem 1.5rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
-          {t.billing.noStudentsYetBilling}
+          No students with billing set up yet.{" "}
+          <span style={{ color: "var(--charcoal)" }}>Open a student profile to configure billing.</span>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          {summaries.map(s => (
-            <Link key={s.id} href={`/teacher/billing/${s.id}`} style={{ textDecoration: "none" }}>
-              <div className="card-base" style={{
-                padding: "0.875rem 1.125rem",
-                display: "flex", alignItems: "center", gap: "0.875rem",
-                cursor: "pointer", transition: "box-shadow 0.15s",
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "var(--white)",
-                  overflow: "hidden",
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+          {rows.map(row => {
+            const isStudio = row.config.billing_type === "studio";
+            const isPaid = row.invoice?.status === "paid";
+            const hasInvoice = !!row.invoice;
+
+            return (
+              <Link key={row.config.id} href={`/teacher/billing/${row.config.student_id ?? row.config.external_student_id}`} style={{ textDecoration: "none" }}>
+                <div className="card-base" style={{
+                  padding: "0.875rem 1.125rem",
+                  display: "flex", alignItems: "center", gap: "0.875rem",
+                  opacity: isStudio ? 0.7 : 1,
                 }}>
-                  {s.avatarUrl
-                    ? <img src={s.avatarUrl} alt={s.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : s.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-                  }
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                    {s.name}
-                  </div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.1rem" }}>
-                    {s.total > 0
-                      ? `${s.unpaidTuition > 0 ? `${fmt(s.unpaidTuition)} ${t.teacher.tuition}` : ""}${s.unpaidTuition > 0 && s.unpaidCharges > 0 ? " + " : ""}${s.unpaidCharges > 0 ? `${fmt(s.unpaidCharges)} ${t.teacher.other}` : ""}`
-                      : t.billing.allPaidUp
+                  {/* Avatar */}
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                    background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "var(--white)",
+                    overflow: "hidden",
+                  }}>
+                    {row.student.avatarUrl
+                      ? <img src={row.student.avatarUrl} alt={row.student.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : row.student.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
                     }
                   </div>
+
+                  {/* Name + meta */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                      {row.student.name}
+                    </div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.1rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      {row.student.instrument && <span>{row.student.instrument}</span>}
+                      {row.student.instrument && <span>·</span>}
+                      <span>{row.config.lesson_type === "online" ? "💻 Online" : "🏠 In-person"}</span>
+                      {isStudio && <><span>·</span><span style={{ color: "var(--sage)", fontWeight: 500 }}>Studio billing</span></>}
+                      {row.config.makeup_credits > 0 && !isStudio && (
+                        <><span>·</span><span style={{ color: "#e09b3d" }}>🔄 {row.config.makeup_credits} makeup{row.config.makeup_credits !== 1 ? "s" : ""}</span></>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Lesson count */}
+                  {!isStudio && (
+                    <div style={{ textAlign: "center", minWidth: 64 }}>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                        {row.lessonCount} lesson{row.lessonCount !== 1 ? "s" : ""}
+                      </div>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                        {row.config.lesson_rate_cents > 0 ? `${fmt(row.config.lesson_rate_cents)}/lesson` : "rate not set"}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status badge */}
+                  <div style={{
+                    flexShrink: 0,
+                    fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem",
+                    minWidth: 80, textAlign: "right",
+                  }}>
+                    {isStudio ? (
+                      <span style={{ fontSize: "0.75rem", color: "var(--sage)", fontWeight: 500 }}>Studio</span>
+                    ) : isPaid ? (
+                      <span style={{ color: "#2d8a4e" }}>✓ Paid</span>
+                    ) : row.amountDue > 0 ? (
+                      <span style={{ color: "#c0392b" }}>Owes {fmt(row.amountDue)}</span>
+                    ) : (
+                      <span style={{ color: "var(--muted)", fontWeight: 400 }}>—</span>
+                    )}
+                  </div>
                 </div>
-                <div style={{
-                  fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem",
-                  color: s.total > 0 ? "#c0392b" : "var(--sage)",
-                  flexShrink: 0,
-                }}>
-                  {s.total > 0 ? fmt(s.total) : "✓"}
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

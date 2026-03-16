@@ -325,6 +325,9 @@ export interface VideoRoomRow {
 // Billing & Payments
 // ============================================================
 
+export type LessonType = 'in_person' | 'online';
+export type BillingType = 'private' | 'studio';
+
 export interface BillingConfigRow {
   id: string;
   studio_id: string;
@@ -334,6 +337,14 @@ export interface BillingConfigRow {
   monthly_rate_cents: number;
   billing_day: number;
   notes: string | null;
+  // Simple billing fields
+  parent_name: string | null;
+  parent_email: string | null;
+  parent_phone: string | null;
+  lesson_rate_cents: number;
+  lesson_type: LessonType;
+  billing_type: BillingType;
+  makeup_credits: number;
   created_at: string;
 }
 
@@ -353,6 +364,11 @@ export interface TuitionRecordRow {
   paid_at: string | null;
   payment_method: PaymentMethod | null;
   notes: string | null;
+  // Invoice detail
+  lesson_count: number;
+  makeup_credits_applied: number;
+  extra_charges_cents: number;
+  extra_charges_desc: string | null;
   created_at: string;
 }
 

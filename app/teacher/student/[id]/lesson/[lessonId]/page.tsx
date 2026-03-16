@@ -5,6 +5,7 @@ import { useAuth } from "../../../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../../../lib/supabase/client";
 import { LessonService } from "../../../../../../lib/services/LessonService";
 import { AssignmentService } from "../../../../../../lib/services/AssignmentService";
+import { BillingService } from "../../../../../../lib/services/BillingService";
 import { Teacher } from "../../../../../../lib/models/Teacher";
 import type { LessonRow, AssignmentWithContext } from "../../../../../../lib/types";
 import { useI18n } from "../../../../../../lib/context/I18nContext";
@@ -31,6 +32,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
   const supabase = getSupabaseBrowserClient();
   const lessonSvc = LessonService.create(supabase);
   const assignmentSvc = AssignmentService.create(supabase);
+  const billingSvc = BillingService.create(supabase);
 
   const [lesson, setLesson] = useState<LessonRow | null>(null);
   const [studentName, setStudentName] = useState("");
@@ -43,6 +45,8 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
   const [focus, setFocus] = useState("");
   const [nextLesson, setNextLesson] = useState("");
   const [attendance, setAttendance] = useState<"attended" | "cancelled" | "no_show">("attended");
+  const [originalAttendance, setOriginalAttendance] = useState<"attended" | "cancelled" | "no_show">("attended");
+  const [creditAdded, setCreditAdded] = useState(false);
 
   // New assignment
   const [showAssignForm, setShowAssignForm] = useState(false);
@@ -71,7 +75,9 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
         setCovered(l.covered_notes ?? "");
         setFocus(l.focus_notes ?? "");
         setNextLesson(l.next_lesson_notes ?? "");
-        setAttendance(l.attendance ?? "attended");
+        const att = l.attendance ?? "attended";
+        setAttendance(att);
+        setOriginalAttendance(att);
       }
       setStudentName((profile as { display_name: string } | null)?.display_name ?? "Student");
       setAssignments(assigns as AssignmentWithContext[]);
@@ -90,6 +96,18 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
         nextLessonNotes: nextLesson,
         attendance,
       }, teacher.id);
+
+      // Auto-add makeup credit when marking a no-show for the first time
+      if (attendance === "no_show" && originalAttendance !== "no_show") {
+        const cfg = await billingSvc.getConfig(studentId, teacher.id);
+        if (cfg && cfg.billing_type !== "studio") {
+          await billingSvc.addMakeupCredit(cfg.id, cfg.makeup_credits);
+          setCreditAdded(true);
+          setTimeout(() => setCreditAdded(false), 3000);
+        }
+        setOriginalAttendance("no_show");
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
@@ -236,6 +254,11 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
         >
           {saving ? t.common.saving : saved ? t.teacher.reportsSaved : t.schedule.saveChanges}
         </button>
+        {creditAdded && (
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#e09b3d", marginTop: "0.5rem" }}>
+            🔄 Makeup credit added for this student
+          </div>
+        )}
       </div>
 
       {/* Assignments for this lesson */}

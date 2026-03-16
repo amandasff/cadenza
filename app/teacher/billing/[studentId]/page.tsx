@@ -1,498 +1,540 @@
 "use client";
-import React, { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState, use, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
 import { BillingService } from "../../../../lib/services/BillingService";
 import { Teacher } from "../../../../lib/models/Teacher";
-import type { BillingConfigRow, TuitionRecordRow, BillingChargeRow, PaymentMethod } from "../../../../lib/types";
-import { useI18n } from "../../../../lib/context/I18nContext";
+import type { BillingConfigRow, TuitionRecordRow, LessonRow, PaymentMethod, LessonType, BillingType } from "../../../../lib/types";
 
-function fmt(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
+function fmt(cents: number) { return `$${(cents / 100).toFixed(2)}`; }
+function periodMonth(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, "0")}-01`;
 }
-
-function monthLabel(iso: string) {
-  const d = new Date(iso + "T12:00:00");
+function monthLabel(pm: string) {
+  const d = new Date(pm + "T12:00:00");
   return d.toLocaleDateString([], { month: "long", year: "numeric" });
 }
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const PAY_METHODS: PaymentMethod[] = ["cash", "e-transfer", "cheque", "other"];
+const MONTH_NAMES = ["January","February","March","April","May","June",
+  "July","August","September","October","November","December"];
+const PAY_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "e-transfer", label: "E-transfer" },
+  { value: "cheque", label: "Cheque" },
+  { value: "other", label: "Other" },
+];
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)",
+  padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
+  background: "var(--white)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box",
+};
+const labelStyle: React.CSSProperties = {
+  fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600,
+  color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em",
+  display: "block", marginBottom: "0.25rem",
+};
+const primaryBtn: React.CSSProperties = {
+  padding: "0.5625rem 1rem", borderRadius: 3, border: "none",
+  background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif",
+  fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer", letterSpacing: "0.01em",
+};
+const ghostBtn: React.CSSProperties = {
+  padding: "0.5rem 0.875rem", borderRadius: 3, border: "1px solid var(--border-strong)",
+  background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
+  fontWeight: 500, fontSize: "0.8125rem", cursor: "pointer",
+};
 
 export default function StudentBillingPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = use(params);
-  const router = useRouter();
   const { user } = useAuth();
   const teacher = user as Teacher;
-  const { t } = useI18n();
   const supabase = getSupabaseBrowserClient();
   const billing = BillingService.create(supabase);
 
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+
   const [studentName, setStudentName] = useState("");
+  const [studentInstrument, setStudentInstrument] = useState<string | null>(null);
+  const [isExternal, setIsExternal] = useState(false);
   const [config, setConfig] = useState<BillingConfigRow | null>(null);
-  const [records, setRecords] = useState<TuitionRecordRow[]>([]);
-  const [charges, setCharges] = useState<BillingChargeRow[]>([]);
+  const [lessons, setLessons] = useState<LessonRow[]>([]);
+  const [invoice, setInvoice] = useState<TuitionRecordRow | null>(null);
+  const [invoiceHistory, setInvoiceHistory] = useState<TuitionRecordRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Config form
-  const [rateInput, setRateInput] = useState("");
-  const [billingDay, setBillingDay] = useState(1);
-  const [configNotes, setConfigNotes] = useState("");
-  const [savingConfig, setSavingConfig] = useState(false);
+  // Contact form
+  const [parentName, setParentName] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
+  const [parentPhone, setParentPhone] = useState("");
+  const [rate, setRate] = useState("");
+  const [lessonType, setLessonType] = useState<LessonType>("in_person");
+  const [billingType, setBillingType] = useState<BillingType>("private");
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
 
-  // New charge form
-  const [showChargeForm, setShowChargeForm] = useState(false);
-  const [chargeDesc, setChargeDesc] = useState("");
-  const [chargeAmount, setChargeAmount] = useState("");
-  const [addingCharge, setAddingCharge] = useState(false);
-
-  // Mark paid
-  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  // Invoice editing
+  const [creditsToApply, setCreditsToApply] = useState(0);
+  const [extraDesc, setExtraDesc] = useState("");
+  const [extraAmount, setExtraAmount] = useState("");
+  const [showExtraForm, setShowExtraForm] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [payMethod, setPayMethod] = useState<PaymentMethod>("e-transfer");
+  const [markingPaid, setMarkingPaid] = useState(false);
 
-  // New tuition record
-  const [addingMonth, setAddingMonth] = useState(false);
-
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!teacher?.id) return;
-    loadAll();
-  }, [teacher?.id, studentId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function loadAll() {
     setLoading(true);
     try {
-      const [{ data: profile }, cfg, recs, chgs] = await Promise.all([
-        supabase.from("profiles").select("display_name").eq("id", studentId).single(),
-        billing.getConfig(studentId, teacher.id),
-        billing.getRecords(studentId, teacher.id, 24),
-        billing.getCharges(studentId, teacher.id),
+      // Try registered student first, then external
+      const [profileRes, extRes] = await Promise.all([
+        supabase.from("profiles").select("display_name,instrument").eq("id", studentId).maybeSingle(),
+        supabase.from("external_students").select("name,instrument").eq("id", studentId).maybeSingle(),
       ]);
-      setStudentName((profile as { display_name: string } | null)?.display_name ?? "Student");
+
+      let cfg: BillingConfigRow | null = null;
+      if (profileRes.data) {
+        setStudentName(profileRes.data.display_name);
+        setStudentInstrument(profileRes.data.instrument ?? null);
+        setIsExternal(false);
+        cfg = await billing.getConfig(studentId, teacher.id);
+      } else if (extRes.data) {
+        setStudentName(extRes.data.name);
+        setStudentInstrument(extRes.data.instrument ?? null);
+        setIsExternal(true);
+        cfg = await billing.getConfigByExternal(studentId, teacher.id);
+      }
+
       setConfig(cfg);
       if (cfg) {
-        setRateInput(String(cfg.monthly_rate_cents / 100));
-        setBillingDay(cfg.billing_day);
-        setConfigNotes(cfg.notes ?? "");
+        setParentName(cfg.parent_name ?? "");
+        setParentEmail(cfg.parent_email ?? "");
+        setParentPhone(cfg.parent_phone ?? "");
+        setRate(cfg.lesson_rate_cents > 0 ? String(cfg.lesson_rate_cents / 100) : "");
+        setLessonType(cfg.lesson_type ?? "in_person");
+        setBillingType(cfg.billing_type ?? "private");
       }
-      setRecords(recs);
-      setCharges(chgs);
+
+      const pm = periodMonth(year, month);
+      const [lsns, inv, hist] = await Promise.all([
+        billing.getBillableLessons(teacher.id, isExternal ? null : studentId, isExternal ? studentId : null, year, month),
+        cfg ? billing.getInvoice(teacher.id, isExternal ? null : studentId, isExternal ? studentId : null, pm) : Promise.resolve(null),
+        cfg ? billing.getInvoices(teacher.id, isExternal ? null : studentId, isExternal ? studentId : null) : Promise.resolve([]),
+      ]);
+
+      setLessons(lsns);
+      setInvoice(inv);
+      setInvoiceHistory(hist);
     } finally {
       setLoading(false);
     }
-  }
+  }, [teacher?.id, studentId, year, month, isExternal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function saveConfig(e: React.FormEvent) {
+  useEffect(() => { load(); }, [load]);
+
+  async function saveContact(e: React.FormEvent) {
     e.preventDefault();
-    setSavingConfig(true);
+    if (!teacher?.studioId) return;
+    setSavingContact(true);
     try {
-      const rateCents = Math.round(parseFloat(rateInput) * 100);
+      const rateCents = rate ? Math.round(parseFloat(rate) * 100) : 0;
       await billing.upsertConfig({
-        studioId: teacher.studioId!,
-        studentId,
+        studioId: teacher.studioId,
+        studentId: isExternal ? null : studentId,
+        externalStudentId: isExternal ? studentId : null,
         teacherId: teacher.id,
-        monthlyRateCents: rateCents,
-        billingDay,
-        notes: configNotes || undefined,
+        parentName: parentName || undefined,
+        parentEmail: parentEmail || undefined,
+        parentPhone: parentPhone || undefined,
+        lessonRateCents: rateCents,
+        lessonType,
+        billingType,
       });
-      await loadAll();
+      setContactSaved(true);
+      setTimeout(() => setContactSaved(false), 2000);
+      await load();
     } finally {
-      setSavingConfig(false);
+      setSavingContact(false);
     }
   }
 
-  async function addThisMonth() {
+  async function handleGenerateInvoice() {
     if (!config) return;
-    setAddingMonth(true);
+    setGeneratingInvoice(true);
     try {
-      await billing.generateCurrentMonthRecord(config);
-      await loadAll();
-    } finally {
-      setAddingMonth(false);
-    }
-  }
-
-  async function handleMarkPaid(recordId: string) {
-    setMarkingPaid(recordId);
-    try {
-      await billing.markTuitionPaid(recordId, payMethod, teacher.id);
-      await loadAll();
-    } finally {
-      setMarkingPaid(null);
-    }
-  }
-
-  async function handleMarkUnpaid(recordId: string) {
-    setMarkingPaid(recordId);
-    try {
-      await billing.markTuitionUnpaid(recordId, teacher.id);
-      await loadAll();
-    } finally {
-      setMarkingPaid(null);
-    }
-  }
-
-  async function addCharge(e: React.FormEvent) {
-    e.preventDefault();
-    setAddingCharge(true);
-    try {
-      await billing.addCharge({
-        studioId: teacher.studioId!,
-        studentId,
-        teacherId: teacher.id,
-        description: chargeDesc.trim(),
-        amountCents: Math.round(parseFloat(chargeAmount) * 100),
+      const extraCents = extraAmount ? Math.round(parseFloat(extraAmount) * 100) : 0;
+      await billing.generateInvoice({
+        config,
+        periodMonth: periodMonth(year, month),
+        lessonCount: lessons.length,
+        makeupCreditsApplied: creditsToApply,
+        extraChargesCents: extraCents,
+        extraChargesDesc: extraDesc || undefined,
       });
-      setChargeDesc("");
-      setChargeAmount("");
-      setShowChargeForm(false);
-      await loadAll();
+      setShowExtraForm(false);
+      setExtraDesc("");
+      setExtraAmount("");
+      await load();
     } finally {
-      setAddingCharge(false);
+      setGeneratingInvoice(false);
     }
   }
 
-  async function markChargePaid(chargeId: string) {
-    await billing.markChargePaid(chargeId, teacher.id);
-    await loadAll();
+  async function handleMarkPaid() {
+    if (!invoice) return;
+    setMarkingPaid(true);
+    try {
+      await billing.markInvoicePaid(invoice.id, payMethod, teacher.id);
+      await load();
+    } finally {
+      setMarkingPaid(false);
+    }
   }
 
-  const outstanding = records.filter(r => r.status === "unpaid").reduce((s, r) => s + r.amount_cents, 0)
-    + charges.filter(c => c.status === "unpaid").reduce((s, c) => s + c.amount_cents, 0);
+  async function handleMarkUnpaid() {
+    if (!invoice) return;
+    setMarkingPaid(true);
+    try {
+      await billing.markInvoiceUnpaid(invoice.id, teacher.id);
+      await load();
+    } finally {
+      setMarkingPaid(false);
+    }
+  }
 
-  const inp: React.CSSProperties = {
-    border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem",
-    fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--white)",
-    color: "var(--charcoal)", outline: "none", width: "100%", boxSizing: "border-box",
-  };
+  function prevMonth() {
+    if (month === 1) { setYear(y => y - 1); setMonth(12); }
+    else setMonth(m => m - 1);
+  }
+  function nextMonth() {
+    const cur = new Date(year, month - 1, 1);
+    const cur2 = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (cur >= cur2) return;
+    if (month === 12) { setYear(y => y + 1); setMonth(1); }
+    else setMonth(m => m + 1);
+  }
+
+  const rateCents = config?.lesson_rate_cents ?? 0;
+  const makeupCredits = config?.makeup_credits ?? 0;
+  const billableCount = Math.max(0, lessons.length - creditsToApply);
+  const extraCents = extraAmount ? Math.round(parseFloat(extraAmount) * 100) : 0;
+  const estimatedTotal = billableCount * rateCents + extraCents;
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const isStudio = billingType === "studio";
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: "2rem 1.5rem" }}>
+        <div className="skeleton" style={{ height: 24, width: 180, marginBottom: "1.5rem", borderRadius: 3 }} />
+        <div className="skeleton" style={{ height: 200, borderRadius: 4 }} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto", padding: "2rem 1.5rem" }}>
-      <button
-        onClick={() => router.back()}
-        style={{ background: "none", border: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer", padding: 0, marginBottom: "1.25rem" }}
-      >
-        ← Back
-      </button>
 
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-          {studentName}
-        </h1>
-        <div style={{
-          fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", fontWeight: 600,
-          color: outstanding > 0 ? "#c0392b" : "var(--sage)",
-        }}>
-          {outstanding > 0 ? `${fmt(outstanding)} ${t.billing.outstanding}` : t.billing.allPaidUp}
+      {/* Back + header */}
+      <div style={{ marginBottom: "1.75rem" }}>
+        <Link href="/teacher/billing" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.25rem", marginBottom: "0.875rem" }}>
+          ← Billing
+        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.625rem", color: "var(--charcoal)", margin: 0, letterSpacing: "-0.01em" }}>
+            {studentName}
+          </h1>
+          {studentInstrument && (
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
+              · {studentInstrument}
+            </span>
+          )}
         </div>
       </div>
 
-      {loading ? (
-        <div className="skeleton" style={{ height: 200, borderRadius: 4 }} />
-      ) : (
-        <>
-          {/* Billing config */}
-          <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
-              {t.billing.monthlyRateSection}
+      {/* ── Contact + Settings ── */}
+      <form onSubmit={saveContact}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem", marginBottom: "0.875rem" }}>
+
+          {/* Parent contact */}
+          <div className="card-base" style={{ padding: "1.125rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 700, color: "var(--charcoal)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Parent / Guardian
             </div>
-            <form onSubmit={saveConfig} style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div style={{ flex: "0 0 120px" }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.billing.ratePerMonth}</label>
-                <div style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>$</span>
-                  <input value={rateInput} onChange={e => setRateInput(e.target.value)} type="number" min="0" step="0.01" required style={{ ...inp, paddingLeft: "1.5rem" }} />
-                </div>
-              </div>
-              <div style={{ flex: "0 0 100px" }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.billing.dueOnDay}</label>
-                <input value={billingDay} onChange={e => setBillingDay(Number(e.target.value))} type="number" min="1" max="28" style={inp} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>{t.billing.notes}</label>
-                <input value={configNotes} onChange={e => setConfigNotes(e.target.value)} placeholder="Optional" style={inp} />
-              </div>
-              <button type="submit" disabled={savingConfig} style={{
-                padding: "0.5rem 1rem", borderRadius: 3, border: "none",
-                background: "var(--charcoal)", color: "var(--white)",
-                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
-                whiteSpace: "nowrap", opacity: savingConfig ? 0.5 : 1,
-              }}>
-                {savingConfig ? t.common.saving : config ? t.billing.update : t.billing.setRate}
-              </button>
-            </form>
+            <div>
+              <label style={labelStyle}>Name</label>
+              <input value={parentName} onChange={e => setParentName(e.target.value)} placeholder="Parent name" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Email</label>
+              <input type="email" value={parentEmail} onChange={e => setParentEmail(e.target.value)} placeholder="email@example.com" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Phone</label>
+              <input value={parentPhone} onChange={e => setParentPhone(e.target.value)} placeholder="Phone number" style={inputStyle} />
+            </div>
           </div>
 
-          {/* Tuition records */}
-          <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                {t.billing.tuitionSection}
+          {/* Billing settings */}
+          <div className="card-base" style={{ padding: "1.125rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 700, color: "var(--charcoal)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Billing Settings
+            </div>
+            <div>
+              <label style={labelStyle}>Rate per lesson</label>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>$</span>
+                <input type="number" min="0" step="0.01" value={rate} onChange={e => setRate(e.target.value)} placeholder="0.00" style={{ ...inputStyle, width: 90 }} />
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>/ lesson</span>
               </div>
-              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                <select value={payMethod} onChange={e => setPayMethod(e.target.value as PaymentMethod)}
-                  style={{ ...inp, width: "auto", fontSize: "0.75rem", padding: "0.25rem 0.5rem" }}>
-                  {PAY_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-                {config && (
-                  <button onClick={addThisMonth} disabled={addingMonth} style={{
-                    padding: "0.25rem 0.75rem", borderRadius: 3, border: "1px solid var(--border-strong)",
-                    background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
-                    fontSize: "0.75rem", cursor: "pointer", whiteSpace: "nowrap", opacity: addingMonth ? 0.5 : 1,
-                  }}>
-                    {t.billing.thisMonth}
+            </div>
+            <div>
+              <label style={labelStyle}>Lesson type</label>
+              <select value={lessonType} onChange={e => setLessonType(e.target.value as LessonType)} style={inputStyle}>
+                <option value="in_person">🏠 In-person</option>
+                <option value="online">💻 Online</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Billing handled by</label>
+              <select value={billingType} onChange={e => setBillingType(e.target.value as BillingType)} style={inputStyle}>
+                <option value="private">Me (private)</option>
+                <option value="studio">Studio</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1.75rem" }}>
+          <button type="submit" disabled={savingContact} style={{ ...primaryBtn, opacity: savingContact ? 0.6 : 1, background: contactSaved ? "#2d8a4e" : "var(--charcoal)" }}>
+            {contactSaved ? "✓ Saved" : savingContact ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </form>
+
+      {/* ── Studio billing notice ── */}
+      {isStudio && (
+        <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem", background: "var(--cream-deep)", textAlign: "center" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>
+            Studio billing — the studio manages invoicing for this student.
+          </div>
+        </div>
+      )}
+
+      {/* ── Monthly Invoice (only for private billing) ── */}
+      {!isStudio && config && (
+        <>
+          {/* Month nav */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.125rem", color: "var(--charcoal)" }}>
+              {MONTH_NAMES[month - 1]} {year}
+            </div>
+            <div style={{ display: "flex", gap: "0.375rem" }}>
+              <button onClick={prevMonth} style={{ ...ghostBtn, padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}>◀</button>
+              <button onClick={nextMonth} disabled={isCurrentMonth} style={{ ...ghostBtn, padding: "0.25rem 0.625rem", fontSize: "0.75rem", opacity: isCurrentMonth ? 0.35 : 1 }}>▶</button>
+            </div>
+          </div>
+
+          <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem" }}>
+
+            {/* Lesson count */}
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "0.875rem" }}>
+              <div>
+                <span style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.875rem", fontWeight: 600, color: "var(--charcoal)" }}>
+                  {lessons.length}
+                </span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", marginLeft: "0.375rem" }}>
+                  lesson{lessons.length !== 1 ? "s" : ""}
+                  {rateCents > 0 && ` × ${fmt(rateCents)}`}
+                </span>
+              </div>
+              {rateCents > 0 && lessons.length > 0 && (
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>
+                  = {fmt(lessons.length * rateCents)}
+                </div>
+              )}
+            </div>
+
+            {/* Makeup credits */}
+            {makeupCredits > 0 && (
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "0.625rem 0.875rem", background: "var(--cream-deep)", borderRadius: 3,
+                marginBottom: "0.875rem",
+              }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)" }}>
+                  🔄 {makeupCredits} makeup credit{makeupCredits !== 1 ? "s" : ""} available
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => setCreditsToApply(c => Math.max(0, c - 1))}
+                    disabled={creditsToApply === 0}
+                    style={{ ...ghostBtn, padding: "0.125rem 0.5rem", fontSize: "0.875rem", opacity: creditsToApply === 0 ? 0.3 : 1 }}
+                  >−</button>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", minWidth: 16, textAlign: "center" }}>
+                    {creditsToApply}
+                  </span>
+                  <button
+                    onClick={() => setCreditsToApply(c => Math.min(makeupCredits, lessons.length, c + 1))}
+                    disabled={creditsToApply >= Math.min(makeupCredits, lessons.length)}
+                    style={{ ...ghostBtn, padding: "0.125rem 0.5rem", fontSize: "0.875rem", opacity: creditsToApply >= Math.min(makeupCredits, lessons.length) ? 0.3 : 1 }}
+                  >+</button>
+                  {creditsToApply > 0 && (
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#2d8a4e" }}>
+                      −{fmt(creditsToApply * rateCents)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Extra charges */}
+            {showExtraForm ? (
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.875rem" }}>
+                <input
+                  value={extraDesc}
+                  onChange={e => setExtraDesc(e.target.value)}
+                  placeholder="Description (e.g. Travel)"
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>$</span>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={extraAmount}
+                    onChange={e => setExtraAmount(e.target.value)}
+                    placeholder="0.00"
+                    style={{ ...inputStyle, width: 80 }}
+                  />
+                </div>
+                <button onClick={() => { setShowExtraForm(false); setExtraDesc(""); setExtraAmount(""); }} style={{ ...ghostBtn, padding: "0.5rem 0.625rem", color: "var(--muted)" }}>×</button>
+              </div>
+            ) : (
+              <button onClick={() => setShowExtraForm(true)} style={{ ...ghostBtn, fontSize: "0.8125rem", marginBottom: "0.875rem", width: "100%", textAlign: "left", color: "var(--muted)" }}>
+                + Add extra charge (travel, materials…)
+              </button>
+            )}
+
+            {/* Total */}
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.875rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>
+                Total
+              </div>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.5rem", color: "var(--charcoal)" }}>
+                {invoice ? fmt(invoice.amount_cents) : (rateCents > 0 ? fmt(estimatedTotal) : "—")}
+              </div>
+            </div>
+
+            {/* Invoice status */}
+            {invoice ? (
+              <div style={{ marginTop: "1rem" }}>
+                {invoice.status === "paid" ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "#2d8a4e", fontWeight: 500 }}>
+                      ✓ Paid
+                      {invoice.payment_method && ` · ${invoice.payment_method}`}
+                      {invoice.paid_at && ` · ${new Date(invoice.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })}`}
+                    </div>
+                    <button onClick={handleMarkUnpaid} disabled={markingPaid} style={{ ...ghostBtn, fontSize: "0.75rem", color: "var(--muted)" }}>
+                      Undo
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b", fontWeight: 500, marginBottom: "0.75rem" }}>
+                      Invoice sent — payment pending
+                    </div>
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                      {PAY_METHODS.map(m => (
+                        <button
+                          key={m.value}
+                          onClick={() => setPayMethod(m.value)}
+                          style={{
+                            padding: "0.375rem 0.75rem", borderRadius: 3, fontSize: "0.8125rem",
+                            fontFamily: "Inter, sans-serif", cursor: "pointer",
+                            border: payMethod === m.value ? "2px solid var(--charcoal)" : "1px solid var(--border-strong)",
+                            background: payMethod === m.value ? "var(--charcoal)" : "none",
+                            color: payMethod === m.value ? "var(--white)" : "var(--charcoal)",
+                            fontWeight: payMethod === m.value ? 600 : 400,
+                          }}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                      <button onClick={handleMarkPaid} disabled={markingPaid} style={{ ...primaryBtn, background: "#2d8a4e", marginLeft: "auto", opacity: markingPaid ? 0.6 : 1 }}>
+                        {markingPaid ? "Saving…" : "Mark Paid ✓"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ marginTop: "1rem", display: "flex", gap: "0.625rem" }}>
+                <button
+                  onClick={handleGenerateInvoice}
+                  disabled={generatingInvoice || rateCents === 0}
+                  style={{ ...primaryBtn, flex: 1, opacity: generatingInvoice || rateCents === 0 ? 0.5 : 1, textAlign: "center" }}
+                  title={rateCents === 0 ? "Set a rate to generate an invoice" : undefined}
+                >
+                  {generatingInvoice ? "Generating…" : "Generate Invoice"}
+                </button>
+                {parentEmail && (
+                  <button
+                    onClick={async () => {
+                      await handleGenerateInvoice();
+                    }}
+                    style={{ ...ghostBtn }}
+                    title="Copy invoice to share with parent"
+                  >
+                    Share
                   </button>
                 )}
               </div>
-            </div>
-
-            {records.length === 0 ? (
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", padding: "0.5rem 0" }}>
-                {t.billing.noTuitionRecords} {config ? t.billing.noTuitionRecordsWithConfig : t.billing.setRateFirst}
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {records.map(r => (
-                  <div key={r.id} style={{
-                    display: "flex", alignItems: "center", gap: "0.75rem",
-                    padding: "0.5rem 0.75rem", borderRadius: 3,
-                    background: r.status === "paid" ? "transparent" : "var(--cream)",
-                    border: "1px solid var(--border)",
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", fontWeight: 400 }}>
-                        {monthLabel(r.period_month)}
-                      </div>
-                      {r.status === "paid" && r.paid_at && (
-                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                          {t.billing.paidOn} {new Date(r.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })} · {r.payment_method}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
-                      {fmt(r.amount_cents)}
-                    </div>
-                    <div>
-                      {r.status === "unpaid" ? (
-                        <button
-                          onClick={() => handleMarkPaid(r.id)}
-                          disabled={markingPaid === r.id}
-                          style={{
-                            padding: "0.25rem 0.625rem", borderRadius: 3, border: "none",
-                            background: "var(--sage)", color: "var(--white)", fontFamily: "Inter, sans-serif",
-                            fontSize: "0.6875rem", fontWeight: 500, cursor: "pointer", opacity: markingPaid === r.id ? 0.5 : 1,
-                          }}
-                        >
-                          {t.billing.markPaid}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleMarkUnpaid(r.id)}
-                          disabled={markingPaid === r.id}
-                          style={{
-                            padding: "0.25rem 0.625rem", borderRadius: 3, border: "1px solid var(--border)",
-                            background: "none", color: "var(--muted)", fontFamily: "Inter, sans-serif",
-                            fontSize: "0.6875rem", cursor: "pointer", opacity: markingPaid === r.id ? 0.5 : 1,
-                          }}
-                        >
-                          {t.billing.markUnpaid}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
-
-          {/* One-off charges */}
-          <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                {t.billing.additionalCharges}
-              </div>
-              <button onClick={() => setShowChargeForm(v => !v)} style={{
-                padding: "0.25rem 0.75rem", borderRadius: 3, border: "1px solid var(--border-strong)",
-                background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
-                fontSize: "0.75rem", cursor: "pointer",
-              }}>
-                + {t.billing.addCharge}
-              </button>
-            </div>
-
-            {showChargeForm && (
-              <form onSubmit={addCharge} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", marginBottom: "0.875rem", flexWrap: "wrap" }}>
-                <div style={{ flex: 1 }}>
-                  <input value={chargeDesc} onChange={e => setChargeDesc(e.target.value)} required placeholder="Description (e.g. RCM exam fee)" style={inp} />
-                </div>
-                <div style={{ flex: "0 0 110px" }}>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>$</span>
-                    <input value={chargeAmount} onChange={e => setChargeAmount(e.target.value)} type="number" min="0" step="0.01" required placeholder="0.00" style={{ ...inp, paddingLeft: "1.5rem" }} />
-                  </div>
-                </div>
-                <button type="submit" disabled={addingCharge} style={{
-                  padding: "0.5rem 1rem", borderRadius: 3, border: "none",
-                  background: "var(--charcoal)", color: "var(--white)",
-                  fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer",
-                  opacity: addingCharge ? 0.5 : 1, whiteSpace: "nowrap",
-                }}>
-                  {addingCharge ? t.billing.addingCharge : t.common.add}
-                </button>
-              </form>
-            )}
-
-            {charges.length === 0 ? (
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", padding: "0.25rem 0" }}>
-                {t.billing.noAdditionalCharges}
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {charges.map(c => (
-                  <div key={c.id} style={{
-                    display: "flex", alignItems: "center", gap: "0.75rem",
-                    padding: "0.5rem 0.75rem", borderRadius: 3,
-                    background: c.status === "paid" ? "transparent" : "var(--cream)",
-                    border: "1px solid var(--border)",
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)" }}>{c.description}</div>
-                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                        {new Date(c.charge_date).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
-                        {c.status === "paid" && c.paid_at ? ` · ${t.billing.paidOn} ${new Date(c.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
-                      </div>
-                    </div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
-                      {fmt(c.amount_cents)}
-                    </div>
-                    {c.status === "unpaid" && (
-                      <button
-                        onClick={() => markChargePaid(c.id)}
-                        style={{
-                          padding: "0.25rem 0.625rem", borderRadius: 3, border: "none",
-                          background: "var(--sage)", color: "var(--white)", fontFamily: "Inter, sans-serif",
-                          fontSize: "0.6875rem", fontWeight: 500, cursor: "pointer",
-                        }}
-                      >
-                        {t.billing.markPaid}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Print invoice link */}
-          <a
-            href={`/teacher/billing/${studentId}/invoice`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-block", padding: "0.625rem 1.25rem", borderRadius: 3,
-              border: "1px solid var(--border-strong)", background: "none",
-              color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
-              fontSize: "0.8125rem", fontWeight: 500, textDecoration: "none",
-              cursor: "pointer",
-            }}
-          >
-            {t.billing.printViewInvoice}
-          </a>
         </>
       )}
 
-      {/* Parent / guardian linking */}
-      <ParentLinkSection studentId={studentId} teacherId={teacher?.id ?? ""} supabase={supabase} />
-    </div>
-  );
-}
-
-function ParentLinkSection({ studentId, teacherId: _teacherId, supabase }: { studentId: string; teacherId: string; supabase: ReturnType<typeof import("../../../../lib/supabase/client").getSupabaseBrowserClient> }) {
-  const { t } = useI18n();
-  const [links, setLinks] = React.useState<{ id: string; parent_id: string; parent_name: string }[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [email, setEmail] = React.useState("");
-  const [linking, setLinking] = React.useState(false);
-  const [linkError, setLinkError] = React.useState("");
-
-  React.useEffect(() => { loadLinks(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function loadLinks() {
-    setLoading(true);
-    const { data } = await supabase
-      .from("parent_student_links")
-      .select("id, parent_id, profiles!parent_id(display_name)")
-      .eq("student_id", studentId);
-    const rows = (data ?? []).map((r: { id: string; parent_id: string; profiles: { display_name: string } | null }) => ({
-      id: r.id,
-      parent_id: r.parent_id,
-      parent_name: r.profiles?.display_name ?? "Parent",
-    }));
-    setLinks(rows);
-    setLoading(false);
-  }
-
-  async function linkParent(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setLinking(true);
-    setLinkError("");
-    try {
-      const res = await fetch("/api/parent/link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), studentId }),
-      });
-      const json = await res.json();
-      if (!res.ok) { setLinkError(json.error ?? "Failed to link"); return; }
-      setEmail("");
-      await loadLinks();
-    } finally {
-      setLinking(false);
-    }
-  }
-
-  async function unlink(linkId: string) {
-    const { error } = await supabase.from("parent_student_links").delete().eq("id", linkId);
-    if (error) { setLinkError("Failed to remove link: " + error.message); return; }
-    await loadLinks();
-  }
-
-  const inp: React.CSSProperties = {
-    border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem",
-    fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--white)",
-    color: "var(--charcoal)", outline: "none", boxSizing: "border-box",
-  };
-
-  return (
-    <div className="card-base" style={{ padding: "1.25rem", marginTop: "1.25rem" }}>
-      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
-        {t.billing.parentGuardianAccess}
-      </div>
-      {loading ? null : links.length === 0 ? (
-        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "0.875rem" }}>{t.billing.noParentsLinked}</div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.875rem" }}>
-          {links.map(l => (
-            <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.375rem 0.75rem", background: "var(--cream)", borderRadius: 3, border: "1px solid var(--border)" }}>
-              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                {l.parent_name}
-              </span>
-              <button onClick={() => unlink(l.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", padding: 0 }}>{t.billing.removeParent}</button>
-            </div>
-          ))}
+      {/* ── Invoice history ── */}
+      {!isStudio && invoiceHistory.filter(h => h.period_month !== periodMonth(year, month)).length > 0 && (
+        <div style={{ marginTop: "0.5rem" }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.625rem" }}>
+            Past Invoices
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+            {invoiceHistory
+              .filter(h => h.period_month !== periodMonth(year, month))
+              .slice(0, 12)
+              .map(h => (
+                <div key={h.id} className="card-base" style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", fontWeight: 500 }}>
+                      {monthLabel(h.period_month)}
+                    </div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.1rem" }}>
+                      {h.lesson_count > 0 ? `${h.lesson_count} lesson${h.lesson_count !== 1 ? "s" : ""}` : ""}
+                      {h.makeup_credits_applied > 0 ? ` · ${h.makeup_credits_applied} credit${h.makeup_credits_applied !== 1 ? "s" : ""} applied` : ""}
+                      {h.extra_charges_cents > 0 ? ` · +${fmt(h.extra_charges_cents)} extra` : ""}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: h.status === "paid" ? "#2d8a4e" : "#c0392b" }}>
+                      {fmt(h.amount_cents)}
+                    </div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.1rem" }}>
+                      {h.status === "paid"
+                        ? `✓ ${h.payment_method ?? "paid"}${h.paid_at ? ` · ${new Date(h.paid_at).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}`
+                        : "Unpaid"
+                      }
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
       )}
-      <form onSubmit={linkParent} style={{ display: "flex", gap: "0.5rem" }}>
-        <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder={t.billing.parentEmailPlaceholder} style={{ ...inp, flex: 1 }} />
-        <button type="submit" disabled={linking} style={{ padding: "0.5rem 0.875rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer", opacity: linking ? 0.5 : 1, whiteSpace: "nowrap" }}>
-          {linking ? t.billing.linking : t.billing.linkParent}
-        </button>
-      </form>
-      {linkError && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--rose)", marginTop: "0.5rem" }}>{linkError}</div>}
-      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.5rem" }}>
-        {t.billing.parentAccountNote}
-      </div>
     </div>
   );
 }
