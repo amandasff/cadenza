@@ -47,6 +47,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* FIGMA_CAPTURE_SCRIPT */}
+        <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
       </head>
       <body suppressHydrationWarning>
         <AuthProvider>
