@@ -75,6 +75,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
   const [billingType, setBillingType] = useState<BillingType>("private");
   const [savingContact, setSavingContact] = useState(false);
   const [contactSaved, setContactSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Invoice editing
   const [creditsToApply, setCreditsToApply] = useState(0);
@@ -96,6 +97,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
       ]);
 
       let cfg: BillingConfigRow | null = null;
+      let detectedIsExternal = false;
       if (profileRes.data) {
         setStudentName(profileRes.data.display_name);
         setStudentInstrument(profileRes.data.instrument ?? null);
@@ -104,6 +106,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
       } else if (extRes.data) {
         setStudentName(extRes.data.name);
         setStudentInstrument(extRes.data.instrument ?? null);
+        detectedIsExternal = true;
         setIsExternal(true);
         cfg = await billing.getConfigByExternal(studentId, teacher.id);
       }
@@ -120,18 +123,20 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
 
       const pm = periodMonth(year, month);
       const [lsns, inv, hist] = await Promise.all([
-        billing.getBillableLessons(teacher.id, isExternal ? null : studentId, isExternal ? studentId : null, year, month),
-        cfg ? billing.getInvoice(teacher.id, isExternal ? null : studentId, isExternal ? studentId : null, pm) : Promise.resolve(null),
-        cfg ? billing.getInvoices(teacher.id, isExternal ? null : studentId, isExternal ? studentId : null) : Promise.resolve([]),
+        billing.getBillableLessons(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null, year, month),
+        cfg ? billing.getInvoice(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null, pm) : Promise.resolve(null),
+        cfg ? billing.getInvoices(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null) : Promise.resolve([]),
       ]);
 
       setLessons(lsns);
       setInvoice(inv);
       setInvoiceHistory(hist);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to load billing data");
     } finally {
       setLoading(false);
     }
-  }, [teacher?.id, studentId, year, month, isExternal]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [teacher?.id, studentId, year, month]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
 
@@ -139,6 +144,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
     e.preventDefault();
     if (!teacher?.studioId) return;
     setSavingContact(true);
+    setSaveError(null);
     try {
       const rateCents = rate ? Math.round(parseFloat(rate) * 100) : 0;
       await billing.upsertConfig({
@@ -156,6 +162,8 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
       setContactSaved(true);
       setTimeout(() => setContactSaved(false), 2000);
       await load();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSavingContact(false);
     }
@@ -164,6 +172,7 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
   async function handleGenerateInvoice() {
     if (!config) return;
     setGeneratingInvoice(true);
+    setSaveError(null);
     try {
       const extraCents = extraAmount ? Math.round(parseFloat(extraAmount) * 100) : 0;
       await billing.generateInvoice({
@@ -178,6 +187,8 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
       setExtraDesc("");
       setExtraAmount("");
       await load();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to generate invoice");
     } finally {
       setGeneratingInvoice(false);
     }
@@ -186,9 +197,12 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
   async function handleMarkPaid() {
     if (!invoice) return;
     setMarkingPaid(true);
+    setSaveError(null);
     try {
       await billing.markInvoicePaid(invoice.id, payMethod, teacher.id);
       await load();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to mark paid");
     } finally {
       setMarkingPaid(false);
     }
@@ -197,9 +211,12 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
   async function handleMarkUnpaid() {
     if (!invoice) return;
     setMarkingPaid(true);
+    setSaveError(null);
     try {
       await billing.markInvoiceUnpaid(invoice.id, teacher.id);
       await load();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to update invoice");
     } finally {
       setMarkingPaid(false);
     }
@@ -307,7 +324,12 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1.75rem" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "0.75rem", marginBottom: "1.75rem" }}>
+          {saveError && (
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b" }}>
+              {saveError}
+            </div>
+          )}
           <button type="submit" disabled={savingContact} style={{ ...primaryBtn, opacity: savingContact ? 0.6 : 1, background: contactSaved ? "#2d8a4e" : "var(--charcoal)" }}>
             {contactSaved ? "✓ Saved" : savingContact ? "Saving…" : "Save"}
           </button>
