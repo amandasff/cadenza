@@ -721,6 +721,7 @@ const zh: Translations = {
     referenceNameCol: "名称",
     referenceSymbolCol: "符号",
     referenceDistanceCol: "距离",
+    referenceNoChordsFound: "未找到和弦。",
     earTrainingTitle: "听力训练",
     earTrainingSubtitle: "识别和弦进行和调号 — 视唱练耳的基础",
     progressionsTab: "和弦进行",

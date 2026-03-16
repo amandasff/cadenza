@@ -729,6 +729,7 @@ export interface Translations {
     referenceNameCol: string;
     referenceSymbolCol: string;
     referenceDistanceCol: string;
+    referenceNoChordsFound: string;
     earTrainingTitle: string;
     earTrainingSubtitle: string;
     progressionsTab: string;

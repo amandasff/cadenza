@@ -732,6 +732,7 @@ const en: Translations = {
     referenceNameCol: "Name",
     referenceSymbolCol: "Symbol",
     referenceDistanceCol: "Distance",
+    referenceNoChordsFound: "No chords found.",
     earTrainingTitle: "Ear Training",
     earTrainingSubtitle: "Identify progressions and keys — essential for playing by ear",
     progressionsTab: "Progressions",

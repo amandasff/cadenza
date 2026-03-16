@@ -721,6 +721,7 @@ const vi: Translations = {
     referenceNameCol: "Tên",
     referenceSymbolCol: "Ký hiệu",
     referenceDistanceCol: "Khoảng cách",
+    referenceNoChordsFound: "Không tìm thấy hợp âm.",
     earTrainingTitle: "Luyện tai nghe",
     earTrainingSubtitle: "Nhận biết hợp âm và giọng điệu — thiết yếu để chơi nhạc theo tai",
     progressionsTab: "Tiến trình hợp âm",

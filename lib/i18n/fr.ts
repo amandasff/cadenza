@@ -721,6 +721,7 @@ const fr: Translations = {
     referenceNameCol: "Nom",
     referenceSymbolCol: "Symbole",
     referenceDistanceCol: "Distance",
+    referenceNoChordsFound: "Aucun accord trouvé.",
     earTrainingTitle: "Formation de l'oreille",
     earTrainingSubtitle: "Identifier les progressions et les tonalités — essentiel pour jouer à l'oreille",
     progressionsTab: "Progressions",

@@ -721,6 +721,7 @@ const es: Translations = {
     referenceNameCol: "Nombre",
     referenceSymbolCol: "Símbolo",
     referenceDistanceCol: "Distancia",
+    referenceNoChordsFound: "No se encontraron acordes.",
     earTrainingTitle: "Entrenamiento auditivo",
     earTrainingSubtitle: "Identifica progresiones y tonalidades — esencial para tocar de oído",
     progressionsTab: "Progresiones",

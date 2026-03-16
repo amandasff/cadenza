@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { useI18n } from "@/lib/context/I18nContext";
 
 // ── Note data ──────────────────────────────────────────────────────────────────
 
@@ -215,6 +216,7 @@ function ChordDiagram({ chord, strings = 6 }: { chord: GChord; strings?: number 
 type Tab = "piano" | "guitar" | "ukulele";
 
 export default function ChordsPage() {
+  const { t: tr } = useI18n();
   const [tab, setTab] = useState<Tab>("piano");
   const [root, setRoot] = useState(0); // index into NOTE_NAMES
   const [chordType, setChordType] = useState("maj");
@@ -260,7 +262,7 @@ export default function ChordsPage() {
           {/* Root note picker */}
           <div style={{ marginBottom: "1rem" }}>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 0.625rem" }}>
-              Root note
+              {tr.student.referencePianoRootNote}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
               {NOTE_NAMES.map((note, idx) => (
@@ -282,7 +284,7 @@ export default function ChordsPage() {
           {/* Chord type picker */}
           <div style={{ marginBottom: "1.5rem" }}>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 0.625rem" }}>
-              Chord type
+              {tr.student.referencePianoChordType}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
               {CHORD_TYPES.map(ct => (
@@ -320,7 +322,7 @@ export default function ChordsPage() {
         <div>
           <input
             type="text"
-            placeholder="Search chords (e.g. Am, G, D7…)"
+            placeholder={tr.student.referenceSearchChords}
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
@@ -331,7 +333,7 @@ export default function ChordsPage() {
             }}
           />
           {guitarFiltered.length === 0 ? (
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>No chords found.</p>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>{tr.student.referenceNoChordsFound}</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "1rem" }}>
               {guitarFiltered.map(chord => (
@@ -349,7 +351,7 @@ export default function ChordsPage() {
         <div>
           <input
             type="text"
-            placeholder="Search chords (e.g. Am, C, G7…)"
+            placeholder={tr.student.referenceSearchChords}
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
@@ -360,7 +362,7 @@ export default function ChordsPage() {
             }}
           />
           {ukuFiltered.length === 0 ? (
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>No chords found.</p>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>{tr.student.referenceNoChordsFound}</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: "1rem" }}>
               {ukuFiltered.map(chord => (
