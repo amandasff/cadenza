@@ -7,6 +7,7 @@ const fr: Translations = {
     cancel: "Annuler",
     save: "Enregistrer",
     saving: "Enregistrement…",
+    sending: "Envoi…",
     delete: "Supprimer",
     deleting: "Suppression…",
     back: "Retour",

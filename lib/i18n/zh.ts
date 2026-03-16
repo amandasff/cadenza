@@ -7,6 +7,7 @@ const zh: Translations = {
     cancel: "取消",
     save: "保存",
     saving: "保存中…",
+    sending: "发送中…",
     delete: "删除",
     deleting: "删除中…",
     back: "返回",

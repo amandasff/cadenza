@@ -7,6 +7,7 @@ const vi: Translations = {
     cancel: "Hủy",
     save: "Lưu",
     saving: "Đang lưu…",
+    sending: "Đang gửi…",
     delete: "Xóa",
     deleting: "Đang xóa…",
     back: "Quay lại",

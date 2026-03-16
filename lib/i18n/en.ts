@@ -7,6 +7,7 @@ const en: Translations = {
     cancel: "Cancel",
     save: "Save",
     saving: "Saving…",
+    sending: "Sending…",
     delete: "Delete",
     deleting: "Deleting…",
     back: "Back",

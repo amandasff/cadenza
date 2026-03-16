@@ -5,6 +5,7 @@ export interface Translations {
     cancel: string;
     save: string;
     saving: string;
+    sending: string;
     delete: string;
     deleting: string;
     back: string;
