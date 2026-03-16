@@ -25,7 +25,7 @@ const fmt = (s: number) =>
 function PracticeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const student = user as Student;
   const practice = usePractice();
   const { t } = useI18n();
@@ -252,6 +252,9 @@ function PracticeInner() {
       });
       if (!logRes.ok) throw new Error("Failed to save session");
       const { session: sessionData } = await logRes.json() as { session: { id: string } };
+
+      // Refresh auth context so streak/points update immediately on home screen
+      await refresh();
 
       // Fire AI analysis in background — only if recording was captured
       if (recordingUrl && sessionData?.id) {
