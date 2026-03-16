@@ -78,6 +78,12 @@ export default function TeacherDashboard() {
       }
       setSentReminderIds(prev => new Set(prev).add(encourageTarget.id));
       setTimeout(() => setSentReminderIds(prev => { const next = new Set(prev); next.delete(encourageTarget!.id); return next; }), 3000);
+      // Fire push notification (best-effort — doesn't block on failure)
+      fetch("/api/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: encourageTarget.id }),
+      }).catch(() => {});
       setEncourageTarget(null);
     } catch (err) {
       setEncourageError(err instanceof Error ? err.message : "Failed to send. Please try again.");

@@ -124,7 +124,7 @@ Write personalized coaching feedback in 2–3 short paragraphs. No bullet points
 - Use the student's first name`;
 
     const message = await anthropic.messages.create({
-      model: "claude-opus-4-6",
+      model: "claude-sonnet-4-6",
       max_tokens: 400,
       messages: [{ role: "user", content: claudePrompt }],
     });

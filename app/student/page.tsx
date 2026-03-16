@@ -293,6 +293,51 @@ export default function ThisWeek() {
         <style>{`@keyframes pip-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }`}</style>
       </div>
 
+      {/* ── Streak & Points ── */}
+      {!practice.isActive && (
+        <div style={{ padding: "0 1.5rem 1rem", display: "flex", gap: "0.625rem" }}>
+          {/* Streak */}
+          <div style={{
+            flex: 1, borderRadius: 10, padding: "0.75rem 1rem",
+            background: (student?.streakDays ?? 0) > 0 ? "var(--peach-bg)" : "var(--white)",
+            border: `1px solid ${(student?.streakDays ?? 0) > 0 ? "var(--peach-light)" : "var(--border)"}`,
+            display: "flex", alignItems: "center", gap: "0.5rem",
+          }}>
+            <span style={{ fontSize: "1.25rem" }}>{(student?.streakDays ?? 0) > 0 ? "🔥" : "✨"}</span>
+            <div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--charcoal)", lineHeight: 1 }}>
+                {student?.streakDays ?? 0}
+              </div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
+                day streak
+              </div>
+            </div>
+            {(student?.streakDays ?? 0) > 0 && (
+              <div style={{ marginLeft: "auto", fontSize: "0.6875rem", color: "var(--peach)", fontWeight: 500 }}>
+                Keep it up!
+              </div>
+            )}
+          </div>
+
+          {/* Points + Level */}
+          <div style={{
+            flex: 1, borderRadius: 10, padding: "0.75rem 1rem",
+            background: "var(--white)", border: "1px solid var(--border)",
+            display: "flex", alignItems: "center", gap: "0.5rem",
+          }}>
+            <span style={{ fontSize: "1.25rem" }}>⭐</span>
+            <div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--charcoal)", lineHeight: 1 }}>
+                {(student?.totalPoints ?? 0).toLocaleString()}
+              </div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
+                pts · {student?.getLevelLabel?.() ?? "Beginner"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Chat with teacher ── */}
       <div style={{ padding: "0 1.5rem 1rem" }}>
         <div
