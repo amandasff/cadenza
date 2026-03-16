@@ -1,9 +1,9 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { en, zh, vi, fr, es, LOCALE_LABELS } from "../i18n";
+import { en, zh, vi, fr, es, hi, LOCALE_LABELS } from "../i18n";
 import type { Locale, Translations } from "../i18n";
 
-const TRANSLATIONS: Record<Locale, Translations> = { en, zh, vi, fr, es };
+const TRANSLATIONS: Record<Locale, Translations> = { en, zh, vi, fr, es, hi };
 const STORAGE_KEY = "cadenza-locale";
 
 interface I18nCtx {
