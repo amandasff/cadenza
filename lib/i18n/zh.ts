@@ -311,7 +311,7 @@ const zh: Translations = {
     categorySightReading: "视奏",
     categoryOther: "其他",
     noPiecesYet: "暂无曲目",
-    noPiecesDesc: "点击"{btn}"开始整理学生的作业。",
+    noPiecesDesc: "点击\"{btn}\"开始整理学生的作业。",
     noSessionsYetLabel: "暂无练习记录",
     pointsNotification: "积分已添加到{name}的总积分，他们将收到聊天通知。",
     addPieceButton: "添加曲目",
