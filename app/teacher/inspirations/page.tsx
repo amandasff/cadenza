@@ -5,6 +5,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import type { Inspiration, InspirationComment, YouTubeResult } from "../../../lib/types";
 import type { Teacher } from "../../../lib/models/Teacher";
 import YouTubeSearch from "../../../components/YouTubeSearch";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 interface StudentPick extends Inspiration {
   student_name: string;
@@ -16,6 +17,7 @@ export default function TeacherInspirationPage() {
   const { user } = useAuth();
   const teacher = user as Teacher | null;
   const supabase = getSupabaseBrowserClient();
+  const { t: tr } = useI18n();
 
   const [tab, setTab] = useState<"mine" | "students">("mine");
 
@@ -238,10 +240,10 @@ export default function TeacherInspirationPage() {
           fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600,
           fontSize: "1.5rem", color: "var(--charcoal)", margin: "0 0 0.375rem",
         }}>
-          Inspirations
+          {tr.student.inspirationsTitle}
         </h1>
         <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-          Your music mood board, plus pieces your students want to share
+          {tr.teacher.inspirationsDesc}
         </p>
       </div>
 
@@ -260,7 +262,7 @@ export default function TeacherInspirationPage() {
               transition: "color 0.12s",
             }}
           >
-            {t === "mine" ? "My Inspirations" : "Student Picks"}
+            {t === "mine" ? tr.teacher.inspirationsMyTab : tr.teacher.inspirationsStudentTab}
           </button>
         ))}
       </div>
@@ -276,7 +278,7 @@ export default function TeacherInspirationPage() {
             />
             {saving && (
               <div style={{ marginTop: "0.375rem", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                Saving…
+                {tr.common.saving}
               </div>
             )}
           </div>
@@ -337,8 +339,8 @@ export default function TeacherInspirationPage() {
             </div>
           ) : showEmptyAll ? (
             <div style={{ textAlign: "center", padding: "3rem 0" }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>Nothing saved yet</div>
-              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>Search above to find music and build your mood board.</p>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{tr.student.nothingSavedYet}</div>
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>{tr.student.nothingSavedDesc}</p>
             </div>
           ) : showEmptyCollection ? (
             <div style={{ textAlign: "center", padding: "3rem 0" }}>
@@ -428,7 +430,7 @@ export default function TeacherInspirationPage() {
                             color: saveStatus.state === "error" ? "#C0392B" : saveStatus.state === "saved" ? "#2E7D52" : "var(--muted)",
                             textAlign: "center",
                           }}>
-                            {saveStatus.state === "saving" ? "Saving…" : saveStatus.state === "saved" ? "✓ Saved" : "⚠ Couldn't save"}
+                            {saveStatus.state === "saving" ? tr.common.saving : saveStatus.state === "saved" ? "✓ Saved" : "⚠ Couldn't save"}
                           </div>
                         )}
                         <div style={{ display: "flex", gap: "0.375rem", alignItems: "center", justifyContent: "space-between" }}>
@@ -436,14 +438,14 @@ export default function TeacherInspirationPage() {
                             onClick={() => { setEditingNoteFor(ins.id); setNoteText(ins.notes ?? ""); }}
                             style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", padding: 0, textAlign: "left" }}
                           >
-                            {ins.notes ? "✏️ Edit note" : "📝 Add note"}
+                            {ins.notes ? tr.student.editNote : tr.student.addNote}
                           </button>
                           <button
                             onClick={() => handleRemoveMine(ins)}
                             style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", padding: 0 }}
                             title="Remove"
                           >
-                            Remove
+                            {tr.common.remove}
                           </button>
                         </div>
 
@@ -516,7 +518,7 @@ export default function TeacherInspirationPage() {
                                     onClick={() => confirmNewCollection(ins.id)}
                                     style={{ padding: "0.25rem 0.5rem", borderRadius: 4, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", cursor: "pointer" }}
                                   >
-                                    Save
+                                    {tr.common.save}
                                   </button>
                                 </div>
                               ) : (
@@ -550,10 +552,10 @@ export default function TeacherInspirationPage() {
           ) : picks.length === 0 ? (
             <div style={{ textAlign: "center", padding: "3rem 0" }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>
-                No student picks yet
+                {tr.teacher.inspirationsNoStudentPicks}
               </div>
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-                When students mark an inspiration as "Visible to teacher" it will appear here.
+                {tr.teacher.inspirationsStudentPicksHint}
               </p>
             </div>
           ) : (
@@ -593,7 +595,7 @@ export default function TeacherInspirationPage() {
                             color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em",
                             marginBottom: "0.625rem",
                           }}>
-                            Other picks
+                            {tr.teacher.inspirationsOtherPicks}
                           </div>
                         )}
                         <PickCards items={group.uncollected} newComments={newComments} setNewComments={setNewComments} submittingComment={submittingComment} toggleComments={toggleComments} submitComment={submitComment} />
@@ -622,6 +624,7 @@ interface PickCardsProps {
 }
 
 function PickCards({ items, newComments, setNewComments, submittingComment, toggleComments, submitComment }: PickCardsProps) {
+  const { t: tr } = useI18n();
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.75rem" }}>
       {items.map(ins => (
@@ -668,7 +671,7 @@ function PickCards({ items, newComments, setNewComments, submittingComment, togg
             >
               {ins.comments.length > 0
                 ? `💬 ${ins.comments.length} comment${ins.comments.length !== 1 ? "s" : ""} ${ins.showComments ? "▴" : "▾"}`
-                : `💬 Leave a comment ${ins.showComments ? "▴" : "▾"}`}
+                : `💬 ${tr.teacher.inspirationsLeaveComment} ${ins.showComments ? "▴" : "▾"}`}
             </button>
 
             {/* Comment thread */}
@@ -702,7 +705,7 @@ function PickCards({ items, newComments, setNewComments, submittingComment, togg
                       cursor: "pointer", opacity: submittingComment === ins.id ? 0.6 : 1,
                     }}
                   >
-                    Send
+                    {tr.common.send}
                   </button>
                 </div>
               </div>

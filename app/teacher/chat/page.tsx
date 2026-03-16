@@ -8,6 +8,7 @@ import { Teacher } from "../../../lib/models/Teacher";
 import { useRecording } from "../../../lib/context/RecordingContext";
 import VideoRecorderModal from "../../../components/VideoRecorderModal";
 import type { MessageRow, ProfileRow } from "../../../lib/types";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -27,6 +28,7 @@ function initials(name: string) {
 export default function TeacherChat() {
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
 
   const [selectedStudent, setSelectedStudent] = useState<ProfileRow | null>(null);
   const [students, setStudents] = useState<ProfileRow[]>([]);
@@ -244,8 +246,8 @@ export default function TeacherChat() {
   }
 
   const isAnnouncements = selectedStudent === null;
-  const headerTitle = isAnnouncements ? "Announcements" : selectedStudent.display_name;
-  const headerSub = isAnnouncements ? "Visible to all students" : "Private message";
+  const headerTitle = isAnnouncements ? t.teacher.chatAnnouncements : selectedStudent.display_name;
+  const headerSub = isAnnouncements ? t.teacher.chatVisibleToAll : t.teacher.chatPrivateMessage;
   // Mobile: track whether we're showing the list or the chat pane
   const [mobilePane, setMobilePane] = React.useState<"list" | "chat">("list");
 
@@ -259,7 +261,7 @@ export default function TeacherChat() {
       {/* Desktop heading — hidden on mobile when in chat pane */}
       <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 500, fontSize: "1.875rem", color: "var(--charcoal)", marginBottom: "1.5rem", letterSpacing: "-0.01em" }}
         className="chat-desktop-heading">
-        Messages
+        {t.nav.chat}
       </h1>
 
       <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "1px", height: "calc(100dvh - 120px)", maxHeight: "74vh", background: "var(--border)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}
@@ -275,11 +277,11 @@ export default function TeacherChat() {
             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--peach-bg)", border: "1px solid var(--peach-light)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <span style={{ fontSize: "0.5625rem", fontWeight: 600, color: "var(--peach)", letterSpacing: "0.02em" }}>ALL</span>
             </div>
-            <span style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)" }}>Announcements</span>
+            <span style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)" }}>{t.teacher.chatAnnouncements}</span>
           </button>
 
           <div style={{ padding: "0.5rem 1rem 0.375rem", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid var(--border)" }}>
-            Direct Messages
+            {t.teacher.chatDirectMessages}
           </div>
 
           <div style={{ flex: 1, overflowY: "auto" }}>
@@ -289,7 +291,7 @@ export default function TeacherChat() {
               </div>
             ) : students.length === 0 ? (
               <div style={{ padding: "2rem 1rem", textAlign: "center" }}>
-                <p style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>No students yet</p>
+                <p style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>{t.teacher.noStudentsYet}</p>
               </div>
             ) : students.map(s => {
               const isSel = selectedStudent?.id === s.id;
@@ -334,7 +336,7 @@ export default function TeacherChat() {
               [1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: 38, borderRadius: 3, width: i % 2 === 0 ? "55%" : "42%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />)
             ) : messages.length === 0 ? (
               <div className="empty-state" style={{ flex: 1, justifyContent: "center" }}>
-                <p className="empty-state-title">{isAnnouncements ? "No announcements yet" : "No messages yet"}</p>
+                <p className="empty-state-title">{isAnnouncements ? t.teacher.chatNoAnnouncements : t.teacher.chatNoMessages}</p>
                 <p className="empty-state-desc">{isAnnouncements ? "Post an announcement — all students will see it" : `Start a conversation with ${selectedStudent?.display_name}`}</p>
               </div>
             ) : messages.map((msg, i) => {
@@ -392,8 +394,8 @@ export default function TeacherChat() {
                       />
                       {editError && <p style={{ fontSize: "0.6875rem", color: "var(--error)", margin: "0.25rem 0 0" }}>{editError}</p>}
                       <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.375rem", justifyContent: "flex-end" }}>
-                        <button onClick={() => { setEditingId(null); setEditError(null); }} style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}>Cancel</button>
-                        <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
+                        <button onClick={() => { setEditingId(null); setEditError(null); }} style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}>{t.common.cancel}</button>
+                        <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>{t.common.save}</button>
                       </div>
                     </div>
                   ) : videoSrc ? (
@@ -431,9 +433,9 @@ export default function TeacherChat() {
                   {/* Edit/Delete — shown on ALL own messages when hovered */}
                   {isMe && !isEditing && (
                     <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none", paddingRight: "0.25rem" }}>
-                      <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
+                      <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{t.common.edit}</button>
                       <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                      <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
+                      <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{t.common.delete}</button>
                     </div>
                   )}
 
@@ -469,7 +471,7 @@ export default function TeacherChat() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isAnnouncements ? "Post an announcement…" : `Message ${selectedStudent?.display_name}…`}
+              placeholder={isAnnouncements ? t.teacher.chatPostAnnouncement : t.teacher.chatMessageUser.replace("{name}", selectedStudent?.display_name ?? "")}
               disabled={sending || isRecording || uploadingAudio}
               rows={Math.min(6, Math.max(1, input.split("\n").length))}
               style={{ flex: 1, border: "1px solid var(--border)", borderRadius: 3, padding: "0.5625rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }}
@@ -526,7 +528,7 @@ export default function TeacherChat() {
               disabled={!input.trim() || sending || isRecording}
               style={{ padding: "0.5625rem 1.25rem", borderRadius: 3, border: "none", background: input.trim() && !isRecording ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && !isRecording ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, transition: "background 0.15s", flexShrink: 0, marginBottom: "0.125rem" }}
             >
-              Send
+              {t.common.send}
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useI18n } from "../../../../lib/context/I18nContext";
 
 const suggested = [
   { id:1, title:"Practice Bach LH mm. 9-12 at 50 BPM", area:"technique", color:"var(--sage)", bg:"var(--sage-bg)", icon:"🌿", points:100, boss:false },
@@ -9,6 +10,7 @@ const suggested = [
 ];
 
 export default function NewSummary() {
+  const { t } = useI18n();
   const [text, setText] = useState("Good progress on Bach today. LH measures 9-12 need more work — try isolating at 50 BPM. Ready to start the Clementi Sonatina next week.");
   const [showSuggested, setShowSuggested] = useState(false);
   const [selected, setSelected] = useState<number[]>([0,1,2]);
@@ -18,7 +20,7 @@ export default function NewSummary() {
     <div>
       <div style={{ display:"flex", alignItems:"center", gap:"1rem", marginBottom:"1.5rem" }}>
         <Link href="/teacher/summaries" style={{ color:"var(--muted)", textDecoration:"none", fontSize:"1.1rem" }}>←</Link>
-        <h1 style={{ fontFamily:"Nunito,sans-serif", fontWeight:800, fontSize:"1.4rem", color:"var(--charcoal)" }}>Write Lesson Summary</h1>
+        <h1 style={{ fontFamily:"Nunito,sans-serif", fontWeight:800, fontSize:"1.4rem", color:"var(--charcoal)" }}>{t.teacher.summariesNewTitle}</h1>
       </div>
       <div className="r-two-col" style={{ gridTemplateColumns:"1fr 300px" }}>
         <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>

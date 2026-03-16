@@ -15,26 +15,37 @@ import { Teacher } from "../../../../lib/models/Teacher";
 import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeResult, LessonRow, AssignmentWithContext } from "../../../../lib/types";
 import YouTubeSearch from "../../../../components/YouTubeSearch";
 import { useLesson } from "../../../../lib/context/LessonContext";
+import { useI18n } from "../../../../lib/context/I18nContext";
 
-const CATEGORIES: { value: string; label: string; color: string }[] = [
-  { value: "technique",    label: "Technique",    color: "var(--sage)" },
-  { value: "etude",        label: "Études",       color: "var(--sky)" },
-  { value: "repertoire",   label: "Repertoire",   color: "var(--rose)" },
-  { value: "theory",       label: "Theory",       color: "var(--butter)" },
-  { value: "ear_training", label: "Ear Training", color: "var(--peach)" },
-  { value: "sight_reading",label: "Sight Reading",color: "var(--muted)" },
-  { value: "free",         label: "Other",        color: "var(--muted)" },
+const CATEGORIES_BASE: { value: string; colorKey: keyof typeof CATEGORY_COLORS }[] = [
+  { value: "technique",    colorKey: "technique" },
+  { value: "etude",        colorKey: "etude" },
+  { value: "repertoire",   colorKey: "repertoire" },
+  { value: "theory",       colorKey: "theory" },
+  { value: "ear_training", colorKey: "ear_training" },
+  { value: "sight_reading",colorKey: "sight_reading" },
+  { value: "free",         colorKey: "free" },
 ];
 
-const SECTION_ORDER = CATEGORIES.map(c => c.value);
+const CATEGORY_COLORS: Record<string, string> = {
+  technique:    "var(--sage)",
+  etude:        "var(--sky)",
+  repertoire:   "var(--rose)",
+  theory:       "var(--butter)",
+  ear_training: "var(--peach)",
+  sight_reading:"var(--muted)",
+  free:         "var(--muted)",
+};
+
+const SECTION_ORDER = CATEGORIES_BASE.map(c => c.value);
 const PRESET_AWARDS = [5, 10, 25, 50];
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, yesterdayLabel: string) {
   const d = new Date(iso);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
   if (diffDays === 0) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays === 1) return yesterdayLabel;
   if (diffDays < 7) return `${diffDays}d ago`;
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
@@ -70,6 +81,7 @@ function GoalForm({
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <form onSubmit={onSubmit} style={{
       padding: "0.875rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 4,
@@ -79,13 +91,13 @@ function GoalForm({
         required
         value={form.title}
         onChange={e => onChange({ ...form, title: e.target.value })}
-        placeholder="Goal (e.g. Bars 1–24 hands together, slow tempo)"
+        placeholder={t.goals.goalPlaceholder}
         style={inputStyle}
       />
       <input
         value={form.description}
         onChange={e => onChange({ ...form, description: e.target.value })}
-        placeholder="Instructions (optional)"
+        placeholder={t.goals.instructionsPlaceholder}
         style={inputStyle}
       />
       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -94,21 +106,21 @@ function GoalForm({
           onChange={e => onChange({ ...form, points: Number(e.target.value) })}
           style={{ ...inputStyle, width: 90 }}
         />
-        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>pts</span>
+        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>{t.goals.pts}</span>
         <select
           value={form.status}
           onChange={e => onChange({ ...form, status: e.target.value as "locked" | "current" })}
           style={{ ...inputStyle, flex: 1 }}
         >
-          <option value="current">Assign this week</option>
-          <option value="locked">Keep locked</option>
+          <option value="current">{t.goals.assignThisWeek}</option>
+          <option value="locked">{t.goals.keepLocked}</option>
         </select>
       </div>
       <div style={{ display: "flex", gap: "0.5rem" }}>
         <button type="submit" disabled={adding || !form.title.trim()} style={{ ...primaryBtnStyle, flex: 1, opacity: adding || !form.title.trim() ? 0.5 : 1 }}>
-          {adding ? "Adding…" : "Add Goal"}
+          {adding ? t.goals.adding : t.goals.addGoal}
         </button>
-        <button type="button" onClick={onCancel} style={ghostBtnStyle}>Cancel</button>
+        <button type="button" onClick={onCancel} style={ghostBtnStyle}>{t.common.cancel}</button>
       </div>
     </form>
   );
@@ -124,6 +136,7 @@ function GoalItem({
   onComplete: (g: GoalRow) => void;
   onToggle: (g: GoalRow) => void;
 }) {
+  const { t } = useI18n();
   const isDone = goal.status === "completed";
   const isCurrent = goal.status === "current";
   const isCompleting = completingGoalId === goal.id;
@@ -150,7 +163,7 @@ function GoalItem({
           {goal.title}
         </div>
         <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.1rem" }}>
-          {goal.points} pts · {isDone ? "Done" : isCurrent ? "This week" : "Locked"}
+          {goal.points} {t.goals.pts} · {isDone ? t.goals.done : isCurrent ? t.goals.thisWeek : t.goals.locked}
         </div>
       </div>
       {!isDone && (
@@ -160,7 +173,7 @@ function GoalItem({
             disabled={!!togglingGoalId || !!completingGoalId}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", opacity: isToggling ? 0.5 : 1 }}
           >
-            {isCurrent ? "Lock" : "Assign"}
+            {isCurrent ? t.goals.lock : t.goals.assign}
           </button>
           {isCurrent && (
             <button
@@ -168,7 +181,7 @@ function GoalItem({
               disabled={!!completingGoalId || !!togglingGoalId}
               style={{ ...primaryBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", opacity: isCompleting ? 0.5 : 1 }}
             >
-              {isCompleting ? "…" : "Complete"}
+              {isCompleting ? "…" : t.goals.complete}
             </button>
           )}
         </div>
@@ -204,6 +217,7 @@ function PieceBlock({
   onRemoveRecording: (recordingId: string, pieceId: string) => void;
   onSetPrimaryRecording: (recordingId: string, pieceId: string) => void;
 }) {
+  const { t } = useI18n();
   const [showRecordings, setShowRecordings] = useState(false);
   const [addingRecording, setAddingRecording] = useState(false);
   const [pasteMode, setPasteMode] = useState(false);
@@ -260,7 +274,7 @@ function PieceBlock({
           )}
           {total > 0 && (
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", marginTop: "0.375rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span>{done}/{total} goals</span>
+              <span>{done}/{total} {t.pieces.goalsLabel}</span>
               <div style={{ width: 40, height: 3, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${total > 0 ? (done / total) * 100 : 0}%`, background: color, borderRadius: 2 }} />
               </div>
@@ -271,7 +285,7 @@ function PieceBlock({
           {/* Sheet music upload */}
           <label
             htmlFor={sheetInputId}
-            title={piece.sheet_music_url ? "Replace sheet music (PDF or images)" : "Upload sheet music (PDF or screenshots)"}
+            title={piece.sheet_music_url ? t.pieces.replaceSheetMusic : t.pieces.uploadSheetMusic}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingPdf ? "default" : "pointer", opacity: uploadingPdf ? 0.5 : 1 }}
           >
             {uploadingPdf ? "…" : piece.sheet_music_url ? "📄✓" : "📄+"}
@@ -287,7 +301,7 @@ function PieceBlock({
           {/* Score file upload (MusicXML / Guitar Pro) */}
           <label
             htmlFor={scoreInputId}
-            title={piece.score_url ? "Replace score file (MusicXML or Guitar Pro)" : "Upload playable score (MusicXML or Guitar Pro .gp)"}
+            title={piece.score_url ? t.pieces.replaceScore : t.pieces.uploadScore}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingScore ? "default" : "pointer", opacity: uploadingScore ? 0.5 : 1 }}
           >
             {uploadingScore ? "…" : piece.score_url ? "🎵✓" : "🎵+"}
@@ -333,7 +347,7 @@ function PieceBlock({
             onClick={() => onSetAddGoalFor(addGoalFor === piece.id ? null : piece.id)}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.6rem", fontSize: "0.6875rem", flexShrink: 0 }}
           >
-            + Goal
+            + {t.goals.addGoal}
           </button>
         </div>
       </div>
@@ -365,7 +379,7 @@ function PieceBlock({
       {showRecordings && (
         <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", background: "var(--white)" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>
-            Reference Recordings
+            {t.pieces.recordings}
           </div>
           {piece.recordings.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.75rem" }}>
@@ -405,7 +419,7 @@ function PieceBlock({
             }}
           />
           {addingRecording && (
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem" }}>Adding…</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem" }}>{t.goals.adding}</div>
           )}
         </div>
       )}
@@ -445,7 +459,18 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const teacher = user as Teacher;
   const router = useRouter();
   const { joinLesson } = useLesson();
+  const { t } = useI18n();
   const [startingLesson, setStartingLesson] = useState(false);
+
+  const CATEGORIES = [
+    { value: "technique",    label: t.teacher.categoryTechnique,    color: CATEGORY_COLORS.technique },
+    { value: "etude",        label: t.teacher.categoryEtude,        color: CATEGORY_COLORS.etude },
+    { value: "repertoire",   label: t.teacher.categoryRepertoire,   color: CATEGORY_COLORS.repertoire },
+    { value: "theory",       label: t.teacher.categoryTheory,       color: CATEGORY_COLORS.theory },
+    { value: "ear_training", label: t.teacher.categoryEarTraining,  color: CATEGORY_COLORS.ear_training },
+    { value: "sight_reading",label: t.teacher.categorySightReading, color: CATEGORY_COLORS.sight_reading },
+    { value: "free",         label: t.teacher.categoryOther,        color: CATEGORY_COLORS.free },
+  ];
 
   const [student, setStudent] = useState<ProfileRow | null>(null);
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
@@ -915,8 +940,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   if (notFound || !student) {
     return (
       <div className="empty-state" style={{ padding: "3rem 0" }}>
-        <div className="empty-state-title">Student not found</div>
-        <Link href="/teacher" style={{ marginTop: "1rem", display: "inline-block", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", textDecoration: "underline" }}>Back to dashboard</Link>
+        <div className="empty-state-title">{t.teacher.studentNotFound}</div>
+        <Link href="/teacher" style={{ marginTop: "1rem", display: "inline-block", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", textDecoration: "underline" }}>{t.teacher.backToDashboard}</Link>
       </div>
     );
   }
@@ -926,7 +951,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
       {/* Back + header */}
       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <Link href="/teacher" style={{ color: "var(--muted)", textDecoration: "none", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>← Back</Link>
+        <Link href="/teacher" style={{ color: "var(--muted)", textDecoration: "none", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>← {t.common.back}</Link>
         <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", flex: 1 }}>
           <div style={{ width: 44, height: 44, background: "var(--charcoal)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--white)", flexShrink: 0, letterSpacing: "0.02em" }}>
             {initials}
@@ -951,16 +976,16 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             whiteSpace: "nowrap", letterSpacing: "0.01em", flexShrink: 0,
           }}
         >
-          {startingLesson ? "Starting…" : "📹 Start lesson"}
+          {startingLesson ? t.teacher.startingLesson : t.teacher.startLesson}
         </button>
       </div>
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
         {[
-          { value: student.total_points.toLocaleString(), label: "Points" },
-          { value: student.streak_days, label: "Day streak" },
-          { value: `${pct}%`, label: "Goals done" },
+          { value: student.total_points.toLocaleString(), label: t.teacher.statPoints },
+          { value: student.streak_days, label: t.teacher.statDayStreak },
+          { value: `${pct}%`, label: t.teacher.statGoalsDone },
         ].map(stat => (
           <div key={stat.label} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem", textAlign: "center" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.75rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>{stat.value}</div>
@@ -972,10 +997,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       {/* Quick links to sub-pages */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.625rem" }}>
         {[
-          { label: "Lesson Log", href: `/teacher/student/${id}/lesson/log`, icon: "📋" },
-          { label: "RCM Prep", href: `/teacher/student/${id}/rcm`, icon: "🎓" },
-          { label: "Reports", href: `/teacher/student/${id}/reports`, icon: "📄" },
-          { label: "Billing", href: `/teacher/billing/${id}`, icon: "💳" },
+          { label: t.teacher.lessonLog, href: `/teacher/student/${id}/lesson/log`, icon: "📋" },
+          { label: t.teacher.rcmPrep, href: `/teacher/student/${id}/rcm`, icon: "🎓" },
+          { label: t.teacher.reports, href: `/teacher/student/${id}/reports`, icon: "📄" },
+          { label: t.teacher.billing, href: `/teacher/billing/${id}`, icon: "💳" },
         ].map(link => (
           <Link
             key={link.href}
@@ -1008,10 +1033,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             <span style={{ fontSize: "1rem" }}>🤖</span>
             <div>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                Pre-lesson brief
+                {t.teacher.preLessonBrief}
               </div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
-                {briefStats ? `${briefStats.sessionCount} sessions · ${briefStats.totalMinutes} min last 2 weeks` : "AI summary of recent practice"}
+                {briefStats ? t.teacher.briefStats.replace("{n}", String(briefStats.sessionCount)).replace("{m}", String(briefStats.totalMinutes)) : t.teacher.aiSummaryPractice}
               </div>
             </div>
           </div>
@@ -1024,7 +1049,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           <div style={{ padding: "0 1.125rem 1rem", borderTop: "1px solid var(--border)" }}>
             {briefLoading ? (
               <div style={{ paddingTop: "0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-                Generating brief…
+                {t.teacher.generatingBrief}
               </div>
             ) : brief ? (
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, margin: "0.875rem 0 0" }}>
@@ -1032,7 +1057,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
               </p>
             ) : (
               <div style={{ paddingTop: "0.875rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-                Could not generate brief.
+                {t.teacher.briefError}
               </div>
             )}
             {brief && (
@@ -1040,7 +1065,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 onClick={() => { setBrief(null); setBriefStats(null); loadBrief(); }}
                 style={{ marginTop: "0.75rem", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", padding: 0, textDecoration: "underline" }}
               >
-                Refresh
+                {t.teacher.refresh}
               </button>
             )}
           </div>
@@ -1054,17 +1079,17 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         {nextLesson && (
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem 1.25rem" }}>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 0.625rem" }}>
-              Next Lesson
+              {t.schedule.nextLessonLabel}
             </p>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9375rem", color: "var(--charcoal)" }}>
               {new Date(nextLesson.scheduled_at).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}
             </div>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-              {new Date(nextLesson.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {nextLesson.duration_minutes} min
+              {new Date(nextLesson.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {nextLesson.duration_minutes} {t.schedule.min}
             </div>
             {nextLesson.lesson_notes && (
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.625rem", padding: "0.5rem 0.75rem", background: "var(--cream)", borderRadius: 3, fontStyle: "italic" }}>
-                Last lesson: {nextLesson.lesson_notes}
+                {t.schedule.lastLesson}: {nextLesson.lesson_notes}
               </div>
             )}
           </div>
@@ -1074,9 +1099,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         {studentAssignments.length > 0 && (
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem 1.25rem" }}>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 0.625rem" }}>
-              This Week's Assignments
+              {t.teacher.thisWeeksAssignments}
               <span style={{ marginLeft: "0.5rem", fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: "0.6875rem" }}>
-                {studentAssignments.filter(a => a.completion).length}/{studentAssignments.length} complete
+                {t.teacher.assignmentCompletion.replace("{done}", String(studentAssignments.filter(a => a.completion).length)).replace("{total}", String(studentAssignments.length))}
               </span>
             </p>
             {studentAssignments.map(a => {
@@ -1121,13 +1146,13 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)" }}>
               <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Repertoire & Goals
+                {t.teacher.repertoireGoals}
               </span>
               <button
                 onClick={() => { setShowAddPiece(v => !v); setPieceForm(emptyPieceForm()); }}
                 style={{ ...ghostBtnStyle, padding: "0.3rem 0.6rem", fontSize: "0.6875rem" }}
               >
-                + Add Piece
+                {t.teacher.addPiece}
               </button>
             </div>
 
@@ -1148,7 +1173,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             {/* Add piece form */}
             {showAddPiece && (
               <form onSubmit={handleAddPiece} style={{ marginBottom: "1.25rem", padding: "1rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 4, display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>New Piece</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>{t.teacher.newPiece}</div>
                 <input required value={pieceForm.title} onChange={e => setPieceForm(f => ({ ...f, title: e.target.value }))} placeholder="Title (e.g. Waltz in A minor)" style={inputStyle} />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
                   <input value={pieceForm.composer} onChange={e => setPieceForm(f => ({ ...f, composer: e.target.value }))} placeholder="Composer (optional)" style={inputStyle} />
@@ -1159,7 +1184,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 </select>
                 <div>
                   <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.25rem" }}>
-                    Sheet Music — PDF or screenshots (optional)
+                    {t.pieces.uploadSheetMusic}
                   </label>
                   <input
                     ref={sheetInputRef}
@@ -1196,17 +1221,17 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button type="submit" disabled={addingPiece || !pieceForm.title.trim()} style={{ ...primaryBtnStyle, flex: 1, opacity: addingPiece || !pieceForm.title.trim() ? 0.5 : 1 }}>
-                    {addingPiece ? "Adding…" : "Add Piece"}
+                    {addingPiece ? t.goals.adding : t.teacher.addPieceButton}
                   </button>
-                  <button type="button" onClick={() => { setShowAddPiece(false); setSheetFiles([]); setFormPasteReady(false); }} style={ghostBtnStyle}>Cancel</button>
+                  <button type="button" onClick={() => { setShowAddPiece(false); setSheetFiles([]); setFormPasteReady(false); }} style={ghostBtnStyle}>{t.common.cancel}</button>
                 </div>
               </form>
             )}
 
             {pieces.length === 0 && standaloneGoals.length === 0 && !showAddPiece ? (
               <div className="empty-state">
-                <div className="empty-state-title">No pieces yet</div>
-                <p className="empty-state-desc">Click "+ Add Piece" to start organizing this student&apos;s assignments.</p>
+                <div className="empty-state-title">{t.teacher.noPiecesYet}</div>
+                <p className="empty-state-desc">{t.teacher.noPiecesDesc.replace("{btn}", t.teacher.addPiece)}</p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
@@ -1250,7 +1275,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
                       <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--border-strong)" }} />
-                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--muted)" }}>Other Goals</span>
+                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--muted)" }}>{t.teacher.otherGoals}</span>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                       {standaloneGoals.map(g => (
@@ -1267,7 +1292,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                   <GoalForm form={goalForm} adding={addingGoal} onChange={setGoalForm} onSubmit={handleAddGoal} onCancel={() => setAddGoalFor(null)} />
                 ) : (
                   <button onClick={() => { setAddGoalFor("standalone"); setGoalForm(emptyGoalForm()); }} style={{ ...ghostBtnStyle, fontSize: "0.75rem", width: "fit-content" }}>
-                    + Add standalone goal
+                    {t.teacher.addStandaloneGoal}
                   </button>
                 )}
               </div>
@@ -1277,10 +1302,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           {/* Sessions */}
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1.25rem" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)" }}>
-              Recent Sessions ({sessions.length})
+              {t.teacher.recentSessions.replace("{n}", String(sessions.length))}
             </div>
             {sessions.length === 0 ? (
-              <div className="empty-state"><div className="empty-state-title">No sessions yet</div></div>
+              <div className="empty-state"><div className="empty-state-title">{t.teacher.noSessionsYetLabel}</div></div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                 {sessions.map(s => {
@@ -1292,10 +1317,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>{mins} min{s.recording_url ? " · rec" : ""}</div>
-                        <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>{timeAgo(s.created_at)}</div>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>{mins} {t.schedule.min}{s.recording_url ? " · rec" : ""}</div>
+                        <div style={{ fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.125rem" }}>{timeAgo(s.created_at, t.schedule.yesterday)}</div>
                       </div>
-                      <span style={{ color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500 }}>Review →</span>
+                      <span style={{ color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500 }}>{t.teacher.reviewArrow}</span>
                     </Link>
                   );
                 })}
@@ -1307,7 +1332,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         {/* Right: Award Points */}
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1.25rem", alignSelf: "start" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)" }}>
-            Award Points
+            {t.teacher.awardPoints}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.375rem", marginBottom: "1rem" }}>
             {PRESET_AWARDS.map(pts => (
@@ -1317,11 +1342,11 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             ))}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.75rem" }}>
-            <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>Custom amount</label>
+            <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>{t.teacher.customAmount}</label>
             <input type="number" min="1" max="9999" value={customAward} onChange={e => setCustomAward(e.target.value)} placeholder="e.g. 15" style={inputStyle} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.875rem" }}>
-            <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>Note (optional)</label>
+            <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.02em" }}>{t.teacher.noteOptional}</label>
             <input type="text" value={awardNote} onChange={e => setAwardNote(e.target.value)} placeholder="Great work on your recital!" style={inputStyle} />
           </div>
           <button
@@ -1329,13 +1354,13 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             disabled={awarding || !customAward || parseInt(customAward, 10) <= 0}
             style={{ width: "100%", padding: "0.625rem", borderRadius: 3, border: "none", background: awardSuccess ? "var(--sage)" : !customAward || parseInt(customAward, 10) <= 0 ? "var(--border)" : "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", cursor: awarding || !customAward ? "default" : "pointer", transition: "background 0.15s", letterSpacing: "0.01em" }}
           >
-            {awardSuccess ? "Awarded!" : awarding ? "Awarding…" : "Award Custom Points"}
+            {awardSuccess ? t.teacher.awarded : awarding ? t.teacher.awarding : t.teacher.awardCustomPoints}
           </button>
           {awardError && (
             <div style={{ marginTop: "0.5rem", background: "var(--cream-deep)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "var(--charcoal)", fontFamily: "Inter, sans-serif" }}>{awardError}</div>
           )}
           <p style={{ marginTop: "1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}>
-            Points are added to {student.display_name.split(" ")[0]}&apos;s total and they receive a chat notification.
+            {t.teacher.pointsNotification.replace("{name}", student.display_name.split(" ")[0])}
           </p>
         </div>
       </div>

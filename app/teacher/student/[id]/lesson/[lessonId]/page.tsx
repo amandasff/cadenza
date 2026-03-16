@@ -7,6 +7,7 @@ import { LessonService } from "../../../../../../lib/services/LessonService";
 import { AssignmentService } from "../../../../../../lib/services/AssignmentService";
 import { Teacher } from "../../../../../../lib/models/Teacher";
 import type { LessonRow, AssignmentWithContext } from "../../../../../../lib/types";
+import { useI18n } from "../../../../../../lib/context/I18nContext";
 
 const TA: React.CSSProperties = {
   width: "100%", border: "1px solid var(--border-strong)", borderRadius: 3,
@@ -22,6 +23,7 @@ const INP: React.CSSProperties = {
 };
 
 export default function LessonNotesPage({ params }: { params: Promise<{ id: string; lessonId: string }> }) {
+  const { t } = useI18n();
   const { id: studentId, lessonId } = use(params);
   const router = useRouter();
   const { user } = useAuth();
@@ -152,7 +154,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
 
       <div style={{ marginBottom: "1.5rem" }}>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: "0 0 0.25rem", letterSpacing: "-0.01em" }}>
-          Lesson Notes
+          {t.schedule.lessonNotes}
         </h1>
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)" }}>
           {studentName} · {lessonDate}
@@ -162,7 +164,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
       {/* Attendance */}
       <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1rem" }}>
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.625rem" }}>
-          Attendance
+          {t.schedule.attendanceLabel}
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           {(["attended", "cancelled", "no_show"] as const).map(val => (
@@ -178,7 +180,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
                 cursor: "pointer", transition: "all 0.15s",
               }}
             >
-              {val === "attended" ? "Attended" : val === "cancelled" ? "Cancelled" : "No show"}
+              {val === "attended" ? t.schedule.attended : val === "cancelled" ? t.teacher.lessonLogAttendanceCancelled : t.teacher.lessonLogAttendanceNoShow}
             </button>
           ))}
         </div>
@@ -188,7 +190,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
       <div className="card-base" style={{ padding: "1.25rem", marginBottom: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
         <div>
           <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "0.375rem" }}>
-            What we covered today
+            {t.schedule.coveredTodayLabel}
           </label>
           <textarea
             value={covered}
@@ -199,7 +201,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
         </div>
         <div>
           <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "0.375rem" }}>
-            Focus for this week
+            {t.schedule.focusLabel}
           </label>
           <textarea
             value={focus}
@@ -210,7 +212,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
         </div>
         <div>
           <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", display: "block", marginBottom: "0.375rem" }}>
-            Notes for next lesson
+            {t.schedule.nextLessonLabel}
           </label>
           <textarea
             value={nextLesson}
@@ -232,7 +234,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
             alignSelf: "flex-start",
           }}
         >
-          {saving ? "Saving…" : saved ? "Saved ✓" : "Save notes"}
+          {saving ? t.common.saving : saved ? t.teacher.reportsSaved : t.schedule.saveChanges}
         </button>
       </div>
 
@@ -240,7 +242,7 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
       <div className="card-base" style={{ padding: "1.25rem", marginBottom: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-            This Week&apos;s Assignments
+            {t.schedule.assignments}
           </div>
           <button
             onClick={() => setShowAssignForm(v => !v)}
@@ -286,13 +288,13 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
                 fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500,
                 cursor: "pointer", opacity: addingAssign ? 0.5 : 1,
               }}>
-                {addingAssign ? "Adding…" : "Add assignment"}
+                {addingAssign ? t.common.saving : t.schedule.addAssignment}
               </button>
               <button type="button" onClick={() => setShowAssignForm(false)} style={{
                 padding: "0.5rem 0.875rem", borderRadius: 3, border: "1px solid var(--border-strong)",
                 background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
                 fontSize: "0.8125rem", cursor: "pointer",
-              }}>Cancel</button>
+              }}>{t.common.cancel}</button>
             </div>
           </form>
         )}

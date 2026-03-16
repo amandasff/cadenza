@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { Student } from "../../../lib/models/Student";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 const FEATURES = [
   { icon: "🎵", label: "AI Sheet Music", desc: "Convert a photo of sheet music into a playable score instantly" },
@@ -17,6 +18,7 @@ function UpgradeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const student = user as Student | null;
+  const { t } = useI18n();
 
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
   const [error, setError] = useState("");
@@ -82,10 +84,10 @@ function UpgradeInner() {
             margin: "0 0 0.375rem",
             letterSpacing: "-0.01em",
           }}>
-            Cadenza Premium
+            {t.student.upgradeTitle}
           </h1>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
-            Everything you need to practise smarter.
+            {t.student.upgradeSubtitle}
           </p>
         </div>
 
@@ -96,7 +98,7 @@ function UpgradeInner() {
             padding: "0.875rem 1rem", marginBottom: "1.5rem",
             fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "#2d7a55",
           }}>
-            🎉 You&apos;re now on Premium! Enjoy all features.
+            {t.student.upgradeSuccessMsg}
           </div>
         )}
         {canceledMsg && (
@@ -105,7 +107,7 @@ function UpgradeInner() {
             padding: "0.875rem 1rem", marginBottom: "1.5rem",
             fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "#9a6b00",
           }}>
-            Checkout was canceled — you haven&apos;t been charged.
+            {t.student.upgradeCanceledMsg}
           </div>
         )}
 
@@ -158,7 +160,7 @@ function UpgradeInner() {
                 padding: "0.625rem 1rem", textAlign: "center",
                 fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "#2d7a55", fontWeight: 500,
               }}>
-                ✓ Active subscription
+                {t.student.upgradeActiveStatus}
               </div>
               <button
                 onClick={handlePortal}
@@ -172,7 +174,7 @@ function UpgradeInner() {
                   opacity: loading === "portal" ? 0.6 : 1,
                 }}
               >
-                {loading === "portal" ? "Opening…" : "Manage or cancel subscription"}
+                {loading === "portal" ? t.student.upgradeOpening : t.student.upgradeManage}
               </button>
             </div>
           ) : (
@@ -189,7 +191,7 @@ function UpgradeInner() {
                 transition: "opacity 0.15s",
               }}
             >
-              {loading === "checkout" ? "Redirecting to Stripe…" : "Subscribe — $9.99/mo"}
+              {loading === "checkout" ? t.student.upgradeRedirecting : t.student.upgradeSubscribe}
             </button>
           )}
 
@@ -208,7 +210,7 @@ function UpgradeInner() {
           fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
           color: "var(--muted)", textAlign: "center", lineHeight: 1.6,
         }}>
-          Cancel anytime. Billed monthly. Secure checkout via Stripe.
+          {t.student.upgradeFineprint}
         </p>
 
       </div>

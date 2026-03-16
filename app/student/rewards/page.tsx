@@ -5,6 +5,7 @@ import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PracticeService } from "../../../lib/services/PracticeService";
 import { Student } from "../../../lib/models/Student";
 import type { PracticeSessionRow, GoalRow } from "../../../lib/types";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 // ── Level system ─────────────────────────────────────────────────────────────
 // Calibrated so:
@@ -102,6 +103,7 @@ function getMonthCells(firstOfMonth: Date): (number | null)[] {
 export default function Rewards() {
   const { user } = useAuth();
   const student = user as Student;
+  const { t } = useI18n();
 
   const [sessions, setSessions] = useState<PracticeSessionRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,7 +222,7 @@ export default function Rewards() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
           <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Progress
+            {t.student.rewardsProgress}
           </span>
           <div style={{ height: 1, flex: 1, background: "var(--border)" }} />
         </div>
@@ -241,7 +243,7 @@ export default function Rewards() {
                 </div>
               ) : (
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-                  Maximum level reached
+                  {t.student.rewardsMaxLevel}
                 </div>
               )}
             </div>
@@ -250,7 +252,7 @@ export default function Rewards() {
                 {totalPoints.toLocaleString()}
               </div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.25rem" }}>
-                total points
+                {t.student.rewardsTotalPoints}
               </div>
             </div>
           </div>
@@ -285,9 +287,9 @@ export default function Rewards() {
             {[
               {
                 value: String(effectiveStreak),
-                label: "Day streak",
+                label: t.student.rewardsDayStreak,
                 sub: effectiveStreak > 0 && lastSessionDate === yesterdayLocal
-                  ? "Practice today!"
+                  ? t.student.rewardsPracticeToday
                   : effectiveStreak > 0 && effectiveStreak % 7 === 0 ? "+500 this week!" : undefined,
                 subColor: effectiveStreak > 0 && lastSessionDate === yesterdayLocal
                   ? "var(--peach)"
@@ -295,7 +297,7 @@ export default function Rewards() {
               },
               {
                 value: String(sessions.length),
-                label: "Sessions",
+                label: t.student.rewardsSessions,
                 sub: undefined,
                 subColor: undefined,
               },
@@ -303,13 +305,13 @@ export default function Rewards() {
                 value: totalMinutes >= 60
                   ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
                   : `${totalMinutes}m`,
-                label: "Practiced",
+                label: t.student.rewardsPracticed,
                 sub: undefined,
                 subColor: undefined,
               },
               {
                 value: String(completedGoals.length),
-                label: "Goals done",
+                label: t.student.rewardsGoalsDone,
                 sub: undefined,
                 subColor: undefined,
               },
@@ -402,7 +404,7 @@ export default function Rewards() {
             <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.625rem", justifyContent: "flex-end" }}>
               <div style={{ width: 7, height: 7, borderRadius: 2, background: "var(--sage)" }} />
               <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", letterSpacing: "0.04em" }}>
-                Practiced
+                {t.student.rewardsPracticed}
               </span>
             </div>
           </div>
@@ -413,7 +415,7 @@ export default function Rewards() {
         {!loading && weekSessions.length > 0 && (
           <div className="card-base" style={{ padding: "1rem 1.25rem" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
-              This Week
+              {t.student.rewardsThisWeek}
             </div>
             <div style={{ display: "flex", gap: "2rem", alignItems: "flex-end" }}>
               <div>
@@ -429,7 +431,7 @@ export default function Rewards() {
                   {weekMinutes}
                 </div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.25rem" }}>
-                  minutes
+                  {t.student.rewardsMinutes}
                 </div>
               </div>
               <div>
@@ -437,7 +439,7 @@ export default function Rewards() {
                   ~{weekPtsEst}
                 </div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: "0.25rem" }}>
-                  pts earned
+                  {t.student.rewardsPtsEarned}
                 </div>
               </div>
             </div>
@@ -452,7 +454,7 @@ export default function Rewards() {
         {/* ── How to earn points ── */}
         <div className="card-base" style={{ padding: "1rem 1.25rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
-            How you earn points
+            {t.student.rewardsHowToEarn}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {[
@@ -474,10 +476,10 @@ export default function Rewards() {
         <div className="card-base" style={{ padding: "1.25rem" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "1rem" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 500, color: "var(--muted)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-              Achievements
+              {t.student.rewardsAchievements}
             </div>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
-              {earnedCount} / {badges.length} earned
+              {t.student.rewardsEarned.replace("{n}", String(earnedCount)).replace("{m}", String(badges.length))}
             </div>
           </div>
 

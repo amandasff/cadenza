@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { StudioService } from "../../../lib/services/StudioService";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 type StudioEntry = { id: string; name: string; teacher_name: string };
 type Tab = "search" | "code";
@@ -12,6 +13,7 @@ function StudentJoinInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, refresh } = useAuth();
+  const { t } = useI18n();
 
   // If ?code= is in URL, start on code tab
   const urlCode = searchParams.get("code") ?? "";
@@ -64,7 +66,7 @@ function StudentJoinInner() {
     try {
       const supabase = getSupabaseBrowserClient();
       const studio = await StudioService.create(supabase).findByInviteCode(c.trim());
-      if (!studio) { setCodeError("No studio found with that code."); return; }
+      if (!studio) { setCodeError(t.student.joinCodeNotFound); return; }
       // Fetch teacher name
       const { data: profile } = await supabase
         .from("profiles")
@@ -158,7 +160,7 @@ function StudentJoinInner() {
           transition: "background 0.15s",
         }}
       >
-        {joining === studio.id ? "Joining…" : "Join"}
+        {joining === studio.id ? t.student.joinJoining : t.student.joinJoin}
       </button>
     </div>
   );
@@ -185,7 +187,7 @@ function StudentJoinInner() {
             margin: "0 0 0.5rem",
             letterSpacing: "-0.01em",
           }}>
-            Find your studio
+            {t.student.joinTitle}
           </h1>
           <p style={{
             fontFamily: "Inter, sans-serif",
@@ -194,7 +196,7 @@ function StudentJoinInner() {
             margin: 0,
             lineHeight: 1.6,
           }}>
-            Search by name or enter your teacher&apos;s invite code.
+            {t.student.joinSubtitle}
           </p>
         </div>
 
@@ -207,8 +209,8 @@ function StudentJoinInner() {
           marginBottom: "1.25rem",
           gap: 2,
         }}>
-          {tabBtn("search", "Search")}
-          {tabBtn("code", "Invite Code")}
+          {tabBtn("search", t.common.search)}
+          {tabBtn("code", t.student.joinInviteCode)}
         </div>
 
         {/* Join error */}
@@ -257,12 +259,12 @@ function StudentJoinInner() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
               {loadingStudios && studios.length === 0 && (
                 <p style={{ textAlign: "center", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "2rem 0" }}>
-                  Loading studios…
+                  {t.common.loading}
                 </p>
               )}
               {!loadingStudios && studios.length === 0 && (
                 <p style={{ textAlign: "center", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "2rem 0" }}>
-                  {search ? "No studios found. Try a different name." : "No studios yet. Ask your teacher to set one up first."}
+                  {search ? t.student.joinNoStudios : t.student.joinNoStudiosYet}
                 </p>
               )}
               {studios.map(s => <StudioCard key={s.id} studio={s} />)}
@@ -312,7 +314,7 @@ function StudentJoinInner() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {lookingUp ? "…" : "Look up"}
+                {lookingUp ? "…" : t.student.joinLookup}
               </button>
             </div>
 
@@ -334,7 +336,7 @@ function StudentJoinInner() {
 
             {!codeStudio && !codeError && !lookingUp && (
               <p style={{ textAlign: "center", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "2rem 0" }}>
-                Enter the code your teacher shared with you.
+                {t.student.joinCodeHint}
               </p>
             )}
           </>
@@ -348,7 +350,7 @@ function StudentJoinInner() {
           marginTop: "2rem",
           lineHeight: 1.6,
         }}>
-          Don&apos;t see your studio? Ask your teacher to share their invite link.
+          {t.student.joinDontSee}
         </p>
 
       </div>

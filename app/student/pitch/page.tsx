@@ -73,7 +73,10 @@ function pickRandom<T>(arr: T[], exclude?: T): T {
 
 type Phase = "idle" | "listening" | "correct" | "wrong";
 
+import { useI18n } from "../../../lib/context/I18nContext";
+
 export default function PitchTrainerPage() {
+  const { t } = useI18n();
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy");
   const [phase, setPhase]           = useState<Phase>("idle");
   const [currentNote, setCurrentNote] = useState<NoteName | null>(null);
@@ -156,14 +159,14 @@ export default function PitchTrainerPage() {
       <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1.25rem 1rem 1rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.25rem" }}>
           <Link href="/student/theory" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", textDecoration: "none" }}>
-            ← Games
+            ← {t.nav.games}
           </Link>
         </div>
         <h1 style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.625rem", color: "var(--charcoal)", margin: 0, letterSpacing: "-0.01em" }}>
-          Pitch Trainer
+          {t.student.pitchTitle}
         </h1>
         <p style={{ color: "var(--muted)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", margin: "0.125rem 0 0" }}>
-          Listen and identify the note — train your ear
+          {t.student.pitchSubtitle}
         </p>
       </div>
 
@@ -173,10 +176,10 @@ export default function PitchTrainerPage() {
         {started && (
           <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
             {[
-              { label: "Score",  value: score },
-              { label: "Streak", value: `${streak}🔥` },
-              { label: "Best",   value: bestStreak },
-              { label: "Round",  value: round },
+              { label: t.student.scoreLabel,  value: score },
+              { label: t.student.streakLabel, value: `${streak}🔥` },
+              { label: t.student.bestLabel,   value: bestStreak },
+              { label: t.student.roundLabel,  value: round },
             ].map(({ label, value }) => (
               <div key={label} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
                 <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{value}</div>
@@ -189,7 +192,7 @@ export default function PitchTrainerPage() {
         {/* Difficulty picker */}
         {!started && (
           <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1.25rem", marginBottom: "1rem" }}>
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.75rem" }}>Choose difficulty</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.75rem" }}>{t.student.pitchChooseDifficulty}</div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               {(["easy", "medium", "hard"] as const).map(d => (
                 <button key={d} onClick={() => setDifficulty(d)} style={{
@@ -219,7 +222,7 @@ export default function PitchTrainerPage() {
             <>
               <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎵</div>
               <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.375rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.375rem" }}>
-                Train your ear
+                {t.student.pitchTrainYourEar}
               </div>
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.6, margin: "0 0 1.25rem", maxWidth: 280, marginLeft: "auto", marginRight: "auto" }}>
                 A note will play — tap the key you heard. The more you practice, the faster you&apos;ll recognise pitches instantly.
@@ -230,7 +233,7 @@ export default function PitchTrainerPage() {
                 fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem",
                 cursor: "pointer", letterSpacing: "0.01em",
               }}>
-                Start
+                {t.student.startGame}
               </button>
             </>
           ) : (
@@ -242,7 +245,7 @@ export default function PitchTrainerPage() {
               }}>
                 {phase === "listening" && (
                   <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--muted)", fontStyle: "italic" }}>
-                    What note was that?
+                    {t.student.pitchWhatNote}
                   </div>
                 )}
                 {phase === "correct" && (
@@ -251,7 +254,7 @@ export default function PitchTrainerPage() {
                       {currentNote}
                     </div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#27ae60", fontWeight: 600 }}>
-                      {streak >= 3 ? `${streak} in a row!` : "Correct!"}
+                      {streak >= 3 ? t.student.inARow.replace("{n}", String(streak)) : t.student.correctFeedback}
                     </div>
                   </div>
                 )}
@@ -261,7 +264,7 @@ export default function PitchTrainerPage() {
                       {currentNote}
                     </div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b" }}>
-                      It was {currentNote} — you guessed {guess}
+                      {t.student.pitchWrongFeedback.replace("{note}", currentNote ?? "").replace("{guess}", guess ?? "")}
                     </div>
                   </div>
                 )}
@@ -279,7 +282,7 @@ export default function PitchTrainerPage() {
                   marginBottom: "1.25rem",
                 }}
               >
-                Play again
+                {t.student.playAgain}
               </button>
 
               {/* Piano keyboard */}
@@ -296,7 +299,7 @@ export default function PitchTrainerPage() {
                 onClick={() => { clearTimer(); setStarted(false); setPhase("idle"); setCurrentNote(null); }}
                 style={{ marginTop: "1.25rem", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "underline" }}
               >
-                End session
+                {t.student.endSession}
               </button>
             </>
           )}

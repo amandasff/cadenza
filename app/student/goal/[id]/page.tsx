@@ -8,6 +8,7 @@ import { GoalService } from "../../../../lib/services/GoalService";
 import { ChatService } from "../../../../lib/services/ChatService";
 import { Student } from "../../../../lib/models/Student";
 import type { GoalRow } from "../../../../lib/types";
+import { useI18n } from "../../../../lib/context/I18nContext";
 
 const AREAS: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   technique:    { label: "Technique",    color: "var(--sage)",   bg: "var(--sage-bg)",   icon: "🌿" },
@@ -21,6 +22,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
   const router = useRouter();
   const { user } = useAuth();
   const student = user as Student;
+  const { t } = useI18n();
 
   const [goal, setGoal] = useState<GoalRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
   }
 
   const area = goal ? (AREAS[goal.practice_area] ?? AREAS["technique"]) : null;
-  const statusLabel = goal?.status === "current" ? "In Progress" : goal?.status === "completed" ? "Completed" : "Locked";
+  const statusLabel = goal?.status === "current" ? t.student.goalStatusInProgress : goal?.status === "completed" ? t.student.goalStatusCompleted : t.student.goalStatusLocked;
   const statusColor = goal?.status === "current" ? "var(--peach)" : goal?.status === "completed" ? "var(--sage)" : "var(--muted)";
   const statusBg = goal?.status === "current" ? "var(--peach-bg)" : goal?.status === "completed" ? "var(--sage-bg)" : "var(--border)";
 
@@ -96,7 +98,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
       <div style={{ background: "var(--white)", borderBottom: "1.5px solid var(--border)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <button onClick={() => router.back()} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "1.1rem", padding: 0 }}>←</button>
         <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1.05rem", color: "var(--charcoal)", flex: 1, margin: 0 }}>
-          Goal Detail
+          {t.student.goalDetailTitle}
         </h1>
       </div>
 
@@ -110,9 +112,9 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
         ) : notFound || !goal || !area ? (
           <div className="empty-state" style={{ padding: "3rem 1rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>😕</div>
-            <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, color: "var(--charcoal)", margin: 0 }}>Goal not found</p>
+            <p style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, color: "var(--charcoal)", margin: 0 }}>{t.student.goalNotFound}</p>
             <Link href="/student" style={{ marginTop: "1rem", display: "inline-block", color: "var(--peach)", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.875rem", textDecoration: "none" }}>
-              ← Back to your path
+              {t.student.goalBackToPath}
             </Link>
           </div>
         ) : (
@@ -139,12 +141,12 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
               </h2>
               <div style={{ display: "flex", gap: "1.5rem" }}>
                 <div>
-                  <div style={{ fontSize: "0.7rem", color: "var(--muted)", marginBottom: 2, fontFamily: "DM Sans, sans-serif" }}>Stars</div>
+                  <div style={{ fontSize: "0.7rem", color: "var(--muted)", marginBottom: 2, fontFamily: "DM Sans, sans-serif" }}>{t.student.goalStars}</div>
                   <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--butter)", fontSize: "1rem" }}>⭐ {goal.points}</div>
                 </div>
                 {goal.due_date && (
                   <div>
-                    <div style={{ fontSize: "0.7rem", color: "var(--muted)", marginBottom: 2, fontFamily: "DM Sans, sans-serif" }}>Due</div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--muted)", marginBottom: 2, fontFamily: "DM Sans, sans-serif" }}>{t.student.goalDue}</div>
                     <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--charcoal)", fontSize: "0.9rem" }}>
                       {new Date(goal.due_date).toLocaleDateString([], { month: "short", day: "numeric" })}
                     </div>
@@ -157,7 +159,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
             {goal.description && (
               <div className="card-base" style={{ padding: "1.25rem" }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.5rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  Instructions
+                  {t.teacher.goalInstructions}
                 </div>
                 <p style={{ fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.6, margin: 0, fontFamily: "DM Sans, sans-serif" }}>
                   {goal.description}
@@ -184,7 +186,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
             {goal.teacher_feedback && (
               <div className="card-base" style={{ padding: "1.25rem" }}>
                 <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.75rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  Teacher Feedback
+                  {t.student.goalTeacherFeedback}
                 </div>
                 <div style={{ display: "flex", gap: "0.75rem" }}>
                   <div style={{ width: 36, height: 36, background: "var(--sky-bg)", borderRadius: 100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", flexShrink: 0 }}>
@@ -202,10 +204,10 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
               <div style={{ background: "var(--sage-bg)", border: "1.5px solid var(--sage)", borderRadius: "var(--radius-xl)", padding: "1.5rem", textAlign: "center" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎉</div>
                 <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.05rem", color: "var(--sage)" }}>
-                  Goal Complete!
+                  {t.student.goalComplete}
                 </div>
                 <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.8rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-                  You earned ⭐ {goal.points} stars
+                  {t.student.goalEarned.replace("{n}", String(goal.points))}
                 </div>
               </div>
             )}
@@ -214,7 +216,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
             {goal.status === "current" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingBottom: "1rem" }}>
                 <Link href="/student/practice" style={{ background: "var(--peach)", color: "white", padding: "0.9rem", borderRadius: 100, textAlign: "center", textDecoration: "none", fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", display: "block", boxShadow: "var(--shadow-peach)" }}>
-                  🎙 Record Practice Session
+                  {t.student.goalRecordPractice}
                 </Link>
 
                 <button
@@ -229,7 +231,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
                     opacity: claiming ? 0.7 : 1, transition: "all 0.15s",
                   }}
                 >
-                  {claiming ? "Claiming…" : `⭐ Complete & Claim ${goal.points} Stars`}
+                  {claiming ? t.student.goalClaiming : t.student.goalClaim.replace("{n}", String(goal.points))}
                 </button>
 
                 {claimError && (
@@ -239,7 +241,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
                 )}
 
                 <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textAlign: "center", margin: 0 }}>
-                  Claim when you feel ready — your teacher will be notified
+                  {t.student.goalClaimNote}
                 </p>
               </div>
             )}

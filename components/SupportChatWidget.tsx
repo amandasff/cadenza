@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useI18n } from "@/lib/context/I18nContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -9,6 +10,7 @@ interface Message {
 
 export default function SupportChatWidget() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -30,7 +32,7 @@ export default function SupportChatWidget() {
       hasGreeted.current = true;
       setMessages([{
         role: "assistant",
-        content: "Hey! I'm Cadenza's support assistant. Ask me anything about the app — features, how things work, or troubleshooting.",
+        content: t.common.supportGreeting,
       }]);
     }
   }, [open]);
@@ -129,10 +131,10 @@ export default function SupportChatWidget() {
               }}>🎵</div>
               <div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, color: "#fff" }}>
-                  Cadenza Support
+                  {t.common.supportTitle}
                 </div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "rgba(255,255,255,0.55)" }}>
-                  AI assistant · usually instant
+                  {t.common.supportSubtitle}
                 </div>
               </div>
             </div>
@@ -189,7 +191,7 @@ export default function SupportChatWidget() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Ask anything…"
+              placeholder={t.common.supportPlaceholder}
               disabled={streaming}
               style={{
                 flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",

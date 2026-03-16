@@ -42,6 +42,20 @@ export interface Translations {
     goToDashboard: string;
     or: string;
     unassigned: string;
+    feedbackTitle: string;
+    feedbackThanks: string;
+    feedbackBug: string;
+    feedbackFeature: string;
+    feedbackGeneral: string;
+    feedbackPlaceholderBug: string;
+    feedbackPlaceholderFeature: string;
+    feedbackPlaceholderGeneral: string;
+    feedbackCantSend: string;
+    feedbackSend: string;
+    supportTitle: string;
+    supportSubtitle: string;
+    supportGreeting: string;
+    supportPlaceholder: string;
   };
   nav: {
     students: string;
@@ -322,6 +336,60 @@ export interface Translations {
     invoiceTotalDue: string;
     invoiceThankYou: string;
     invoicePrint: string;
+    // Onboard page
+    onboardTitle: string;
+    onboardSubtitle: string;
+    onboardStudioName: string;
+    onboardCreating: string;
+    onboardCreate: string;
+    onboardInviteNote: string;
+    // Practice page
+    practiceTitle: string;
+    practiceSubtitle: string;
+    practiceNotesLabel: string;
+    practiceNotesPh: string;
+    practicePause: string;
+    practiceResume: string;
+    practiceStart: string;
+    practiceReset: string;
+    practiceSaved: string;
+    practiceLogged: string;
+    practiceStartAnother: string;
+    practiceSaving: string;
+    practiceSaveSession: string;
+    // Summaries page
+    summariesTitle: string;
+    summariesSubtitle: string;
+    summariesNew: string;
+    summariesGoalsCreated: string;
+    summariesNewTitle: string;
+    summariesStudent: string;
+    summariesDate: string;
+    summariesSummary: string;
+    summariesSuggestNodes: string;
+    summariesSuggestedGoals: string;
+    summariesGoalsAdded: string;
+    summariesCreateGoals: string;
+    summariesPathCheckpoint: string;
+    summariesLessonCheckpoint: string;
+    summariesAutoAdded: string;
+    // Chat page
+    chatAnnouncements: string;
+    chatVisibleToAll: string;
+    chatDirectMessages: string;
+    chatNoAnnouncements: string;
+    chatNoMessages: string;
+    chatPostAnnouncement: string;
+    chatMessageUser: string;
+    chatPrivateMessage: string;
+    // Inspirations page
+    inspirationsDesc: string;
+    inspirationsMyTab: string;
+    inspirationsStudentTab: string;
+    inspirationsNoStudentPicks: string;
+    inspirationsStudentPicksHint: string;
+    inspirationsOtherPicks: string;
+    inspirationsLeaveComment: string;
     deleteAccountTitle: string;
     deleteAccountBody: string;
     deleteAccountConfirmLabel: string;
@@ -706,6 +774,91 @@ export interface Translations {
     recapAiComingSoon: string;
     recapSentToTeacher: string;
     recapBackToHome: string;
+    // Chat page
+    chatMessages: string;
+    chatStudioTab: string;
+    chatPrivateTab: string;
+    chatNoAnnouncements: string;
+    chatNoMessages: string;
+    chatAnnouncementsDesc: string;
+    chatMessagesDesc: string;
+    chatReplyPrivately: string;
+    chatMessageTeacher: string;
+    chatAiCoaching: string;
+    chatJoinLesson: string;
+    // Rewards page
+    rewardsProgress: string;
+    rewardsTotalPoints: string;
+    rewardsDayStreak: string;
+    rewardsSessions: string;
+    rewardsPracticed: string;
+    rewardsGoalsDone: string;
+    rewardsMaxLevel: string;
+    rewardsPracticeToday: string;
+    rewardsThisWeek: string;
+    rewardsMinutes: string;
+    rewardsPtsEarned: string;
+    rewardsAchievements: string;
+    rewardsEarned: string;
+    rewardsHowToEarn: string;
+    // AI Tutor page
+    aiTutorTitle: string;
+    aiTutorSubtitle: string;
+    aiTutorLeftToday: string;
+    aiTutorWhatToKnow: string;
+    aiTutorKnowledge: string;
+    aiTutorThinking: string;
+    aiTutorDismiss: string;
+    aiTutorLimitError: string;
+    aiTutorPlaceholder: string;
+    aiTutorLimitPlaceholder: string;
+    aiTutorFooter: string;
+    // Goal detail page
+    goalDetailTitle: string;
+    goalNotFound: string;
+    goalBackToPath: string;
+    goalStars: string;
+    goalDue: string;
+    goalTeacherFeedback: string;
+    goalComplete: string;
+    goalEarned: string;
+    goalRecordPractice: string;
+    goalClaiming: string;
+    goalClaim: string;
+    goalClaimNote: string;
+    goalStatusInProgress: string;
+    goalStatusCompleted: string;
+    goalStatusLocked: string;
+    // Join page
+    joinTitle: string;
+    joinSubtitle: string;
+    joinInviteCode: string;
+    joinJoining: string;
+    joinJoin: string;
+    joinNoStudios: string;
+    joinNoStudiosYet: string;
+    joinLookup: string;
+    joinCodeNotFound: string;
+    joinCodeHint: string;
+    joinDontSee: string;
+    // Upgrade page
+    upgradeTitle: string;
+    upgradeSubtitle: string;
+    upgradeSuccessMsg: string;
+    upgradeCanceledMsg: string;
+    upgradeActiveStatus: string;
+    upgradeManage: string;
+    upgradeOpening: string;
+    upgradeRedirecting: string;
+    upgradeSubscribe: string;
+    upgradeFineprint: string;
+    // Pitch trainer page
+    pitchTitle: string;
+    pitchSubtitle: string;
+    pitchChooseDifficulty: string;
+    pitchTrainYourEar: string;
+    pitchWhatNote: string;
+    pitchWrongFeedback: string;
   };
   parent: {
     practiceMin: string;

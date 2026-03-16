@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Staff layout constants (all in px)
@@ -371,6 +372,7 @@ function ResultsScreen({
   newRecord: boolean; hiScore: number; gameLabel: string;
   onPlayAgain: () => void; onMenu: () => void;
 }) {
+  const { t } = useI18n();
   const acc = total > 0 ? correct / total : 0;
   const g   = gradeOf(acc);
   return (
@@ -396,7 +398,7 @@ function ResultsScreen({
           </div>
           {hiScore > 0 && !newRecord && <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.3)", marginBottom: "1.5rem" }}>Best: {hiScore.toLocaleString()} pts</div>}
           <div style={{ display: "flex", gap: "0.625rem" }}>
-            <button onClick={onPlayAgain} style={{ flex: 1, padding: "0.875rem", borderRadius: 8, border: "none", background: "#4CAF84", color: "#fff", fontSize: "0.9375rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 20px #4CAF8440" }}>Play Again</button>
+            <button onClick={onPlayAgain} style={{ flex: 1, padding: "0.875rem", borderRadius: 8, border: "none", background: "#4CAF84", color: "#fff", fontSize: "0.9375rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 20px #4CAF8440" }}>{t.student.playAgain}</button>
             <button onClick={onMenu} style={{ flex: 1, padding: "0.875rem", borderRadius: 8, border: "1.5px solid rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.6)", fontSize: "0.9375rem", fontFamily: "Inter, sans-serif", fontWeight: 500, cursor: "pointer" }}>Change Mode</button>
           </div>
         </div>
@@ -487,6 +489,7 @@ function makeNoteQ(clef: "treble" | "bass", prevPos?: number) {
 }
 
 function NoteIdGame({ onBack }: { onBack: () => void }) {
+  const { t } = useI18n();
   const [clef, setClef] = useState<"treble" | "bass">("treble");
   const [q, setQ]       = useState(() => makeNoteQ("treble"));
   const gk = `nid_${clef}`;
@@ -554,13 +557,13 @@ function NoteIdGame({ onBack }: { onBack: () => void }) {
           </div>
           {game.selected && (
             <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak} in a row!` : "Correct!") : `That's ${q.correct}`}
+              {isCorrect ? (game.streak >= 5 ? t.student.inARow.replace("{n}", String(game.streak)) : t.student.correctFeedback) : `That's ${q.correct}`}
             </div>
           )}
           <AnswerGrid choices={q.choices} selected={game.selected} correct={q.correct} onAnswer={answer} />
           {!game.selected && (
             <div style={{ textAlign: "center", marginTop: "1rem" }}>
-              <button onClick={() => { setQ(makeNoteQ(clef, q.note.pos)); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif" }}>Skip</button>
+              <button onClick={() => { setQ(makeNoteQ(clef, q.note.pos)); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif" }}>{t.student.skipArrow}</button>
             </div>
           )}
         </div>
@@ -591,6 +594,7 @@ function makeIntervalQ(diff: Difficulty) {
 }
 
 function IntervalGame({ onBack }: { onBack: () => void }) {
+  const { t } = useI18n();
   const [diff, setDiff]   = useState<Difficulty>("easy");
   const [q, setQ]         = useState(() => makeIntervalQ("easy"));
   const [played, setPlayed] = useState(false);
@@ -680,7 +684,7 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
 
           {game.selected && (
             <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `It was ${q.correct}`}
+              {isCorrect ? (game.streak >= 5 ? t.student.inARow.replace("{n}", String(game.streak)) : t.student.correctFeedback) : `It was ${q.correct}`}
             </div>
           )}
 
@@ -702,6 +706,7 @@ function makeChordQ(diff: "easy" | "medium") {
 }
 
 function ChordGame({ onBack }: { onBack: () => void }) {
+  const { t } = useI18n();
   const [diff, setDiff]     = useState<"easy" | "medium">("easy");
   const [q, setQ]           = useState(() => makeChordQ("easy"));
   const [played, setPlayed] = useState(false);
@@ -786,7 +791,7 @@ function ChordGame({ onBack }: { onBack: () => void }) {
 
           {game.selected && (
             <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `It was ${q.correct} ${CHORD_ICONS[q.correct]}`}
+              {isCorrect ? (game.streak >= 5 ? t.student.inARow.replace("{n}", String(game.streak)) : t.student.correctFeedback) : `It was ${q.correct} ${CHORD_ICONS[q.correct]}`}
             </div>
           )}
 
@@ -889,6 +894,7 @@ function makeTermQ(pool: Term[]): TermQ {
 }
 
 function MusicTermsGame({ onBack }: { onBack: () => void }) {
+  const { t: tr } = useI18n();
   type Diff = "easy" | "medium" | "hard";
   const [diff, setDiff] = useState<Diff>("easy");
   const game = useGameState(`terms_${diff}`);
@@ -950,7 +956,7 @@ function MusicTermsGame({ onBack }: { onBack: () => void }) {
 
           {game.selected && (
             <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `"${q.correct}"`}
+              {isCorrect ? (game.streak >= 5 ? tr.student.inARow.replace("{n}", String(game.streak)) : tr.student.correctFeedback) : `"${q.correct}"`}
             </div>
           )}
 
@@ -1043,6 +1049,7 @@ function KeySigVisual({ sharps, flats }: { sharps: number; flats: number }) {
 }
 
 function KeySigGame({ onBack }: { onBack: () => void }) {
+  const { t } = useI18n();
   type Mode = "major" | "relative";
   type KSDiff = "beginner" | "advanced";
   const [mode, setMode] = useState<Mode>("major");
@@ -1118,7 +1125,7 @@ function KeySigGame({ onBack }: { onBack: () => void }) {
 
           {game.selected && (
             <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `It's ${q.correct}`}
+              {isCorrect ? (game.streak >= 5 ? t.student.inARow.replace("{n}", String(game.streak)) : t.student.correctFeedback) : `It's ${q.correct}`}
             </div>
           )}
 
@@ -1188,6 +1195,7 @@ function makeScaleQ(pool: ScaleType[]): ScaleQ {
 }
 
 function ScaleGame({ onBack }: { onBack: () => void }) {
+  const { t } = useI18n();
   type SDiff = "easy" | "medium" | "hard";
   const POOL_BY_DIFF: Record<SDiff, ScaleType[]> = {
     easy:   ["Major", "Natural Minor"],
@@ -1286,7 +1294,7 @@ function ScaleGame({ onBack }: { onBack: () => void }) {
 
           {game.selected && (
             <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-              {isCorrect ? (game.streak >= 5 ? `🔥 ${game.streak}!` : "Correct!") : `It was ${q.scaleType}`}
+              {isCorrect ? (game.streak >= 5 ? t.student.inARow.replace("{n}", String(game.streak)) : t.student.correctFeedback) : `It was ${q.scaleType}`}
             </div>
           )}
 
@@ -2424,6 +2432,7 @@ function SightReadGame({ onBack }: { onBack: () => void }) {
 type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm" | "fretboard" | "guitarChord" | "rhythmEcho" | "sightRead";
 
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
+  const { t } = useI18n();
   const scores = {
     noteId_treble: Number(typeof window !== "undefined" ? localStorage.getItem(hiKey("nid_treble")) ?? 0 : 0),
     noteId_bass:   Number(typeof window !== "undefined" ? localStorage.getItem(hiKey("nid_bass"))   ?? 0 : 0),

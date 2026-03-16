@@ -122,7 +122,10 @@ function inlineFormat(text: string): React.ReactNode {
   return parts.length === 1 ? parts[0] : <>{parts}</>;
 }
 
+import { useI18n } from "../../../lib/context/I18nContext";
+
 export default function AITutorPage() {
+  const { t } = useI18n();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -170,7 +173,7 @@ export default function AITutorPage() {
     if (!trimmed || streaming) return;
 
     if (msgCount >= DAILY_LIMIT) {
-      setError(`You've reached your daily limit of ${DAILY_LIMIT} messages. Come back tomorrow!`);
+      setError(t.student.aiTutorLimitError.replace("{n}", String(DAILY_LIMIT)));
       return;
     }
 
@@ -255,10 +258,10 @@ export default function AITutorPage() {
         <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.5rem", fontWeight: 500, color: "var(--charcoal)", letterSpacing: "-0.01em", marginBottom: "0.125rem" }}>
-              AI Music Tutor
+              {t.student.aiTutorTitle}
             </div>
             <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-              Ask anything — RCM exam prep, music theory, technique, practice strategies.
+              {t.student.aiTutorSubtitle}
             </p>
           </div>
           <div style={{
@@ -267,7 +270,7 @@ export default function AITutorPage() {
             padding: "0.25rem 0.625rem", borderRadius: 12,
             fontWeight: 500, whiteSpace: "nowrap", marginTop: "0.25rem",
           }}>
-            {remaining}/{DAILY_LIMIT} left today
+            {t.student.aiTutorLeftToday.replace("{n}", String(remaining)).replace("{total}", String(DAILY_LIMIT))}
           </div>
         </div>
       </div>
@@ -282,10 +285,10 @@ export default function AITutorPage() {
               <div style={{ textAlign: "center", marginBottom: "2rem", paddingTop: "1rem" }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
                 <div style={{ fontSize: "1rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.375rem" }}>
-                  What would you like to know?
+                  {t.student.aiTutorWhatToKnow}
                 </div>
                 <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-                  I know the full RCM curriculum, music theory, and have years of teaching experience.
+                  {t.student.aiTutorKnowledge}
                 </p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "0.625rem" }}>
@@ -347,7 +350,7 @@ export default function AITutorPage() {
                     </div>
                   ) : m.content
                 ) : (streaming && m.role === "assistant" ? (
-                  <span style={{ opacity: 0.4 }}>Thinking…</span>
+                  <span style={{ opacity: 0.4 }}>{t.student.aiTutorThinking}</span>
                 ) : "")}
                 {streaming && m.role === "assistant" && m.content && (
                   <span style={{
@@ -364,7 +367,7 @@ export default function AITutorPage() {
           {error && (
             <div style={{ textAlign: "center", padding: "1rem", color: "var(--error)", fontSize: "0.8125rem" }}>
               {error}
-              <button onClick={() => setError(null)} style={{ marginLeft: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem" }}>dismiss</button>
+              <button onClick={() => setError(null)} style={{ marginLeft: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem" }}>{t.student.aiTutorDismiss}</button>
             </div>
           )}
 
@@ -385,7 +388,7 @@ export default function AITutorPage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={atLimit ? "Daily limit reached — come back tomorrow!" : "Ask about RCM levels, theory, practice tips…"}
+            placeholder={atLimit ? t.student.aiTutorLimitPlaceholder : t.student.aiTutorPlaceholder}
             rows={1}
             disabled={streaming || atLimit}
             style={{

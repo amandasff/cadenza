@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useI18n } from "@/lib/context/I18nContext";
 
 type FeedbackType = "bug" | "feature" | "general";
 
@@ -13,6 +14,7 @@ const TYPES: { value: FeedbackType; label: string; emoji: string }[] = [
 
 export default function FeedbackWidget() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const supabase = getSupabaseBrowserClient();
 
   const [open, setOpen] = useState(false);
@@ -92,7 +94,7 @@ export default function FeedbackWidget() {
             background: "var(--cream)",
           }}>
             <span style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)" }}>
-              Share feedback
+              {t.common.feedbackTitle}
             </span>
             <button
               onClick={() => setOpen(false)}
@@ -106,7 +108,7 @@ export default function FeedbackWidget() {
             <div style={{ padding: "2rem 1rem", textAlign: "center" }}>
               <div style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>🙏</div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 600, color: "var(--charcoal)" }}>
-                Thanks! Got it.
+                {t.common.feedbackThanks}
               </div>
             </div>
           ) : (
@@ -154,7 +156,7 @@ export default function FeedbackWidget() {
 
               {status === "error" && (
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "#C0392B", marginTop: "0.375rem" }}>
-                  Couldn't send — try again
+                  {t.common.feedbackCantSend}
                 </div>
               )}
 
@@ -171,7 +173,7 @@ export default function FeedbackWidget() {
                   transition: "opacity 0.12s",
                 }}
               >
-                {status === "sending" ? "Sending…" : "Send feedback"}
+                {status === "sending" ? t.common.sending : t.common.feedbackSend}
               </button>
             </form>
           )}

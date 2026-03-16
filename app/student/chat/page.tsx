@@ -8,6 +8,7 @@ import { useRecording } from "../../../lib/context/RecordingContext";
 import VideoRecorderModal from "../../../components/VideoRecorderModal";
 import type { MessageRow } from "../../../lib/types";
 import AudioPlayer from "../../../components/AudioPlayer";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -24,6 +25,7 @@ type HeartMap = Record<string, { count: number; liked: boolean }>;
 export default function StudentChat() {
   const { user } = useAuth();
   const student = user as Student;
+  const { t: tr } = useI18n();
 
   const [tab, setTab] = useState<Tab>("private");
   const [announcements, setAnnouncements] = useState<MessageRow[]>([]);
@@ -276,11 +278,11 @@ export default function StudentChat() {
 
       {/* Header */}
       <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem 0", flexShrink: 0 }}>
-        <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.875rem" }}>Messages</div>
+        <div style={{ fontSize: "0.9375rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.875rem" }}>{tr.student.chatMessages}</div>
         <div style={{ display: "flex", gap: 0 }}>
           {(["announcements", "private"] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: "0.5rem 1.125rem", background: "none", border: "none", borderBottom: tab === t ? "1.5px solid var(--charcoal)" : "1.5px solid transparent", marginBottom: -1, fontSize: "0.8125rem", fontWeight: tab === t ? 500 : 400, color: tab === t ? "var(--charcoal)" : "var(--muted)", cursor: "pointer" }}>
-              {t === "announcements" ? "Studio" : "Private"}
+              {t === "announcements" ? tr.student.chatStudioTab : tr.student.chatPrivateTab}
             </button>
           ))}
         </div>
@@ -295,8 +297,8 @@ export default function StudentChat() {
           </div>
         ) : activeMessages.length === 0 ? (
           <div className="empty-state" style={{ flex: 1, justifyContent: "center" }}>
-            <p className="empty-state-title">{tab === "announcements" ? "No announcements yet" : "No messages yet"}</p>
-            <p className="empty-state-desc">{tab === "announcements" ? "Studio announcements from your teacher appear here." : "Send your teacher a message below."}</p>
+            <p className="empty-state-title">{tab === "announcements" ? tr.student.chatNoAnnouncements : tr.student.chatNoMessages}</p>
+            <p className="empty-state-desc">{tab === "announcements" ? tr.student.chatAnnouncementsDesc : tr.student.chatMessagesDesc}</p>
           </div>
         ) : (
           activeMessages.map((msg, i) => {
@@ -331,14 +333,14 @@ export default function StudentChat() {
                           transition: "opacity 0.15s",
                         }}
                       >
-                        Join Lesson
+                        {tr.student.chatJoinLesson}
                       </a>
                     )}
                     {audioUrl && <AudioPlayer src={audioUrl} />}
                     {aiFeedback && (
                       <div style={{ marginTop: "0.875rem", paddingTop: "0.875rem", borderTop: "1px solid var(--border)" }}>
                         <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>
-                          AI Coaching
+                          {tr.student.chatAiCoaching}
                         </div>
                         <p style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.7, margin: 0 }}>
                           {aiFeedback}
@@ -391,8 +393,8 @@ export default function StudentChat() {
                     />
                     {editError && <p style={{ fontSize: "0.6875rem", color: "var(--error)", margin: "0.25rem 0 0" }}>{editError}</p>}
                     <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.375rem", justifyContent: "flex-end" }}>
-                      <button onClick={() => { setEditingId(null); setEditError(null); }} style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}>Cancel</button>
-                      <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>Save</button>
+                      <button onClick={() => { setEditingId(null); setEditError(null); }} style={{ padding: "0.3rem 0.75rem", border: "1px solid var(--border-strong)", borderRadius: 3, background: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem" }}>{tr.common.cancel}</button>
+                      <button onClick={() => handleEditSave(msg.id)} style={{ padding: "0.3rem 0.75rem", border: "none", borderRadius: 3, background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontSize: "0.75rem", fontWeight: 500 }}>{tr.common.save}</button>
                     </div>
                   </div>
                 ) : videoSrc ? (
@@ -431,9 +433,9 @@ export default function StudentChat() {
                 {/* Edit/Delete — all own private messages when hovered */}
                 {canAct && !isEditing && (
                   <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: hoveredId === msg.id ? 1 : 0, transition: "opacity 0.15s", pointerEvents: hoveredId === msg.id ? "auto" : "none", paddingRight: "0.25rem" }}>
-                    <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Edit</button>
+                    <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{tr.common.edit}</button>
                     <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                    <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>Delete</button>
+                    <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{tr.common.delete}</button>
                   </div>
                 )}
 
@@ -458,7 +460,7 @@ export default function StudentChat() {
 
         {!loading && tab === "announcements" && announcements.length > 0 && (
           <button onClick={() => setTab("private")} style={{ all: "unset", marginTop: "0.75rem", padding: "0.625rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, cursor: "pointer", fontSize: "0.8125rem", color: "var(--muted)", width: "100%", boxSizing: "border-box" }}>
-            Reply privately to your teacher →
+            {tr.student.chatReplyPrivately}
           </button>
         )}
 
@@ -479,7 +481,7 @@ export default function StudentChat() {
       )}
       {tab === "private" && (
         <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "flex-end", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? "Message your teacher…" : "Loading…"} disabled={sending || !teacherId || isRecording || uploadingAudio} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
+          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? tr.student.chatMessageTeacher : tr.common.loading} disabled={sending || !teacherId || isRecording || uploadingAudio} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
           {/* Mic button — audio-only voice note */}
           <button
             onClick={isRecording ? stopRecording : handleStartRecording}
@@ -527,7 +529,7 @@ export default function StudentChat() {
           >
             {sendingImage ? "⏳" : "🖼"}
           </button>
-          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId || isRecording} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId && !isRecording ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId && !isRecording ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>Send</button>
+          <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId || isRecording} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId && !isRecording ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId && !isRecording ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>{tr.common.send}</button>
         </div>
       )}
 

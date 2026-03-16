@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { Teacher } from "../../../lib/models/Teacher";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 function fmt(s: number) {
   const h = Math.floor(s / 3600);
@@ -14,6 +15,7 @@ function fmt(s: number) {
 export default function TeacherPracticePage() {
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
 
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -82,10 +84,10 @@ export default function TeacherPracticePage() {
   return (
     <div style={{ maxWidth: 480, margin: "0 auto" }}>
       <h1 style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1.2rem", color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
-        Practice Session
+        {t.teacher.practiceTitle}
       </h1>
       <p style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.75rem" }}>
-        Log your own practice time.
+        {t.teacher.practiceSubtitle}
       </p>
 
       {/* Timer display */}
@@ -115,7 +117,7 @@ export default function TeacherPracticePage() {
                 border: running ? "2px solid var(--rose)" : "2px solid transparent",
               } as React.CSSProperties}
             >
-              {running ? "⏸ Pause" : elapsed > 0 ? "▶ Resume" : "▶ Start"}
+              {running ? t.teacher.practicePause : elapsed > 0 ? t.teacher.practiceResume : t.teacher.practiceStart}
             </button>
           )}
           {elapsed > 0 && !running && !saved && (
@@ -128,7 +130,7 @@ export default function TeacherPracticePage() {
                 fontSize: "0.875rem", cursor: "pointer",
               }}
             >
-              Reset
+              {t.teacher.practiceReset}
             </button>
           )}
         </div>
@@ -138,12 +140,12 @@ export default function TeacherPracticePage() {
       {(elapsed > 0 || notes) && !saved && (
         <div style={{ background: "var(--white)", borderRadius: 20, padding: "1.25rem", border: "1.5px solid var(--border)", marginBottom: "1rem" }}>
           <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.625rem" }}>
-            Notes (optional)
+            {t.teacher.practiceNotesLabel}
           </div>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="What did you work on today?"
+            placeholder={t.teacher.practiceNotesPh}
             style={{
               width: "100%", borderRadius: 10, border: "1.5px solid var(--border)",
               padding: "0.75rem", fontFamily: "DM Sans, sans-serif", fontSize: "0.875rem",
@@ -166,10 +168,10 @@ export default function TeacherPracticePage() {
         <div style={{ background: "var(--sage-bg)", borderRadius: 20, padding: "1.5rem", border: "1.5px solid var(--sage)", textAlign: "center" }}>
           <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎉</div>
           <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1rem", color: "var(--sage)", marginBottom: "0.25rem" }}>
-            Session saved!
+            {t.teacher.practiceSaved}
           </div>
           <div style={{ fontFamily: "DM Sans, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "1rem" }}>
-            {fmt(elapsed)} logged
+            {t.teacher.practiceLogged.replace("{time}", fmt(elapsed))}
           </div>
           <button
             onClick={resetTimer}
@@ -180,7 +182,7 @@ export default function TeacherPracticePage() {
               cursor: "pointer",
             }}
           >
-            Start another session
+            {t.teacher.practiceStartAnother}
           </button>
         </div>
       ) : (
@@ -196,7 +198,7 @@ export default function TeacherPracticePage() {
               transition: "opacity 0.15s",
             }}
           >
-            {saving ? "Saving…" : "Save Session"}
+            {saving ? t.teacher.practiceSaving : t.teacher.practiceSaveSession}
           </button>
         )
       )}

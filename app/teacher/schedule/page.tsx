@@ -18,23 +18,24 @@ import type {
   GoalRow,
   ExternalStudentRow,
 } from "../../../lib/types";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DURATIONS = [30, 45, 60, 90];
 
-const ASSIGNMENT_TYPES: { value: AssignmentType; label: string; color: string; emoji: string }[] = [
-  { value: "practice", label: "Practice",  color: "var(--rose)",     emoji: "🎹" },
-  { value: "listen",   label: "Listen",    color: "var(--sky)",      emoji: "🎧" },
-  { value: "theory",   label: "Theory",    color: "var(--butter)",   emoji: "📖" },
-  { value: "memorize", label: "Memorize",  color: "var(--lavender)", emoji: "🧠" },
-  { value: "record",   label: "Record",    color: "var(--sage)",     emoji: "🎙" },
+const ASSIGNMENT_TYPES_BASE: { value: AssignmentType; color: string; emoji: string }[] = [
+  { value: "practice", color: "var(--rose)",     emoji: "🎹" },
+  { value: "listen",   color: "var(--sky)",      emoji: "🎧" },
+  { value: "theory",   color: "var(--butter)",   emoji: "📖" },
+  { value: "memorize", color: "var(--lavender)", emoji: "🧠" },
+  { value: "record",   color: "var(--sage)",     emoji: "🎙" },
 ];
 
-const RATING_CONFIG = {
-  struggling:    { emoji: "😓", label: "Struggling",    color: "var(--error)" },
-  getting_there: { emoji: "🙂", label: "Getting there", color: "var(--warning)" },
-  nailed_it:     { emoji: "🎉", label: "Nailed it",     color: "var(--success)" },
+const RATING_CONFIG_BASE = {
+  struggling:    { emoji: "😓", color: "var(--error)" },
+  getting_there: { emoji: "🙂", color: "var(--warning)" },
+  nailed_it:     { emoji: "🎉", color: "var(--success)" },
 };
 
 interface AssignmentDraft {
@@ -69,17 +70,17 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDayGroup(iso: string) {
+function formatDayGroup(iso: string, todayLabel: string, tomorrowLabel: string) {
   const d = new Date(iso);
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+  if (d.toDateString() === today.toDateString()) return todayLabel;
+  if (d.toDateString() === tomorrow.toDateString()) return tomorrowLabel;
   return d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
 }
 
-function groupByDay(lessons: LessonWithAssignments[]) {
+function groupByDay(lessons: LessonWithAssignments[], todayLabel: string, tomorrowLabel: string) {
   const groups: { label: string; date: Date; lessons: LessonWithAssignments[] }[] = [];
   for (const lesson of lessons) {
     const d = new Date(lesson.scheduled_at);
@@ -88,7 +89,7 @@ function groupByDay(lessons: LessonWithAssignments[]) {
     if (existing) {
       existing.lessons.push(lesson);
     } else {
-      groups.push({ label: formatDayGroup(lesson.scheduled_at), date: d, lessons: [lesson] });
+      groups.push({ label: formatDayGroup(lesson.scheduled_at, todayLabel, tomorrowLabel), date: d, lessons: [lesson] });
     }
   }
   return groups;
@@ -137,6 +138,22 @@ const btnSecondary: React.CSSProperties = {
 export default function SchedulePage() {
   const { user } = useAuth();
   const teacher = user as Teacher;
+  const { t } = useI18n();
+
+  const ASSIGNMENT_TYPES = ASSIGNMENT_TYPES_BASE.map(a => ({
+    ...a,
+    label: a.value === "practice" ? t.schedule.practiceType
+      : a.value === "listen" ? t.schedule.listenType
+      : a.value === "theory" ? t.schedule.theoryType
+      : a.value === "memorize" ? t.schedule.memorizeType
+      : t.schedule.recordType,
+  }));
+
+  const RATING_CONFIG = {
+    struggling:    { ...RATING_CONFIG_BASE.struggling,    label: t.student.stillStruggling },
+    getting_there: { ...RATING_CONFIG_BASE.getting_there, label: t.student.gettingThere },
+    nailed_it:     { ...RATING_CONFIG_BASE.nailed_it,     label: t.student.nailedIt },
+  };
 
   const [lessons, setLessons] = useState<LessonWithAssignments[]>([]);
   const [students, setStudents] = useState<ProfileRow[]>([]);
@@ -328,7 +345,7 @@ export default function SchedulePage() {
 
   // Cancel lesson
   async function handleCancel(lesson: LessonWithAssignments) {
-    if (!confirm(`Cancel ${lesson.student_name}'s lesson on ${formatDayGroup(lesson.scheduled_at)}?`)) return;
+    if (!confirm(`Cancel ${lesson.student_name}'s lesson on ${formatDayGroup(lesson.scheduled_at, t.schedule.today, t.schedule.tomorrow)}?`)) return;
     try {
       const supabase = getSupabaseBrowserClient();
       await LessonService.create(supabase).cancelLesson(lesson.id, teacher.id);
@@ -543,7 +560,7 @@ export default function SchedulePage() {
     setAssignmentDrafts(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
   }
 
-  const groups = groupByDay(lessons);
+  const groups = groupByDay(lessons, t.schedule.today, t.schedule.tomorrow);
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1.5rem" }}>
@@ -551,14 +568,14 @@ export default function SchedulePage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
         <div>
           <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: 0 }}>
-            Schedule
+            {t.nav.schedule}
           </h1>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0.25rem 0 0" }}>
-            Upcoming lessons · next 14 days
+            {t.schedule.upcomingLessons}
           </p>
         </div>
         <button onClick={() => setShowScheduleModal(true)} style={btnPrimary}>
-          + Schedule Lesson
+          + {t.schedule.scheduleLesson}
         </button>
       </div>
 
@@ -571,10 +588,10 @@ export default function SchedulePage() {
           borderRadius: 4, border: "1px solid var(--border)",
         }}>
           <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
-            No lessons scheduled in the next 14 days.
+            {t.schedule.noLessonsNext14Days}
           </p>
           <button onClick={() => setShowScheduleModal(true)} style={{ ...btnPrimary, marginTop: "1rem" }}>
-            Schedule your first lesson
+            {t.schedule.scheduleFirstLesson}
           </button>
         </div>
       ) : (
@@ -633,20 +650,20 @@ export default function SchedulePage() {
                             border: "1px solid var(--border-strong)", padding: "0.125rem 0.375rem",
                             borderRadius: 2, fontFamily: "Inter, sans-serif",
                           }}>
-                            not on app
+                            {t.schedule.notOnApp}
                           </span>
                         )}
                       </div>
                       <p style={{ margin: "0.125rem 0 0", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
-                        {formatTime(lesson.scheduled_at)} · {lesson.duration_minutes} min
+                        {formatTime(lesson.scheduled_at)} · {lesson.duration_minutes} {t.schedule.min}
                         {prep && prep.totalMinutes > 0 && (
                           <span style={{ marginLeft: "0.75rem", color: prep.totalMinutes >= 60 ? "var(--sage)" : "var(--warning)" }}>
-                            {prep.totalMinutes} min this week
+                            {prep.totalMinutes} {t.schedule.minThisWeek}
                           </span>
                         )}
                         {prep && prep.totalMinutes === 0 && (
                           <span style={{ marginLeft: "0.75rem", color: "var(--error)" }}>
-                            No practice this week
+                            {t.schedule.noPracticeThisWeek}
                           </span>
                         )}
                       </p>
@@ -659,20 +676,20 @@ export default function SchedulePage() {
                           onClick={() => openComplete(lesson)}
                           style={{ ...btnPrimary, padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
                         >
-                          Complete
+                          {t.schedule.complete}
                         </button>
                       )}
                       <button
                         onClick={() => openEdit(lesson)}
                         style={{ ...btnSecondary, padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
                       >
-                        Edit
+                        {t.common.edit}
                       </button>
                       <button
                         onClick={() => handleCancel(lesson)}
                         style={{ ...btnSecondary, padding: "0.375rem 0.75rem", fontSize: "0.75rem" }}
                       >
-                        Cancel
+                        {t.common.cancel}
                       </button>
                     </div>
 
@@ -693,7 +710,7 @@ export default function SchedulePage() {
                         color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase",
                         margin: "0 0 0.625rem",
                       }}>
-                        Lesson Prep
+                        {t.schedule.lessonPrep}
                       </p>
 
                       {/* Stats row */}
@@ -701,10 +718,10 @@ export default function SchedulePage() {
                         {/* Practice this week */}
                         <div>
                           <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "1.25rem", fontWeight: 600, color: "var(--charcoal)" }}>
-                            {prep.totalMinutes}<span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)" }}> min</span>
+                            {prep.totalMinutes}<span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)" }}> {t.schedule.min}</span>
                           </p>
                           <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
-                            {prep.sessionCount} session{prep.sessionCount !== 1 ? "s" : ""} this week
+                            {prep.sessionCount} {t.schedule.sessionsThisWeek}
                           </p>
                         </div>
 
@@ -714,7 +731,7 @@ export default function SchedulePage() {
                             {prep.goalsCompleted}<span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)" }}> / {prep.goalsTotal}</span>
                           </p>
                           <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
-                            goals completed · {prep.goalsCurrent} active
+                            {t.schedule.goalsCompletedActive.replace("{n}", String(prep.goalsCurrent))}
                           </p>
                         </div>
 
@@ -725,7 +742,7 @@ export default function SchedulePage() {
                               {prep.moodTrend.join(" ")}
                             </p>
                             <p style={{ margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
-                              recent mood
+                              {t.schedule.recentMood}
                             </p>
                           </div>
                         )}
@@ -764,7 +781,7 @@ export default function SchedulePage() {
                             margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem",
                             color: "var(--muted)", marginBottom: "0.25rem",
                           }}>
-                            Last lesson{prep.lastLessonDate ? ` · ${new Date(prep.lastLessonDate).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
+                            {t.schedule.lastLesson}{prep.lastLessonDate ? ` · ${new Date(prep.lastLessonDate).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
                           </p>
                           <p style={{
                             margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
@@ -781,7 +798,7 @@ export default function SchedulePage() {
                           margin: 0, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
                           color: "var(--muted)", fontStyle: "italic",
                         }}>
-                          No practice data yet — prep data will appear as the student logs sessions.
+                          {t.schedule.noPracticeDataYet}
                         </p>
                       )}
                     </div>
@@ -793,13 +810,13 @@ export default function SchedulePage() {
                       {/* Lesson notes */}
                       <div style={{ marginTop: "1rem" }}>
                         <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", display: "block", marginBottom: "0.375rem" }}>
-                          Lesson notes
+                          {t.schedule.lessonNotes}
                         </label>
                         <textarea
                           value={noteDrafts[lesson.id] ?? ""}
                           onChange={e => setNoteDrafts(prev => ({ ...prev, [lesson.id]: e.target.value }))}
                           onBlur={() => saveNote(lesson.id)}
-                          placeholder="What did you cover in this lesson?"
+                          placeholder={t.schedule.coveredPlaceholder}
                           rows={3}
                           style={{ ...inputStyle, resize: "vertical" }}
                         />
@@ -809,7 +826,7 @@ export default function SchedulePage() {
                       {lesson.assignments.length > 0 && (
                         <div style={{ marginTop: "1rem" }}>
                           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", margin: "0 0 0.5rem" }}>
-                            Assignments for this lesson
+                            {t.schedule.assignmentsForLesson}
                           </p>
                           {lesson.assignments.map((a: AssignmentRow) => {
                             const typeInfo = ASSIGNMENT_TYPES.find(t => t.value === a.type);
@@ -862,15 +879,15 @@ export default function SchedulePage() {
             padding: "1.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
           }}>
             <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
-              Complete Lesson
+              {t.schedule.completeLesson}
             </h2>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.5rem" }}>
-              {completingLesson.student_name} · {formatDayGroup(completingLesson.scheduled_at)} at {formatTime(completingLesson.scheduled_at)}
+              {completingLesson.student_name} · {formatDayGroup(completingLesson.scheduled_at, t.schedule.today, t.schedule.tomorrow)} at {formatTime(completingLesson.scheduled_at)}
             </p>
 
             {/* Lesson notes */}
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
-              What did you cover today?
+              {t.schedule.coveredTodayLabel}
             </label>
             <textarea
               value={completeNotes}
@@ -883,13 +900,13 @@ export default function SchedulePage() {
             {/* Assignments */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)", margin: 0 }}>
-                Assignments for next lesson
+                {t.schedule.assignmentsForNextLesson}
               </p>
               <button
                 onClick={() => setAssignmentDrafts(prev => [...prev, newDraft()])}
                 style={{ ...btnSecondary, padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
               >
-                + Add
+                + {t.schedule.addAssignment}
               </button>
             </div>
 
@@ -908,7 +925,7 @@ export default function SchedulePage() {
                     <input
                       value={draft.title}
                       onChange={e => updateDraft(draft.id, { title: e.target.value })}
-                      placeholder={`Assignment ${idx + 1} title *`}
+                      placeholder={t.schedule.assignmentTitlePlaceholder.replace("{n}", String(idx + 1))}
                       style={{ ...inputStyle, flex: 1 }}
                     />
                     {assignmentDrafts.length > 1 && (
@@ -928,7 +945,7 @@ export default function SchedulePage() {
                       onChange={e => updateDraft(draft.id, { pieceId: e.target.value })}
                       style={{ ...inputStyle, flex: 1 }}
                     >
-                      <option value="">No piece</option>
+                      <option value="">{t.schedule.noPiece}</option>
                       {studentPieces.map(p => (
                         <option key={p.id} value={p.id}>{p.title}</option>
                       ))}
@@ -936,7 +953,7 @@ export default function SchedulePage() {
                     <input
                       value={draft.focus}
                       onChange={e => updateDraft(draft.id, { focus: e.target.value })}
-                      placeholder="Focus (e.g. bars 15–22)"
+                      placeholder={t.schedule.focusPlaceholder}
                       style={{ ...inputStyle, flex: 1 }}
                     />
                   </div>
@@ -956,7 +973,7 @@ export default function SchedulePage() {
                       type="number"
                       value={draft.targetMins}
                       onChange={e => updateDraft(draft.id, { targetMins: e.target.value })}
-                      placeholder="Min/day"
+                      placeholder={t.schedule.minPerDay}
                       min={1}
                       style={{ ...inputStyle, width: 90, flex: "none" }}
                     />
@@ -981,7 +998,7 @@ export default function SchedulePage() {
                           color: isRecording ? "var(--error)" : undefined,
                         }}
                       >
-                        {isRecording ? `⏹ Stop (${recordingSeconds}s)` : "🎙 Record voice note"}
+                        {isRecording ? t.schedule.stopRecording.replace("{n}", String(recordingSeconds)) : t.schedule.recordVoiceNote}
                       </button>
                     ) : (
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -990,12 +1007,12 @@ export default function SchedulePage() {
                           onClick={() => updateDraft(draft.id, { audioBlob: null, audioUrl: null })}
                           style={{ ...btnSecondary, padding: "0.25rem 0.5rem", fontSize: "0.6875rem" }}
                         >
-                          ✕ Remove
+                          ✕ {t.common.remove}
                         </button>
                       </div>
                     )}
                     <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                      Optional — record yourself playing the passage
+                      {t.schedule.voiceNoteHint}
                     </span>
                   </div>
                 </div>
@@ -1014,10 +1031,10 @@ export default function SchedulePage() {
             )}
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "1.25rem" }}>
               <button onClick={() => { setCompletingLesson(null); setSaveError(null); }} style={btnSecondary} disabled={saving}>
-                Cancel
+                {t.common.cancel}
               </button>
               <button onClick={handleCompleteLesson} style={btnPrimary} disabled={saving}>
-                {saving ? "Saving…" : "Save & Complete Lesson"}
+                {saving ? t.common.saving : t.schedule.saveComplete}
               </button>
             </div>
           </div>
@@ -1036,14 +1053,14 @@ export default function SchedulePage() {
             padding: "1.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
           }}>
             <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
-              Edit Lesson
+              {t.schedule.editLesson}
             </h2>
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.5rem" }}>
               {editingLesson.student_name}
             </p>
 
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
-              Date & time
+              {t.schedule.dateAndTime}
             </label>
             <input
               type="datetime-local"
@@ -1053,7 +1070,7 @@ export default function SchedulePage() {
             />
 
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
-              Duration
+              {t.schedule.duration}
             </label>
             <select
               value={editForm.durationMinutes}
@@ -1061,7 +1078,7 @@ export default function SchedulePage() {
               style={{ ...inputStyle, marginBottom: "1.5rem" }}
             >
               {DURATIONS.map(d => (
-                <option key={d} value={d}>{d} minutes</option>
+                <option key={d} value={d}>{t.schedule.minutes.replace("{d}", String(d))}</option>
               ))}
             </select>
 
@@ -1076,10 +1093,10 @@ export default function SchedulePage() {
             )}
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
               <button onClick={() => setEditingLesson(null)} style={btnSecondary} disabled={editSaving}>
-                Cancel
+                {t.common.cancel}
               </button>
               <button onClick={handleEditLesson} style={btnPrimary} disabled={editSaving || !editForm.scheduledAt}>
-                {editSaving ? "Saving…" : "Save Changes"}
+                {editSaving ? t.common.saving : t.schedule.saveChanges}
               </button>
             </div>
           </div>
@@ -1098,7 +1115,7 @@ export default function SchedulePage() {
             padding: "1.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
           }}>
             <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "1.375rem", fontWeight: 600, color: "var(--charcoal)", margin: "0 0 1.5rem" }}>
-              Schedule a Lesson
+              {t.schedule.scheduleALesson}
             </h2>
 
             {/* Student type toggle */}
@@ -1115,13 +1132,13 @@ export default function SchedulePage() {
                     border: scheduleStudentType === type ? "1px solid var(--charcoal)" : "1px solid var(--border-strong)",
                   }}
                 >
-                  {type === "app" ? "On Cadenza" : type === "ext_existing" ? "Existing external" : "New external"}
+                  {type === "app" ? t.schedule.onCadenza : type === "ext_existing" ? t.schedule.existingExternal : t.schedule.newExternal}
                 </button>
               ))}
             </div>
 
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
-              Student
+              {t.schedule.studentLabel}
             </label>
 
             {scheduleStudentType === "app" && (
@@ -1130,7 +1147,7 @@ export default function SchedulePage() {
                 onChange={e => setScheduleForm(f => ({ ...f, studentId: e.target.value }))}
                 style={{ ...inputStyle, marginBottom: "1rem" }}
               >
-                <option value="">Select student…</option>
+                <option value="">{t.schedule.selectStudentPlaceholder}</option>
                 {students.map(s => (
                   <option key={s.id} value={s.id}>{s.display_name}</option>
                 ))}
@@ -1143,7 +1160,7 @@ export default function SchedulePage() {
                 onChange={e => setScheduleExtId(e.target.value)}
                 style={{ ...inputStyle, marginBottom: "1rem" }}
               >
-                <option value="">Select external student…</option>
+                <option value="">{t.schedule.selectExternalStudent}</option>
                 {externalStudents.map(s => (
                   <option key={s.id} value={s.id}>{s.name}{s.instrument ? ` (${s.instrument})` : ""}</option>
                 ))}
@@ -1154,14 +1171,14 @@ export default function SchedulePage() {
               <div style={{ marginBottom: "1rem" }}>
                 <input
                   type="text"
-                  placeholder="Student name *"
+                  placeholder={t.schedule.studentNamePlaceholder}
                   value={scheduleExtName}
                   onChange={e => setScheduleExtName(e.target.value)}
                   style={{ ...inputStyle, marginBottom: "0.5rem" }}
                 />
                 <input
                   type="email"
-                  placeholder="Email (optional)"
+                  placeholder={t.schedule.emailOptional}
                   value={scheduleExtEmail}
                   onChange={e => setScheduleExtEmail(e.target.value)}
                   style={inputStyle}
@@ -1170,7 +1187,7 @@ export default function SchedulePage() {
             )}
 
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
-              Date & time
+              {t.schedule.dateAndTime}
             </label>
             <input
               type="datetime-local"
@@ -1180,7 +1197,7 @@ export default function SchedulePage() {
             />
 
             <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", display: "block", marginBottom: "0.375rem" }}>
-              Duration
+              {t.schedule.duration}
             </label>
             <select
               value={scheduleForm.durationMinutes}
@@ -1188,7 +1205,7 @@ export default function SchedulePage() {
               style={{ ...inputStyle, marginBottom: "1.25rem" }}
             >
               {DURATIONS.map(d => (
-                <option key={d} value={d}>{d} minutes</option>
+                <option key={d} value={d}>{t.schedule.minutes.replace("{d}", String(d))}</option>
               ))}
             </select>
 
@@ -1200,12 +1217,14 @@ export default function SchedulePage() {
                 onChange={e => setScheduleForm(f => ({ ...f, recurring: e.target.checked }))}
               />
               <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)" }}>
-                Make this a recurring lesson
+                {t.schedule.makeRecurring}
               </span>
             </label>
             {scheduleForm.recurring && scheduleForm.scheduledAt && (
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "-1rem 0 1.25rem", padding: "0.625rem", background: "var(--cream)", borderRadius: 4 }}>
-                Every {FULL_DAYS[new Date(scheduleForm.scheduledAt).getDay()]} at {new Date(scheduleForm.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — will generate the next 8 weeks of lessons
+                {t.schedule.recurringDesc
+                  .replace("{day}", FULL_DAYS[new Date(scheduleForm.scheduledAt).getDay()])
+                  .replace("{time}", new Date(scheduleForm.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}
               </p>
             )}
 
@@ -1220,7 +1239,7 @@ export default function SchedulePage() {
             )}
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
               <button onClick={() => { setShowScheduleModal(false); setScheduleError(null); }} style={btnSecondary} disabled={scheduling}>
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 onClick={handleScheduleLesson}
@@ -1242,7 +1261,7 @@ export default function SchedulePage() {
                   (scheduleStudentType === "ext_new" && !scheduleExtName.trim())
                 }
               >
-                {scheduling ? "Scheduling…" : scheduleForm.recurring ? "Schedule + Repeat" : "Schedule Lesson"}
+                {scheduling ? t.schedule.scheduling : scheduleForm.recurring ? t.schedule.scheduleAndRepeat : t.schedule.scheduleLesson}
               </button>
             </div>
           </div>

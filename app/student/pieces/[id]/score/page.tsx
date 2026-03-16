@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
+import { useI18n } from "../../../../../lib/context/I18nContext";
 
 declare global {
   interface Window { alphaTab?: any; }
@@ -14,6 +15,7 @@ const SOUNDFONT_CDN = "https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.3.0/di
 type PlayerState = "stopped" | "playing" | "paused";
 
 export default function ScorePage() {
+  const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
 
   const [piece, setPiece] = useState<{ title: string; score_url: string } | null>(null);
@@ -37,7 +39,7 @@ export default function ScorePage() {
       .single()
       .then(({ data, error: err }: { data: { title: string; score_url: string | null } | null; error: unknown }) => {
         if (err || !data) { setError("Piece not found."); return; }
-        if (!data.score_url) { setError("No score file has been uploaded for this piece yet."); return; }
+        if (!data.score_url) { setError(t.student.performNoSheetMusic); return; }
         setPiece(data as { title: string; score_url: string });
       })
       .finally(() => setLoading(false));
@@ -113,7 +115,7 @@ export default function ScorePage() {
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <Link href="/student/pieces" style={{ color: "var(--muted)", textDecoration: "none", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem" }}>
-          ← Pieces
+          {t.student.performBackToPieces}
         </Link>
         <div style={{ flex: 1, minWidth: 0, fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.125rem", fontWeight: 600, color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {piece?.title ?? "Score"}
@@ -178,7 +180,7 @@ export default function ScorePage() {
       <div style={{ flex: 1, overflow: "auto", padding: "1rem" }}>
         {loading && (
           <div style={{ textAlign: "center", padding: "4rem", fontFamily: "Inter, sans-serif", color: "var(--muted)" }}>
-            Loading piece…
+            {t.student.performLoading}
           </div>
         )}
 
@@ -193,14 +195,14 @@ export default function ScorePage() {
               {error}
             </div>
             <Link href="/student/pieces" style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
-              ← Back to pieces
+              {t.student.performBackToPieces}
             </Link>
           </div>
         )}
 
         {!loading && !error && !scriptReady && (
           <div style={{ textAlign: "center", padding: "4rem", fontFamily: "Inter, sans-serif", color: "var(--muted)" }}>
-            Loading music player…
+            {t.student.performLoading}
           </div>
         )}
 

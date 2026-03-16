@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { StudioService } from "../../../lib/services/StudioService";
+import { useI18n } from "../../../lib/context/I18nContext";
 
 export default function TeacherOnboardPage() {
   const router = useRouter();
   const { user, refresh } = useAuth();
+  const { t } = useI18n();
   const [studioName, setStudioName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +52,7 @@ export default function TeacherOnboardPage() {
             color: "var(--charcoal)",
             margin: 0,
           }}>
-            Create Your Studio
+            {t.teacher.onboardTitle}
           </h1>
           <p style={{
             fontFamily: "DM Sans, sans-serif",
@@ -58,7 +60,7 @@ export default function TeacherOnboardPage() {
             fontSize: "0.95rem",
             marginTop: "0.5rem",
           }}>
-            Give your studio a name. Students will join using your invite code.
+            {t.teacher.onboardSubtitle}
           </p>
         </div>
 
@@ -74,7 +76,7 @@ export default function TeacherOnboardPage() {
                 display: "block",
                 marginBottom: "0.4rem",
               }}>
-                Studio name
+                {t.teacher.onboardStudioName}
               </label>
               <input
                 type="text"
@@ -121,7 +123,7 @@ export default function TeacherOnboardPage() {
               className="btn btn-primary"
               style={{ width: "100%", padding: "0.875rem", fontSize: "1rem", opacity: (loading || !studioName.trim()) ? 0.65 : 1 }}
             >
-              {loading ? "Creating studio..." : "Create Studio"}
+              {loading ? t.teacher.onboardCreating : t.teacher.onboardCreate}
             </button>
           </form>
         </div>
@@ -133,7 +135,7 @@ export default function TeacherOnboardPage() {
           color: "var(--muted)",
           marginTop: "1.5rem",
         }}>
-          Your unique invite code will be generated automatically.
+          {t.teacher.onboardInviteNote}
         </p>
       </div>
     </div>
