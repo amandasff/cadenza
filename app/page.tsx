@@ -3,37 +3,157 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { AuthService } from "@/lib/services/AuthService";
-import type { UserRole } from "@/lib/types";
 import { useTheme } from "@/lib/context/ThemeContext";
 import { useI18n } from "@/lib/context/I18nContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import {
+  Brain, Target, CreditCard, Bell, BarChart2, FileText,
+  Timer, Flame, Bot, Gamepad2, Mic, Globe, ArrowRight,
+  CheckCircle, Circle, Sparkles, Users, Music2,
+} from "lucide-react";
+
+/* ─── Tiny product UI mockups ─── */
+
+function PracticeMockup() {
+  return (
+    <div style={{
+      background: "var(--white)", borderRadius: 20, border: "1px solid var(--border)",
+      boxShadow: "0 24px 64px rgba(44,40,36,0.14)", overflow: "hidden",
+      width: "100%", maxWidth: 340,
+    }}>
+      {/* App header */}
+      <div style={{ background: "var(--charcoal)", padding: "0.875rem 1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.625rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", flex: 1 }}>Cadenza</div>
+        <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#3D6B55" }} />
+        <div style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>Practice</div>
+      </div>
+      {/* Content */}
+      <div style={{ padding: "1.5rem" }}>
+        {/* Greeting */}
+        <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginBottom: "0.25rem" }}>Good morning, Emma</div>
+        <div style={{ fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", marginBottom: "1.25rem" }}>Today&apos;s Practice</div>
+
+        {/* Timer card */}
+        <div style={{
+          background: "var(--sage-bg)", border: "1px solid var(--sage-light)",
+          borderRadius: 12, padding: "1.25rem", textAlign: "center", marginBottom: "1rem",
+        }}>
+          <div style={{ fontSize: "0.625rem", color: "var(--sage)", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}>Moonlight Sonata · Beethoven</div>
+          <div style={{ fontSize: "2.75rem", fontWeight: 300, color: "var(--charcoal)", lineHeight: 1, letterSpacing: "-0.03em", fontFamily: "Cormorant Garamond, Georgia, serif" }}>14:23</div>
+          <div style={{ marginTop: "0.75rem", height: 4, background: "var(--sage-light)", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ width: "62%", height: "100%", background: "var(--sage)", borderRadius: 99 }} />
+          </div>
+        </div>
+
+        {/* Streak badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "0.375rem",
+            background: "var(--peach-bg)", border: "1px solid var(--peach-light)",
+            borderRadius: 999, padding: "0.3rem 0.75rem",
+            fontSize: "0.75rem", fontWeight: 600, color: "var(--peach)",
+          }}>
+            <Flame size={12} />
+            7 day streak
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Keep it up!</div>
+        </div>
+
+        {/* Goals list */}
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "0.625rem" }}>Today&apos;s Goals</div>
+        {[
+          { done: true, text: "Bars 1–16, right hand" },
+          { done: true, text: "Slow practice with metronome" },
+          { done: false, text: "Hands together, bars 1–8" },
+        ].map((g, i) => (
+          <div key={i} style={{ display: "flex", gap: "0.5rem", alignItems: "center", padding: "0.4rem 0", borderTop: i === 0 ? "1px solid var(--border)" : undefined }}>
+            {g.done
+              ? <CheckCircle size={13} color="var(--sage)" strokeWidth={2.5} />
+              : <Circle size={13} color="var(--muted)" strokeWidth={1.5} />}
+            <span style={{ fontSize: "0.8125rem", color: g.done ? "var(--muted)" : "var(--charcoal)", textDecoration: g.done ? "line-through" : "none" }}>{g.text}</span>
+          </div>
+        ))}
+
+        {/* AI tutor bubble */}
+        <div style={{
+          background: "var(--lavender-bg)", border: "1px solid var(--lavender-light)",
+          borderRadius: 10, padding: "0.75rem", marginTop: "1rem",
+          display: "flex", gap: "0.625rem", alignItems: "flex-start",
+        }}>
+          <Bot size={14} color="var(--lavender)" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: "0.75rem", color: "var(--lavender)", lineHeight: 1.5 }}>
+            Great focus! Try playing bar 8 left hand alone at 60 bpm — it&apos;ll unlock the whole passage.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LessonPlanMockup() {
+  return (
+    <div style={{
+      background: "var(--white)", borderRadius: 16, border: "1px solid var(--border)",
+      boxShadow: "var(--shadow-lg)", overflow: "hidden", width: "100%", maxWidth: 380,
+    }}>
+      <div style={{ background: "var(--sage-bg)", borderBottom: "1px solid var(--sage-light)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.625rem" }}>
+        <Brain size={16} color="var(--sage)" />
+        <div>
+          <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>AI Lesson Plan · Emma Chen</div>
+          <div style={{ fontSize: "0.6875rem", color: "var(--muted)" }}>45 min this week · 5 of 7 days practiced</div>
+        </div>
+      </div>
+      <div style={{ padding: "1.25rem" }}>
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "0.75rem" }}>Suggested Focus</div>
+        {[
+          { checked: true, text: "Review bars 8–12 · struggled 3× this week", tag: "High priority", tagColor: "var(--peach)", tagBg: "var(--peach-bg)", tagBorder: "var(--peach-light)" },
+          { checked: true, text: "Left hand independence exercise · C major", tag: "Technique", tagColor: "var(--sage)", tagBg: "var(--sage-bg)", tagBorder: "var(--sage-light)" },
+          { checked: false, text: "Introduce Burgmüller No. 2 · new piece", tag: "Repertoire", tagColor: "var(--sky)", tagBg: "var(--sky-bg)", tagBorder: "var(--sky-light)" },
+        ].map((item, i) => (
+          <div key={i} style={{
+            display: "flex", gap: "0.75rem", alignItems: "flex-start",
+            padding: "0.75rem 0", borderTop: "1px solid var(--border)",
+          }}>
+            {item.checked
+              ? <CheckCircle size={15} color="var(--sage)" style={{ flexShrink: 0, marginTop: 1 }} />
+              : <Circle size={15} color="var(--border-strong)" style={{ flexShrink: 0, marginTop: 1 }} />}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.4, marginBottom: "0.375rem" }}>{item.text}</div>
+              <span style={{ fontSize: "0.625rem", fontWeight: 600, color: item.tagColor, background: item.tagBg, border: `1px solid ${item.tagBorder}`, borderRadius: 999, padding: "0.15rem 0.5rem", letterSpacing: "0.04em" }}>{item.tag}</span>
+            </div>
+          </div>
+        ))}
+        <div style={{
+          background: "var(--lavender-bg)", border: "1px solid var(--lavender-light)",
+          borderRadius: 8, padding: "0.75rem", marginTop: "0.5rem",
+          fontSize: "0.75rem", color: "var(--lavender)", lineHeight: 1.5,
+          display: "flex", gap: "0.5rem",
+        }}>
+          <Sparkles size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          Emma is consistent and motivated. Bar 8 is a stumbling block — start there and the rest will follow.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main page ─── */
 
 export default function Home() {
   const router = useRouter();
-
-  const [mode, setMode] = useState<"signup" | "signin">("signup");
-  const [role, setRole] = useState<UserRole>("student");
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState<"student" | "teacher" | null>(null);
   const [dashboardUrl, setDashboardUrl] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState<"student" | "teacher" | null>(null);
+  const [demoError, setDemoError] = useState("");
 
   const { theme, toggleTheme } = useTheme();
   const { t } = useI18n();
+
   const demoStudentEmail = process.env.NEXT_PUBLIC_DEMO_STUDENT_EMAIL;
   const demoStudentPassword = process.env.NEXT_PUBLIC_DEMO_STUDENT_PASSWORD;
   const demoTeacherEmail = process.env.NEXT_PUBLIC_DEMO_TEACHER_EMAIL;
   const demoTeacherPassword = process.env.NEXT_PUBLIC_DEMO_TEACHER_PASSWORD;
+  const hasDemos = !!(demoStudentEmail || demoTeacherEmail);
 
-  function switchMode(m: "signup" | "signin") {
-    setMode(m); setError(""); setDisplayName(""); setEmail(""); setPassword("");
-  }
-
-  // Check if already logged in — just show a dashboard link, don't auto-redirect
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: import("@supabase/supabase-js").Session | null } }) => {
@@ -43,72 +163,28 @@ export default function Home() {
     });
   }, []);
 
-  // Pre-fill email when switching accounts
   useEffect(() => {
     if (typeof window === "undefined") return;
     const switchEmail = localStorage.getItem("cadenza-switch-email");
     if (switchEmail) {
       localStorage.removeItem("cadenza-switch-email");
-      setEmail(switchEmail);
-      setMode("signin");
-      setTimeout(() => {
-        document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 200);
+      router.push(`/auth/login?email=${encodeURIComponent(switchEmail)}`);
     }
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); setError(""); setLoading(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      if (mode === "signin") {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", (await supabase.auth.getUser()).data.user!.id).single();
-        router.push(profile?.role === "teacher" ? "/teacher" : "/student");
-      } else {
-        if (password.length < 6) { setError("Password must be at least 6 characters"); setLoading(false); return; }
-        const service = AuthService.getInstance(supabase);
-        const user = await service.signUp(email, password, role, displayName);
-        router.push(user.getHomeRoute());
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : mode === "signin" ? "Sign in failed" : "Sign up failed");
-    } finally { setLoading(false); }
-  };
+  }, [router]);
 
   const handleDemoLogin = async (type: "student" | "teacher") => {
     const email = type === "student" ? demoStudentEmail : demoTeacherEmail;
     const password = type === "student" ? demoStudentPassword : demoTeacherPassword;
     if (!email || !password) return;
-    setDemoLoading(type); setError("");
+    setDemoLoading(type); setDemoError("");
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw signInError;
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       router.push(type === "teacher" ? "/teacher" : "/student");
     } catch {
-      setError("Demo login failed — try signing up instead.");
+      setDemoError("Demo login failed — try signing up instead.");
     } finally { setDemoLoading(null); }
-  };
-
-  const handleGoogleSignup = async () => {
-    const supabase = getSupabaseBrowserClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?role=${role}` },
-    });
-  };
-
-  const inputStyle: React.CSSProperties = {
-    borderRadius: 4, border: "1px solid var(--border-strong)", background: "var(--cream)",
-    fontSize: "0.875rem", color: "var(--charcoal)",
-    padding: "0.625rem 0.875rem", outline: "none", width: "100%", boxSizing: "border-box",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontWeight: 500, fontSize: "0.75rem",
-    color: "var(--charcoal)", letterSpacing: "0.02em",
   };
 
   return (
@@ -117,45 +193,46 @@ export default function Home() {
       {/* ── Nav ── */}
       <nav className="landing-nav-bg" style={{
         padding: "0 2rem", display: "flex", justifyContent: "space-between",
-        alignItems: "center", height: 54, position: "sticky", top: 0, zIndex: 50,
+        alignItems: "center", height: 56, position: "sticky", top: 0, zIndex: 50,
         borderBottom: "1px solid var(--border)",
       }}>
-        <span style={{ fontWeight: 700, fontSize: "0.8rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--charcoal)" }}>
-          Cadenza
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <Music2 size={16} color="var(--peach)" strokeWidth={2} />
+          <span style={{ fontWeight: 700, fontSize: "0.8rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--charcoal)" }}>
+            Cadenza
+          </span>
+        </div>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
           {dashboardUrl ? (
-            <a
-              href={dashboardUrl}
-              className="btn btn-primary"
-              style={{ padding: "0.375rem 0.875rem", fontSize: "0.8125rem" }}
-            >
+            <a href={dashboardUrl} className="btn btn-primary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8125rem" }}>
               {t.landing.goToDashboard}
             </a>
           ) : (
-            <button
-              onClick={() => { switchMode("signin"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}
-              className="btn btn-secondary"
-              style={{ padding: "0.375rem 0.875rem", fontSize: "0.8125rem" }}
-            >
-              {t.landing.signIn}
-            </button>
+            <>
+              <Link href="/auth/login" className="btn btn-secondary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8125rem" }}>
+                {t.landing.signIn}
+              </Link>
+              <Link href="/auth/signup" className="btn btn-primary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8125rem" }}>
+                Get started free
+              </Link>
+            </>
           )}
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <div style={{
-        padding: "4rem 2rem 3rem", maxWidth: 1080, margin: "0 auto", width: "100%",
-        boxSizing: "border-box", display: "flex", flexWrap: "wrap", gap: "3rem", alignItems: "center",
+      <section style={{
+        padding: "5rem 2rem 4rem", maxWidth: 1080, margin: "0 auto", width: "100%",
+        boxSizing: "border-box", display: "flex", flexWrap: "wrap", gap: "3.5rem", alignItems: "center",
       }}>
         {/* Left copy */}
-        <div style={{ flex: "1 1 360px", minWidth: 280 }}>
+        <div style={{ flex: "1 1 380px", minWidth: 280 }}>
+          {/* Badge */}
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "0.4rem",
             padding: "0.3rem 0.875rem", borderRadius: 999,
             border: "1px solid var(--border)", background: "var(--cream)",
-            marginBottom: "1.75rem", fontSize: "0.6875rem", color: "var(--muted)",
+            marginBottom: "2rem", fontSize: "0.6875rem", color: "var(--muted)",
             letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600,
           }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--sage)", flexShrink: 0 }} />
@@ -163,36 +240,35 @@ export default function Home() {
           </div>
 
           <h1 style={{
-            fontWeight: 500,
-            fontSize: "clamp(2.5rem, 6vw, 4.5rem)", color: "var(--charcoal)",
-            lineHeight: 0.98, letterSpacing: "-0.02em", marginBottom: "1.5rem",
+            fontWeight: 500, fontSize: "clamp(2.75rem, 6vw, 4.5rem)",
+            color: "var(--charcoal)", lineHeight: 0.98, letterSpacing: "-0.025em", marginBottom: "1.5rem",
           }}>
-            {role === "teacher" ? (
-              <>{t.landing.heroTeacher}<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>{t.landing.heroTeacherEmphasis}</em></>
-            ) : (
-              <>{t.landing.heroStudent}<br /><em style={{ color: "var(--peach)", fontStyle: "italic" }}>{t.landing.heroStudentEmphasis}</em></>
-            )}
+            {t.landing.heroStudent}<br />
+            <em style={{ color: "var(--peach)", fontStyle: "italic" }}>{t.landing.heroStudentEmphasis}</em>
           </h1>
 
-          <p style={{ color: "var(--muted)", fontSize: "1.0625rem", maxWidth: 440, marginBottom: "1.75rem", lineHeight: 1.75 }}>
+          <p style={{ color: "var(--muted)", fontSize: "1.0625rem", maxWidth: 460, marginBottom: "2.25rem", lineHeight: 1.8 }}>
             {t.landing.heroDesc}
           </p>
 
-          {/* Audience pills */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "2rem" }}>
-            {[
-              { text: t.landing.pillAiPlanner, bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)" },
-              { text: t.landing.pillPracticeTracking, bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)" },
-              { text: t.landing.pillStreaks, bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)" },
-              { text: t.landing.pillAiTutor, bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)" },
-              { text: t.landing.pillParentUpdates, bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)" },
-              { text: t.landing.pillMusicGames, bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)" },
-            ].map(f => (
-              <span key={f.text} style={{ fontSize: "0.75rem", fontWeight: 500, color: f.color, background: f.bg, border: `1px solid ${f.border}`, borderRadius: 999, padding: "0.25rem 0.75rem" }}>{f.text}</span>
-            ))}
+          {/* CTAs */}
+          <div style={{ display: "flex", gap: "0.875rem", flexWrap: "wrap", alignItems: "center", marginBottom: "2.5rem" }}>
+            <Link href="/auth/signup" className="btn btn-primary" style={{
+              padding: "0.875rem 2rem", fontSize: "1rem", fontWeight: 600,
+              letterSpacing: "0.01em", display: "inline-flex", alignItems: "center", gap: "0.5rem",
+            }}>
+              {t.landing.getStartedFree} <ArrowRight size={16} strokeWidth={2.5} />
+            </Link>
+            <Link href="/auth/login" style={{
+              fontSize: "0.875rem", color: "var(--muted)", fontWeight: 500,
+              textDecoration: "underline", textUnderlineOffset: "3px",
+            }}>
+              {t.landing.alreadyHaveAccount} {t.landing.signIn}
+            </Link>
           </div>
 
-          <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+          {/* Stats */}
+          <div style={{ display: "flex", gap: "2.25rem", flexWrap: "wrap" }}>
             {[
               { val: t.landing.statFreeLabel, sub: t.landing.statFreeFor },
               { val: t.landing.statSetupTime, sub: t.landing.statSetupLabel },
@@ -200,130 +276,28 @@ export default function Home() {
             ].map((item, i) => (
               <div key={i}>
                 <div style={{ fontWeight: 600, fontSize: "1.5rem", color: "var(--charcoal)", lineHeight: 1 }}>{item.val}</div>
-                <div style={{ fontSize: "0.6875rem", color: "var(--muted)", letterSpacing: "0.04em", marginTop: 2 }}>{item.sub}</div>
+                <div style={{ fontSize: "0.6875rem", color: "var(--muted)", letterSpacing: "0.04em", marginTop: 3 }}>{item.sub}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right: form */}
-        <div id="hero-form" style={{
-          flex: "0 1 380px", minWidth: 300, width: "100%",
-          background: "var(--white)", border: "1px solid var(--border)",
-          borderRadius: 10, boxShadow: "var(--shadow-lg)", overflow: "hidden",
-        }}>
-          <div style={{ padding: "1.25rem 1.5rem 0" }}>
-            <h2 style={{ fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.875rem" }}>
-              {mode === "signin" ? t.landing.welcomeBack : t.landing.getStartedFree}
-            </h2>
-            {mode === "signup" && (
-              <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", marginBottom: "0.25rem" }}>
-                {(["student", "teacher"] as UserRole[]).map(r => (
-                  <button key={r} type="button" onClick={() => setRole(r)} style={{
-                    flex: 1, padding: "0.5rem", border: "none", cursor: "pointer",
-                    background: role === r ? "var(--charcoal)" : "transparent",
-                    fontWeight: 500, fontSize: "0.8125rem",
-                    color: role === r ? "var(--white)" : "var(--muted)", transition: "all 0.15s", textTransform: "capitalize",
-                  }}>
-                    {r === "student" ? t.landing.labelStudent : t.landing.labelTeacher}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.875rem", padding: "1rem 1.5rem 1.25rem" }}>
-            {mode === "signup" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                <label style={labelStyle}>{t.landing.labelName}</label>
-                <input type="text" placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"} value={displayName} onChange={e => setDisplayName(e.target.value)} required style={inputStyle} />
-              </div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-              <label style={labelStyle}>{t.landing.labelEmail}</label>
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-              <label style={labelStyle}>{t.landing.labelPassword}</label>
-              <input type="password" placeholder={mode === "signin" ? t.landing.passwordPlaceholder : t.landing.passwordPlaceholderNew} value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
-            </div>
-            {error && (
-              <div style={{ border: "1px solid var(--peach-light)", borderRadius: 4, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "var(--peach)", background: "var(--peach-bg)" }}>{error}</div>
-            )}
-            <button type="submit" disabled={loading} className="btn btn-primary" style={{
-              width: "100%", padding: "0.75rem",
-              opacity: loading ? 0.5 : 1,
-              fontSize: "0.9375rem", fontWeight: 600, marginTop: "0.125rem", letterSpacing: "0.01em",
-            }}>
-              {loading
-                ? (mode === "signin" ? t.landing.signingIn : t.landing.creatingAccount)
-                : (mode === "signin" ? t.landing.signInAction : t.landing.createAccount.replace("{role}", role))}
-            </button>
-          </form>
-
-          <div style={{ padding: "0 1.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
-              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              <span style={{ fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500 }}>{t.common.or}</span>
-              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            </div>
-            <button type="button" onClick={handleGoogleSignup} className="btn btn-secondary" style={{
-              width: "100%", gap: "0.625rem", padding: "0.625rem", fontSize: "0.8125rem",
-            }}>
-              <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-              {t.landing.continueWithGoogle}
-            </button>
-          </div>
-
-          {(demoStudentEmail || demoTeacherEmail) && (
-            <div style={{ padding: "0 1.5rem 0.75rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                <span style={{ fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500 }}>{t.landing.orTryDemo}</span>
-                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                {demoStudentEmail && (
-                  <button type="button" onClick={() => handleDemoLogin("student")} disabled={!!demoLoading} className="btn btn-secondary" style={{
-                    flex: 1, padding: "0.5625rem", fontSize: "0.75rem",
-                    opacity: demoLoading && demoLoading !== "student" ? 0.4 : 1,
-                  }}>
-                    {demoLoading === "student" ? t.landing.loadingDemo : t.landing.studentDemo}
-                  </button>
-                )}
-                {demoTeacherEmail && (
-                  <button type="button" onClick={() => handleDemoLogin("teacher")} disabled={!!demoLoading} className="btn btn-secondary" style={{
-                    flex: 1, padding: "0.5625rem", fontSize: "0.75rem",
-                    opacity: demoLoading && demoLoading !== "teacher" ? 0.4 : 1,
-                  }}>
-                    {demoLoading === "teacher" ? t.landing.loadingDemo : t.landing.teacherDemo}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div style={{ padding: "1rem 1.5rem", textAlign: "center" }}>
-            <p style={{ fontSize: "0.75rem", color: "var(--muted)", margin: 0 }}>
-              {mode === "signin" ? t.landing.noAccount : t.landing.alreadyHaveAccount}{" "}
-              <button type="button" onClick={() => switchMode(mode === "signin" ? "signup" : "signin")} style={{ background: "none", border: "none", padding: 0, color: "var(--charcoal)", fontWeight: 500, fontSize: "0.75rem", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "2px" }}>
-                {mode === "signin" ? t.landing.signUp : t.landing.signIn}
-              </button>
-            </p>
-          </div>
+        {/* Right: product mockup */}
+        <div style={{ flex: "0 1 340px", display: "flex", justifyContent: "center" }}>
+          <PracticeMockup />
         </div>
-      </div>
+      </section>
 
       {/* ── Amanda's students note ── */}
-      <div style={{ padding: "0 2rem 3rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box", textAlign: "center" }}>
+      <div style={{ padding: "0 2rem 2.5rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box", textAlign: "center" }}>
         <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>
-          🎉 <strong style={{ color: "var(--sage)" }}>Amanda&apos;s students:</strong> {t.landing.amandaStudentsNote}
+          <strong style={{ color: "var(--sage)" }}>Amanda&apos;s students:</strong> {t.landing.amandaStudentsNote}
         </p>
       </div>
 
       {/* ── Social proof strip ── */}
-      <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", background: "var(--cream)", padding: "1.25rem 2rem" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "2.5rem" }}>
+      <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", background: "var(--cream)", padding: "1.5rem 2rem" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "3rem" }}>
           {[
             { val: t.landing.statFreeLabel, label: t.landing.socialFreeFor },
             { val: t.landing.statSetupTime, label: t.landing.socialSetupLabel },
@@ -349,71 +323,171 @@ export default function Home() {
           </div>
           <div style={{
             position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden",
-            borderRadius: 16, boxShadow: "0 24px 64px rgba(44,40,36,0.18)",
-            border: "1px solid var(--border)",
+            borderRadius: 16, boxShadow: "0 24px 64px rgba(44,40,36,0.18)", border: "1px solid var(--border)",
           }}>
             <iframe
               src={process.env.NEXT_PUBLIC_DEMO_VIDEO_URL}
               style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title="Cadenza demo"
+              allowFullScreen title="Cadenza demo"
             />
           </div>
-          <p style={{ textAlign: "center", color: "var(--muted)", fontSize: "0.8125rem", marginTop: "1.25rem" }}>
-            {t.landing.demoCaption}
-          </p>
+          <p style={{ textAlign: "center", color: "var(--muted)", fontSize: "0.8125rem", marginTop: "1.25rem" }}>{t.landing.demoCaption}</p>
         </div>
       )}
 
-      {/* ── Feature cards ── */}
-      <div style={{ padding: "1rem 2rem 5rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        {/* For Teachers */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+      {/* ── For Teachers ── */}
+      <section style={{ padding: "5rem 2rem 2rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        {/* Section label */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "3.5rem" }}>
           <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
           <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--sage)", whiteSpace: "nowrap" }}>{t.landing.forTeachers}</span>
           <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "4rem" }}>
-          {[
-            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "🎹", title: t.landing.featureAiPlannerTitle, desc: t.landing.featureAiPlannerDesc },
-            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "📋", title: t.landing.featureGoalTrackingTitle, desc: t.landing.featureGoalTrackingDesc },
-            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "💰", title: t.landing.featurePaymentsTitle, desc: t.landing.featurePaymentsDesc },
-            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "👪", title: t.landing.featureParentUpdatesTitle, desc: t.landing.featureParentUpdatesDesc },
-            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "📊", title: t.landing.featureDashboardTitle, desc: t.landing.featureDashboardDesc },
-            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "📝", title: t.landing.featureLessonNotesTitle, desc: t.landing.featureLessonNotesDesc },
-          ].map((c, i) => (
-            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
-              <h3 style={{ fontWeight: 600, fontSize: "1.25rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{c.title}</h3>
-              <div style={{ fontSize: "0.875rem", color: c.color, lineHeight: 1.7 }}>{c.desc}</div>
+
+        {/* Hero teacher feature */}
+        <div style={{
+          display: "flex", flexWrap: "wrap", gap: "3rem", alignItems: "center",
+          background: "var(--sage-bg)", border: "1px solid var(--sage-light)",
+          borderRadius: 20, padding: "3rem", marginBottom: "2rem",
+        }}>
+          <div style={{ flex: "1 1 300px", minWidth: 260 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+              <Brain size={20} color="var(--sage)" />
+              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--sage)", letterSpacing: "0.04em", textTransform: "uppercase" }}>AI Lesson Planner</span>
             </div>
-          ))}
+            <h2 style={{ fontWeight: 500, fontSize: "clamp(1.5rem, 3vw, 2.25rem)", color: "var(--charcoal)", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "1rem" }}>
+              {t.landing.featureAiPlannerTitle}
+            </h2>
+            <p style={{ color: "var(--muted)", fontSize: "1rem", lineHeight: 1.8, marginBottom: "1.5rem", maxWidth: 420 }}>
+              {t.landing.featureAiPlannerDesc}
+            </p>
+            <Link href="/auth/signup?role=teacher" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.75rem 1.5rem", fontSize: "0.875rem" }}>
+              Set up your studio <ArrowRight size={15} />
+            </Link>
+          </div>
+          <div style={{ flex: "0 1 380px", display: "flex", justifyContent: "center" }}>
+            <LessonPlanMockup />
+          </div>
         </div>
 
-        {/* For Students */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
-          <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
-          <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--peach)", whiteSpace: "nowrap" }}>{t.landing.forStudents}</span>
-          <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem" }}>
+        {/* 3 supporting teacher features */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem", marginBottom: "5rem" }}>
           {[
-            { bg: "var(--sage-bg)", border: "var(--sage-light)", color: "var(--sage)", icon: "⏱", title: t.landing.featureTimerTitle, desc: t.landing.featureTimerDesc },
-            { bg: "var(--peach-bg)", border: "var(--peach-light)", color: "var(--peach)", icon: "🔥", title: t.landing.featureStreaksTitle, desc: t.landing.featureStreaksDesc },
-            { bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", icon: "🤖", title: t.landing.featureAiTutorTitle, desc: t.landing.featureAiTutorDesc },
-            { bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", icon: "🎮", title: t.landing.featureGamesTitle, desc: t.landing.featureGamesDesc },
-            { bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", icon: "🎤", title: t.landing.featureCoversTitle, desc: t.landing.featureCoversDesc },
-            { bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", icon: "🌍", title: t.landing.featureCommunityTitle, desc: t.landing.featureCommunityDesc },
+            { icon: <Target size={20} color="var(--butter)" />, bg: "var(--butter-bg)", border: "var(--butter-light)", color: "var(--butter)", title: t.landing.featureGoalTrackingTitle, desc: t.landing.featureGoalTrackingDesc },
+            { icon: <Bell size={20} color="var(--rose)" />, bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", title: t.landing.featureParentUpdatesTitle, desc: t.landing.featureParentUpdatesDesc },
+            { icon: <CreditCard size={20} color="var(--sky)" />, bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", title: t.landing.featurePaymentsTitle, desc: t.landing.featurePaymentsDesc },
           ].map((c, i) => (
-            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 14, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "1rem", lineHeight: 1 }}>{c.icon}</div>
-              <h3 style={{ fontWeight: 600, fontSize: "1.25rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{c.title}</h3>
-              <div style={{ fontSize: "0.875rem", color: c.color, lineHeight: 1.7 }}>{c.desc}</div>
+            <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
+              <div style={{ marginBottom: "1rem" }}>{c.icon}</div>
+              <h3 style={{ fontWeight: 600, fontSize: "1.0625rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{c.title}</h3>
+              <p style={{ fontSize: "0.875rem", color: c.color, lineHeight: 1.7, margin: 0 }}>{c.desc}</p>
             </div>
           ))}
         </div>
-      </div>
+      </section>
+
+      {/* ── For Students ── */}
+      <section style={{ background: "var(--cream)", padding: "5rem 2rem" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          {/* Section label */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "3.5rem" }}>
+            <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
+            <span style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--peach)", whiteSpace: "nowrap" }}>{t.landing.forStudents}</span>
+            <div style={{ height: 1, background: "var(--border)", flex: 1 }} />
+          </div>
+
+          {/* Hero student feature */}
+          <div style={{
+            display: "flex", flexWrap: "wrap", gap: "3rem", alignItems: "center",
+            background: "var(--white)", border: "1px solid var(--border)",
+            borderRadius: 20, padding: "3rem", marginBottom: "2rem",
+          }}>
+            <div style={{ flex: "0 1 340px", display: "flex", justifyContent: "center", order: 2 }}>
+              {/* Streak mockup */}
+              <div style={{ background: "var(--peach-bg)", border: "1px solid var(--peach-light)", borderRadius: 20, padding: "2rem", width: "100%", maxWidth: 300 }}>
+                <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                  <Flame size={40} color="var(--peach)" style={{ margin: "0 auto 0.75rem" }} />
+                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "3.5rem", fontWeight: 600, color: "var(--charcoal)", lineHeight: 1 }}>7</div>
+                  <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginTop: "0.25rem" }}>day streak</div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.375rem", marginBottom: "1.25rem" }}>
+                  {["M","T","W","T","F","S","S"].map((d, i) => (
+                    <div key={i} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "0.5625rem", color: "var(--muted)", marginBottom: "0.25rem" }}>{d}</div>
+                      <div style={{
+                        width: "100%", aspectRatio: "1", borderRadius: 6,
+                        background: i < 7 ? "var(--peach)" : "var(--border)",
+                        opacity: i < 7 ? 1 : 0.3,
+                      }} />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--lavender-bg)", border: "1px solid var(--lavender-light)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Sparkles size={14} color="var(--lavender)" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--charcoal)" }}>247 points earned</div>
+                    <div style={{ fontSize: "0.6875rem", color: "var(--muted)" }}>Top 10% this week</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: "1 1 300px", minWidth: 260, order: 1 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+                <Flame size={20} color="var(--peach)" />
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--peach)", letterSpacing: "0.04em", textTransform: "uppercase" }}>Streaks & Progress</span>
+              </div>
+              <h2 style={{ fontWeight: 500, fontSize: "clamp(1.5rem, 3vw, 2.25rem)", color: "var(--charcoal)", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: "1rem" }}>
+                {t.landing.featureStreaksTitle}
+              </h2>
+              <p style={{ color: "var(--muted)", fontSize: "1rem", lineHeight: 1.8, marginBottom: "1.5rem", maxWidth: 420 }}>
+                {t.landing.featureStreaksDesc}
+              </p>
+              <Link href="/auth/signup?role=student" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", padding: "0.75rem 1.5rem", fontSize: "0.875rem" }}>
+                Start your streak <ArrowRight size={15} />
+              </Link>
+            </div>
+          </div>
+
+          {/* 3 supporting student features */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1.25rem" }}>
+            {[
+              { icon: <Bot size={20} color="var(--lavender)" />, bg: "var(--lavender-bg)", border: "var(--lavender-light)", color: "var(--lavender)", title: t.landing.featureAiTutorTitle, desc: t.landing.featureAiTutorDesc },
+              { icon: <Gamepad2 size={20} color="var(--sky)" />, bg: "var(--sky-bg)", border: "var(--sky-light)", color: "var(--sky)", title: t.landing.featureGamesTitle, desc: t.landing.featureGamesDesc },
+              { icon: <Mic size={20} color="var(--rose)" />, bg: "var(--rose-bg)", border: "var(--rose-light)", color: "var(--rose)", title: t.landing.featureCoversTitle, desc: t.landing.featureCoversDesc },
+            ].map((c, i) => (
+              <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16, padding: "1.75rem", boxShadow: "var(--shadow-sm)" }}>
+                <div style={{ marginBottom: "1rem" }}>{c.icon}</div>
+                <h3 style={{ fontWeight: 600, fontSize: "1.0625rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{c.title}</h3>
+                <p style={{ fontSize: "0.875rem", color: c.color, lineHeight: 1.7, margin: 0 }}>{c.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Try a demo ── */}
+      {hasDemos && (
+        <div style={{ padding: "3rem 2rem", maxWidth: 560, margin: "0 auto", width: "100%", boxSizing: "border-box", textAlign: "center" }}>
+          <div style={{ fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.5rem" }}>{t.landing.orTryDemo}</div>
+          <p style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "1.25rem" }}>Not ready to sign up? Explore the app instantly with a demo account.</p>
+          {demoError && <p style={{ fontSize: "0.8125rem", color: "var(--peach)", marginBottom: "0.75rem" }}>{demoError}</p>}
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+            {demoStudentEmail && (
+              <button onClick={() => handleDemoLogin("student")} disabled={!!demoLoading} className="btn btn-secondary" style={{ padding: "0.625rem 1.25rem", fontSize: "0.875rem", opacity: demoLoading && demoLoading !== "student" ? 0.4 : 1 }}>
+                {demoLoading === "student" ? t.landing.loadingDemo : t.landing.studentDemo}
+              </button>
+            )}
+            {demoTeacherEmail && (
+              <button onClick={() => handleDemoLogin("teacher")} disabled={!!demoLoading} className="btn btn-secondary" style={{ padding: "0.625rem 1.25rem", fontSize: "0.875rem", opacity: demoLoading && demoLoading !== "teacher" ? 0.4 : 1 }}>
+                {demoLoading === "teacher" ? t.landing.loadingDemo : t.landing.teacherDemo}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── How it works ── */}
       <div style={{ padding: "3rem 2rem 5rem", maxWidth: 900, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
@@ -471,19 +545,19 @@ export default function Home() {
           {t.landing.ctaBody}
         </p>
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-          <button onClick={() => { switchMode("signup"); setRole("teacher"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn" style={{
+          <Link href="/auth/signup?role=teacher" className="btn" style={{
             background: "#F0EDE7", color: "#1A1714", padding: "0.9375rem 2.5rem",
             fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "0.01em",
           }}>
             {t.landing.ctaSetupStudio}
-          </button>
-          <button onClick={() => { switchMode("signup"); setRole("student"); document.getElementById("hero-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} className="btn" style={{
+          </Link>
+          <Link href="/auth/signup?role=student" className="btn" style={{
             background: "transparent", color: "#F0EDE7", opacity: 0.7, padding: "0.9375rem 2.5rem",
             fontWeight: 500, fontSize: "0.9375rem", border: "1px solid rgba(240,237,231,0.2)",
             letterSpacing: "0.01em",
           }}>
             {t.landing.ctaJoinStudent}
-          </button>
+          </Link>
         </div>
       </div>
 
