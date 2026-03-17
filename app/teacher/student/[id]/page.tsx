@@ -16,7 +16,7 @@ import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeRe
 import YouTubeSearch from "../../../../components/YouTubeSearch";
 import { useLesson } from "../../../../lib/context/LessonContext";
 import { useI18n } from "../../../../lib/context/I18nContext";
-import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2, Flame } from "lucide-react";
 
 const CATEGORIES_BASE: { value: string; colorKey: keyof typeof CATEGORY_COLORS }[] = [
   { value: "technique",    colorKey: "technique" },
@@ -1075,12 +1075,14 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
         {[
-          { value: student.total_points.toLocaleString(), label: t.teacher.statPoints },
-          { value: student.streak_days, label: t.teacher.statDayStreak },
-          { value: `${pct}%`, label: t.teacher.statGoalsDone },
+          { value: student.total_points.toLocaleString(), label: t.teacher.statPoints, icon: null },
+          { value: student.streak_days, label: t.teacher.statDayStreak, icon: student.streak_days > 0 ? <Flame size={18} fill="#E6A817" color="#E6A817" strokeWidth={0} /> : null },
+          { value: `${pct}%`, label: t.teacher.statGoalsDone, icon: null },
         ].map(stat => (
           <div key={stat.label} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem", textAlign: "center" }}>
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.75rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1 }}>{stat.value}</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.75rem", color: "var(--charcoal)", letterSpacing: "-0.02em", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}>
+              {stat.icon}{stat.value}
+            </div>
             <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.375rem", letterSpacing: "0.05em", textTransform: "uppercase" }}>{stat.label}</div>
           </div>
         ))}
