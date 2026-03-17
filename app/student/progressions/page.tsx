@@ -495,7 +495,7 @@ function KeyIdGame() {
     const dur = 0.9;
     const gap = 0.08;
     chords.forEach((chord, i) => {
-      scheduleChord(ctx, chord, ctx.currentTime + i * (dur + gap), dur, 0.11);
+      scheduleChord(ctx, chord, ctx.currentTime + i * (dur + gap), dur);
     });
     setTimeout(() => { if (audioCtxRef.current === ctx) { try { ctx.close(); } catch {} audioCtxRef.current = null; } }, (chords.length * (dur + gap) + 0.5) * 1000);
   }
