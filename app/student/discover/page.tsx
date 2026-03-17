@@ -17,6 +17,7 @@ type Comment = {
 type PublicItem = PortfolioItemRow & {
   display_name?: string;
   avatar_url?: string | null;
+  streak_days?: number;
   like_count: number;
   comment_count: number;
   user_liked: boolean;
@@ -110,10 +111,10 @@ export default function DiscoverPage() {
     if (rows.length === 0) return [];
     const studentIds = [...new Set(rows.map(r => r.student_id))];
     const { data: profiles } = await supabase
-      .from("profiles").select("id, display_name, avatar_url").in("id", studentIds);
-    const profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
-    (profiles ?? []).forEach((p: { id: string; display_name?: string; avatar_url?: string | null }) => {
-      profileMap[p.id] = { display_name: p.display_name ?? "", avatar_url: p.avatar_url ?? null };
+      .from("profiles").select("id, display_name, avatar_url, streak_days").in("id", studentIds);
+    const profileMap: Record<string, { display_name: string; avatar_url: string | null; streak_days: number }> = {};
+    (profiles ?? []).forEach((p: { id: string; display_name?: string; avatar_url?: string | null; streak_days?: number }) => {
+      profileMap[p.id] = { display_name: p.display_name ?? "", avatar_url: p.avatar_url ?? null, streak_days: p.streak_days ?? 0 };
     });
 
     const itemIds = rows.map(r => r.id);
@@ -128,6 +129,7 @@ export default function DiscoverPage() {
       ...row,
       display_name: profileMap[row.student_id]?.display_name,
       avatar_url: profileMap[row.student_id]?.avatar_url ?? null,
+      streak_days: profileMap[row.student_id]?.streak_days ?? 0,
       like_count: likesData.filter(l => l.portfolio_item_id === row.id).length,
       comment_count: commentsData.filter(c => c.portfolio_item_id === row.id).length,
       user_liked: likesData.some(l => l.portfolio_item_id === row.id && l.user_id === userId),
@@ -513,9 +515,14 @@ export default function DiscoverPage() {
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem", color: "var(--charcoal)", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, marginBottom: "0.15rem" }}>
                       {item.title}
                     </div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", lineHeight: 1.3 }}>
-                      {item.display_name ?? t.student.musicianFallback}
-                      {myFollows.has(item.student_id) && <span style={{ marginLeft: "0.3rem", color: "var(--sage)", fontWeight: 600 }}>· {t.student.followingBadge}</span>}
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", lineHeight: 1.3, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.25rem" }}>
+                      <span>{item.display_name ?? t.student.musicianFallback}</span>
+                      {myFollows.has(item.student_id) && <span style={{ color: "var(--sage)", fontWeight: 600 }}>· {t.student.followingBadge}</span>}
+                      {(item.streak_days ?? 0) > 0 && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.15rem", background: "rgba(230,168,23,0.12)", border: "1px solid rgba(230,168,23,0.25)", borderRadius: 99, padding: "0.05rem 0.35rem", color: "#c47d10", fontWeight: 700, fontSize: "0.5rem", letterSpacing: "0.01em" }}>
+                          🔥{item.streak_days}
+                        </span>
+                      )}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.2rem" }}>
                       <span style={{ fontSize: "0.5625rem" }}>{item.user_liked ? "✦" : "✧"}</span>
