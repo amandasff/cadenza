@@ -6,7 +6,7 @@ import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
-import { PlayerProvider } from "../../lib/context/PlayerContext";
+import { PlayerProvider, usePlayer } from "../../lib/context/PlayerContext";
 import { PracticeProvider } from "../../lib/context/PracticeContext";
 import { RecordingProvider } from "../../lib/context/RecordingContext";
 import MiniPlayer from "../../components/MiniPlayer";
