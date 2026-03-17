@@ -4,8 +4,7 @@ import { AuthProvider } from "@/lib/context/AuthContext";
 import { ThemeProvider } from "@/lib/context/ThemeContext";
 import { I18nProvider } from "@/lib/context/I18nContext";
 import LessonProviderClient from "@/components/LessonProviderClient";
-import FeedbackWidget from "@/components/FeedbackWidget";
-import SupportChatWidget from "@/components/SupportChatWidget";
+import HelpWidget from "@/components/HelpWidget";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -68,8 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <I18nProvider>
             <ThemeProvider>
               <LessonProviderClient>{children}</LessonProviderClient>
-              <SupportChatWidget />
-              <FeedbackWidget />
+              <HelpWidget />
             </ThemeProvider>
           </I18nProvider>
         </AuthProvider>

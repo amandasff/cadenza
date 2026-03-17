@@ -93,22 +93,27 @@ async function sendPushNotifications({
 
   if (!recipientUserIds.length) return;
 
-  // Get push subscriptions for all recipients
-  const { data: subs } = await admin
-    .from('push_subscriptions')
-    .select('user_id, subscription, endpoint')
-    .in('user_id', recipientUserIds);
+  // Get push subscriptions + roles for all recipients
+  const [{ data: subs }, { data: recipientProfiles }] = await Promise.all([
+    admin
+      .from('push_subscriptions')
+      .select('user_id, subscription, endpoint')
+      .in('user_id', recipientUserIds),
+    admin
+      .from('profiles')
+      .select('id, role')
+      .in('id', recipientUserIds),
+  ]);
 
   if (!subs?.length) return;
 
+  const roleMap = Object.fromEntries((recipientProfiles ?? []).map((p: { id: string; role: string }) => [p.id, p.role]));
   const preview = content.length > 80 ? content.slice(0, 77) + '…' : content;
-  const payload = JSON.stringify({
-    title: senderName,
-    body: preview,
-    url: recipientId ? '/student/chat' : '/student/chat',
-  });
 
   for (const row of subs) {
+    const role = roleMap[row.user_id] ?? 'student';
+    const url = role === 'teacher' ? '/teacher/chat' : '/student/chat';
+    const payload = JSON.stringify({ title: senderName, body: preview, url });
     try {
       await wp.sendNotification(row.subscription as Parameters<typeof wp.sendNotification>[0], payload);
     } catch (err) {

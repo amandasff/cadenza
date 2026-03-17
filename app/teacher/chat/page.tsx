@@ -10,6 +10,7 @@ import VideoRecorderModal from "../../../components/VideoRecorderModal";
 import type { MessageRow, ProfileRow } from "../../../lib/types";
 import { useI18n } from "../../../lib/context/I18nContext";
 import { Hourglass, Square, Mic, Video, Image, X } from "lucide-react";
+import PushSubscribeButton from "../../../components/PushSubscribeButton";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -260,10 +261,13 @@ export default function TeacherChat() {
   return (
     <div>
       {/* Desktop heading — hidden on mobile when in chat pane */}
-      <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 500, fontSize: "1.875rem", color: "var(--charcoal)", marginBottom: "1.5rem", letterSpacing: "-0.01em" }}
+      <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 500, fontSize: "1.875rem", color: "var(--charcoal)", marginBottom: "1rem", letterSpacing: "-0.01em" }}
         className="chat-desktop-heading">
         {t.nav.chat}
       </h1>
+      <div style={{ marginBottom: "1rem" }} className="chat-desktop-heading">
+        <PushSubscribeButton title="Message notifications" description="Get notified when students send you a message" />
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "1px", height: "calc(100dvh - 120px)", maxHeight: "74vh", background: "var(--border)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}
         className="chat-grid">

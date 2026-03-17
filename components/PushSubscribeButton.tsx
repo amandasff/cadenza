@@ -13,7 +13,13 @@ function urlBase64ToUint8Array(base64: string): ArrayBuffer {
 
 type State = "loading" | "unsupported" | "subscribed" | "ready" | "denied";
 
-export default function PushSubscribeButton() {
+export default function PushSubscribeButton({
+  title = "Daily practice reminders",
+  description = "A nudge each day keeps your streak alive",
+}: {
+  title?: string;
+  description?: string;
+} = {}) {
   const [state, setState] = useState<State>("loading");
   const [subscribing, setSubscribing] = useState(false);
 
@@ -65,10 +71,10 @@ export default function PushSubscribeButton() {
         <Bell size={28} strokeWidth={1.5} color="#8A7A50" style={{ flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "#2C2824", marginBottom: "0.2rem" }}>
-            Daily practice reminders
+            {title}
           </div>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "#8A7A50", lineHeight: 1.4 }}>
-            A nudge each day keeps your streak alive
+            {description}
           </div>
         </div>
         <button
