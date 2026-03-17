@@ -42,6 +42,7 @@ export default function LinkedAccountSwitcher() {
   const [switching, setSwitching] = useState<string | null>(null);
   const [unlinking, setUnlinking] = useState<string | null>(null);
   const [linkEmail, setLinkEmail] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState(false);
@@ -106,19 +107,20 @@ export default function LinkedAccountSwitcher() {
 
   async function handleLink(e: React.FormEvent) {
     e.preventDefault();
-    if (!linkEmail.trim()) return;
+    if (!linkEmail.trim() || !linkPassword) return;
     setLinking(true);
     setLinkError(null);
     try {
       const res = await fetch("/api/accounts/link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: linkEmail.trim() }),
+        body: JSON.stringify({ email: linkEmail.trim(), password: linkPassword }),
       });
       const { linked, error } = await res.json();
       if (error) { setLinkError(error); return; }
       setAccounts(prev => [...prev, linked]);
       setLinkEmail("");
+      setLinkPassword("");
       setShowLinkForm(false);
     } finally {
       setLinking(false);
@@ -234,8 +236,22 @@ export default function LinkedAccountSwitcher() {
             type="email"
             value={linkEmail}
             onChange={e => { setLinkEmail(e.target.value); setLinkError(null); }}
-            placeholder="Email of other account"
+            placeholder="Email"
             autoFocus
+            style={{
+              width: "100%", boxSizing: "border-box",
+              fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
+              border: "1px solid var(--border)",
+              borderRadius: 6, padding: "0.4rem 0.625rem",
+              background: "var(--white)", color: "var(--charcoal)", outline: "none",
+              marginBottom: "0.375rem",
+            }}
+          />
+          <input
+            type="password"
+            value={linkPassword}
+            onChange={e => { setLinkPassword(e.target.value); setLinkError(null); }}
+            placeholder="Password"
             style={{
               width: "100%", boxSizing: "border-box",
               fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
@@ -253,19 +269,19 @@ export default function LinkedAccountSwitcher() {
           <div style={{ display: "flex", gap: "0.375rem" }}>
             <button
               type="submit"
-              disabled={!linkEmail.trim() || linking}
+              disabled={!linkEmail.trim() || !linkPassword || linking}
               style={{
                 flex: 1, padding: "0.375rem 0", borderRadius: 6, border: "none",
                 background: "var(--charcoal)", color: "var(--white)",
                 fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600,
-                cursor: "pointer", opacity: (!linkEmail.trim() || linking) ? 0.5 : 1,
+                cursor: "pointer", opacity: (!linkEmail.trim() || !linkPassword || linking) ? 0.5 : 1,
               }}
             >
               {linking ? "Linking…" : "Link account"}
             </button>
             <button
               type="button"
-              onClick={() => { setShowLinkForm(false); setLinkEmail(""); setLinkError(null); }}
+              onClick={() => { setShowLinkForm(false); setLinkEmail(""); setLinkPassword(""); setLinkError(null); }}
               style={{
                 padding: "0.375rem 0.625rem", borderRadius: 6,
                 border: "1px solid var(--border)", background: "none",

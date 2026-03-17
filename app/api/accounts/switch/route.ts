@@ -37,7 +37,9 @@ export async function POST(request: Request) {
   if (!targetAuth.user?.email) return NextResponse.json({ error: 'Target account has no email' }, { status: 500 });
 
   const role = targetProfile?.role ?? 'student';
-  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://cadenza.social'}/${role}`;
+  // Use the request origin so switching works in both dev and production
+  const origin = new URL(request.url).origin;
+  const redirectTo = `${origin}/${role}`;
 
   // Generate a one-time magic link for the target account
   const { data: linkData, error } = await admin.auth.admin.generateLink({
