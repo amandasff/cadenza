@@ -154,7 +154,7 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "A4", freq: 440.0,  stringNum: 1 },
     ],
     leftStrings: [0, 1],
-    rightStrings: [3, 2],
+    rightStrings: [2, 3],
   },
   violin: {
     name: "Violin",
@@ -319,7 +319,10 @@ function Headstock({
   const maxRows = Math.max(leftPegs.length, rightPegs.length);
 
   // All strings in order (low to high) for the string lines
-  const allStrings = [...strings].sort((a, b) => a.freq - b.freq);
+  // Sort by stringNum descending so string 4 (thickest/top) is leftmost.
+  // Frequency sort breaks re-entrant tunings like ukulele (G4 is string 4
+  // but higher frequency than C4/string 3).
+  const allStrings = [...strings].sort((a, b) => b.stringNum - a.stringNum);
   const numStrings = allStrings.length;
 
   return (
