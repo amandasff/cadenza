@@ -6,6 +6,83 @@ import { useAuth } from "../../../../../lib/context/AuthContext";
 import type { PracticeSessionRow } from "../../../../../lib/types";
 import { useI18n } from "../../../../../lib/context/I18nContext";
 
+// ─── Confetti ────────────────────────────────────────────────────────────────
+function Confetti() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const COLORS = ["#E6A817", "#4CAF84", "#B85C3A", "#9b59b6", "#5B9E79", "#E8C4BA", "#C4B8E8"];
+    const COUNT  = 120;
+
+    type Particle = {
+      x: number; y: number; vx: number; vy: number;
+      angle: number; spin: number; size: number;
+      color: string; shape: "rect" | "circle";
+      opacity: number;
+    };
+
+    const particles: Particle[] = Array.from({ length: COUNT }, () => ({
+      x:       canvas.width  * 0.5 + (Math.random() - 0.5) * 80,
+      y:       canvas.height * 0.18,
+      vx:      (Math.random() - 0.5) * 9,
+      vy:      -(Math.random() * 8 + 4),
+      angle:   Math.random() * Math.PI * 2,
+      spin:    (Math.random() - 0.5) * 0.25,
+      size:    Math.random() * 7 + 4,
+      color:   COLORS[Math.floor(Math.random() * COLORS.length)],
+      shape:   Math.random() > 0.4 ? "rect" : "circle",
+      opacity: 1,
+    }));
+
+    let frame: number;
+    const tick = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      for (const p of particles) {
+        p.vy     += 0.22;   // gravity
+        p.vx     *= 0.995;  // air drag
+        p.x      += p.vx;
+        p.y      += p.vy;
+        p.angle  += p.spin;
+        p.opacity = Math.max(0, p.opacity - 0.008);
+        if (p.opacity <= 0 || p.y > canvas.height + 20) continue;
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.fillStyle = p.color;
+        if (p.shape === "circle") {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        }
+        ctx.restore();
+      }
+      if (alive) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 999 }}
+    />
+  );
+}
+
 const MUSIC_FACTS = [
   "Mozart wrote his first symphony at age 8. His first piano concerto? Age 4. He literally learned to walk and compose at the same time.",
   "Beethoven was completely deaf when he wrote his 9th Symphony — one of the most famous pieces ever. He never heard a single note of it performed.",
@@ -106,6 +183,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
       display: "flex", flexDirection: "column", alignItems: "center",
       justifyContent: "flex-start", padding: "2.5rem 1.25rem 4rem",
     }}>
+      <Confetti />
       <div style={{ width: "100%", maxWidth: 360 }}>
 
         {/* Header */}
