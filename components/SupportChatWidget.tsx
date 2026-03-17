@@ -218,19 +218,19 @@ export default function SupportChatWidget() {
         </div>
       )}
 
-      {/* Trigger button */}
+      {/* Trigger button — hardcoded colors so fun-mode theme overrides don't affect it */}
       <button
         onClick={() => setOpen(o => !o)}
         title="Get help"
         style={{
           width: 40, height: 40, borderRadius: "50%",
-          background: open ? "var(--charcoal)" : "var(--white)",
-          border: "1px solid var(--border)",
+          background: open ? "#2C2824" : "#fff",
+          border: "1px solid #ddd",
           boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
           cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "1.1rem", lineHeight: 1,
           transition: "background 0.15s",
-          color: open ? "var(--white)" : "var(--charcoal)",
+          color: open ? "#fff" : "#2C2824",
         }}
         aria-label="Open support chat"
       >
