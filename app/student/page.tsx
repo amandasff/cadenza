@@ -248,12 +248,12 @@ export default function ThisWeek() {
             background: practice.isActive
               ? "linear-gradient(135deg, var(--error) 0%, #6B2424 100%)"
               : "linear-gradient(135deg, var(--sage) 0%, #2C5242 100%)",
-            borderRadius: 10, border: "none",
-            padding: "1.625rem 1.5rem",
+            borderRadius: 14, border: "none",
+            padding: "2rem 1.75rem",
             color: "var(--white)",
             boxShadow: practice.isActive
-              ? "var(--shadow-md)"
-              : "var(--shadow-sage)",
+              ? "0 8px 32px rgba(176,56,56,0.28), 0 2px 8px rgba(44,40,36,0.1)"
+              : "0 8px 32px rgba(76,175,132,0.28), 0 2px 8px rgba(44,40,36,0.1)",
             position: "relative",
             overflow: "hidden",
             cursor: "pointer",
@@ -268,7 +268,7 @@ export default function ThisWeek() {
               <div style={{ fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.375rem" }}>
                 {practice.isActive ? t.student.sessionInProgress : t.student.readyToPlay}
               </div>
-              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.875rem", lineHeight: 1, marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "2.25rem", lineHeight: 1, marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>
                 {practice.isActive ? t.student.continuePracticing : t.student.startPracticing}
               </div>
               <div style={{ fontSize: "0.8125rem", opacity: 0.55, fontFamily: "Inter, sans-serif" }}>
@@ -309,24 +309,24 @@ export default function ThisWeek() {
           : streakDays > 0 ? "Keep it up!" : null;
 
         return (
-          <div style={{ padding: "0 1.5rem 1rem", display: "flex", gap: "0.625rem" }}>
+          <div style={{ padding: "0 1.5rem 1rem", display: "flex", gap: "0.5rem" }}>
             {/* Streak */}
             <div style={{
-              flex: 1, borderRadius: 10, padding: "0.75rem 1rem",
+              flex: 1, borderRadius: 8, padding: "0.625rem 0.875rem",
               background: streakColor, border: `1px solid ${streakBorder}`,
               display: "flex", alignItems: "center", gap: "0.5rem",
             }}>
-              <span style={{ fontSize: "1.25rem" }}>{streakIcon}</span>
+              <span style={{ fontSize: "1rem" }}>{streakIcon}</span>
               <div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--charcoal)", lineHeight: 1 }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1 }}>
                   {streakDays}
                 </div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
                   day streak
                 </div>
               </div>
               {streakLabel && (
-                <div style={{ marginLeft: "auto", fontSize: "0.6875rem", color: freezeCount > 0 ? "var(--sky)" : "var(--peach)", fontWeight: 500, flexShrink: 0 }}>
+                <div style={{ marginLeft: "auto", fontSize: "0.625rem", color: freezeCount > 0 ? "var(--sky)" : "var(--peach)", fontWeight: 500, flexShrink: 0 }}>
                   {streakLabel}
                 </div>
               )}
@@ -334,16 +334,16 @@ export default function ThisWeek() {
 
             {/* Points + Level */}
             <div style={{
-              flex: 1, borderRadius: 10, padding: "0.75rem 1rem",
+              flex: 1, borderRadius: 8, padding: "0.625rem 0.875rem",
               background: "var(--white)", border: "1px solid var(--border)",
               display: "flex", alignItems: "center", gap: "0.5rem",
             }}>
-              <span style={{ fontSize: "1.25rem" }}>⭐</span>
+              <span style={{ fontSize: "1rem" }}>⭐</span>
               <div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--charcoal)", lineHeight: 1 }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1 }}>
                   {(student?.totalPoints ?? 0).toLocaleString()}
                 </div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
                   pts · {student?.getLevelLabel?.() ?? "Beginner"}
                 </div>
               </div>
@@ -750,20 +750,20 @@ export default function ThisWeek() {
                   </div>
 
                   {isEmpty ? (
-                    /* Empty section placeholder — notebook-style */
+                    /* Empty section — visually suppressed so populated sections dominate */
                     <div style={{
-                      borderLeft: `2px solid var(--border)`,
+                      borderLeft: `1px solid var(--border)`,
                       marginLeft: "0.1875rem",
                       paddingLeft: "1rem",
-                      paddingTop: "0.25rem",
-                      paddingBottom: "0.25rem",
+                      paddingTop: "0.125rem",
+                      paddingBottom: "0.125rem",
+                      opacity: 0.45,
                     }}>
                       <span style={{
                         fontFamily: "Inter, sans-serif",
-                        fontSize: "0.75rem",
-                        color: "var(--border-strong)",
+                        fontSize: "0.6875rem",
+                        color: "var(--muted)",
                         fontStyle: "italic",
-                        letterSpacing: "0.01em",
                       }}>
                         {t.student.noAssignmentsThisWeek}
                       </span>
@@ -856,17 +856,18 @@ export default function ThisWeek() {
                                         padding: "0.75rem 1rem",
                                         background: "var(--white)",
                                         border: "1px solid var(--border)",
-                                        borderRadius: 4,
+                                        borderLeft: `3px solid ${section.color}`,
+                                        borderRadius: 6,
                                         textDecoration: "none",
-                                        transition: "border-color 0.12s",
+                                        transition: "box-shadow 0.12s",
                                       }}
-                                      onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--border-strong)")}
-                                      onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
+                                      onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 2px 8px rgba(44,40,36,0.08)")}
+                                      onMouseLeave={e => (e.currentTarget.style.boxShadow = "none")}
                                     >
                                       <div style={{
-                                        width: 8, height: 8, borderRadius: "50%",
-                                        border: `1.5px solid ${section.color}`,
-                                        flexShrink: 0,
+                                        width: 7, height: 7, borderRadius: "50%",
+                                        background: section.color,
+                                        flexShrink: 0, opacity: 0.7,
                                       }} />
 
                                       <div style={{ flex: 1, minWidth: 0 }}>
