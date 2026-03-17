@@ -380,7 +380,6 @@ export default function MyPieces() {
                             padding: "0.2rem 0.625rem", borderRadius: 99,
                             background: statusCfg.bg, color: statusCfg.color,
                             fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem",
-                            display: "inline-flex", alignItems: "center", gap: "0.25rem",
                           }}>
                             {statusCfg.icon} {statusCfg.label}
                           </span>
