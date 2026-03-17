@@ -163,6 +163,10 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
 
   // ── Load annotations ────────────────────────────────────────────────────────
 
+  // Keep a ref to current pageIndex for use inside realtime callback
+  const pageIndexRef = useRef(0);
+  useEffect(() => { pageIndexRef.current = pageIndex; }, [pageIndex]);
+
   useEffect(() => {
     if (!student?.id || !pieceId) return;
     (async () => {
@@ -183,6 +187,34 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         setTextBoxes([...(textMap.get(0) ?? [])]);
       }
     })();
+  }, [student?.id, pieceId]);
+
+  // ── Realtime: teacher edits show up live ────────────────────────────────────
+
+  useEffect(() => {
+    if (!student?.id || !pieceId) return;
+    const channel = supabase
+      .channel(`annot:${pieceId}:${student.id}:student`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on("postgres_changes" as any, {
+        event: "*",
+        schema: "public",
+        table: "piece_annotations",
+        filter: `piece_id=eq.${pieceId}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }, (payload: any) => {
+        const row = (payload.new ?? payload.old) as { page_index: number; strokes: StrokeData[]; texts?: TextAnnotation[]; student_id?: string } | undefined;
+        if (!row || row.student_id !== student.id) return;
+        if (isDrawingRef.current) return; // don't interrupt active drawing
+        annotationsRef.current.set(row.page_index, row.strokes ?? []);
+        textsRef.current.set(row.page_index, row.texts ?? []);
+        if (row.page_index === pageIndexRef.current) {
+          redrawAnnotations();
+          setTextBoxes([...(textsRef.current.get(row.page_index) ?? [])]);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [student?.id, pieceId]);
 
   // ── Load sheet music (PDF or images) ───────────────────────────────────────
