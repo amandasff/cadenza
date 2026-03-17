@@ -15,6 +15,22 @@ interface StudentWithGoals {
   goals: GoalRow[];
 }
 
+function toUTCDateStr(d: Date) {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function computeLiveStreak(storedStreak: number, lastAt: string | null, freezeCount: number): { streak: number; frozen: boolean } {
+  if (storedStreak === 0 || !lastAt) return { streak: 0, frozen: false };
+  const now = new Date();
+  const todayUTC = toUTCDateStr(now);
+  const yesterdayUTC = toUTCDateStr(new Date(now.getTime() - 86_400_000));
+  const twoDaysAgoUTC = toUTCDateStr(new Date(now.getTime() - 2 * 86_400_000));
+  const lastUTC = toUTCDateStr(new Date(lastAt));
+  if (lastUTC === todayUTC || lastUTC === yesterdayUTC) return { streak: storedStreak, frozen: false };
+  if (lastUTC === twoDaysAgoUTC && freezeCount > 0) return { streak: storedStreak, frozen: true };
+  return { streak: 0, frozen: false };
+}
+
 function getGreetingKey() {
   const h = new Date().getHours();
   if (h < 12) return "morning";
@@ -43,6 +59,8 @@ export default function TeacherDashboard() {
   const [students, setStudents] = useState<StudentWithGoals[]>([]);
   const [recentSessions, setRecentSessions] = useState<PracticeSessionRow[]>([]);
   const [studentMap, setStudentMap] = useState<Record<string, ProfileRow>>({});
+  const [lastSessionMap, setLastSessionMap] = useState<Record<string, string>>({});
+  const [grantingFreezeFor, setGrantingFreezeFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   // Encouragement modal state
@@ -92,6 +110,25 @@ export default function TeacherDashboard() {
     }
   }
 
+  async function grantFreeze(studentId: string) {
+    setGrantingFreezeFor(studentId);
+    try {
+      await fetch("/api/student/grant-freeze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId }),
+      });
+      // Optimistically update freeze count in the students list
+      setStudents(prev => prev.map(s =>
+        s.profile.id === studentId
+          ? { ...s, profile: { ...s.profile, streak_freeze_count: (s.profile.streak_freeze_count ?? 0) + 1 } }
+          : s
+      ));
+    } finally {
+      setGrantingFreezeFor(null);
+    }
+  }
+
   const loadData = useCallback(async () => {
     if (!teacher?.studioId) return;
     setLoading(true);
@@ -105,6 +142,24 @@ export default function TeacherDashboard() {
         studioService.getStudents(teacher.studioId),
         practiceService.getStudioSessions(teacher.studioId, 8),
       ]);
+
+      // Batch-fetch each student's most recent session so we can compute live streaks
+      const studentIds = profiles.map(p => p.id);
+      const { data: lastSessions } = studentIds.length > 0
+        ? await supabase
+            .from("practice_sessions")
+            .select("student_id, created_at")
+            .in("student_id", studentIds)
+            .order("created_at", { ascending: false })
+        : { data: [] };
+
+      const sessMap: Record<string, string> = {};
+      if (lastSessions) {
+        for (const s of lastSessions as { student_id: string; created_at: string }[]) {
+          if (!sessMap[s.student_id]) sessMap[s.student_id] = s.created_at;
+        }
+      }
+      setLastSessionMap(sessMap);
 
       const withGoals = await Promise.all(
         profiles.map(async (p) => ({
@@ -379,80 +434,130 @@ export default function TeacherDashboard() {
                     )}
 
                     {/* Stats row */}
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {(() => {
+                      const { streak: liveStreak, frozen } = computeLiveStreak(
+                        profile.streak_days,
+                        lastSessionMap[profile.id] ?? null,
+                        profile.streak_freeze_count ?? 0,
+                      );
+                      const freezeCount = profile.streak_freeze_count ?? 0;
+                      return (
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <div style={{
+                            flex: 1,
+                            background: liveStreak > 0 ? "var(--peach-bg)" : "var(--cream)",
+                            borderRadius: 2,
+                            padding: "0.375rem 0.5rem",
+                            textAlign: "center",
+                            border: `1px solid ${liveStreak > 0 ? "var(--peach-light)" : "var(--border)"}`,
+                          }}>
+                            <div style={{
+                              fontFamily: "Inter, sans-serif",
+                              fontWeight: 600,
+                              fontSize: "0.875rem",
+                              color: "var(--charcoal)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "0.2rem",
+                            }}>
+                              {liveStreak > 0 ? (frozen ? "❄️" : "🔥") : ""}
+                              {liveStreak}
+                            </div>
+                            <div style={{
+                              fontSize: "0.5625rem",
+                              color: "var(--muted)",
+                              letterSpacing: "0.05em",
+                              textTransform: "uppercase",
+                              marginTop: "0.125rem",
+                            }}>
+                              {t.teacher.dayStreak}
+                            </div>
+                          </div>
+                          <div style={{
+                            flex: 1,
+                            background: "var(--cream)",
+                            borderRadius: 2,
+                            padding: "0.375rem 0.5rem",
+                            textAlign: "center",
+                            border: "1px solid var(--border)",
+                          }}>
+                            <div style={{
+                              fontFamily: "Inter, sans-serif",
+                              fontWeight: 600,
+                              fontSize: "0.875rem",
+                              color: "var(--charcoal)",
+                            }}>
+                              {profile.total_points.toLocaleString()}
+                            </div>
+                            <div style={{
+                              fontSize: "0.5625rem",
+                              color: "var(--muted)",
+                              letterSpacing: "0.05em",
+                              textTransform: "uppercase",
+                              marginTop: "0.125rem",
+                            }}>
+                              {t.teacher.points}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Freeze grants row */}
+                    {(profile.streak_freeze_count ?? 0) > 0 && (
                       <div style={{
-                        flex: 1,
-                        background: "var(--cream)",
-                        borderRadius: 2,
-                        padding: "0.375rem 0.5rem",
-                        textAlign: "center",
-                        border: "1px solid var(--border)",
+                        marginTop: "0.5rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.25rem",
+                        fontSize: "0.6rem",
+                        color: "var(--muted)",
+                        fontFamily: "Inter, sans-serif",
                       }}>
-                        <div style={{
-                          fontFamily: "Inter, sans-serif",
-                          fontWeight: 600,
-                          fontSize: "0.875rem",
-                          color: "var(--charcoal)",
-                        }}>
-                          {profile.streak_days}
-                        </div>
-                        <div style={{
-                          fontSize: "0.5625rem",
-                          color: "var(--muted)",
-                          letterSpacing: "0.05em",
-                          textTransform: "uppercase",
-                          marginTop: "0.125rem",
-                        }}>
-                          {t.teacher.dayStreak}
-                        </div>
+                        <span>❄️</span>
+                        <span>{profile.streak_freeze_count} freeze{(profile.streak_freeze_count ?? 0) !== 1 ? "s" : ""} available</span>
                       </div>
-                      <div style={{
-                        flex: 1,
-                        background: "var(--cream)",
-                        borderRadius: 2,
-                        padding: "0.375rem 0.5rem",
-                        textAlign: "center",
-                        border: "1px solid var(--border)",
-                      }}>
-                        <div style={{
-                          fontFamily: "Inter, sans-serif",
-                          fontWeight: 600,
-                          fontSize: "0.875rem",
-                          color: "var(--charcoal)",
-                        }}>
-                          {profile.total_points.toLocaleString()}
-                        </div>
-                        <div style={{
-                          fontSize: "0.5625rem",
-                          color: "var(--muted)",
-                          letterSpacing: "0.05em",
-                          textTransform: "uppercase",
-                          marginTop: "0.125rem",
-                        }}>
-                          {t.teacher.points}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </Link>
-                  {/* Encourage button — outside Link to avoid nested interactive elements */}
-                  <button
-                    onClick={() => openEncourage(profile)}
-                    title="Send encouragement"
-                    style={{
-                      position: "absolute", top: 10, right: 10,
-                      width: 28, height: 28,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      background: sentReminderIds.has(profile.id) ? "var(--sage)" : "var(--cream)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 4,
-                      cursor: "pointer",
-                      fontSize: "0.75rem",
-                      zIndex: 1,
-                      transition: "background 0.2s",
-                    }}
-                  >
-                    {sentReminderIds.has(profile.id) ? "✓" : "🔔"}
-                  </button>
+                  {/* Action buttons — outside Link to avoid nested interactive elements */}
+                  <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: "0.25rem" }}>
+                    <button
+                      onClick={() => grantFreeze(profile.id)}
+                      title="Grant streak freeze"
+                      disabled={grantingFreezeFor === profile.id}
+                      style={{
+                        width: 28, height: 28,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        background: "var(--cream)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                        opacity: grantingFreezeFor === profile.id ? 0.5 : 1,
+                        transition: "background 0.2s",
+                      }}
+                    >
+                      ❄️
+                    </button>
+                    <button
+                      onClick={() => openEncourage(profile)}
+                      title="Send encouragement"
+                      style={{
+                        width: 28, height: 28,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        background: sentReminderIds.has(profile.id) ? "var(--sage)" : "var(--cream)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                        zIndex: 1,
+                        transition: "background 0.2s",
+                      }}
+                    >
+                      {sentReminderIds.has(profile.id) ? "✓" : "🔔"}
+                    </button>
+                  </div>
                   </div>
                 );
               })}

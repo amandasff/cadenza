@@ -145,10 +145,9 @@ export class AuthService {
       throw new Error('Profile not found. Please try signing in again.');
     }
 
-    // Compute live streak: if the last session was more than 1 day ago the
-    // streak is broken, even though streak_days in the DB still holds the old
-    // value (there is no scheduled job to zero it). This makes the displayed
-    // streak accurate whenever the profile is loaded.
+    // Compute live streak: streak_days in the DB is only updated when a session
+    // is logged — there is no cron job to zero it. Recompute it here so the
+    // displayed value is always accurate.
     if (profile.streak_days > 0) {
       const lastAt = lastSession?.created_at ?? null;
       if (!lastAt) {
@@ -159,9 +158,15 @@ export class AuthService {
         const now = new Date();
         const todayUTC = toUTCDateStr(now);
         const yesterdayUTC = toUTCDateStr(new Date(now.getTime() - 86_400_000));
+        const twoDaysAgoUTC = toUTCDateStr(new Date(now.getTime() - 2 * 86_400_000));
         const lastUTC = toUTCDateStr(new Date(lastAt));
         if (lastUTC !== todayUTC && lastUTC !== yesterdayUTC) {
-          profile.streak_days = 0;
+          // Freeze protects exactly one missed day
+          const hasFreezeProtection =
+            lastUTC === twoDaysAgoUTC && (profile.streak_freeze_count ?? 0) > 0;
+          if (!hasFreezeProtection) {
+            profile.streak_days = 0;
+          }
         }
       }
     }

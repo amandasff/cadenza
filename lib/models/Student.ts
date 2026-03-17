@@ -5,6 +5,7 @@ export class Student extends User {
   public streakDays: number;
   public totalPoints: number;
   public studioId: string | null;
+  public streakFreezeCount: number;
 
   constructor(profile: ProfileRow, email: string) {
     super(
@@ -17,6 +18,7 @@ export class Student extends User {
     this.streakDays = profile.streak_days;
     this.totalPoints = profile.total_points;
     this.studioId = profile.studio_id;
+    this.streakFreezeCount = profile.streak_freeze_count ?? 0;
   }
 
   getHomeRoute(): string {

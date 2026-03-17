@@ -64,22 +64,28 @@ export async function POST(request: Request) {
   // Fetch current profile
   const { data: profile, error: profileFetchError } = await admin
     .from('profiles')
-    .select('streak_days, total_points')
+    .select('streak_days, total_points, streak_freeze_count')
     .eq('id', user.id)
     .single();
 
   if (profileFetchError) return NextResponse.json({ error: profileFetchError.message }, { status: 500 });
 
-  const current = profile as { streak_days: number; total_points: number };
+  const current = profile as { streak_days: number; total_points: number; streak_freeze_count: number };
+  const twoDaysAgoStr = toUTCDateStr(new Date(now.getTime() - 2 * 86_400_000));
 
-  // Streak calculation
+  // Streak calculation — freeze protects exactly one missed day
   let newStreak: number;
+  let consumeFreeze = false;
   if (lastDate === null) {
     newStreak = 1;
   } else if (lastDate === todayStr) {
     newStreak = current.streak_days;
   } else if (lastDate === yesterdayStr) {
     newStreak = current.streak_days + 1;
+  } else if (lastDate === twoDaysAgoStr && (current.streak_freeze_count ?? 0) > 0) {
+    // Missed exactly one day but has a freeze — streak continues
+    newStreak = current.streak_days + 1;
+    consumeFreeze = true;
   } else {
     newStreak = 1;
   }
@@ -94,6 +100,7 @@ export async function POST(request: Request) {
   const updates: Record<string, number> = {};
   if (newStreak !== current.streak_days) updates.streak_days = newStreak;
   if (pointsEarned > 0) updates.total_points = current.total_points + pointsEarned;
+  if (consumeFreeze) updates.streak_freeze_count = Math.max(0, (current.streak_freeze_count ?? 0) - 1);
 
   if (Object.keys(updates).length > 0) {
     await admin.from('profiles').update(updates).eq('id', user.id);
