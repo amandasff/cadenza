@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { Teacher } from "../../../lib/models/Teacher";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { PartyPopper } from "lucide-react";
 
 function fmt(s: number) {
   const h = Math.floor(s / 3600);
@@ -166,7 +167,7 @@ export default function TeacherPracticePage() {
       {/* Save or success */}
       {saved ? (
         <div style={{ background: "var(--sage-bg)", borderRadius: 20, padding: "1.5rem", border: "1.5px solid var(--sage)", textAlign: "center" }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎉</div>
+          <div style={{ marginBottom: "0.5rem", display: "flex", justifyContent: "center" }}><PartyPopper size={32} strokeWidth={1.5} color="var(--sage)" /></div>
           <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "1rem", color: "var(--sage)", marginBottom: "0.25rem" }}>
             {t.teacher.practiceSaved}
           </div>

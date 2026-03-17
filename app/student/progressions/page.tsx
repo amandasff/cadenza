@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Flame, Music } from "lucide-react";
 
 // ── Audio engine ──────────────────────────────────────────────────────────────
 
@@ -330,7 +331,7 @@ function ProgressionGame() {
     <>
       {started && (
         <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
-          {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: `${streak}🔥` }, { l: t.student.bestLabel, v: bestStreak }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
+          {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: <>{streak}<Flame size={12} color="#E6A817" fill="#E6A817" strokeWidth={0} /></> }, { l: t.student.bestLabel, v: bestStreak }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
             <div key={l} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{v}</div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{l}</div>
@@ -341,7 +342,7 @@ function ProgressionGame() {
 
       {!started ? (
         <div style={{ background: "var(--white)", borderRadius: 14, border: "1px solid var(--border)", padding: "1.5rem 1.25rem" }}>
-          <div style={{ fontSize: "2.5rem", textAlign: "center", marginBottom: "0.75rem" }}>🎵</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.75rem" }}><Music size={40} strokeWidth={1} color="var(--muted)" /></div>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.375rem", color: "var(--charcoal)", fontWeight: 500, textAlign: "center", marginBottom: "0.375rem" }}>Chord Progressions</div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.6, textAlign: "center", margin: "0 0 1.25rem" }}>
             A 4-chord progression plays in C major. Identify the Roman numeral pattern by ear.
@@ -548,7 +549,7 @@ function KeyIdGame() {
     <>
       {started && (
         <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
-          {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: `${streak}🔥` }, { l: t.student.bestLabel, v: bestStreak }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
+          {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: <>{streak}<Flame size={12} color="#E6A817" fill="#E6A817" strokeWidth={0} /></> }, { l: t.student.bestLabel, v: bestStreak }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
             <div key={l} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{v}</div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{l}</div>
@@ -724,7 +725,7 @@ function RealSongsGame() {
     <>
       {/* Stats */}
       <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
-        {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: `${streak}🔥` }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
+        {[{ l: t.student.scoreLabel, v: score }, { l: t.student.streakLabel, v: <>{streak}<Flame size={12} color="#E6A817" fill="#E6A817" strokeWidth={0} /></> }, { l: t.student.roundLabel, v: round }].map(({ l, v }) => (
           <div key={l} style={{ flex: 1, background: "var(--white)", borderRadius: 10, padding: "0.5rem 0.25rem", textAlign: "center", border: "1px solid var(--border)" }}>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{v}</div>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 2 }}>{l}</div>

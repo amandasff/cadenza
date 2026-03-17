@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { GRADES, type GradeData, type TechItem } from "./rcm-data";
+import { Square, Play } from "lucide-react";
 import ScaleNotation from "./ScaleNotation";
 
 // ── Metronome ─────────────────────────────────────────────────────────────────
@@ -74,7 +75,7 @@ function MetronomeWidget({ defaultBpm }: { defaultBpm: number }) {
           display: "flex", alignItems: "center", gap: "0.375rem",
         }}
       >
-        {metro.running ? "⏹ Stop" : "▶ Click"}
+        {metro.running ? <><Square size={12} strokeWidth={1.5} /> Stop</> : <><Play size={12} strokeWidth={1.5} fill="currentColor" /> Click</>}
       </button>
       <button onClick={() => { const v = Math.max(40, localBpm - 4); setLocalBpm(v); if (metro.running) metro.start(v); }}
         style={nudgeBtn}>−</button>

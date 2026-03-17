@@ -19,17 +19,18 @@ import type {
   ExternalStudentRow,
 } from "../../../lib/types";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Piano, Mic, Frown, Smile, PartyPopper, ChevronUp, ChevronDown, X } from "lucide-react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DURATIONS = [30, 45, 60, 90];
 
 const ASSIGNMENT_TYPES_BASE: { value: AssignmentType; color: string; emoji: string }[] = [
-  { value: "practice", color: "var(--rose)",     emoji: "🎹" },
+  { value: "practice", color: "var(--rose)",     emoji: "♪" },
   { value: "listen",   color: "var(--sky)",      emoji: "🎧" },
   { value: "theory",   color: "var(--butter)",   emoji: "📖" },
   { value: "memorize", color: "var(--lavender)", emoji: "🧠" },
-  { value: "record",   color: "var(--sage)",     emoji: "🎙" },
+  { value: "record",   color: "var(--sage)",     emoji: "◉" },
 ];
 
 const RATING_CONFIG_BASE = {
@@ -282,9 +283,9 @@ export default function SchedulePage() {
             .slice(0, 5)
             .map(s => {
               const notes = (s.notes ?? "").toLowerCase();
-              if (notes.includes("frustrated") || notes.includes("hard") || notes.includes("difficult")) return "😓";
-              if (notes.includes("good") || notes.includes("great") || notes.includes("fun")) return "😊";
-              if (notes.includes("ok") || notes.includes("fine") || notes.includes("alright")) return "🙂";
+              if (notes.includes("frustrated") || notes.includes("hard") || notes.includes("difficult")) return ":(";
+              if (notes.includes("good") || notes.includes("great") || notes.includes("fun")) return ":)";
+              if (notes.includes("ok") || notes.includes("fine") || notes.includes("alright")) return ":)";
               return "";
             })
             .filter(Boolean)
@@ -694,7 +695,7 @@ export default function SchedulePage() {
                     </div>
 
                     <span style={{ color: "var(--muted)", fontSize: "0.75rem", flexShrink: 0 }}>
-                      {isExpanded ? "▲" : "▼"}
+                      {isExpanded ? <ChevronUp size={14} strokeWidth={1.5} /> : <ChevronDown size={14} strokeWidth={1.5} />}
                     </span>
                   </div>
 
@@ -931,9 +932,9 @@ export default function SchedulePage() {
                     {assignmentDrafts.length > 1 && (
                       <button
                         onClick={() => setAssignmentDrafts(prev => prev.filter(d => d.id !== draft.id))}
-                        style={{ ...btnSecondary, padding: "0.5rem 0.625rem", flexShrink: 0 }}
+                        style={{ ...btnSecondary, padding: "0.5rem 0.625rem", flexShrink: 0, display: "flex", alignItems: "center" }}
                       >
-                        ✕
+                        <X size={14} strokeWidth={1.5} />
                       </button>
                     )}
                   </div>
@@ -1007,7 +1008,7 @@ export default function SchedulePage() {
                           onClick={() => updateDraft(draft.id, { audioBlob: null, audioUrl: null })}
                           style={{ ...btnSecondary, padding: "0.25rem 0.5rem", fontSize: "0.6875rem" }}
                         >
-                          ✕ {t.common.remove}
+                          <X size={12} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /> {t.common.remove}
                         </button>
                       </div>
                     )}

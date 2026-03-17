@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import type { TechItem } from "./rcm-data";
+import { Square, Play } from "lucide-react";
 
 // ── Scale note data ────────────────────────────────────────────────────────────
 // Note names (lowercase) used by VexFlow: "f#", "bb", etc.
@@ -519,7 +520,7 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
             display: "flex", alignItems: "center", gap: "0.3rem",
           }}
         >
-          {playing ? "⏹ Stop" : "▶ Play"}
+          {playing ? <><Square size={12} strokeWidth={1.5} /> Stop</> : <><Play size={12} strokeWidth={1.5} fill="currentColor" /> Play</>}
         </button>
 
         {/* Tempo slider */}

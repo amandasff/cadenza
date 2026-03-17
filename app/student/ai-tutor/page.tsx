@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Music, ArrowUp } from "lucide-react";
 
 interface Message {
   id: string;
@@ -283,7 +284,7 @@ export default function AITutorPage() {
           {isEmpty && (
             <div>
               <div style={{ textAlign: "center", marginBottom: "2rem", paddingTop: "1rem" }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
+                <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}><Music size={40} strokeWidth={1.5} color="var(--muted)" /></div>
                 <div style={{ fontSize: "1rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.375rem" }}>
                   {t.student.aiTutorWhatToKnow}
                 </div>
@@ -422,7 +423,7 @@ export default function AITutorPage() {
           >
             {streaming ? (
               <span style={{ fontSize: "0.75rem", fontFamily: "Inter, sans-serif" }}>…</span>
-            ) : "↑"}
+            ) : <ArrowUp size={18} strokeWidth={1.5} />}
           </button>
         </div>
         <div style={{ maxWidth: 720, margin: "0.375rem auto 0", textAlign: "center" }}>

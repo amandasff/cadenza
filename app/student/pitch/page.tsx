@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
+import { Flame, Music } from "lucide-react";
 
 // ── Note definitions ─────────────────────────────────────────────────────────
 
@@ -177,7 +178,7 @@ export default function PitchTrainerPage() {
           <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1rem" }}>
             {[
               { label: t.student.scoreLabel,  value: score },
-              { label: t.student.streakLabel, value: `${streak}🔥` },
+              { label: t.student.streakLabel, value: <>{streak}<Flame size={12} color="#E6A817" fill="#E6A817" strokeWidth={0} /></> },
               { label: t.student.bestLabel,   value: bestStreak },
               { label: t.student.roundLabel,  value: round },
             ].map(({ label, value }) => (
@@ -220,7 +221,7 @@ export default function PitchTrainerPage() {
 
           {!started ? (
             <>
-              <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎵</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.75rem" }}><Music size={48} strokeWidth={1} color="var(--muted)" /></div>
               <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.375rem", color: "var(--charcoal)", fontWeight: 500, marginBottom: "0.375rem" }}>
                 {t.student.pitchTrainYourEar}
               </div>

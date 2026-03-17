@@ -6,10 +6,10 @@ import { Student } from "../../../lib/models/Student";
 import { useI18n } from "../../../lib/context/I18nContext";
 
 const FEATURES = [
-  { icon: "🎵", label: "AI Sheet Music", desc: "Convert a photo of sheet music into a playable score instantly" },
-  { icon: "🎸", label: "Guitar Tuner", desc: "Real-time pitch detection tuner with visual feedback" },
-  { icon: "🎙", label: "Practice Recordings", desc: "Record yourself, review playback, and track your progress" },
-  { icon: "📊", label: "Full Practice History", desc: "Unlimited session history with detailed analytics" },
+  { icon: "♪", label: "AI Sheet Music", desc: "Convert a photo of sheet music into a playable score instantly" },
+  { icon: "♬", label: "Guitar Tuner", desc: "Real-time pitch detection tuner with visual feedback" },
+  { icon: "◉", label: "Practice Recordings", desc: "Record yourself, review playback, and track your progress" },
+  { icon: "≡", label: "Full Practice History", desc: "Unlimited session history with detailed analytics" },
   { icon: "🏆", label: "Rewards & Streaks", desc: "Advanced gamification to keep you motivated" },
 ];
 

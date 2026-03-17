@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { usePractice } from "../lib/context/PracticeContext";
+import { Pause, Play, ChevronDown } from "lucide-react";
 
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -99,7 +100,7 @@ export default function PracticePip() {
                 fontFamily: "Inter, sans-serif",
               }}
             >
-              {recording ? "⏸ Pause" : "▶ Resume"}
+              {recording ? <><Pause size={12} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />Pause</> : <><Play size={12} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />Resume</>}
             </button>
 
             {/* Back to practice */}
@@ -127,7 +128,7 @@ export default function PracticePip() {
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
-              ▼
+              <ChevronDown size={14} strokeWidth={1.5} />
             </button>
           </div>
         </>

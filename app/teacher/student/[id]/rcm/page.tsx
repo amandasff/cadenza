@@ -7,6 +7,7 @@ import { RcmService, RCM_GRADE_LEVELS } from "../../../../../lib/services/RcmSer
 import { Teacher } from "../../../../../lib/models/Teacher";
 import { useI18n } from "../../../../../lib/context/I18nContext";
 import type { RcmExamRow, RcmChecklistItemRow, RcmCategory } from "../../../../../lib/types";
+import { Check, X } from "lucide-react";
 
 const CATEGORY_ORDER: RcmCategory[] = ["list_a", "list_b", "list_c", "etudes", "technical", "theory", "ear_training", "sight_reading"];
 
@@ -311,7 +312,7 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
                           color: "white", fontSize: "0.625rem", fontWeight: 700,
                         }}
                       >
-                        {item.completed ? "✓" : ""}
+                        {item.completed ? <Check size={12} strokeWidth={2.5} /> : ""}
                       </button>
                       <div style={{ flex: 1 }}>
                         <span style={{
@@ -329,9 +330,9 @@ export default function RcmPage({ params }: { params: Promise<{ id: string }> })
                       </div>
                       <button
                         onClick={() => deleteItem(item.id)}
-                        style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: "0.75rem", padding: "0 0.25rem", opacity: 0.5 }}
+                        style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: "0 0.25rem", opacity: 0.5 }}
                       >
-                        ×
+                        <X size={12} strokeWidth={1.5} />
                       </button>
                     </div>
                   ))}

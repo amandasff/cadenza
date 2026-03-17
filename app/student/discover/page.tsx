@@ -5,6 +5,7 @@ import type { PortfolioItemRow } from "../../../lib/services/PortfolioService";
 import AudioPlayer from "../../../components/AudioPlayer";
 import { usePlayer } from "../../../lib/context/PlayerContext";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Flame, X, Guitar } from "lucide-react";
 
 type Comment = {
   id: string;
@@ -488,7 +489,7 @@ export default function DiscoverPage() {
         </div>
       ) : displayItems.length === 0 ? (
         <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--white)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem", fontSize: "1.75rem" }}>🎸</div>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--white)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}><Guitar size={32} strokeWidth={1.5} color="var(--muted)" /></div>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>{t.student.nothingSharedYet}</div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 280, margin: "0 auto" }}>
             {t.student.nothingSharedDesc}
@@ -520,7 +521,7 @@ export default function DiscoverPage() {
                       {myFollows.has(item.student_id) && <span style={{ color: "var(--sage)", fontWeight: 600 }}>· {t.student.followingBadge}</span>}
                       {(item.streak_days ?? 0) > 0 && (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.15rem", background: "rgba(230,168,23,0.12)", border: "1px solid rgba(230,168,23,0.25)", borderRadius: 99, padding: "0.05rem 0.35rem", color: "#c47d10", fontWeight: 700, fontSize: "0.5rem", letterSpacing: "0.01em" }}>
-                          🔥{item.streak_days}
+                          <Flame size={10} color="#E6A817" fill="#E6A817" strokeWidth={0} />{item.streak_days}
                         </span>
                       )}
                     </div>
@@ -567,7 +568,7 @@ export default function DiscoverPage() {
                     </span>
                     {profileInfo.streak_days > 0 && (
                       <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
-                        🔥 <strong style={{ color: "var(--charcoal)" }}>{profileInfo.streak_days}</strong>{t.student.streakDaysLabel}
+                        <Flame size={14} color="#E6A817" fill="#E6A817" strokeWidth={0} style={{ display: "inline", verticalAlign: "middle" }} /> <strong style={{ color: "var(--charcoal)" }}>{profileInfo.streak_days}</strong>{t.student.streakDaysLabel}
                       </span>
                     )}
                   </div>
@@ -592,7 +593,7 @@ export default function DiscoverPage() {
                   {followError && <span style={{ fontSize: "0.625rem", color: "var(--error)", maxWidth: 120, textAlign: "right", lineHeight: 1.3 }}>{followError}</span>}
                   </div>
                 ) : (
-                  <button onClick={() => { setProfileInfo(null); setProfileItems([]); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+                  <button onClick={() => { setProfileInfo(null); setProfileItems([]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: 0, flexShrink: 0, display: "flex", alignItems: "center" }}><X size={20} strokeWidth={1.5} /></button>
                 )}
               </div>
 
@@ -662,7 +663,7 @@ export default function DiscoverPage() {
           <div style={{ background: "var(--white)", borderRadius: "20px 20px 0 0", maxHeight: "90dvh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem 0.5rem" }}>
               <div style={{ width: 36, height: 3, borderRadius: 2, background: "var(--border)" }} />
-              <button onClick={closeItem} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: "0 0 0 1rem" }}>×</button>
+              <button onClick={closeItem} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: "0 0 0 1rem", display: "flex", alignItems: "center" }}><X size={20} strokeWidth={1.5} /></button>
             </div>
 
             <div style={{ overflowY: "auto", flex: 1 }}>

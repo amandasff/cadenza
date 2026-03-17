@@ -251,7 +251,7 @@ export default function ChordsPage() {
             fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: tab === t ? 500 : 400,
             cursor: "pointer",
           }}>
-            {t === "piano" ? "🎹 Piano" : t === "guitar" ? "🎸 Guitar" : "🪕 Ukulele"}
+            {t === "piano" ? "Piano" : t === "guitar" ? "Guitar" : "Ukulele"}
           </button>
         ))}
       </div>

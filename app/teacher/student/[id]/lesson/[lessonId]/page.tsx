@@ -9,6 +9,7 @@ import { BillingService } from "../../../../../../lib/services/BillingService";
 import { Teacher } from "../../../../../../lib/models/Teacher";
 import type { LessonRow, AssignmentWithContext } from "../../../../../../lib/types";
 import { useI18n } from "../../../../../../lib/context/I18nContext";
+import { RefreshCw } from "lucide-react";
 
 const TA: React.CSSProperties = {
   width: "100%", border: "1px solid var(--border-strong)", borderRadius: 3,
@@ -255,8 +256,8 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
           {saving ? t.common.saving : saved ? t.teacher.reportsSaved : t.schedule.saveChanges}
         </button>
         {creditAdded && (
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#e09b3d", marginTop: "0.5rem" }}>
-            🔄 Makeup credit added for this student
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#e09b3d", marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <RefreshCw size={14} strokeWidth={1.5} /> Makeup credit added for this student
           </div>
         )}
       </div>

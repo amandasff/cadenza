@@ -6,6 +6,7 @@ import { PracticeService } from "../../../lib/services/PracticeService";
 import { Student } from "../../../lib/models/Student";
 import type { PracticeSessionRow, GoalRow } from "../../../lib/types";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Flame } from "lucide-react";
 
 // ── Level system ─────────────────────────────────────────────────────────────
 // Calibrated so:
@@ -54,7 +55,7 @@ interface BadgeStats {
 const BADGES = [
   // ── Habit formation ──
   { id: "first_note",    icon: "♪",  name: "First Note",       desc: "Log your first practice session",  unlocked: (s: BadgeStats) => s.sessions >= 1 },
-  { id: "on_a_roll",     icon: "🔥", name: "On a Roll",         desc: "3-day practice streak",            unlocked: (s: BadgeStats) => s.streakDays >= 3 },
+  { id: "on_a_roll",     icon: "✦",  name: "On a Roll",         desc: "3-day practice streak",            unlocked: (s: BadgeStats) => s.streakDays >= 3 },
   { id: "daily_ten",     icon: "📅", name: "10 Sessions",       desc: "Complete 10 practice sessions",    unlocked: (s: BadgeStats) => s.sessions >= 10 },
   // ── Streak milestones (loss aversion loop) ──
   { id: "week_warrior",  icon: "⚡", name: "Week Warrior",      desc: "7-day streak — +500 bonus!",      unlocked: (s: BadgeStats) => s.streakDays >= 7 },
@@ -65,13 +66,13 @@ const BADGES = [
   { id: "ten_hours",     icon: "⌛", name: "Ten Hours",          desc: "Practice 10 hours total",         unlocked: (s: BadgeStats) => s.totalMinutes >= 600 },
   { id: "fifty_hours",   icon: "🏆", name: "Fifty Hours",       desc: "Practice 50 hours total",         unlocked: (s: BadgeStats) => s.totalMinutes >= 3000 },
   // ── Goals & assignments ──
-  { id: "goal_getter",   icon: "🎵", name: "Goal Getter",       desc: "Complete your first goal",        unlocked: (s: BadgeStats) => s.completedGoals >= 1 },
+  { id: "goal_getter",   icon: "♪",  name: "Goal Getter",       desc: "Complete your first goal",        unlocked: (s: BadgeStats) => s.completedGoals >= 1 },
   { id: "overachiever",  icon: "🌟", name: "Overachiever",      desc: "Complete 5 goals",                unlocked: (s: BadgeStats) => s.completedGoals >= 5 },
   { id: "assignment_ace",icon: "✅", name: "Assignment Ace",    desc: "Complete 5 assignments",          unlocked: (s: BadgeStats) => s.completedAssignments >= 5 },
   // ── Points milestones ──
-  { id: "rising_star",   icon: "⭐", name: "Rising Star",       desc: "Earn 500 points",                 unlocked: (s: BadgeStats) => s.totalPoints >= 500 },
+  { id: "rising_star",   icon: "★",  name: "Rising Star",       desc: "Earn 500 points",                 unlocked: (s: BadgeStats) => s.totalPoints >= 500 },
   { id: "high_achiever", icon: "💎", name: "High Achiever",     desc: "Earn 2,000 points",               unlocked: (s: BadgeStats) => s.totalPoints >= 2000 },
-  { id: "elite",         icon: "🎹", name: "Elite",              desc: "Earn 5,000 points",               unlocked: (s: BadgeStats) => s.totalPoints >= 5000 },
+  { id: "elite",         icon: "♫",  name: "Elite",              desc: "Earn 5,000 points",               unlocked: (s: BadgeStats) => s.totalPoints >= 5000 },
 ];
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -445,7 +446,7 @@ export default function Rewards() {
             </div>
             {effectiveStreak > 0 && effectiveStreak % 7 === 0 && (
               <div style={{ marginTop: "0.75rem", padding: "0.5rem 0.75rem", background: "var(--cream-deep)", borderRadius: 3, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>
-                🔥 {effectiveStreak}-day streak — <strong>+500 bonus</strong> awarded this week!
+                <Flame size={12} color="#E6A817" fill="#E6A817" strokeWidth={0} style={{ verticalAlign: "middle" }} /> {effectiveStreak}-day streak — <strong>+500 bonus</strong> awarded this week!
               </div>
             )}
           </div>

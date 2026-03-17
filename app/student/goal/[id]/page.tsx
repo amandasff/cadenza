@@ -9,12 +9,13 @@ import { ChatService } from "../../../../lib/services/ChatService";
 import { Student } from "../../../../lib/models/Student";
 import type { GoalRow } from "../../../../lib/types";
 import { useI18n } from "../../../../lib/context/I18nContext";
+import { Star, PartyPopper } from "lucide-react";
 
 const AREAS: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   technique:    { label: "Technique",    color: "var(--sage)",   bg: "var(--sage-bg)",   icon: "🌿" },
   repertoire:   { label: "Repertoire",   color: "var(--rose)",   bg: "var(--rose-bg)",   icon: "🌸" },
   ear_training: { label: "Ear Training", color: "var(--sky)",    bg: "var(--sky-bg)",    icon: "🎧" },
-  theory:       { label: "Theory",       color: "var(--butter)", bg: "var(--butter-bg)", icon: "⭐" },
+  theory:       { label: "Theory",       color: "var(--butter)", bg: "var(--butter-bg)", icon: "★" },
 };
 
 export default function GoalDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -128,8 +129,8 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
                 {statusLabel}
               </span>
               {goal.is_boss && (
-                <span style={{ background: "var(--butter-bg)", color: "var(--butter)", padding: "0.25rem 0.75rem", borderRadius: 100, fontSize: "0.75rem", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>
-                  ⭐ Boss Node
+                <span style={{ background: "var(--butter-bg)", color: "var(--butter)", padding: "0.25rem 0.75rem", borderRadius: 100, fontSize: "0.75rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                  <Star size={12} strokeWidth={1.5} /> Boss Node
                 </span>
               )}
             </div>
@@ -142,7 +143,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
               <div style={{ display: "flex", gap: "1.5rem" }}>
                 <div>
                   <div style={{ fontSize: "0.7rem", color: "var(--muted)", marginBottom: 2, fontFamily: "DM Sans, sans-serif" }}>{t.student.goalStars}</div>
-                  <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--butter)", fontSize: "1rem" }}>⭐ {goal.points}</div>
+                  <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 700, color: "var(--butter)", fontSize: "1rem", display: "flex", alignItems: "center", gap: "0.25rem" }}><Star size={14} strokeWidth={1.5} /> {goal.points}</div>
                 </div>
                 {goal.due_date && (
                   <div>
@@ -170,8 +171,8 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
             {/* Bonus challenge */}
             {goal.bonus_title && (
               <div style={{ background: "var(--butter-bg)", borderRadius: "var(--radius-xl)", padding: "1.25rem", border: "1.5px solid var(--butter-light)" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--butter)", marginBottom: "0.5rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  ⭐ Bonus Challenge
+                <div style={{ fontSize: "0.75rem", color: "var(--butter)", marginBottom: "0.5rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <Star size={12} strokeWidth={1.5} /> Bonus Challenge
                 </div>
                 <p style={{ fontSize: "0.875rem", color: "var(--charcoal)", margin: "0 0 0.5rem", fontFamily: "DM Sans, sans-serif" }}>
                   {goal.bonus_title}
@@ -202,7 +203,7 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
             {/* Completed celebration */}
             {goal.status === "completed" && (
               <div style={{ background: "var(--sage-bg)", border: "1.5px solid var(--sage)", borderRadius: "var(--radius-xl)", padding: "1.5rem", textAlign: "center" }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎉</div>
+                <div style={{ marginBottom: "0.5rem", display: "flex", justifyContent: "center" }}><PartyPopper size={40} strokeWidth={1.5} color="var(--sage)" /></div>
                 <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 900, fontSize: "1.05rem", color: "var(--sage)" }}>
                   {t.student.goalComplete}
                 </div>

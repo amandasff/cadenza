@@ -7,6 +7,7 @@ import { GoalService } from "../../../lib/services/GoalService";
 import { Teacher } from "../../../lib/models/Teacher";
 import { useI18n } from "../../../lib/context/I18nContext";
 import type { ProfileRow, GoalRow } from "../../../lib/types";
+import { Star, Check, ChevronUp, ChevronDown } from "lucide-react";
 
 export default function GoalBuilder() {
   const { user } = useAuth();
@@ -17,7 +18,7 @@ export default function GoalBuilder() {
     { value: "technique", label: t.teacher.categoryTechnique, color: "var(--sage)", bg: "var(--sage-bg)", icon: "🌿" },
     { value: "repertoire", label: t.teacher.categoryRepertoire, color: "var(--rose)", bg: "var(--rose-bg)", icon: "🌸" },
     { value: "ear_training", label: t.teacher.categoryEarTraining, color: "var(--sky)", bg: "var(--sky-bg)", icon: "🎧" },
-    { value: "theory", label: t.teacher.categoryTheory, color: "var(--butter)", bg: "var(--butter-bg)", icon: "⭐" },
+    { value: "theory", label: t.teacher.categoryTheory, color: "var(--butter)", bg: "var(--butter-bg)", icon: "★" },
   ];
 
   const [students, setStudents] = useState<ProfileRow[]>([]);
@@ -246,7 +247,7 @@ export default function GoalBuilder() {
               style={{ width: "100%", padding: "0.75rem 1rem", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: 700, fontSize: "0.85rem", color: "var(--charcoal)" }}
             >
               <span>{t.teacher.goalBonusChallenge}</span>
-              <span style={{ color: "var(--butter)" }}>{hasBonus ? "▲" : "▼"}</span>
+              <span style={{ color: "var(--butter)" }}>{hasBonus ? <ChevronUp size={14} strokeWidth={1.5} /> : <ChevronDown size={14} strokeWidth={1.5} />}</span>
             </button>
             {hasBonus && (
               <div style={{ padding: "0 1rem 1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -309,7 +310,7 @@ export default function GoalBuilder() {
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: "0.75rem", flexShrink: 0,
                       }}>
-                        {g.status === "completed" ? "✓" : a.icon}
+                        {g.status === "completed" ? <Check size={12} strokeWidth={2} /> : a.icon}
                       </div>
                       <span style={{ fontSize: "0.7rem", color: "var(--charcoal)", fontWeight: 600, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.title}</span>
                     </div>

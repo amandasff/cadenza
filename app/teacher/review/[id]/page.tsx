@@ -9,6 +9,7 @@ import { Teacher } from "../../../../lib/models/Teacher";
 import { useI18n } from "../../../../lib/context/I18nContext";
 import type { PracticeSessionRow, GoalRow, ProfileRow, PracticeSegment } from "../../../../lib/types";
 import AudioPlayer from "../../../../components/AudioPlayer";
+import { Star, Check, Smile, Frown, PartyPopper } from "lucide-react";
 
 function fmt(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -24,15 +25,15 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
     technique:    { label: t.teacher.categoryTechnique,    color: "var(--sage)",   icon: "🌿" },
     repertoire:   { label: t.teacher.categoryRepertoire,   color: "var(--rose)",   icon: "🌸" },
     ear_training: { label: t.teacher.categoryEarTraining,  color: "var(--sky)",    icon: "🎧" },
-    theory:       { label: t.teacher.categoryTheory,       color: "var(--butter)", icon: "⭐" },
+    theory:       { label: t.teacher.categoryTheory,       color: "var(--butter)", icon: "★" },
   };
 
-  const MOOD_DISPLAY: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-    great:      { label: t.student.moodGreat,      emoji: "😄", color: "var(--sage)",   bg: "var(--sage-bg)" },
-    good:       { label: t.student.moodGood,       emoji: "🙂", color: "var(--sky)",    bg: "var(--sky-bg)" },
-    okay:       { label: t.student.moodOkay,       emoji: "😐", color: "var(--butter)", bg: "var(--butter-bg)" },
-    tired:      { label: "Tired",                  emoji: "😴", color: "var(--muted)",  bg: "var(--cream)" },
-    frustrated: { label: "Frustrated",             emoji: "😤", color: "var(--rose)",   bg: "var(--rose-bg)" },
+  const MOOD_DISPLAY: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
+    great:      { label: t.student.moodGreat,      icon: <Smile size={16} strokeWidth={1.5} />, color: "var(--sage)",   bg: "var(--sage-bg)" },
+    good:       { label: t.student.moodGood,       icon: <Smile size={16} strokeWidth={1.5} />, color: "var(--sky)",    bg: "var(--sky-bg)" },
+    okay:       { label: t.student.moodOkay,       icon: <Smile size={16} strokeWidth={1.5} />, color: "var(--butter)", bg: "var(--butter-bg)" },
+    tired:      { label: "Tired",                  icon: <Frown size={16} strokeWidth={1.5} />, color: "var(--muted)",  bg: "var(--cream)" },
+    frustrated: { label: "Frustrated",             icon: <Frown size={16} strokeWidth={1.5} />, color: "var(--rose)",   bg: "var(--rose-bg)" },
   };
 
   const [session, setSession] = useState<PracticeSessionRow | null>(null);
@@ -291,7 +292,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontFamily: "Nunito, sans-serif", fontWeight: 800, fontSize: "0.95rem", color: "var(--charcoal)" }}>{goal.title}</div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", marginTop: 2 }}>⭐ {goal.points} stars</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--muted)", fontFamily: "DM Sans, sans-serif", marginTop: 2, display: "flex", alignItems: "center", gap: "0.25rem" }}><Star size={12} strokeWidth={1.5} /> {goal.points} stars</div>
                 </div>
                 <span style={{
                   padding: "0.25rem 0.75rem", borderRadius: 100, fontSize: "0.72rem",
@@ -299,7 +300,7 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                   background: goal.status === "completed" ? "var(--sage-bg)" : "var(--peach-bg)",
                   color: goal.status === "completed" ? "var(--sage)" : "var(--peach)",
                 }}>
-                  {goal.status === "completed" ? "✓ Completed" : "In Progress"}
+                  {goal.status === "completed" ? <><Check size={12} strokeWidth={2} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />Completed</> : "In Progress"}
                 </span>
               </div>
             </div>
@@ -367,10 +368,10 @@ export default function RecordingReview({ params }: { params: Promise<{ id: stri
                 {t.teacher.reviewStudentNotes}
               </div>
               {mood && (() => {
-                const m = MOOD_DISPLAY[mood] ?? { label: mood, emoji: "🙂", color: "var(--muted)", bg: "var(--cream)" };
+                const m = MOOD_DISPLAY[mood] ?? { label: mood, icon: <Smile size={16} strokeWidth={1.5} />, color: "var(--muted)", bg: "var(--cream)" };
                 return (
                   <div style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", padding: "0.3rem 0.75rem", borderRadius: 999, background: m.bg, border: `1px solid ${m.color}`, marginBottom: notesText ? "0.75rem" : 0 }}>
-                    <span style={{ fontSize: "1rem" }}>{m.emoji}</span>
+                    <span>{m.icon}</span>
                     <span style={{ fontSize: "0.75rem", fontWeight: 600, color: m.color, fontFamily: "Nunito, sans-serif" }}>{t.teacher.reviewFeelingLabel.replace("{label}", m.label)}</span>
                   </div>
                 );

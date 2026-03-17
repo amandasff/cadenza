@@ -10,6 +10,7 @@ import { RecordingProvider } from "../../lib/context/RecordingContext";
 import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
+import { Camera, Palette, X } from "lucide-react";
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -191,7 +192,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: size > 30 ? "0.875rem" : "0.5rem",
             opacity: 0, transition: "opacity 0.15s", borderRadius: "50%",
-          }}>📷</span>
+          }}><Camera size={14} strokeWidth={1.5} /></span>
         )}
       </label>
       <input
@@ -236,7 +237,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               letterSpacing: "0.04em", transition: "all 0.15s",
             }}
           >
-            {theme === "light" ? "Light" : theme === "dark" ? "Dark" : "🎨"}
+            {theme === "light" ? "Light" : theme === "dark" ? "Dark" : <Palette size={14} strokeWidth={1.5} />}
           </button>
           <button
             onClick={() => signOut()}
@@ -384,7 +385,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           zIndex: 9999, maxWidth: 340, textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
         }}>
           {t.teacher.uploadFailed}: {uploadError}
-          <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "0.875rem" }}>×</button>
+          <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center" }}><X size={14} strokeWidth={1.5} /></button>
         </div>
       )}
 

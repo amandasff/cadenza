@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Flame, Music, Piano, Guitar, BarChart2, Clipboard, Play, RefreshCw, X } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Staff layout constants (all in px)
@@ -421,7 +422,7 @@ function GameHeader({ timeLeft, score, streak }: { timeLeft: number; score: numb
         </div>
         {streak >= 3 && (
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "1.25rem", lineHeight: 1 }}>🔥</div>
+            <div style={{ lineHeight: 1 }}><Flame size={20} color="#E6A817" fill="#E6A817" strokeWidth={0} /></div>
             <div style={{ fontSize: "0.6875rem", fontWeight: 700, color: mult >= 3 ? "#FFD700" : "#E6A817" }}>{streak}</div>
           </div>
         )}
@@ -454,7 +455,7 @@ function ResultsScreen({
             {[
               { label: "Correct",   value: `${correct}/${total}` },
               { label: "Accuracy",  value: total > 0 ? `${Math.round(acc * 100)}%` : "—" },
-              { label: "Top Streak",value: topStreak > 0 ? `🔥 ${topStreak}` : "0" },
+              { label: "Top Streak",value: topStreak > 0 ? <>{topStreak}<Flame size={12} color="#E6A817" fill="#E6A817" strokeWidth={0} /></> : "0" },
             ].map(s => (
               <div key={s.label} style={{ background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: "0.875rem 0.5rem" }}>
                 <div style={{ fontSize: "1.125rem", fontWeight: 700, color: "#FDFCFA", marginBottom: "0.25rem" }}>{s.value}</div>
@@ -667,7 +668,7 @@ function IntervalRefPanel({ diff, allowDesc, onClose }: { diff: Difficulty; allo
     <div style={{ position: "absolute", inset: 0, background: "#1a1a2e", zIndex: 20, overflowY: "auto", padding: "1rem 1.25rem", fontFamily: "Inter, sans-serif" }}>
       <div style={{ display: "flex", alignItems: "center", marginBottom: "1.25rem" }}>
         <div style={{ flex: 1, fontWeight: 700, fontSize: "0.9375rem", color: "#FDFCFA" }}>Interval Reference</div>
-        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: "1.25rem", padding: 0, lineHeight: 1 }}>✕</button>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: 0, lineHeight: 1 }}><X size={18} strokeWidth={1.5} /></button>
       </div>
       {/* Column headers */}
       <div style={{ display: "grid", gridTemplateColumns: allowDesc ? "1fr 1fr 1fr" : "1fr 1fr", gap: "0.375rem 0.75rem", marginBottom: "0.5rem" }}>
@@ -801,7 +802,7 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
           {/* Big play button */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
             <button onClick={() => playQ(q.semi, q.direction)} style={{ width: 80, height: 80, borderRadius: "50%", border: "none", background: played ? "rgba(255,255,255,0.08)" : "#4CAF84", color: "#fff", fontSize: "1.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: played ? "none" : "0 0 28px #4CAF8450", transition: "all 0.2s" }}>
-              {played ? "↻" : "▶"}
+              {played ? <RefreshCw size={14} strokeWidth={1.5} /> : <Play size={14} strokeWidth={1.5} fill="currentColor" />}
             </button>
           </div>
           {played && !game.selected && <div style={{ textAlign: "center", marginBottom: "1rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>Tap to replay ↑</div>}
@@ -908,7 +909,7 @@ function ChordGame({ onBack }: { onBack: () => void }) {
           <div style={{ textAlign: "center", marginBottom: "1.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>What chord quality is this?</div>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
             <button onClick={() => play(q.quality)} style={{ width: 80, height: 80, borderRadius: "50%", border: "none", background: played ? "rgba(255,255,255,0.08)" : "#9b59b6", color: "#fff", fontSize: "1.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: played ? "none" : "0 0 28px #9b59b650", transition: "all 0.2s" }}>
-              {played ? "↻" : "▶"}
+              {played ? <RefreshCw size={14} strokeWidth={1.5} /> : <Play size={14} strokeWidth={1.5} fill="currentColor" />}
             </button>
           </div>
           {played && !game.selected && <div style={{ textAlign: "center", marginBottom: "1rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>Tap to replay ↑</div>}
@@ -1411,7 +1412,7 @@ function ScaleGame({ onBack }: { onBack: () => void }) {
           <div style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>What type of scale is this?</div>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
             <button onClick={() => play(q.scaleType)} style={{ width: 80, height: 80, borderRadius: "50%", border: "none", background: played ? "rgba(255,255,255,0.08)" : "#2980b9", color: "#fff", fontSize: "1.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: played ? "none" : "0 0 28px #2980b950", transition: "all 0.2s" }}>
-              {played ? "↻" : "▶"}
+              {played ? <RefreshCw size={14} strokeWidth={1.5} /> : <Play size={14} strokeWidth={1.5} fill="currentColor" />}
             </button>
           </div>
           {played && !game.selected && <div style={{ textAlign: "center", marginBottom: "1rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>Tap to replay ↑</div>}
@@ -1592,15 +1593,15 @@ function RCMReference({ onBack }: { onBack: () => void }) {
           </h2>
 
           {[
-            { label: "Repertoire", value: lvl.pieces, icon: "🎵" },
-            { label: "Technical Requirements", value: lvl.technical, icon: "🎹" },
-            { label: "Ear Training", value: lvl.ear, icon: "👂" },
-            { label: "Theory Co-requisite", value: lvl.theory, icon: "📚" },
-            { label: "Mark Distribution", value: lvl.marks, icon: "📊" },
+            { label: "Repertoire", value: lvl.pieces, icon: <Music size={18} strokeWidth={1.5} color="var(--muted)" /> },
+            { label: "Technical Requirements", value: lvl.technical, icon: <Piano size={18} strokeWidth={1.5} color="var(--muted)" /> },
+            { label: "Ear Training", value: lvl.ear, icon: <Music size={18} strokeWidth={1.5} color="var(--muted)" /> },
+            { label: "Theory Co-requisite", value: lvl.theory, icon: <Music size={18} strokeWidth={1.5} color="var(--muted)" /> },
+            { label: "Mark Distribution", value: lvl.marks, icon: <BarChart2 size={18} strokeWidth={1.5} color="var(--muted)" /> },
           ].map(row => (
             <div key={row.label} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.125rem 1.25rem", marginBottom: "0.75rem" }}>
               <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
-                <span style={{ fontSize: "1.125rem", flexShrink: 0, marginTop: "0.125rem" }}>{row.icon}</span>
+                <span style={{ flexShrink: 0, marginTop: "0.125rem" }}>{row.icon}</span>
                 <div>
                   <div style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.25rem" }}>{row.label}</div>
                   <div style={{ fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.6 }}>{row.value}</div>
@@ -1990,7 +1991,7 @@ const RHYTHM_POOLS: Record<RhythmLevel, RhythmPattern[]> = {
   level1: RHYTHMS_LEVEL1, level2: RHYTHMS_LEVEL2, level3: RHYTHMS_LEVEL3,
 };
 const RHYTHM_LEVEL_LABELS: Record<RhythmLevel, string> = {
-  level1: "⭐ Easy", level2: "⭐⭐ Medium", level3: "⭐⭐⭐ Hard",
+  level1: "Easy", level2: "Medium", level3: "Hard",
 };
 
 // Metronome tick: ultra-short triangle wave — sounds like a real woodblock tick
@@ -2320,7 +2321,7 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
             ))}
           </div>
 
-          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Your turn! Tap the beat 🎵</div>
+          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Your turn! Tap the beat</div>
 
           {/* Metronome + replay row */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
@@ -2338,7 +2339,7 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
           <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap", justifyContent: "center", minHeight: 32 }}>
             {Array.from({ length: patRef.current?.beats.length ?? 4 }).map((_, i) => (
               <div key={i} style={{ fontSize: i < tapCount ? "1.5rem" : "1.1rem", transition: "font-size 0.1s", opacity: i < tapCount ? 1 : 0.25, lineHeight: 1 }}>
-                {i < tapCount ? "⭐" : "○"}
+                {i < tapCount ? "★" : "○"}
               </div>
             ))}
           </div>
@@ -2566,7 +2567,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
 
   const games = [
     {
-      view: "noteId" as View, icon: "🎵", title: "Note Identification", category: "Piano",
+      view: "noteId" as View, icon: "♪", title: "Note Identification", category: "Piano",
       desc: "A note flashes on the staff — name it as fast as you can. 30s rounds, streak multipliers.",
       badge: scores.noteId_treble > 0 ? `🏆 ${Math.max(scores.noteId_treble, scores.noteId_bass).toLocaleString()}` : null,
       active: true,
@@ -2597,7 +2598,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       badge: null, active: true,
     },
     {
-      view: "rcm" as View, icon: "📋", title: "RCM Exam Guide", category: "Reference",
+      view: "rcm" as View, icon: "≡", title: "RCM Exam Guide", category: "Reference",
       desc: "Level-by-level breakdown of exam requirements: pieces, technical, ear training, theory co-requisites, and passing marks.",
       badge: null, active: true,
     },
@@ -2610,7 +2611,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       desc: "Listen to a rhythm, then tap it back. 5 rounds scored on accuracy. Three difficulty levels.", badge: null, active: false,
     },
     {
-      view: "fretboard" as View, icon: "🎸", title: "Fretboard Notes", category: "Guitar",
+      view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar",
       desc: "A fret position lights up on the guitar neck — name the note. Three levels: open position to full neck.", badge: null, active: true,
     },
     {
@@ -2658,7 +2659,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
           <Link href="/student/pitch" style={{ textDecoration: "none" }}>
             <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(20,184,166,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.2rem" }}>🎹</div>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(20,184,166,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Piano size={22} strokeWidth={1.5} color="rgb(20,184,166)" /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>Pitch Trainer</span>
@@ -2690,7 +2691,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
           <Link href="/student/reference" style={{ textDecoration: "none" }}>
             <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1.25rem 1.5rem", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(184,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.2rem" }}>🎸</div>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: "rgba(184,92,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Guitar size={22} strokeWidth={1.5} color="rgb(184,92,58)" /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>Chord Reference</span>

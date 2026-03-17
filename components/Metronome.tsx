@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { X } from "lucide-react";
 
 const MIN_BPM = 30;
 const MAX_BPM = 240;
@@ -227,9 +228,9 @@ export default function Metronome({ onClose }: MetronomeProps) {
         {onClose && (
           <button onClick={onClose} style={{
             background: "none", border: "none", cursor: "pointer",
-            color: "var(--muted)", fontSize: "1.25rem", padding: "0 0.25rem",
-            lineHeight: 1,
-          }}>×</button>
+            color: "var(--muted)", padding: "0 0.25rem",
+            lineHeight: 1, display: "flex", alignItems: "center",
+          }}><X size={18} strokeWidth={1.5} /></button>
         )}
       </div>
 

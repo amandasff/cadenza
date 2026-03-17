@@ -8,6 +8,7 @@ import { PracticeService } from "../../../../lib/services/PracticeService";
 import { Student } from "../../../../lib/models/Student";
 import type { PieceRow, StrokeData } from "../../../../lib/types";
 import { useI18n } from "../../../../lib/context/I18nContext";
+import { Pencil, Circle, X } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -686,7 +687,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
             <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, color: "#eee", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.student.performMetronome}</span>
-            <button onClick={() => setMetronomeOpen(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>×</button>
+            <button onClick={() => setMetronomeOpen(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
           </div>
 
           {/* On/off */}
@@ -735,7 +736,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
             <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, color: "#eee", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.student.performRecord}</span>
-            <button onClick={() => setRecOpen(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", fontSize: "1rem", lineHeight: 1 }}>×</button>
+            <button onClick={() => setRecOpen(false)} style={{ background: "none", border: "none", color: "#888", cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
           </div>
 
           <div style={{ textAlign: "center", fontFamily: "Inter, sans-serif", fontWeight: 300, fontSize: "1.5rem", color: recording ? "#e74c3c" : "#888", letterSpacing: "0.02em", marginBottom: "0.75rem" }}>
@@ -836,7 +837,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
           onClick={() => setTool(t => t === "pencil" ? "none" : "pencil")}
           title="Pencil"
           style={{ ...toolBtnStyle, background: tool === "pencil" ? "#fff" : "transparent", color: tool === "pencil" ? "#111" : "#aaa" }}
-        >✏️</button>
+        ><Pencil size={18} strokeWidth={1.5} /></button>
 
         {/* Annotation: Eraser */}
         <button
@@ -884,7 +885,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         <button onClick={() => setMetronomeOpen(o => !o)} title="Metronome" style={{ ...toolBtnStyle, color: metronomeOpen ? "#fff" : "#888" }}>♩</button>
 
         {/* Record toggle */}
-        <button onClick={() => setRecOpen(o => !o)} title="Record" style={{ ...toolBtnStyle, color: recOpen || recording ? "#e74c3c" : "#888" }}>⏺</button>
+        <button onClick={() => setRecOpen(o => !o)} title="Record" style={{ ...toolBtnStyle, color: recOpen || recording ? "#e74c3c" : "#888" }}><Circle size={18} fill={recOpen || recording ? "#e74c3c" : "none"} strokeWidth={recOpen || recording ? 0 : 1.5} /></button>
 
         {/* Fullscreen */}
         <button onClick={toggleFullscreen} title="Fullscreen" style={toolBtnStyle}>{fullscreen ? "⛶" : "⛶"}</button>

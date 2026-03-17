@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { X, PhoneOff } from "lucide-react";
 
 type Mode = "preview" | "recording" | "review";
 
@@ -156,12 +157,12 @@ export default function VideoRecorderModal({ uploadPath, onSend, onClose }: Prop
           zIndex: 1,
         }}
       >
-        ✕
+        <X size={18} strokeWidth={1.5} />
       </button>
 
       {error ? (
         <div style={{ color: "#fff", textAlign: "center", padding: "2rem", maxWidth: 320 }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>📵</div>
+          <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}><PhoneOff size={32} strokeWidth={1.5} color="rgba(255,255,255,0.7)" /></div>
           <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, opacity: 0.85 }}>{error}</p>
           <button onClick={handleClose} style={{ marginTop: "1.25rem", padding: "0.625rem 1.5rem", background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: 24, cursor: "pointer", fontSize: "0.875rem" }}>Close</button>
         </div>

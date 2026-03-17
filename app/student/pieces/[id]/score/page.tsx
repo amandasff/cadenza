@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import { useI18n } from "../../../../../lib/context/I18nContext";
+import { Pause, Play, Square, Music } from "lucide-react";
 
 declare global {
   interface Window { alphaTab?: any; }
@@ -140,7 +141,7 @@ export default function ScorePage() {
               fontSize: "1rem", flexShrink: 0,
             }}
           >
-            {playerState === "playing" ? "⏸" : "▶"}
+            {playerState === "playing" ? <Pause size={18} strokeWidth={1.5} /> : <Play size={18} strokeWidth={1.5} />}
           </button>
 
           {/* Stop */}
@@ -152,7 +153,7 @@ export default function ScorePage() {
               display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem",
             }}
           >
-            ⏹
+            <Square size={18} strokeWidth={1.5} />
           </button>
 
           {/* Speed */}
@@ -190,7 +191,7 @@ export default function ScorePage() {
             background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8,
             textAlign: "center", fontFamily: "Inter, sans-serif",
           }}>
-            <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>🎵</div>
+            <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}><Music size={32} strokeWidth={1.5} color="var(--muted)" /></div>
             <div style={{ fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.5rem" }}>
               {error}
             </div>

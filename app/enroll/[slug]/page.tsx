@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, use } from "react";
+import { Check } from "lucide-react";
 
 interface StudioInfo {
   id: string;
@@ -144,7 +145,7 @@ export default function EnrollPage({ params }: { params: Promise<{ slug: string 
     return (
       <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#faf9f7", padding: "2rem" }}>
         <div style={{ textAlign: "center", maxWidth: 480 }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>✓</div>
+          <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}><Check size={40} strokeWidth={2} color="#2d8a4e" /></div>
           <h1 style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.5rem", color: "#2c2c2c", margin: "0 0 0.75rem" }}>
             Application received
           </h1>

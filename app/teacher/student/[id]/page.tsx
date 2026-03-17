@@ -16,6 +16,7 @@ import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeRe
 import YouTubeSearch from "../../../../components/YouTubeSearch";
 import { useLesson } from "../../../../lib/context/LessonContext";
 import { useI18n } from "../../../../lib/context/I18nContext";
+import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown } from "lucide-react";
 
 const CATEGORIES_BASE: { value: string; colorKey: keyof typeof CATEGORY_COLORS }[] = [
   { value: "technique",    colorKey: "technique" },
@@ -288,7 +289,7 @@ function PieceBlock({
             title={piece.sheet_music_url ? t.pieces.replaceSheetMusic : t.pieces.uploadSheetMusic}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingPdf ? "default" : "pointer", opacity: uploadingPdf ? 0.5 : 1 }}
           >
-            {uploadingPdf ? "…" : piece.sheet_music_url ? "📄✓" : "📄+"}
+            {uploadingPdf ? "…" : piece.sheet_music_url ? <><FileText size={12} strokeWidth={1.5} /><Check size={10} strokeWidth={2} /></> : <><FileText size={12} strokeWidth={1.5} />+</>}
           </label>
           <input
             id={sheetInputId}
@@ -304,7 +305,7 @@ function PieceBlock({
             title={piece.score_url ? t.pieces.replaceScore : t.pieces.uploadScore}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingScore ? "default" : "pointer", opacity: uploadingScore ? 0.5 : 1 }}
           >
-            {uploadingScore ? "…" : piece.score_url ? "🎵✓" : "🎵+"}
+            {uploadingScore ? "…" : piece.score_url ? <><Music size={12} strokeWidth={1.5} /><Check size={10} strokeWidth={2} /></> : <><Music size={12} strokeWidth={1.5} />+</>}
           </label>
           <input
             id={scoreInputId}
@@ -319,7 +320,7 @@ function PieceBlock({
             title="Convert a photo or screenshot of sheet music to a playable score (AI)"
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: aiConverting ? "default" : "pointer", opacity: aiConverting ? 0.5 : 1 }}
           >
-            {aiConverting ? "⏳" : "🤖"}
+            {aiConverting ? <Hourglass size={12} strokeWidth={1.5} /> : <Bot size={12} strokeWidth={1.5} />}
           </label>
           <input
             id={`ai-score-${piece.id}`}
@@ -333,7 +334,7 @@ function PieceBlock({
             title="Paste screenshot from clipboard (Ctrl+V / ⌘V)"
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", background: pasteMode ? "var(--charcoal)" : "none", color: pasteMode ? "var(--white)" : "var(--muted)" }}
           >
-            📋
+            <Clipboard size={12} strokeWidth={1.5} />
           </button>
           {/* Recordings toggle */}
           <button
@@ -371,7 +372,7 @@ function PieceBlock({
               Upload {pendingPastes.length}
             </button>
           )}
-          <button onClick={cancelPaste} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
+          <button onClick={cancelPaste} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", lineHeight: 1, padding: 0 }}><X size={14} strokeWidth={1.5} /></button>
         </div>
       )}
 
@@ -389,7 +390,7 @@ function PieceBlock({
                     <img src={rec.thumbnail_url} alt="" style={{ width: 48, height: 27, objectFit: "cover", borderRadius: 2, flexShrink: 0 }} />
                   )}
                   <span style={{ flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {rec.is_primary && <span style={{ color: "var(--muted)", marginRight: "0.25rem" }}>★</span>}
+                    {rec.is_primary && <Star size={10} fill="currentColor" strokeWidth={0} style={{ marginRight: "0.25rem", color: "var(--muted)", verticalAlign: "middle" }} />}
                     {rec.title}
                   </span>
                   <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0 }}>
@@ -398,13 +399,13 @@ function PieceBlock({
                         onClick={() => onSetPrimaryRecording(rec.id, piece.id)}
                         style={{ ...ghostBtnStyle, padding: "0.125rem 0.375rem", fontSize: "0.5625rem" }}
                         title="Set as primary"
-                      >★</button>
+                      ><Star size={10} fill="currentColor" strokeWidth={0} /></button>
                     )}
                     <button
                       onClick={() => onRemoveRecording(rec.id, piece.id)}
                       style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, cursor: "pointer", color: "var(--muted)", fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}
                       title="Remove"
-                    >✕</button>
+                    ><X size={12} strokeWidth={1.5} /></button>
                   </div>
                 </div>
               ))}
@@ -997,10 +998,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       {/* Quick links to sub-pages */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.625rem" }}>
         {[
-          { label: t.teacher.lessonLog, href: `/teacher/student/${id}/lesson/log`, icon: "📋" },
-          { label: t.teacher.rcmPrep, href: `/teacher/student/${id}/rcm`, icon: "🎓" },
-          { label: t.teacher.reports, href: `/teacher/student/${id}/reports`, icon: "📄" },
-          { label: t.teacher.billing, href: `/teacher/billing/${id}`, icon: "💳" },
+          { label: t.teacher.lessonLog, href: `/teacher/student/${id}/lesson/log`, icon: <Clipboard size={20} strokeWidth={1.5} /> },
+          { label: t.teacher.rcmPrep, href: `/teacher/student/${id}/rcm`, icon: <BookOpen size={20} strokeWidth={1.5} /> },
+          { label: t.teacher.reports, href: `/teacher/student/${id}/reports`, icon: <FileText size={20} strokeWidth={1.5} /> },
+          { label: t.teacher.billing, href: `/teacher/billing/${id}`, icon: <CreditCard size={20} strokeWidth={1.5} /> },
         ].map(link => (
           <Link
             key={link.href}
@@ -1030,7 +1031,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-            <span style={{ fontSize: "1rem" }}>🤖</span>
+            <Bot size={18} strokeWidth={1.5} color="var(--muted)" />
             <div>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
                 {t.teacher.preLessonBrief}
@@ -1040,8 +1041,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
               </div>
             </div>
           </div>
-          <span style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
-            {briefLoading ? "…" : briefOpen ? "▲" : "▼"}
+          <span style={{ color: "var(--muted)" }}>
+            {briefLoading ? "…" : briefOpen ? <ChevronUp size={16} strokeWidth={1.5} /> : <ChevronDown size={16} strokeWidth={1.5} />}
           </span>
         </button>
 
@@ -1106,7 +1107,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             </p>
             {studentAssignments.map(a => {
               const RATING_COLORS: Record<string, string> = { struggling: "#dc2626", getting_there: "#d97706", nailed_it: "#16a34a" };
-              const RATING_EMOJI: Record<string, string> = { struggling: "😓", getting_there: "🙂", nailed_it: "🎉" };
+              const RATING_ICON: Record<string, React.ReactNode> = { struggling: <Frown size={14} strokeWidth={1.5} />, getting_there: <Smile size={14} strokeWidth={1.5} />, nailed_it: <PartyPopper size={14} strokeWidth={1.5} /> };
               return (
                 <div key={a.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
                   <div style={{
@@ -1124,8 +1125,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                     )}
                   </div>
                   {a.completion?.self_rating && (
-                    <span style={{ fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", color: RATING_COLORS[a.completion.self_rating], fontWeight: 600, flexShrink: 0 }}>
-                      {RATING_EMOJI[a.completion.self_rating]}
+                    <span style={{ color: RATING_COLORS[a.completion.self_rating], flexShrink: 0, display: "inline-flex" }}>
+                      {RATING_ICON[a.completion.self_rating]}
                     </span>
                   )}
                 </div>
@@ -1166,7 +1167,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#c0392b", flex: 1, lineHeight: 1.5 }}>
                   {uploadError}
                 </span>
-                <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontSize: "1rem", lineHeight: 1, padding: 0, flexShrink: 0 }}>✕</button>
+                <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#c0392b", lineHeight: 1, padding: 0, flexShrink: 0 }}><X size={14} strokeWidth={1.5} /></button>
               </div>
             )}
 
@@ -1208,14 +1209,14 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                   >
                     {formPasteReady
                       ? sheetFiles.length > 0 ? `${sheetFiles.length} pasted — paste more or click to stop` : "Ready — Ctrl+V / ⌘V"
-                      : "📋 Paste screenshots"}
+                      : <><Clipboard size={12} strokeWidth={1.5} /> Paste screenshots</>}
                   </button>
                   {sheetFiles.length > 0 && (
                     <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       {sheetFiles.length === 1
-                        ? `📄 ${sheetFiles[0].name}`
-                        : `🖼 ${sheetFiles.length} images selected`}
-                      <button type="button" onClick={() => setSheetFiles([])} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.75rem", padding: 0, lineHeight: 1 }}>✕</button>
+                        ? <><FileText size={12} strokeWidth={1.5} style={{ verticalAlign: "middle" }} /> {sheetFiles[0].name}</>
+                        : <><Image size={12} strokeWidth={1.5} style={{ verticalAlign: "middle" }} /> {sheetFiles.length} images selected</>}
+                      <button type="button" onClick={() => setSheetFiles([])} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: 0, lineHeight: 1 }}><X size={12} strokeWidth={1.5} /></button>
                     </div>
                   )}
                 </div>

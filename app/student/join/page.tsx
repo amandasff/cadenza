@@ -5,6 +5,7 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { StudioService } from "../../../lib/services/StudioService";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Piano } from "lucide-react";
 
 type StudioEntry = { id: string; name: string; teacher_name: string };
 type Tab = "search" | "code";
@@ -178,7 +179,7 @@ function StudentJoinInner() {
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎹</div>
+          <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}><Piano size={48} strokeWidth={1.5} color="var(--charcoal)" /></div>
           <h1 style={{
             fontFamily: "Cormorant Garamond, Georgia, serif",
             fontWeight: 500,

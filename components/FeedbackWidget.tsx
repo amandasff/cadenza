@@ -3,13 +3,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/context/I18nContext";
+import { Bug, Sparkles, MessageCircle, X } from "lucide-react";
 
 type FeedbackType = "bug" | "feature" | "general";
 
-const TYPES: { value: FeedbackType; label: string; emoji: string }[] = [
-  { value: "bug",     label: "Bug",            emoji: "🐛" },
-  { value: "feature", label: "Feature request", emoji: "✨" },
-  { value: "general", label: "General",         emoji: "💬" },
+const TYPES: { value: FeedbackType; label: string; icon: React.ReactNode }[] = [
+  { value: "bug",     label: "Bug",            icon: <Bug size={12} strokeWidth={1.5} /> },
+  { value: "feature", label: "Feature request", icon: <Sparkles size={12} strokeWidth={1.5} /> },
+  { value: "general", label: "General",         icon: <MessageCircle size={12} strokeWidth={1.5} /> },
 ];
 
 export default function FeedbackWidget() {
@@ -98,15 +99,15 @@ export default function FeedbackWidget() {
             </span>
             <button
               onClick={() => setOpen(false)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1rem", lineHeight: 1, padding: 0 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              ✕
+              <X size={16} strokeWidth={1.5} />
             </button>
           </div>
 
           {status === "sent" ? (
             <div style={{ padding: "2rem 1rem", textAlign: "center" }}>
-              <div style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>🙏</div>
+              <div style={{ marginBottom: "0.5rem" }}></div>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 600, color: "var(--charcoal)" }}>
                 {t.common.feedbackThanks}
               </div>
@@ -127,9 +128,10 @@ export default function FeedbackWidget() {
                       color: type === t.value ? "var(--white)" : "var(--muted)",
                       fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600,
                       letterSpacing: "0.03em", transition: "all 0.12s",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem",
                     }}
                   >
-                    {t.emoji} {t.label}
+                    {t.icon} {t.label}
                   </button>
                 ))}
               </div>
@@ -197,7 +199,7 @@ export default function FeedbackWidget() {
         }}
         aria-label="Send feedback"
       >
-        {open ? "✕" : "?"}
+        {open ? <X size={18} strokeWidth={1.5} /> : "?"}
       </button>
     </div>
   );

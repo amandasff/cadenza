@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useTheme, FunThemeVars } from "@/lib/context/ThemeContext";
+import { Undo, RefreshCw, Bot, Sparkles, Palette } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -216,8 +217,8 @@ export default function FunModeCanvas({ onClose }: Props) {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1A1714", letterSpacing: "-0.01em" }}>
-              Draw your doodle ✏️
+            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#1A1714", letterSpacing: "-0.01em", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              Draw your doodle
             </div>
             <div style={{ fontSize: "0.6875rem", color: "#9A9590", marginTop: 2 }}>
               It'll float in the background as you use the app
@@ -233,9 +234,10 @@ export default function FunModeCanvas({ onClose }: Props) {
                 padding: "0.3rem 0.625rem", cursor: canUndo ? "pointer" : "default",
                 fontSize: "0.75rem", color: canUndo ? "#1A1714" : "#C8C3B9",
                 transition: "all 0.12s",
+                display: "flex", alignItems: "center", gap: "0.25rem",
               }}
             >
-              ↩ Undo
+              <Undo size={12} strokeWidth={1.5} /> Undo
             </button>
             <button onClick={clear} style={{
               background: "none", border: "1px solid #E8E3D9", borderRadius: 6,
@@ -310,7 +312,7 @@ export default function FunModeCanvas({ onClose }: Props) {
               cursor: "pointer", fontWeight: isEraser ? 600 : 400, color: "#1A1714",
             }}
           >
-            ⬜ Erase
+            Erase
           </button>
 
           {/* Brush sizes */}
@@ -340,8 +342,8 @@ export default function FunModeCanvas({ onClose }: Props) {
 
         {/* AI Image Generator */}
         <div style={{ borderTop: "1px solid #E8E3D9", paddingTop: "0.875rem" }}>
-          <div style={{ fontSize: "0.7rem", color: "#9A9590", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-            🤖 AI image — describe anything!
+          <div style={{ fontSize: "0.7rem", color: "#9A9590", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <Bot size={12} strokeWidth={1.5} /> AI image — describe anything!
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <input
@@ -372,10 +374,10 @@ export default function FunModeCanvas({ onClose }: Props) {
             >
               {aiLoading ? (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-                  <span style={{ display: "inline-block", animation: "spin 1s linear infinite", fontSize: "0.875rem" }}>⟳</span>
+                  <span style={{ display: "inline-block", animation: "spin 1s linear infinite", lineHeight: 1 }}><RefreshCw size={14} strokeWidth={1.5} /></span>
                   <span>Gen...</span>
                 </span>
-              ) : "✨ Generate"}
+              ) : <><Sparkles size={14} strokeWidth={1.5} /> Generate</>}
             </button>
           </div>
           {aiError && <div style={{ fontSize: "0.7rem", color: "#B85C3A", marginTop: "0.375rem" }}>{aiError}</div>}
@@ -391,8 +393,8 @@ export default function FunModeCanvas({ onClose }: Props) {
 
         {/* AI Theme Generator */}
         <div style={{ borderTop: "1px solid #E8E3D9", paddingTop: "0.875rem" }}>
-          <div style={{ fontSize: "0.7rem", color: "#9A9590", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-            ✨ AI theme magic
+          <div style={{ fontSize: "0.7rem", color: "#9A9590", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <Sparkles size={12} strokeWidth={1.5} /> AI theme magic
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <input
@@ -432,7 +434,7 @@ export default function FunModeCanvas({ onClose }: Props) {
                   cursor: "pointer", fontSize: "0.8125rem", color: "#9A9590",
                 }}
               >
-                ↺
+                <RefreshCw size={14} strokeWidth={1.5} />
               </button>
             )}
           </div>
@@ -454,7 +456,7 @@ export default function FunModeCanvas({ onClose }: Props) {
             border: "none", background: "#1A1714", color: "#FFFFFF",
             cursor: "pointer", fontSize: "0.875rem", fontWeight: 600,
           }}>
-            Done — use as my wallpaper 🎨
+            Done — use as my wallpaper
           </button>
         </div>
       </div>

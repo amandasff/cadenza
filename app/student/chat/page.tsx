@@ -9,6 +9,7 @@ import VideoRecorderModal from "../../../components/VideoRecorderModal";
 import type { MessageRow } from "../../../lib/types";
 import AudioPlayer from "../../../components/AudioPlayer";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Hourglass, Square, Mic, Video, Image, X } from "lucide-react";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -470,13 +471,13 @@ export default function StudentChat() {
       {tab === "private" && audioError && (
         <div style={{ padding: "0.375rem 1rem", background: "var(--error-bg, #fff0f0)", borderTop: "1px solid var(--error, #d00)", fontSize: "0.75rem", color: "var(--error, #d00)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <span>{audioError}</span>
-          <button onClick={clearError} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
+          <button onClick={clearError} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", display: "flex", alignItems: "center" }}><X size={14} strokeWidth={1.5} /></button>
         </div>
       )}
       {tab === "private" && imageError && (
         <div style={{ padding: "0.375rem 1rem", background: "var(--error-bg, #fff0f0)", borderTop: "1px solid var(--error, #d00)", fontSize: "0.75rem", color: "var(--error, #d00)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <span>{imageError}</span>
-          <button onClick={() => setImageError(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", fontSize: "0.75rem" }}>✕</button>
+          <button onClick={() => setImageError(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", display: "flex", alignItems: "center" }}><X size={14} strokeWidth={1.5} /></button>
         </div>
       )}
       {tab === "private" && (
@@ -496,7 +497,7 @@ export default function StudentChat() {
               transition: "all 0.15s",
             }}
           >
-            {uploadingAudio ? "⏳" : isRecording ? `⏹ ${recordingSeconds}s` : "🎙"}
+            {uploadingAudio ? <Hourglass size={18} strokeWidth={1.5} /> : isRecording ? <><Square size={14} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle" }} /> {recordingSeconds}s</> : <Mic size={18} strokeWidth={1.5} />}
           </button>
           {/* Camera button — video message */}
           <button
@@ -511,7 +512,7 @@ export default function StudentChat() {
               transition: "all 0.15s",
             }}
           >
-            📹
+            <Video size={18} strokeWidth={1.5} />
           </button>
           {/* Hidden image input */}
           <input ref={imageInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) { void handleSendImage(f); e.target.value = ''; } }} />
@@ -527,7 +528,7 @@ export default function StudentChat() {
               fontSize: "1rem", flexShrink: 0, marginBottom: "0.0625rem",
             }}
           >
-            {sendingImage ? "⏳" : "🖼"}
+            {sendingImage ? <Hourglass size={18} strokeWidth={1.5} /> : <Image size={18} strokeWidth={1.5} />}
           </button>
           <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId || isRecording} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId && !isRecording ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId && !isRecording ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>{tr.common.send}</button>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, use, useCallback } from "react";
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { useAuth } from "../../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import { BillingService } from "../../../../../lib/services/BillingService";
@@ -254,7 +255,7 @@ export default function FamilyBillingPage({ params }: { params: Promise<{ family
                       </div>
                       {isPaid && (
                         <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#2d8a4e" }}>
-                          ✓ Paid
+                          <Check size={12} strokeWidth={2} style={{ verticalAlign: "middle", marginRight: "0.2rem" }} />Paid
                         </div>
                       )}
                       {m.invoice?.status === "unpaid" && (
@@ -327,14 +328,14 @@ export default function FamilyBillingPage({ params }: { params: Promise<{ family
                   disabled={markingPaid}
                   style={{ ...primaryBtn, background: "#2d8a4e", opacity: markingPaid ? 0.6 : 1 }}
                 >
-                  {markingPaid ? "Saving…" : `Mark ${privateMembers.filter(m => m.invoice?.status === "unpaid").length > 1 ? "All" : ""} Paid ✓`}
+                  {markingPaid ? "Saving…" : <>{`Mark ${privateMembers.filter(m => m.invoice?.status === "unpaid").length > 1 ? "All" : ""} Paid`} <Check size={12} strokeWidth={2} /></>}
                 </button>
               </div>
             )}
 
             {allPaid && (
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "#2d8a4e", fontWeight: 500 }}>
-                ✓ All invoices paid — {fmt(paidCents)} received
+                <Check size={14} strokeWidth={2} style={{ verticalAlign: "middle", marginRight: "0.25rem" }} />All invoices paid — {fmt(paidCents)} received
               </div>
             )}
           </div>

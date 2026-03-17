@@ -10,6 +10,7 @@ import Link from "next/link";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import type { YouTubeResult, PieceRecording } from "../../../lib/types";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Sparkles, Music2, Play, Star, X } from "lucide-react";
 
 export default function MyPieces() {
   const { t } = useI18n();
@@ -27,11 +28,11 @@ export default function MyPieces() {
     { category: "free",          label: t.student.sectionOther,         color: "var(--muted)" },
   ];
 
-  const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-    learning:          { label: t.student.statusLearning,          emoji: "📖", color: "var(--butter)", bg: "rgba(230,168,23,0.12)" },
-    polishing:         { label: t.student.statusPolishing,         emoji: "✨", color: "var(--sky)", bg: "rgba(74,123,196,0.12)" },
-    performance_ready: { label: t.student.statusPerformanceReady,  emoji: "🎭", color: "var(--sage)", bg: "rgba(91,158,121,0.14)" },
-    completed:         { label: t.student.statusCompleted,         emoji: "🏆", color: "#7A6A5A", bg: "rgba(138,122,106,0.1)" },
+  const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
+    learning:          { label: t.student.statusLearning,          icon: <Sparkles size={12} strokeWidth={1.5} />, color: "var(--butter)", bg: "rgba(230,168,23,0.12)" },
+    polishing:         { label: t.student.statusPolishing,         icon: <Sparkles size={12} strokeWidth={1.5} />, color: "var(--sky)", bg: "rgba(74,123,196,0.12)" },
+    performance_ready: { label: t.student.statusPerformanceReady,  icon: <Music2 size={12} strokeWidth={1.5} />, color: "var(--sage)", bg: "rgba(91,158,121,0.14)" },
+    completed:         { label: t.student.statusCompleted,         icon: <Star size={12} strokeWidth={1.5} />, color: "#7A6A5A", bg: "rgba(138,122,106,0.1)" },
   };
 
   const [pieces, setPieces]               = useState<PieceWithGoals[]>([]);
@@ -323,7 +324,7 @@ export default function MyPieces() {
       {uploadError && (
         <div style={{ background: "var(--error-bg)", border: "1px solid rgba(192,80,80,0.3)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--error)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>{uploadError}</span>
-          <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--error)", fontSize: "1rem", padding: 0 }}>✕</button>
+          <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--error)", padding: 0, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
         </div>
       )}
 
@@ -358,7 +359,7 @@ export default function MyPieces() {
                   const hasRecs  = piece.recordings.length > 0;
                   const managing = managingPieceId === piece.id;
                   const isPasting = pasteModeFor === piece.id;
-                  const statusCfg = STATUS_CONFIG[piece.status] ?? { label: piece.status, emoji: "📌", color: "var(--muted)", bg: "rgba(0,0,0,0.04)" };
+                  const statusCfg = STATUS_CONFIG[piece.status] ?? { label: piece.status, icon: null, color: "var(--muted)", bg: "rgba(0,0,0,0.04)" };
                   const scoreUrl = (piece as PieceWithGoals & { score_url?: string }).score_url;
 
                   return (
@@ -379,8 +380,9 @@ export default function MyPieces() {
                             padding: "0.2rem 0.625rem", borderRadius: 99,
                             background: statusCfg.bg, color: statusCfg.color,
                             fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem",
+                            display: "inline-flex", alignItems: "center", gap: "0.25rem",
                           }}>
-                            {statusCfg.emoji} {statusCfg.label}
+                            {statusCfg.icon} {statusCfg.label}
                           </span>
                         </div>
 
@@ -479,7 +481,7 @@ export default function MyPieces() {
                             color: managing ? "var(--charcoal)" : "var(--muted)",
                           }}
                         >
-                          {managing ? `▲ ${t.common.close}` : `··· ${t.student.more}`}
+                          {managing ? <><X size={12} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />{t.common.close}</> : `··· ${t.student.more}`}
                         </button>
                       </div>
 
@@ -575,7 +577,7 @@ export default function MyPieces() {
                                     {t.student.uploadCount.replace("{n}", String(pendingPastes.length))}
                                   </button>
                                 )}
-                                <button onClick={cancelPasteMode} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
+                                <button onClick={cancelPasteMode} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", lineHeight: 1, padding: 0, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
                               </div>
                             )}
                           </div>
@@ -648,12 +650,12 @@ export default function MyPieces() {
                                           const idx = piece.recordings.findIndex(r => r.id === rec.id);
                                           player.play(tracks[idx], tracks);
                                         }}
-                                        style={{ ...btnGhost, fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}
-                                      >▶</button>
+                                        style={{ ...btnGhost, padding: "0.25rem 0.5rem", display: "flex", alignItems: "center" }}
+                                      ><Play size={12} strokeWidth={1.5} /></button>
                                       {!rec.is_primary && (
-                                        <button onClick={() => handleSetPrimary(piece.id, rec.id)} title="Set as main" style={{ ...btnGhost, fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}>★</button>
+                                        <button onClick={() => handleSetPrimary(piece.id, rec.id)} title="Set as main" style={{ ...btnGhost, padding: "0.25rem 0.5rem", display: "flex", alignItems: "center" }}><Star size={12} strokeWidth={1.5} /></button>
                                       )}
-                                      <button onClick={() => handleRemoveRecording(piece.id, rec.id)} title="Remove" style={{ ...btnGhost, color: "var(--error)", fontSize: "0.6875rem", padding: "0.25rem 0.5rem" }}>✕</button>
+                                      <button onClick={() => handleRemoveRecording(piece.id, rec.id)} title="Remove" style={{ ...btnGhost, color: "var(--error)", padding: "0.25rem 0.5rem", display: "flex", alignItems: "center" }}><X size={12} strokeWidth={1.5} /></button>
                                     </div>
                                   </div>
                                 ))}

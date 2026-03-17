@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { usePlayer } from "../lib/context/PlayerContext";
+import { Pause, Play, X, SkipBack, SkipForward, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function MiniPlayer() {
   const { current, queue, queueIndex, next, prev, stop, playIndex, discoverTrack, stopDiscover, suppressMiniPlayer } = usePlayer();
@@ -84,13 +85,13 @@ export default function MiniPlayer() {
             }}
             style={{ background: "none", border: "none", cursor: "pointer", color: "#F0EDE7", padding: "0 0.25rem", fontSize: "1rem", lineHeight: 1 }}
           >
-            {playing ? "⏸" : "▶"}
+            {playing ? <Pause size={16} strokeWidth={1.5} /> : <Play size={16} strokeWidth={1.5} />}
           </button>
           <button
             onClick={stopDiscover}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: "0 0.25rem", fontSize: "0.875rem", lineHeight: 1 }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: "0 0.25rem", lineHeight: 1, display: "flex", alignItems: "center" }}
           >
-            ✕
+            <X size={14} strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -177,12 +178,12 @@ export default function MiniPlayer() {
 
           {/* Controls */}
           <div style={{ display: "flex", alignItems: "center", gap: 0, flexShrink: 0 }}>
-            <button onClick={hasPrev ? prev : undefined} style={hasPrev ? btnStyle : dimBtnStyle} title="Previous">⏮</button>
-            <button onClick={() => setExpanded(v => !v)} style={btnStyle} title={expanded ? "Minimise" : "Expand"}>
-              {expanded ? "▾" : "▴"}
+            <button onClick={hasPrev ? prev : undefined} style={{ ...hasPrev ? btnStyle : dimBtnStyle, display: "flex", alignItems: "center" }} title="Previous"><SkipBack size={16} strokeWidth={1.5} /></button>
+            <button onClick={() => setExpanded(v => !v)} style={{ ...btnStyle, display: "flex", alignItems: "center" }} title={expanded ? "Minimise" : "Expand"}>
+              {expanded ? <ChevronDown size={16} strokeWidth={1.5} /> : <ChevronUp size={16} strokeWidth={1.5} />}
             </button>
-            <button onClick={hasNext ? next : undefined} style={hasNext ? btnStyle : dimBtnStyle} title="Next">⏭</button>
-            <button onClick={stop} style={{ ...btnStyle, marginLeft: "0.25rem", opacity: 0.6 }} title="Stop">✕</button>
+            <button onClick={hasNext ? next : undefined} style={{ ...hasNext ? btnStyle : dimBtnStyle, display: "flex", alignItems: "center" }} title="Next"><SkipForward size={16} strokeWidth={1.5} /></button>
+            <button onClick={stop} style={{ ...btnStyle, marginLeft: "0.25rem", opacity: 0.6, display: "flex", alignItems: "center" }} title="Stop"><X size={14} strokeWidth={1.5} /></button>
           </div>
         </div>
 
@@ -205,7 +206,7 @@ export default function MiniPlayer() {
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}
               >
-                {i === queueIndex ? "▶ " : ""}{t.title}
+                {i === queueIndex ? <><Play size={10} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }} /></> : ""}{t.title}
               </button>
             ))}
           </div>

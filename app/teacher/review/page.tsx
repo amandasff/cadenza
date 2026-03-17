@@ -8,6 +8,7 @@ import { StudioService } from "../../../lib/services/StudioService";
 import { Teacher } from "../../../lib/models/Teacher";
 import { useI18n } from "../../../lib/context/I18nContext";
 import type { PracticeSessionRow, ProfileRow } from "../../../lib/types";
+import { Music } from "lucide-react";
 
 export default function ReviewQueue() {
   const { user } = useAuth();
@@ -66,7 +67,7 @@ export default function ReviewQueue() {
         </div>
       ) : sessions.length === 0 ? (
         <div className="empty-state" style={{ padding: "3rem 0" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
+          <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}><Music size={40} strokeWidth={1.5} color="var(--muted)" /></div>
           <p style={{ fontWeight: 700, color: "var(--charcoal)", margin: 0 }}>{t.teacher.reviewNoSessions}</p>
           <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: "0.25rem 0 0" }}>
             {t.teacher.reviewSessionsWillAppear}

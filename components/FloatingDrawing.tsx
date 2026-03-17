@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useTheme } from "@/lib/context/ThemeContext";
+import { Pencil } from "lucide-react";
 
 const DEFAULT_EMOJIS = ["🎵", "🎶", "✨", "⭐", "🎸", "🎹"];
 
@@ -282,7 +283,7 @@ export default function FloatingDrawing() {
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
     >
-      ✏️
+      <Pencil size={16} strokeWidth={1.5} />
     </button>
   );
 }

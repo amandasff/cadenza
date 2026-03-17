@@ -446,7 +446,7 @@ const PRACTICE_GUIDES = [
   },
   {
     title: "Record yourself",
-    icon: "🎙️",
+    icon: "♪",
     color: "#E05252",
     body: "Record every practice session. You hear differently on playback — tone, timing, and dynamics that felt right often aren't. Listening critically to recordings is one of the fastest paths to improvement.",
   },
@@ -458,7 +458,7 @@ const PRACTICE_GUIDES = [
   },
   {
     title: "Warm up intentionally",
-    icon: "🔥",
+    icon: "✦",
     color: "#E67E22",
     body: "Don't warm up by playing through the piece. Use scales, arpeggios, or technical exercises. For guitarists: chromatic exercises, string skipping. Piano: Hanon, five-finger patterns, triads in all keys.",
   },
@@ -470,7 +470,7 @@ const PRACTICE_GUIDES = [
   },
   {
     title: "Performance practice",
-    icon: "🎭",
+    icon: "♬",
     color: "#8E44AD",
     body: "Once you know the piece, do full run-throughs without stopping. Getting comfortable with mistakes (recovering gracefully) is a separate skill from playing correctly. Record these run-throughs.",
   },
@@ -612,10 +612,10 @@ export default function ReferencePage() {
         <div>
           {/* Instrument picker */}
           <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap", marginBottom:"1.5rem" }}>
-            {instBtn("guitar", "🎸 Guitar")}
-            {instBtn("ukulele", "🪕 Ukulele")}
-            {instBtn("bass", "🎸 Bass")}
-            {instBtn("piano", "🎹 Piano")}
+            {instBtn("guitar", "Guitar")}
+            {instBtn("ukulele", "Ukulele")}
+            {instBtn("bass", "Bass")}
+            {instBtn("piano", "Piano")}
           </div>
 
           {/* Guitar */}

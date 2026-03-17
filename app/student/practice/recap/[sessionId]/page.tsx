@@ -5,6 +5,7 @@ import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import { useAuth } from "../../../../../lib/context/AuthContext";
 import type { PracticeSessionRow } from "../../../../../lib/types";
 import { useI18n } from "../../../../../lib/context/I18nContext";
+import { PartyPopper, Smile, Frown, Check, Bot, Gamepad2, Send, Music } from "lucide-react";
 
 // ─── Confetti ────────────────────────────────────────────────────────────────
 function Confetti() {
@@ -131,11 +132,11 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
   const { user } = useAuth();
   const firstName = user?.displayName?.split(" ")[0] ?? null;
 
-  const MOOD_DISPLAY: Record<string, { label: string; emoji: string }> = {
-    great: { label: t.student.moodGreat, emoji: "🌟" },
-    good:  { label: t.student.moodGood,  emoji: "😊" },
-    okay:  { label: t.student.moodOkay,  emoji: "😐" },
-    hard:  { label: t.student.moodHard,  emoji: "😓" },
+  const MOOD_DISPLAY: Record<string, { label: string; icon: React.ReactNode }> = {
+    great: { label: t.student.moodGreat, icon: <PartyPopper size={14} strokeWidth={1.5} /> },
+    good:  { label: t.student.moodGood,  icon: <Smile size={14} strokeWidth={1.5} /> },
+    okay:  { label: t.student.moodOkay,  icon: <Smile size={14} strokeWidth={1.5} /> },
+    hard:  { label: t.student.moodHard,  icon: <Frown size={14} strokeWidth={1.5} /> },
   };
 
   const [session, setSession] = useState<PracticeSessionRow | null>(null);
@@ -188,7 +189,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "1.75rem" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🎉</div>
+          <div style={{ marginBottom: "0.5rem", display: "flex", justifyContent: "center" }}><PartyPopper size={40} strokeWidth={1.5} color="var(--peach)" /></div>
           <h1 style={{
             fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600,
             fontSize: "1.875rem", color: "var(--charcoal)", margin: "0 0 0.25rem",
@@ -198,7 +199,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           </h1>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", margin: 0 }}>
             {fmt(session.duration_seconds)}{pieceName ? ` · ${pieceName}` : ""}
-            {moodDisplay ? `  ${moodDisplay.emoji} ${moodDisplay.label}` : ""}
+            {moodDisplay ? <>{" "}{moodDisplay.icon} {moodDisplay.label}</> : ""}
           </p>
         </div>
 
@@ -207,7 +208,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           <div className="card-base" style={{ padding: "1rem 1.125rem", marginBottom: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {wentWell && (
               <div style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start" }}>
-                <span style={{ fontSize: "0.875rem", flexShrink: 0, marginTop: "0.05rem", color: "var(--sage)" }}>✓</span>
+                <Check size={14} strokeWidth={2} color="var(--sage)" style={{ flexShrink: 0, marginTop: "0.05rem" }} />
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.55 }}>{wentWell}</div>
               </div>
             )}
@@ -227,7 +228,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           borderLeft: "3px solid var(--charcoal)",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-            <span style={{ fontSize: "1rem" }}>🤖</span>
+            <Bot size={16} strokeWidth={1.5} color="var(--charcoal)" />
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--charcoal)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
               {t.student.recapAiCoach}
             </div>
@@ -240,7 +241,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           ) : (
             <div>
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", margin: "0 0 0.25rem", fontWeight: 500 }}>
-                Coming soon ✨
+                Coming soon
               </p>
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
                 Your AI coach will listen to your sessions and give you personalized tips. Stay tuned!
@@ -256,7 +257,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           marginBottom: "1.5rem",
           display: "flex", alignItems: "center", gap: "0.625rem",
         }}>
-          <span style={{ fontSize: "1rem", flexShrink: 0 }}>📩</span>
+          <Send size={16} strokeWidth={1.5} color="var(--muted)" style={{ flexShrink: 0 }} />
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.5 }}>
             {t.student.recapSentToTeacher}
           </div>
@@ -269,7 +270,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           borderRadius: 10, padding: "1rem 1.125rem",
           marginBottom: "1.5rem",
         }}>
-          <span style={{ fontSize: "1.125rem", display: "block", marginBottom: "0.5rem" }}>🎼</span>
+          <div style={{ display: "flex", marginBottom: "0.5rem" }}><Music size={18} strokeWidth={1.5} color="var(--butter)" /></div>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: 0, lineHeight: 1.6 }}>
             {factRef.current}
           </p>
@@ -282,7 +283,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
             className="btn btn-primary"
             style={{ width: "100%", padding: "0.875rem", fontSize: "0.9375rem" }}
           >
-            🎮 Play a Game
+            <Gamepad2 size={16} strokeWidth={1.5} style={{ marginRight: "0.375rem", verticalAlign: "middle" }} />Play a Game
           </button>
           <button
             onClick={() => router.replace("/student")}

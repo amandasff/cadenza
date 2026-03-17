@@ -6,6 +6,7 @@ import type { Inspiration, YouTubeResult } from "../../../lib/types";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import { usePlayer } from "../../../lib/context/PlayerContext";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Play, Pause, Check } from "lucide-react";
 
 export default function InspirationPage() {
   const { t } = useI18n();
@@ -266,7 +267,7 @@ export default function InspirationPage() {
                   {ins.thumbnail_url ? (
                     <img src={ins.thumbnail_url} alt={ins.title} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
                   ) : (
-                    <div style={{ width: "100%", aspectRatio: "16/9", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>▶</div>
+                    <div style={{ width: "100%", aspectRatio: "16/9", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={32} strokeWidth={1.5} color="var(--muted)" /></div>
                   )}
                   {/* Play/pause overlay */}
                   <div style={{
@@ -274,7 +275,7 @@ export default function InspirationPage() {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     transition: "background 0.15s",
                   }}>
-                    {isPlaying && <div style={{ color: "#fff", fontSize: "1.75rem", lineHeight: 1 }}>⏸</div>}
+                    {isPlaying && <div style={{ color: "#fff", lineHeight: 1 }}><Pause size={28} strokeWidth={1.5} /></div>}
                   </div>
                 </div>
 
@@ -406,7 +407,7 @@ export default function InspirationPage() {
                                     cursor: "pointer",
                                   }}
                                 >
-                                  {ins.collection_name === col ? "✓ " : ""}{col}
+                                  {ins.collection_name === col ? <><Check size={12} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /></> : ""}{col}
                                 </button>
                               ))}
                               <div style={{ height: 1, background: "var(--border)" }} />

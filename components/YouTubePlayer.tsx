@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import type { PieceRecording } from "../lib/types";
+import { X, Star } from "lucide-react";
 
 export default function YouTubePlayer({
   recordings,
@@ -41,10 +42,10 @@ export default function YouTubePlayer({
           onClick={onClose}
           style={{
             background: "none", border: "none", cursor: "pointer",
-            color: "var(--muted)", fontSize: "1rem", lineHeight: 1, padding: "0 0.25rem", flexShrink: 0,
+            color: "var(--muted)", lineHeight: 1, padding: "0 0.25rem", flexShrink: 0, display: "flex", alignItems: "center",
           }}
         >
-          ✕
+          <X size={16} strokeWidth={1.5} />
         </button>
       </div>
 
@@ -79,7 +80,7 @@ export default function YouTubePlayer({
               }}
             >
               {i + 1}
-              {r.is_primary && " ★"}
+              {r.is_primary && <Star size={10} fill="currentColor" strokeWidth={0} style={{ display: "inline", marginLeft: 2, verticalAlign: "middle" }} />}
             </button>
           ))}
         </div>

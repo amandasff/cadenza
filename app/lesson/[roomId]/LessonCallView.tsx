@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import type { DailyCall, DailyParticipant } from "@daily-co/daily-js";
 import { useLesson } from "../../../lib/context/LessonContext";
 import { useRouter } from "next/navigation";
+import { MicOff, Mic, Camera, CameraOff } from "lucide-react";
 
 // Renders a single participant's video track
 function VideoTile({ participant, label }: { participant: DailyParticipant; label: string }) {
@@ -106,8 +107,8 @@ export default function LessonCallView({ studentName }: { studentName: string | 
 
       {/* Controls */}
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", justifyContent: "center", padding: "1rem", background: "rgba(0,0,0,0.5)" }}>
-        <button onClick={toggleMic} style={muted ? activeBtn : btn}>{muted ? "🔇 Unmute" : "🎙 Mute"}</button>
-        <button onClick={toggleCam} style={camOff ? activeBtn : btn}>{camOff ? "📷 Start video" : "📸 Stop video"}</button>
+        <button onClick={toggleMic} style={{ ...muted ? activeBtn : btn, display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>{muted ? <><MicOff size={16} strokeWidth={1.5} /> Unmute</> : <><Mic size={16} strokeWidth={1.5} /> Mute</>}</button>
+        <button onClick={toggleCam} style={{ ...camOff ? activeBtn : btn, display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>{camOff ? <><Camera size={16} strokeWidth={1.5} /> Start video</> : <><CameraOff size={16} strokeWidth={1.5} /> Stop video</>}</button>
         <button onClick={toggleScreen} style={sharing ? activeBtn : btn}>{sharing ? "🖥 Stop sharing" : "🖥 Share"}</button>
         <button onClick={handleLeave} style={{ ...btn, background: "#e85d4a", border: "none", marginLeft: "0.5rem" }}>End lesson</button>
       </div>

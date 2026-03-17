@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useI18n } from "@/lib/context/I18nContext";
+import { Music, X, ArrowUp, MessageCircle } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -127,8 +128,7 @@ export default function SupportChatWidget() {
                 width: 28, height: 28, borderRadius: "50%",
                 background: "rgba(255,255,255,0.12)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "0.875rem",
-              }}>🎵</div>
+              }}><Music size={14} strokeWidth={1.5} color="rgba(255,255,255,0.8)" /></div>
               <div>
                 <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, color: "#fff" }}>
                   {t.common.supportTitle}
@@ -140,9 +140,9 @@ export default function SupportChatWidget() {
             </div>
             <button
               onClick={() => setOpen(false)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.55)", fontSize: "1rem", padding: 0, lineHeight: 1 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.55)", padding: 0, lineHeight: 1, display: "flex", alignItems: "center" }}
             >
-              ✕
+              <X size={16} strokeWidth={1.5} />
             </button>
           </div>
 
@@ -212,7 +212,7 @@ export default function SupportChatWidget() {
                 fontSize: "0.875rem", transition: "background 0.12s", flexShrink: 0,
               }}
             >
-              ↑
+              <ArrowUp size={16} strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -234,7 +234,7 @@ export default function SupportChatWidget() {
         }}
         aria-label="Open support chat"
       >
-        {open ? "✕" : "💬"}
+        {open ? <X size={18} strokeWidth={1.5} /> : <MessageCircle size={18} strokeWidth={1.5} />}
       </button>
     </div>
   );

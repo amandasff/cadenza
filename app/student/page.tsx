@@ -13,7 +13,7 @@ import PushSubscribeButton from "../../components/PushSubscribeButton";
 import { usePractice } from "../../lib/context/PracticeContext";
 import Metronome from "../../components/Metronome";
 import { useI18n } from "../../lib/context/I18nContext";
-import { Flame, Snowflake, Sparkles as Sparkle, Star, Music as MusicNote, Piano as PianoKeys, Headphones, BookOpen, Brain, Mic as Microphone } from "lucide-react";
+import { Flame, Snowflake, Sparkles as Sparkle, Star, Music as MusicNote, Piano as PianoKeys, Headphones, BookOpen, Brain, Mic as Microphone, Video, Frown, Smile, PartyPopper } from "lucide-react";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -413,7 +413,7 @@ export default function ThisWeek() {
                         {text && <div style={{ fontSize: "0.75rem", color: "var(--charcoal)", lineHeight: 1.6, marginBottom: (audioUrl || lessonRoom) ? "0.5rem" : 0, overflowWrap: "break-word", wordBreak: "break-word" }}>{text}</div>}
                         {lessonRoom && (
                           <a href={`/lesson/${lessonRoom}`} onClick={e => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", padding: "0.375rem 0.75rem", borderRadius: 5, background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", textDecoration: "none" }}>
-                            📹 Join Lesson
+                            <Video size={14} strokeWidth={1.5} /> Join Lesson
                           </a>
                         )}
                         {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", height: 28, marginTop: lessonRoom ? "0.375rem" : 0 }} />}
@@ -1055,7 +1055,7 @@ export default function ThisWeek() {
 
             <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1.25rem" }}>
               {(["struggling", "getting_there", "nailed_it"] as SelfRating[]).map(r => {
-                const config = { struggling: { emoji: "😓", label: t.student.stillStruggling }, getting_there: { emoji: "🙂", label: t.student.gettingThere }, nailed_it: { emoji: "🎉", label: t.student.nailedIt } }[r];
+                const config = { struggling: { icon: <Frown size={24} strokeWidth={1.5} />, label: t.student.stillStruggling }, getting_there: { icon: <Smile size={24} strokeWidth={1.5} />, label: t.student.gettingThere }, nailed_it: { icon: <PartyPopper size={24} strokeWidth={1.5} />, label: t.student.nailedIt } }[r];
                 const selected = ratingValue === r;
                 return (
                   <button
@@ -1069,7 +1069,7 @@ export default function ThisWeek() {
                       color: "var(--charcoal)", textAlign: "center", transition: "all 0.12s",
                     }}
                   >
-                    <div style={{ fontSize: "1.5rem", marginBottom: "0.25rem" }}>{config.emoji}</div>
+                    <div style={{ marginBottom: "0.25rem", display: "flex", justifyContent: "center" }}>{config.icon}</div>
                     {config.label}
                   </button>
                 );

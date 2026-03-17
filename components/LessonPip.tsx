@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLesson } from "../lib/context/LessonContext";
 import type { DailyCall, DailyParticipant } from "@daily-co/daily-js";
+import { Music, ChevronUp, ChevronDown } from "lucide-react";
 
 function useElapsedTime(active: boolean) {
   const [secs, setSecs] = useState(0);
@@ -53,7 +54,7 @@ function PipVideoTile({ participant, small }: { participant: DailyParticipant; s
       />
       {!track && (
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: small ? "1.25rem" : "1.75rem" }}>🎵</span>
+          <Music size={small ? 20 : 28} strokeWidth={1.5} color="rgba(255,255,255,0.4)" />
         </div>
       )}
     </div>
@@ -124,7 +125,7 @@ export default function LessonPip() {
           >
             End
           </button>
-          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.625rem" }}>{collapsed ? "▲" : "▼"}</span>
+          <span style={{ color: "rgba(255,255,255,0.4)" }}>{collapsed ? <ChevronUp size={12} strokeWidth={1.5} /> : <ChevronDown size={12} strokeWidth={1.5} />}</span>
         </span>
       </div>
 

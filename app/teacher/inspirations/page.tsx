@@ -6,6 +6,7 @@ import type { Inspiration, InspirationComment, YouTubeResult } from "../../../li
 import type { Teacher } from "../../../lib/models/Teacher";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { X, Play, Pause, Check, ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
 
 interface StudentPick extends Inspiration {
   student_name: string;
@@ -293,7 +294,7 @@ export default function TeacherInspirationPage() {
                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: "0.5rem" }}>
                   {playing.title}
                 </span>
-                <button onClick={() => setPlayingId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1rem", lineHeight: 1, padding: 0 }}>✕</button>
+                <button onClick={() => setPlayingId(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: 0, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
               </div>
               <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
                 <iframe
@@ -372,14 +373,14 @@ export default function TeacherInspirationPage() {
                       {ins.thumbnail_url ? (
                         <img src={ins.thumbnail_url} alt={ins.title} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
                       ) : (
-                        <div style={{ width: "100%", aspectRatio: "16/9", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>▶</div>
+                        <div style={{ width: "100%", aspectRatio: "16/9", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={32} strokeWidth={1.5} color="var(--muted)" /></div>
                       )}
                       <div style={{
                         position: "absolute", inset: 0, background: isPlaying ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0)",
                         display: "flex", alignItems: "center", justifyContent: "center",
                         transition: "background 0.15s",
                       }}>
-                        {isPlaying && <div style={{ color: "#fff", fontSize: "1.75rem", lineHeight: 1 }}>⏸</div>}
+                        {isPlaying && <div style={{ color: "#fff", lineHeight: 1 }}><Pause size={28} strokeWidth={1.5} /></div>}
                       </div>
                     </div>
 
@@ -430,7 +431,7 @@ export default function TeacherInspirationPage() {
                             color: saveStatus.state === "error" ? "#C0392B" : saveStatus.state === "saved" ? "#2E7D52" : "var(--muted)",
                             textAlign: "center",
                           }}>
-                            {saveStatus.state === "saving" ? tr.common.saving : saveStatus.state === "saved" ? "✓ Saved" : "⚠ Couldn't save"}
+                            {saveStatus.state === "saving" ? tr.common.saving : saveStatus.state === "saved" ? <><Check size={12} strokeWidth={2} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />Saved</> : "⚠ Couldn't save"}
                           </div>
                         )}
                         <div style={{ display: "flex", gap: "0.375rem", alignItems: "center", justifyContent: "space-between" }}>
@@ -462,7 +463,7 @@ export default function TeacherInspirationPage() {
                             }}
                           >
                             <span>📂 {ins.collection_name ? `In "${ins.collection_name}"` : "Add to playlist"}</span>
-                            <span style={{ color: "var(--muted)" }}>▾</span>
+                            <span style={{ color: "var(--muted)" }}><ChevronDown size={14} strokeWidth={1.5} /></span>
                           </button>
 
                           {isPickingCollection && (
@@ -489,7 +490,7 @@ export default function TeacherInspirationPage() {
                                         cursor: "pointer",
                                       }}
                                     >
-                                      {ins.collection_name === col ? "✓ " : ""}{col}
+                                      {ins.collection_name === col ? <><Check size={12} strokeWidth={2} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} /></> : ""}{col}
                                     </button>
                                   ))}
                                   <div style={{ height: 1, background: "var(--border)" }} />
@@ -642,7 +643,7 @@ function PickCards({ items, newComments, setNewComments, submittingComment, togg
             {ins.thumbnail_url ? (
               <img src={ins.thumbnail_url} alt={ins.title} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
             ) : (
-              <div style={{ width: "100%", aspectRatio: "16/9", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>▶</div>
+              <div style={{ width: "100%", aspectRatio: "16/9", background: "var(--cream)", display: "flex", alignItems: "center", justifyContent: "center" }}><Play size={32} strokeWidth={1.5} color="var(--muted)" /></div>
             )}
           </a>
 
@@ -669,9 +670,12 @@ function PickCards({ items, newComments, setNewComments, submittingComment, togg
                 textAlign: "left",
               }}
             >
+              <><MessageCircle size={14} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
               {ins.comments.length > 0
-                ? `💬 ${ins.comments.length} comment${ins.comments.length !== 1 ? "s" : ""} ${ins.showComments ? "▴" : "▾"}`
-                : `💬 ${tr.teacher.inspirationsLeaveComment} ${ins.showComments ? "▴" : "▾"}`}
+                ? `${ins.comments.length} comment${ins.comments.length !== 1 ? "s" : ""} `
+                : `${tr.teacher.inspirationsLeaveComment} `}
+              {ins.showComments ? <ChevronUp size={12} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle" }} /> : <ChevronDown size={12} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle" }} />}
+              </>
             </button>
 
             {/* Comment thread */}

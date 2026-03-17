@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useRecording } from "../lib/context/RecordingContext";
+import { X } from "lucide-react";
 
 /**
  * Floating pill that stays visible across page navigations while a voice
@@ -42,9 +43,9 @@ export default function RecordingIndicator() {
           <span style={{ flex: 1, lineHeight: 1.4 }}>{audioError}</span>
           <button
             onClick={clearError}
-            style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 0, fontSize: "1rem", flexShrink: 0 }}
+            style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 0, flexShrink: 0, display: "flex", alignItems: "center" }}
           >
-            ✕
+            <X size={16} strokeWidth={1.5} />
           </button>
         </div>
       )}

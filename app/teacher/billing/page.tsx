@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { RefreshCw, Users } from "lucide-react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { BillingService } from "../../../lib/services/BillingService";
@@ -220,13 +221,13 @@ export default function BillingPage() {
                         <Link
                           href={`/teacher/billing/family/${row.config.family_id}`}
                           onClick={e => e.stopPropagation()}
-                          style={{ color: "var(--charcoal)", fontWeight: 500, textDecoration: "none" }}
+                          style={{ color: "var(--charcoal)", fontWeight: 500, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.2rem" }}
                         >
-                          👨‍👩‍👧 Family
+                          <Users size={12} strokeWidth={1.5} /> Family
                         </Link></>
                       )}
                       {row.config.makeup_credits > 0 && !isStudio && (
-                        <><span>·</span><span style={{ color: "#e09b3d" }}>🔄 {row.config.makeup_credits} makeup{row.config.makeup_credits !== 1 ? "s" : ""}</span></>
+                        <><span>·</span><span style={{ color: "#e09b3d", display: "inline-flex", alignItems: "center", gap: "0.2rem" }}><RefreshCw size={12} strokeWidth={1.5} /> {row.config.makeup_credits} makeup{row.config.makeup_credits !== 1 ? "s" : ""}</span></>
                       )}
                     </div>
                   </div>

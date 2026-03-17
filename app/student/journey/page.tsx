@@ -6,6 +6,7 @@ import { PortfolioService, type PortfolioItemRow } from "../../../lib/services/P
 import { Student } from "../../../lib/models/Student";
 import AudioPlayer from "../../../components/AudioPlayer";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { Flame, Music, Play, Clapperboard, Video, Circle, Mic, Camera, X } from "lucide-react";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { year: "numeric", month: "long", day: "numeric" });
@@ -501,7 +502,7 @@ export default function JourneyPage() {
           {[
             { label: t.student.followers, value: followerCount, clickable: true, key: "followers" as const },
             { label: t.student.following, value: followingCount, clickable: true, key: "following" as const },
-            { label: t.student.streak, value: `${profile?.streak_days ?? 0}🔥`, clickable: false, key: "streak" as const },
+            { label: t.student.streak, value: <>{profile?.streak_days ?? 0}<Flame size={14} color="#E6A817" fill="#E6A817" strokeWidth={0} style={{ display: "inline", verticalAlign: "middle", marginLeft: 2 }} /></>, clickable: false, key: "streak" as const },
             { label: t.student.clips, value: publicClipCount, clickable: false, key: "clips" as const },
           ].map(({ label, value, clickable, key }, i, arr) => (
             clickable ? (
@@ -577,9 +578,9 @@ export default function JourneyPage() {
             width: 80, height: 80, borderRadius: "50%",
             background: "var(--white)", border: "1px solid var(--border)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 1.25rem", fontSize: "2rem",
+            margin: "0 auto 1.25rem",
           }}>
-            🎵
+            <Music size={32} strokeWidth={1.5} color="var(--muted)" />
           </div>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.375rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>
             {t.student.noRecordingsYet}
@@ -631,7 +632,7 @@ export default function JourneyPage() {
                           color: (isLatest || isVideo) ? "#fff" : "var(--muted)",
                           fontFamily: "Inter, sans-serif",
                         }}>
-                          {isVideo ? "▶" : items.length - items.indexOf(item)}
+                          {isVideo ? <Play size={14} strokeWidth={1.5} /> : items.length - items.indexOf(item)}
                         </div>
 
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -797,7 +798,7 @@ export default function JourneyPage() {
                   </button>
                 ))}
               </div>
-              <button onClick={() => setFollowModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1.25rem", lineHeight: 1, padding: "0 0.25rem" }}>×</button>
+              <button onClick={() => setFollowModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: "0 0.25rem", display: "flex", alignItems: "center" }}><X size={18} strokeWidth={1.5} /></button>
             </div>
 
             {/* List */}
@@ -864,7 +865,7 @@ export default function JourneyPage() {
               <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "var(--charcoal)" }}>
                 {t.student.addCoverTitle}
               </div>
-              <button onClick={closeModal} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.375rem", color: "var(--muted)", lineHeight: 1, padding: 0 }}>×</button>
+              <button onClick={closeModal} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: 0, display: "flex", alignItems: "center" }}><X size={20} strokeWidth={1.5} /></button>
             </div>
 
             {/* Tabs */}
@@ -896,13 +897,13 @@ export default function JourneyPage() {
                     style={{ border: `2px dashed ${uploadFile ? "var(--sage)" : "var(--border)"}`, borderRadius: 10, padding: "1.5rem", textAlign: "center", cursor: "pointer", background: uploadFile ? "rgba(61,107,85,0.04)" : "var(--cream)", transition: "all 0.15s" }}>
                     {uploadFile ? (
                       <>
-                        <div style={{ fontSize: "1.5rem", marginBottom: "0.375rem" }}>🎬</div>
+                        <div style={{ marginBottom: "0.375rem", display: "flex", justifyContent: "center" }}><Clapperboard size={24} strokeWidth={1.5} color="var(--charcoal)" /></div>
                         <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>{uploadFile.name}</div>
                         <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>{(uploadFile.size / 1024 / 1024).toFixed(1)} MB · tap to change</div>
                       </>
                     ) : (
                       <>
-                        <div style={{ fontSize: "1.5rem", marginBottom: "0.375rem" }}>📹</div>
+                        <div style={{ marginBottom: "0.375rem", display: "flex", justifyContent: "center" }}><Video size={24} strokeWidth={1.5} color="var(--charcoal)" /></div>
                         <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>{t.student.tapToChooseVideo}</div>
                         <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>MP4, MOV, WebM</div>
                       </>
@@ -943,7 +944,7 @@ export default function JourneyPage() {
                         {!recording && (
                           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <div style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem" }}>
-                              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📷</div>
+                              <div style={{ marginBottom: "0.5rem", display: "flex", justifyContent: "center" }}><Camera size={32} strokeWidth={1.5} color="rgba(255,255,255,0.5)" /></div>
                               {t.student.cameraPreview}
                             </div>
                           </div>
@@ -967,7 +968,7 @@ export default function JourneyPage() {
                     /* Audio-only UI */
                     !recordedBlob ? (
                       <div style={{ background: "var(--cream)", borderRadius: 10, padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-                        <div style={{ fontSize: "2.5rem" }}>{recording ? "🔴" : "🎙"}</div>
+                        <div style={{ display: "flex", justifyContent: "center" }}>{recording ? <Circle size={40} fill="red" strokeWidth={0} /> : <Mic size={40} strokeWidth={1.5} color="var(--charcoal)" />}</div>
                         {recording ? (
                           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 600, color: "var(--charcoal)" }}>
                             Recording — {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
@@ -996,7 +997,7 @@ export default function JourneyPage() {
                       {recording ? (
                         <><span style={{ width: 10, height: 10, borderRadius: 2, background: "var(--error)", flexShrink: 0 }} /> {t.common.done}</>
                       ) : (
-                        <>{recordMode === "video" ? `🎥 ${t.student.startRecordingBtn}` : `🎙 ${t.student.startRecordingBtn}`}</>
+                        <>{recordMode === "video" ? <><Video size={14} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />{t.student.startRecordingBtn}</> : <><Mic size={14} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />{t.student.startRecordingBtn}</>}</>
                       )}
                     </button>
                   )}

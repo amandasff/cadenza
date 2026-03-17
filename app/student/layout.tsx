@@ -14,7 +14,7 @@ import PracticePip from "../../components/PracticePip";
 import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
-import { Flame } from "lucide-react";
+import { Flame, Camera, Palette, X } from "lucide-react";
 
 
 interface SiblingProfile {
@@ -354,7 +354,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: size > 30 ? "0.875rem" : "0.5rem",
             opacity: 0, transition: "opacity 0.15s", borderRadius: "50%",
-          }}>📷</span>
+          }}><Camera size={14} strokeWidth={1.5} /></span>
         )}
       </label>
       <input
@@ -422,7 +422,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               letterSpacing: "0.04em", transition: "all 0.15s",
             }}
           >
-            {theme === "light" ? "Light" : theme === "dark" ? "Dark" : "🎨"}
+            {theme === "light" ? "Light" : theme === "dark" ? "Dark" : <Palette size={14} strokeWidth={1.5} />}
           </button>
           <button
             onClick={() => signOut()}
@@ -682,7 +682,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         zIndex: 9999, maxWidth: 340, textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
       }}>
         Photo upload failed: {uploadError}
-        <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "0.875rem" }}>×</button>
+        <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center" }}><X size={14} strokeWidth={1.5} /></button>
       </div>
     )}
 
@@ -693,7 +693,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         <div style={{ background: "var(--white)", borderRadius: 4, padding: "2rem", width: "100%", maxWidth: 380, boxShadow: "0 8px 40px rgba(0,0,0,0.2)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
             <h2 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", margin: 0 }}>Family</h2>
-            <button onClick={() => setFamilyModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.25rem", color: "var(--muted)", lineHeight: 1 }}>×</button>
+            <button onClick={() => setFamilyModalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, display: "flex", alignItems: "center" }}><X size={18} strokeWidth={1.5} /></button>
           </div>
 
           {familyCode ? (
@@ -900,7 +900,7 @@ function AccountSwitcher({ currentEmail, onSwitch }: { currentEmail: string | nu
     <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)", background: "var(--cream)", borderRadius: 6, padding: "0.75rem" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
         <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)" }}>Accounts</span>
-        <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", color: "var(--muted)", lineHeight: 1, padding: 0 }}>×</button>
+        <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: 0, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
       </div>
 
       {others.length > 0 && others.map(a => {
