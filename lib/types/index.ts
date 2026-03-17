@@ -11,6 +11,8 @@ export interface ProfileRow {
   avatar_url?: string | null;
   bio?: string | null;
   instrument?: string | null;
+  birth_year?: number | null;
+  gender?: string | null;       // 'boy' | 'girl' | null
   music_since?: string | null;
   stripe_customer_id?: string | null;
   subscription_status?: 'free' | 'active' | 'canceled' | 'past_due';
