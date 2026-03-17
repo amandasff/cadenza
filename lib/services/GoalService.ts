@@ -153,6 +153,22 @@ export class GoalService {
     if (error) throw error;
   }
 
+  async deleteGoal(goalId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('goals')
+      .delete()
+      .eq('id', goalId);
+    if (error) throw error;
+  }
+
+  async updateGoal(goalId: string, updates: { title?: string; description?: string; points?: number }): Promise<void> {
+    const { error } = await this.supabase
+      .from('goals')
+      .update(updates)
+      .eq('id', goalId);
+    if (error) throw error;
+  }
+
   async awardPoints(studentId: string, points: number): Promise<void> {
     const { data: profile, error: fetchErr } = await this.supabase
       .from('profiles')

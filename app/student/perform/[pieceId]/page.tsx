@@ -7,12 +7,21 @@ import { PieceService } from "../../../../lib/services/PieceService";
 import { PracticeService } from "../../../../lib/services/PracticeService";
 import { Student } from "../../../../lib/models/Student";
 import type { PieceRow, StrokeData } from "../../../../lib/types";
+
+interface TextAnnotation {
+  id: string;
+  x: number; // 0..1 fraction of canvas rendered width
+  y: number; // 0..1 fraction of canvas rendered height
+  text: string;
+  color: string;
+  fontSize: number;
+}
 import { useI18n } from "../../../../lib/context/I18nContext";
 import { Pencil, Circle, X } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Tool = "pencil" | "eraser" | "none";
+type Tool = "pencil" | "eraser" | "text" | "none";
 type PageTurnMethod = "tap" | "keyboard" | "device" | "webcam";
 
 const COLORS = ["#1C1916", "#C0392B", "#2471A3", "#1E8449", "#D35400", "#7D3C98"];
@@ -99,6 +108,10 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   const isDrawingRef = useRef(false);
   const currentStrokeRef = useRef<[number, number][]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const textsRef = useRef<Map<number, TextAnnotation[]>>(new Map());
+  const [textBoxes, setTextBoxes] = useState<TextAnnotation[]>([]);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const draggingTextRef = useRef<{ id: string; startClientX: number; startClientY: number; origX: number; origY: number } | null>(null);
 
   // Page turning
   const [enabledMethods, setEnabledMethods] = useState<Set<PageTurnMethod>>(new Set(["tap", "keyboard"]));
@@ -155,15 +168,19 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
     (async () => {
       const { data } = await supabase
         .from("piece_annotations")
-        .select("page_index, strokes")
+        .select("page_index, strokes, texts")
         .eq("piece_id", pieceId)
         .eq("student_id", student.id);
       if (data) {
-        const map = new Map<number, StrokeData[]>();
-        for (const row of data as { page_index: number; strokes: StrokeData[] }[]) {
-          map.set(row.page_index, row.strokes);
+        const strokeMap = new Map<number, StrokeData[]>();
+        const textMap = new Map<number, TextAnnotation[]>();
+        for (const row of data as { page_index: number; strokes: StrokeData[]; texts?: TextAnnotation[] }[]) {
+          strokeMap.set(row.page_index, row.strokes ?? []);
+          textMap.set(row.page_index, row.texts ?? []);
         }
-        annotationsRef.current = map;
+        annotationsRef.current = strokeMap;
+        textsRef.current = textMap;
+        setTextBoxes([...(textMap.get(0) ?? [])]);
       }
     })();
   }, [student?.id, pieceId]);
@@ -230,6 +247,8 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
       // cancelled — ignore
     }
     redrawAnnotations();
+    refreshTextBoxes();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageIndex, scale]);
 
   useEffect(() => { renderPage(); }, [renderPage]);
@@ -243,8 +262,13 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
     if (img && img.complete && img.naturalWidth > 0) {
       redrawAnnotations();
     }
+    refreshTextBoxes();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageIndex, imageUrls, sheetType]);
+
+  // ── Text annotations: refresh helper ────────────────────────────────────────
+
+  function refreshTextBoxes() { setTextBoxes([...(textsRef.current.get(pageIndex) ?? [])]); }
 
   // ── Annotations: redraw ─────────────────────────────────────────────────────
 
@@ -295,6 +319,28 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
 
   function onPointerDown(e: React.MouseEvent | React.TouchEvent) {
     if (tool === "none") return;
+    if (tool === "text") {
+      e.preventDefault();
+      const canvas = annotCanvasRef.current!;
+      const rect = canvas.getBoundingClientRect();
+      let clientX: number, clientY: number;
+      if ("touches" in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = (e as React.MouseEvent).clientX;
+        clientY = (e as React.MouseEvent).clientY;
+      }
+      const x = (clientX - rect.left) / rect.width;
+      const y = (clientY - rect.top) / rect.height;
+      const id = Math.random().toString(36).slice(2);
+      const newText: TextAnnotation = { id, x, y, text: "", color, fontSize: 16 };
+      const existing = textsRef.current.get(pageIndex) ?? [];
+      textsRef.current.set(pageIndex, [...existing, newText]);
+      setTextBoxes([...(textsRef.current.get(pageIndex)!)]);
+      setEditingTextId(id);
+      return;
+    }
     e.preventDefault();
     isDrawingRef.current = true;
     currentStrokeRef.current = [getCanvasPoint(e)];
@@ -361,8 +407,9 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   async function saveAnnotation(pg: number) {
     if (!student?.id) return;
     const strokes = annotationsRef.current.get(pg) ?? [];
+    const texts = textsRef.current.get(pg) ?? [];
     await supabase.from("piece_annotations").upsert(
-      { piece_id: pieceId, student_id: student.id, page_index: pg, strokes },
+      { piece_id: pieceId, student_id: student.id, page_index: pg, strokes, texts },
       { onConflict: "piece_id,student_id,page_index" }
     );
   }
@@ -376,12 +423,13 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
   useEffect(() => {
     if (!enabledMethods.has("keyboard")) return;
     function onKey(e: KeyboardEvent) {
+      if (editingTextId) return;
       if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); goNext(); }
       if (e.key === "ArrowLeft") { e.preventDefault(); goPrev(); }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [enabledMethods, goNext, goPrev]);
+  }, [enabledMethods, goNext, goPrev, editingTextId]);
 
   // Device orientation (mobile tilt)
   useEffect(() => {
@@ -484,6 +532,37 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
     startWebcam();
     return stopWebcam;
   }, [enabledMethods]);
+
+  // ── Text annotation drag ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    function onDocMouseMove(e: MouseEvent) {
+      const drag = draggingTextRef.current;
+      if (!drag) return;
+      const canvas = annotCanvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dx = (e.clientX - drag.startClientX) / rect.width;
+      const dy = (e.clientY - drag.startClientY) / rect.height;
+      const updated = (textsRef.current.get(pageIndex) ?? []).map(t =>
+        t.id === drag.id ? { ...t, x: Math.max(0, Math.min(0.98, drag.origX + dx)), y: Math.max(0, Math.min(0.98, drag.origY + dy)) } : t
+      );
+      textsRef.current.set(pageIndex, updated);
+      setTextBoxes([...updated]);
+    }
+    function onDocMouseUp() {
+      if (draggingTextRef.current) {
+        draggingTextRef.current = null;
+        scheduleSave(pageIndex);
+      }
+    }
+    document.addEventListener("mousemove", onDocMouseMove);
+    document.addEventListener("mouseup", onDocMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onDocMouseMove);
+      document.removeEventListener("mouseup", onDocMouseUp);
+    };
+  }, [pageIndex]);
 
   // ── Recording ───────────────────────────────────────────────────────────────
 
@@ -661,7 +740,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
           )}
           <canvas
             ref={annotCanvasRef}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: tool === "eraser" ? "cell" : tool === "pencil" ? "crosshair" : "default", zIndex: tool !== "none" ? 10 : 0 }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: tool === "eraser" ? "cell" : tool === "pencil" ? "crosshair" : tool === "text" ? "text" : "default", zIndex: tool !== "none" ? 10 : 0 }}
             onMouseDown={onPointerDown}
             onMouseMove={onPointerMove}
             onMouseUp={onPointerUp}
@@ -670,6 +749,127 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
             onTouchMove={onPointerMove}
             onTouchEnd={onPointerUp}
           />
+          {/* Text annotations overlay */}
+          {textBoxes.map(box => (
+            <div
+              key={box.id}
+              style={{
+                position: "absolute",
+                left: `${box.x * 100}%`,
+                top: `${box.y * 100}%`,
+                zIndex: 15,
+                pointerEvents: tool === "text" || editingTextId === box.id ? "auto" : "none",
+              }}
+              onMouseDown={e => {
+                if (tool !== "text" || editingTextId === box.id) return;
+                e.stopPropagation();
+                e.preventDefault();
+                draggingTextRef.current = {
+                  id: box.id,
+                  startClientX: e.clientX,
+                  startClientY: e.clientY,
+                  origX: box.x,
+                  origY: box.y,
+                };
+              }}
+            >
+              {editingTextId === box.id ? (
+                <textarea
+                  autoFocus
+                  value={box.text}
+                  onChange={ev => {
+                    const updated = (textsRef.current.get(pageIndex) ?? []).map(t =>
+                      t.id === box.id ? { ...t, text: ev.target.value } : t
+                    );
+                    textsRef.current.set(pageIndex, updated);
+                    setTextBoxes([...updated]);
+                  }}
+                  onBlur={() => {
+                    setEditingTextId(null);
+                    const current = (textsRef.current.get(pageIndex) ?? []);
+                    const thisBox = current.find(t => t.id === box.id);
+                    if (thisBox && !thisBox.text.trim()) {
+                      const updated = current.filter(t => t.id !== box.id);
+                      textsRef.current.set(pageIndex, updated);
+                      setTextBoxes([...updated]);
+                    }
+                    scheduleSave(pageIndex);
+                  }}
+                  onKeyDown={ev => {
+                    if (ev.key === "Escape") {
+                      setEditingTextId(null);
+                      scheduleSave(pageIndex);
+                    }
+                  }}
+                  style={{
+                    background: "rgba(255,255,224,0.92)",
+                    border: "1.5px solid #aaa",
+                    borderRadius: 2,
+                    padding: "2px 5px",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: box.fontSize,
+                    color: box.color,
+                    minWidth: 80,
+                    minHeight: 28,
+                    resize: "both",
+                    outline: "none",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+                  }}
+                />
+              ) : (
+                <div style={{ position: "relative" }}>
+                  <div
+                    onClick={ev => {
+                      if (tool === "text") {
+                        ev.stopPropagation();
+                        setEditingTextId(box.id);
+                      }
+                    }}
+                    style={{
+                      background: box.text ? "rgba(255,255,224,0.88)" : (tool === "text" ? "rgba(255,255,224,0.4)" : "transparent"),
+                      border: tool === "text" ? "1px dashed rgba(255,255,255,0.6)" : "none",
+                      padding: "2px 5px",
+                      borderRadius: 2,
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: box.fontSize,
+                      color: box.color,
+                      cursor: tool === "text" ? "move" : "default",
+                      whiteSpace: "pre-wrap",
+                      maxWidth: 220,
+                      wordBreak: "break-word",
+                      userSelect: "none",
+                      boxShadow: box.text ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                      minWidth: box.text ? undefined : (tool === "text" ? 40 : 0),
+                      minHeight: box.text ? undefined : (tool === "text" ? 20 : 0),
+                    }}
+                  >
+                    {box.text || (tool === "text" ? <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>T</span> : null)}
+                  </div>
+                  {tool === "text" && (
+                    <button
+                      onMouseDown={e => e.stopPropagation()}
+                      onClick={e => {
+                        e.stopPropagation();
+                        const updated = (textsRef.current.get(pageIndex) ?? []).filter(t => t.id !== box.id);
+                        textsRef.current.set(pageIndex, updated);
+                        setTextBoxes([...updated]);
+                        scheduleSave(pageIndex);
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: -7, right: -7,
+                        width: 15, height: 15,
+                        background: "#e74c3c", color: "#fff", border: "none",
+                        borderRadius: "50%", cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 9, lineHeight: 1, padding: 0, zIndex: 1,
+                      }}
+                    >×</button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         {numPages === 0 && (
@@ -846,12 +1046,19 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
           style={{ ...toolBtnStyle, background: tool === "eraser" ? "#fff" : "transparent", color: tool === "eraser" ? "#111" : "#aaa" }}
         >⌫</button>
 
-        {/* Colors (only when pencil active) */}
-        {tool === "pencil" && COLORS.map(c => (
+        {/* Text tool */}
+        <button
+          onClick={() => setTool(t => t === "text" ? "none" : "text")}
+          title="Text"
+          style={{ ...toolBtnStyle, background: tool === "text" ? "#fff" : "transparent", color: tool === "text" ? "#111" : "#aaa", fontSize: "0.875rem", fontWeight: 700, fontFamily: "serif" }}
+        >T</button>
+
+        {/* Colors (only when pencil or text active) */}
+        {(tool === "pencil" || tool === "text") && COLORS.map(c => (
           <button key={c} onClick={() => setColor(c)} style={{ width: 18, height: 18, borderRadius: "50%", border: color === c ? "2px solid #fff" : "2px solid transparent", background: c, cursor: "pointer", flexShrink: 0 }} />
         ))}
 
-        {/* Line width (only when pencil) */}
+        {/* Line width (only when pencil active) */}
         {tool === "pencil" && LINE_WIDTHS.map(w => (
           <button key={w} onClick={() => setLineWidth(w)} style={{ ...toolBtnStyle, background: lineWidth === w ? "#444" : "transparent", color: "#aaa", fontSize: "0.6rem", padding: "0 6px" }}>
             <div style={{ width: w * 2.5, height: w, background: "#fff", borderRadius: 2 }} />

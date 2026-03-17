@@ -16,7 +16,7 @@ import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeRe
 import YouTubeSearch from "../../../../components/YouTubeSearch";
 import { useLesson } from "../../../../lib/context/LessonContext";
 import { useI18n } from "../../../../lib/context/I18nContext";
-import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown } from "lucide-react";
+import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2 } from "lucide-react";
 
 const CATEGORIES_BASE: { value: string; colorKey: keyof typeof CATEGORY_COLORS }[] = [
   { value: "technique",    colorKey: "technique" },
@@ -128,7 +128,7 @@ function GoalForm({
 }
 
 function GoalItem({
-  goal, color, completingGoalId, togglingGoalId, onComplete, onToggle,
+  goal, color, completingGoalId, togglingGoalId, onComplete, onToggle, onDelete, onEdit,
 }: {
   goal: GoalRow;
   color: string;
@@ -136,6 +136,8 @@ function GoalItem({
   togglingGoalId: string | null;
   onComplete: (g: GoalRow) => void;
   onToggle: (g: GoalRow) => void;
+  onDelete: (g: GoalRow) => void;
+  onEdit: (g: GoalRow) => void;
 }) {
   const { t } = useI18n();
   const isDone = goal.status === "completed";
@@ -167,26 +169,42 @@ function GoalItem({
           {goal.points} {t.goals.pts} · {isDone ? t.goals.done : isCurrent ? t.goals.thisWeek : t.goals.locked}
         </div>
       </div>
-      {!isDone && (
-        <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0 }}>
-          <button
-            onClick={() => onToggle(goal)}
-            disabled={!!togglingGoalId || !!completingGoalId}
-            style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", opacity: isToggling ? 0.5 : 1 }}
-          >
-            {isCurrent ? t.goals.lock : t.goals.assign}
-          </button>
-          {isCurrent && (
+      <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0 }}>
+        {!isDone && (
+          <>
             <button
-              onClick={() => onComplete(goal)}
-              disabled={!!completingGoalId || !!togglingGoalId}
-              style={{ ...primaryBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", opacity: isCompleting ? 0.5 : 1 }}
+              onClick={() => onToggle(goal)}
+              disabled={!!togglingGoalId || !!completingGoalId}
+              style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", opacity: isToggling ? 0.5 : 1 }}
             >
-              {isCompleting ? "…" : t.goals.complete}
+              {isCurrent ? t.goals.lock : t.goals.assign}
             </button>
-          )}
-        </div>
-      )}
+            {isCurrent && (
+              <button
+                onClick={() => onComplete(goal)}
+                disabled={!!completingGoalId || !!togglingGoalId}
+                style={{ ...primaryBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", opacity: isCompleting ? 0.5 : 1 }}
+              >
+                {isCompleting ? "…" : t.goals.complete}
+              </button>
+            )}
+            <button
+              onClick={() => onEdit(goal)}
+              title="Edit goal"
+              style={{ ...ghostBtnStyle, padding: "0.25rem 0.375rem", fontSize: "0.6875rem" }}
+            >
+              <Pencil size={11} strokeWidth={1.5} />
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => onDelete(goal)}
+          title="Delete goal"
+          style={{ ...ghostBtnStyle, padding: "0.25rem 0.375rem", fontSize: "0.6875rem", color: "#c0392b" }}
+        >
+          <Trash2 size={11} strokeWidth={1.5} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -195,6 +213,7 @@ function PieceBlock({
   piece, color, addGoalFor, goalForm, addingGoal, completingGoalId, togglingGoalId,
   uploadingPdf, uploadingScore, aiConverting, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
   onUploadSheetMusic, onUploadScore, onAiConvertScore, onAddRecording, onRemoveRecording, onSetPrimaryRecording,
+  onDeleteGoal, onEditGoal, deletingGoalId,
 }: {
   piece: PieceWithGoals;
   color: string;
@@ -217,6 +236,9 @@ function PieceBlock({
   onAddRecording: (pieceId: string, video: YouTubeResult) => Promise<void>;
   onRemoveRecording: (recordingId: string, pieceId: string) => void;
   onSetPrimaryRecording: (recordingId: string, pieceId: string) => void;
+  onDeleteGoal: (g: GoalRow) => void;
+  onEditGoal: (g: GoalRow) => void;
+  deletingGoalId: string | null;
 }) {
   const { t } = useI18n();
   const [showRecordings, setShowRecordings] = useState(false);
@@ -273,6 +295,17 @@ function PieceBlock({
           {piece.book && (
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.2rem" }}>{piece.book}</div>
           )}
+          {/* Status */}
+          <div style={{
+            display: "inline-flex", alignItems: "center",
+            padding: "0.1rem 0.4rem", borderRadius: 99, marginTop: "0.25rem",
+            background: piece.status === "completed" ? "var(--sage-light)" : piece.status === "performance_ready" ? "#EBF3EE" : "var(--cream-dark, #EDE8DF)",
+            border: "1px solid var(--border)",
+          }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {piece.status === "learning" ? "Learning" : piece.status === "polishing" ? "Polishing" : piece.status === "performance_ready" ? "Performance Ready" : "Completed"}
+            </span>
+          </div>
           {total > 0 && (
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", marginTop: "0.375rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <span>{done}/{total} {t.pieces.goalsLabel}</span>
@@ -289,7 +322,7 @@ function PieceBlock({
             title={piece.sheet_music_url ? t.pieces.replaceSheetMusic : t.pieces.uploadSheetMusic}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingPdf ? "default" : "pointer", opacity: uploadingPdf ? 0.5 : 1 }}
           >
-            {uploadingPdf ? "…" : piece.sheet_music_url ? <><FileText size={12} strokeWidth={1.5} /><Check size={10} strokeWidth={2} /></> : <><FileText size={12} strokeWidth={1.5} />+</>}
+            {uploadingPdf ? "…" : piece.sheet_music_url ? "Sheet ✓" : "Sheet"}
           </label>
           <input
             id={sheetInputId}
@@ -305,7 +338,7 @@ function PieceBlock({
             title={piece.score_url ? t.pieces.replaceScore : t.pieces.uploadScore}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: uploadingScore ? "default" : "pointer", opacity: uploadingScore ? 0.5 : 1 }}
           >
-            {uploadingScore ? "…" : piece.score_url ? <><Music size={12} strokeWidth={1.5} /><Check size={10} strokeWidth={2} /></> : <><Music size={12} strokeWidth={1.5} />+</>}
+            {uploadingScore ? "…" : piece.score_url ? "Score ✓" : "Score"}
           </label>
           <input
             id={scoreInputId}
@@ -320,7 +353,7 @@ function PieceBlock({
             title="Convert a photo or screenshot of sheet music to a playable score (AI)"
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", cursor: aiConverting ? "default" : "pointer", opacity: aiConverting ? 0.5 : 1 }}
           >
-            {aiConverting ? <Hourglass size={12} strokeWidth={1.5} /> : <Bot size={12} strokeWidth={1.5} />}
+            {aiConverting ? "AI…" : "AI"}
           </label>
           <input
             id={`ai-score-${piece.id}`}
@@ -334,7 +367,7 @@ function PieceBlock({
             title="Paste screenshot from clipboard (Ctrl+V / ⌘V)"
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", background: pasteMode ? "var(--charcoal)" : "none", color: pasteMode ? "var(--white)" : "var(--muted)" }}
           >
-            <Clipboard size={12} strokeWidth={1.5} />
+            Paste
           </button>
           {/* Recordings toggle */}
           <button
@@ -342,7 +375,7 @@ function PieceBlock({
             title="Reference recordings"
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem" }}
           >
-            {piece.recordings.length > 0 ? `🎧${piece.recordings.length}` : "🎧+"}
+            {piece.recordings.length > 0 ? `Ref (${piece.recordings.length})` : "Ref +"}
           </button>
           <button
             onClick={() => onSetAddGoalFor(addGoalFor === piece.id ? null : piece.id)}
@@ -433,6 +466,7 @@ function PieceBlock({
               key={g.id} goal={g} color={color}
               completingGoalId={completingGoalId} togglingGoalId={togglingGoalId}
               onComplete={onCompleteGoal} onToggle={onToggleGoalStatus}
+              onDelete={onDeleteGoal} onEdit={onEditGoal}
             />
           ))}
         </div>
@@ -522,6 +556,10 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
 
   const [completingGoalId, setCompletingGoalId] = useState<string | null>(null);
   const [togglingGoalId, setTogglingGoalId] = useState<string | null>(null);
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
+  const [editingGoal, setEditingGoal] = useState<GoalRow | null>(null);
+  const [editGoalForm, setEditGoalForm] = useState<{ title: string; description: string; points: number }>({ title: "", description: "", points: 20 });
+  const [savingEditGoal, setSavingEditGoal] = useState(false);
   const [nextLesson, setNextLesson] = useState<LessonRow | null>(null);
   const [studentAssignments, setStudentAssignments] = useState<AssignmentWithContext[]>([]);
 
@@ -869,6 +907,47 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       console.error("add goal error:", err);
     } finally {
       setAddingGoal(false);
+    }
+  }
+
+  async function handleDeleteGoal(goal: GoalRow) {
+    if (!confirm(`Delete goal "${goal.title}"? This cannot be undone.`)) return;
+    setDeletingGoalId(goal.id);
+    try {
+      await GoalService.create(supabase).deleteGoal(goal.id);
+      setPieces(prev => prev.map(p => ({
+        ...p,
+        goals: p.goals.filter(g => g.id !== goal.id),
+      })));
+      setStandaloneGoals(prev => prev.filter(g => g.id !== goal.id));
+    } finally {
+      setDeletingGoalId(null);
+    }
+  }
+
+  function handleStartEditGoal(goal: GoalRow) {
+    setEditingGoal(goal);
+    setEditGoalForm({ title: goal.title, description: goal.description ?? "", points: goal.points });
+  }
+
+  async function handleSaveEditGoal() {
+    if (!editingGoal) return;
+    setSavingEditGoal(true);
+    try {
+      await GoalService.create(supabase).updateGoal(editingGoal.id, {
+        title: editGoalForm.title,
+        description: editGoalForm.description || undefined,
+        points: editGoalForm.points,
+      });
+      const updated = { ...editingGoal, ...editGoalForm, description: editGoalForm.description || null };
+      setPieces(prev => prev.map(p => ({
+        ...p,
+        goals: p.goals.map(g => g.id === editingGoal.id ? updated : g),
+      })));
+      setStandaloneGoals(prev => prev.map(g => g.id === editingGoal.id ? updated : g));
+      setEditingGoal(null);
+    } finally {
+      setSavingEditGoal(false);
     }
   }
 
@@ -1265,6 +1344,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                           onAddRecording={handleAddRecording}
                           onRemoveRecording={handleRemoveRecording}
                           onSetPrimaryRecording={handleSetPrimaryRecording}
+                          onDeleteGoal={handleDeleteGoal}
+                          onEditGoal={handleStartEditGoal}
+                          deletingGoalId={deletingGoalId}
                         />
                       ))}
                     </div>
@@ -1283,6 +1365,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                         <GoalItem key={g.id} goal={g} color="var(--muted)"
                           completingGoalId={completingGoalId} togglingGoalId={togglingGoalId}
                           onComplete={handleCompleteGoal} onToggle={handleToggleGoalStatus}
+                          onDelete={handleDeleteGoal} onEdit={handleStartEditGoal}
                         />
                       ))}
                     </div>
@@ -1365,6 +1448,57 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           </p>
         </div>
       </div>
+
+      {/* Edit goal modal */}
+      {editingGoal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}
+          onClick={e => { if (e.target === e.currentTarget) setEditingGoal(null); }}
+        >
+          <div style={{ background: "var(--white)", borderRadius: 4, padding: "1.5rem", width: "100%", maxWidth: 360, boxShadow: "0 8px 40px rgba(0,0,0,0.2)" }}>
+            <h3 style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)", margin: "0 0 1.25rem" }}>Edit Goal</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              <input
+                value={editGoalForm.title}
+                onChange={e => setEditGoalForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="Goal title"
+                style={{ padding: "0.5rem 0.625rem", borderRadius: 3, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", outline: "none" }}
+              />
+              <textarea
+                value={editGoalForm.description}
+                onChange={e => setEditGoalForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Instructions (optional)"
+                rows={3}
+                style={{ padding: "0.5rem 0.625rem", borderRadius: 3, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", resize: "vertical", outline: "none" }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", flexShrink: 0 }}>Points</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={editGoalForm.points}
+                  onChange={e => setEditGoalForm(f => ({ ...f, points: Math.max(1, parseInt(e.target.value) || 1) }))}
+                  style={{ width: 70, padding: "0.375rem 0.5rem", borderRadius: 3, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", outline: "none" }}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "0.625rem", marginTop: "1.25rem", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setEditingGoal(null)}
+                style={{ ...ghostBtnStyle, padding: "0.5rem 1rem" }}
+              >Cancel</button>
+              <button
+                onClick={handleSaveEditGoal}
+                disabled={!editGoalForm.title.trim() || savingEditGoal}
+                style={{ ...primaryBtnStyle, padding: "0.5rem 1rem", opacity: savingEditGoal || !editGoalForm.title.trim() ? 0.6 : 1 }}
+              >
+                {savingEditGoal ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
