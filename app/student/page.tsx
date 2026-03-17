@@ -13,6 +13,7 @@ import PushSubscribeButton from "../../components/PushSubscribeButton";
 import { usePractice } from "../../lib/context/PracticeContext";
 import Metronome from "../../components/Metronome";
 import { useI18n } from "../../lib/context/I18nContext";
+import { Flame, Snowflake, Sparkle, Star, MusicNote, PianoKeys, Headphones, BookOpen, Brain, Microphone } from "@phosphor-icons/react";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -299,9 +300,11 @@ export default function ThisWeek() {
         const freezeCount = student?.streakFreezeCount ?? 0;
         // A positive streak with a freeze available and they haven't practiced today
         // means the freeze is protecting them — show ice instead of fire
-        const streakIcon = streakDays > 0
-          ? (freezeCount > 0 ? "❄️" : "🔥")
-          : "✨";
+        const streakIcon: React.ReactNode = streakDays > 0
+          ? (freezeCount > 0
+              ? <Snowflake size={16} weight="light" color="var(--sky)" />
+              : <Flame size={16} weight="fill" color="#E6A817" />)
+          : <Sparkle size={16} weight="light" color="var(--muted)" />;
         const streakColor = streakDays > 0 ? "var(--peach-bg)" : "var(--white)";
         const streakBorder = streakDays > 0 ? "var(--peach-light)" : "var(--border)";
         const streakLabel = freezeCount > 0 && streakDays > 0
@@ -316,7 +319,7 @@ export default function ThisWeek() {
               background: streakColor, border: `1px solid ${streakBorder}`,
               display: "flex", alignItems: "center", gap: "0.5rem",
             }}>
-              <span style={{ fontSize: "1rem", flexShrink: 0 }}>{streakIcon}</span>
+              <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>{streakIcon}</span>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
                 {streakDays > 0 ? `${streakDays}-day streak` : "Start your streak"}
                 {freezeCount > 0 && streakDays > 0 && (
@@ -331,7 +334,7 @@ export default function ThisWeek() {
               background: "var(--white)", border: "1px solid var(--border)",
               display: "flex", alignItems: "center", gap: "0.5rem",
             }}>
-              <span style={{ fontSize: "1rem", flexShrink: 0 }}>⭐</span>
+              <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><Star size={16} weight="fill" color="#E6A817" /></span>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
                 {(student?.totalPoints ?? 0).toLocaleString()} pts
                 <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontWeight: 400, marginTop: 2 }}>{student?.getLevelLabel?.() ?? "Beginner"}</div>
@@ -577,7 +580,7 @@ export default function ThisWeek() {
             borderRadius: 4, padding: "0.875rem 1.125rem",
             display: "flex", alignItems: "center", gap: "0.875rem",
           }}>
-            <span style={{ fontSize: "1.125rem", flexShrink: 0 }}>🎵</span>
+            <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><MusicNote size={18} weight="light" color="var(--muted)" /></span>
             <div>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
                 {t.student.nextLesson}
@@ -632,8 +635,12 @@ export default function ThisWeek() {
                 practice: "var(--rose)", listen: "var(--sky)", theory: "var(--butter)",
                 memorize: "var(--lavender)", record: "var(--sage)",
               };
-              const TYPE_EMOJI: Record<string, string> = {
-                practice: "🎹", listen: "🎧", theory: "📖", memorize: "🧠", record: "🎙",
+              const TYPE_ICON: Record<string, React.ReactNode> = {
+                practice: <PianoKeys size={14} weight="light" />,
+                listen: <Headphones size={14} weight="light" />,
+                theory: <BookOpen size={14} weight="light" />,
+                memorize: <Brain size={14} weight="light" />,
+                record: <Microphone size={14} weight="light" />,
               };
               const color = TYPE_COLORS[a.type] ?? "var(--muted)";
 
@@ -650,7 +657,7 @@ export default function ThisWeek() {
                     background: color, color: "var(--white)", fontFamily: "Inter, sans-serif",
                     flexShrink: 0, marginTop: "0.125rem",
                   }}>
-                    {TYPE_EMOJI[a.type]} {a.type}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}>{TYPE_ICON[a.type]} {a.type}</span>
                   </span>
 
                   {/* Content */}

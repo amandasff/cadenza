@@ -14,6 +14,7 @@ import PracticePip from "../../components/PracticePip";
 import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
+import { Flame } from "@phosphor-icons/react";
 
 
 interface SiblingProfile {
@@ -410,7 +411,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         </Link>
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
           {/* Streak — visible at a glance on every page */}
-          <span className="streak-pill-compact">🔥 {student.streakDays} day{student.streakDays !== 1 ? "s" : ""}</span>
+          <span className="streak-pill-compact" style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}><Flame size={13} weight="fill" color="#E6A817" /> {student.streakDays} day{student.streakDays !== 1 ? "s" : ""}</span>
           {avatarCircle(28, "0.625rem")}
           <button
             onClick={toggleTheme}
@@ -467,7 +468,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               {student.displayName}
             </div>
             <div style={{ marginTop: "0.3rem" }}>
-              <span className="streak-pill">🔥 {student.streakDays} day{student.streakDays !== 1 ? "s" : ""}</span>
+              <span className="streak-pill" style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}><Flame size={13} weight="fill" color="#E6A817" /> {student.streakDays} day{student.streakDays !== 1 ? "s" : ""}</span>
             </div>
           </div>
         </div>
