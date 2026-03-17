@@ -158,18 +158,60 @@ const CHORD_QUALITIES_MEDIUM: ChordQuality[] = ["Major", "Minor", "Diminished", 
 // ─────────────────────────────────────────────────────────────────────────────
 function midiToHz(midi: number) { return 440 * Math.pow(2, (midi - 69) / 12); }
 
+// Shared compressor per AudioContext — prevents clipping when chords stack
+function getOutputNode(ctx: AudioContext): AudioNode {
+  const key = "__cadenzaOut";
+  const stored = (ctx as unknown as Record<string, unknown>)[key];
+  if (stored) return stored as AudioNode;
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -12;
+  comp.knee.value = 6;
+  comp.ratio.value = 6;
+  comp.attack.value = 0.003;
+  comp.release.value = 0.2;
+  comp.connect(ctx.destination);
+  (ctx as unknown as Record<string, unknown>)[key] = comp;
+  return comp;
+}
+
 function playTone(hz: number, ctx: AudioContext, when: number, dur = 1.4) {
-  // Piano-ish: fundamental + harmonics with exponential decay
-  [[1, 0.45], [2, 0.18], [3, 0.09], [4, 0.04]].forEach(([mult, amp]) => {
+  const out = getOutputNode(ctx);
+
+  // Low-pass filter rolls off high harmonics for warmth — tracks pitch
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = Math.min(hz * 9, 10000);
+  filter.Q.value = 0.5;
+  filter.connect(out);
+
+  // Envelope: fast attack → quick initial decay → slow sustain tail
+  // This two-stage shape is the defining characteristic of a struck string
+  const env = ctx.createGain();
+  env.connect(filter);
+  env.gain.setValueAtTime(0, when);
+  env.gain.linearRampToValueAtTime(1.0, when + 0.007);      // ~7ms hammer attack
+  env.gain.exponentialRampToValueAtTime(0.3, when + 0.08);  // fast initial decay
+  env.gain.exponentialRampToValueAtTime(0.001, when + dur);  // long sustain tail
+
+  // Sine harmonics with piano-like amplitude ratios + slight inharmonicity.
+  // Piano strings are physically stiff so upper partials are slightly sharp
+  // (inharmonicity coefficient B). This is the "piano" quality that synths lack.
+  const B = 0.0003;
+  ([
+    [1, 0.36],
+    [2, 0.20],
+    [3, 0.10],
+    [4, 0.05],
+    [5, 0.025],
+    [6, 0.012],
+  ] as [number, number][]).forEach(([n, amp]) => {
     const osc = ctx.createOscillator();
     const g   = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = hz * n * Math.sqrt(1 + B * n * n);
+    g.gain.value = amp;
     osc.connect(g);
-    g.connect(ctx.destination);
-    osc.type = mult === 1 ? "triangle" : "sine";
-    osc.frequency.value = hz * mult;
-    g.gain.setValueAtTime(0, when);
-    g.gain.linearRampToValueAtTime(amp, when + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, when + dur);
+    g.connect(env);
     osc.start(when);
     osc.stop(when + dur + 0.05);
   });
