@@ -52,32 +52,45 @@ export default function PushSubscribeButton() {
 
   return (
     <div style={{ padding: "0 1.5rem 1rem" }}>
-      <button
-        onClick={subscribe}
-        disabled={subscribing}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.625rem",
-          padding: "0.625rem 1rem",
-          background: "var(--white)",
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          cursor: subscribing ? "default" : "pointer",
-          fontFamily: "Inter, sans-serif",
-          fontSize: "0.8125rem",
-          color: "var(--charcoal)",
-          fontWeight: 500,
-          textAlign: "left",
-        }}
-      >
-        <span style={{ fontSize: "1rem" }}>🔔</span>
-        {subscribing ? "Enabling…" : "Get practice reminders"}
-        <span style={{ marginLeft: "auto", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 400 }}>
-          Tap to enable
-        </span>
-      </button>
+      <div style={{
+        background: "linear-gradient(135deg, #FFF8EC 0%, #FFF2D8 100%)",
+        border: "1px solid #EDD08A",
+        borderRadius: 12,
+        padding: "0.875rem 1rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.875rem",
+      }}>
+        <span style={{ fontSize: "1.625rem", flexShrink: 0, lineHeight: 1 }}>🔔</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "#2C2824", marginBottom: "0.2rem" }}>
+            Daily practice reminders
+          </div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "#8A7A50", lineHeight: 1.4 }}>
+            A nudge each day keeps your streak alive
+          </div>
+        </div>
+        <button
+          onClick={subscribe}
+          disabled={subscribing}
+          style={{
+            flexShrink: 0,
+            background: subscribing ? "#C8A84B" : "#C8911A",
+            border: "none",
+            borderRadius: 6,
+            padding: "0.5rem 0.875rem",
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 700,
+            fontSize: "0.75rem",
+            color: "#fff",
+            cursor: subscribing ? "default" : "pointer",
+            letterSpacing: "0.01em",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {subscribing ? "Enabling…" : "Enable →"}
+        </button>
+      </div>
     </div>
   );
 }
