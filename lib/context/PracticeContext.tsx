@@ -54,7 +54,18 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
     audioCtxRef.current = ctx;
     if (ctx.state === "suspended") await ctx.resume();
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Disable all voice-call processing — these are designed for speech and
+    // actively harm music: AGC causes the "volume fade" on desktop, and
+    // noise suppression / echo cancellation mangle instrument tones on mobile.
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation:  false,
+        noiseSuppression:  false,
+        autoGainControl:   false,
+        sampleRate:        48000,
+        channelCount:      1,
+      },
+    });
     micStreamRef.current = stream;
 
     const source = ctx.createMediaStreamSource(stream);
