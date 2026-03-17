@@ -520,44 +520,25 @@ export default function TeacherDashboard() {
                       </div>
                     )}
                   </Link>
-                  {/* Action buttons — outside Link to avoid nested interactive elements */}
-                  <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: "0.25rem" }}>
-                    <button
-                      onClick={() => grantFreeze(profile.id)}
-                      title="Grant streak freeze"
-                      disabled={grantingFreezeFor === profile.id}
-                      style={{
-                        width: 28, height: 28,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        background: "var(--cream)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 4,
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        opacity: grantingFreezeFor === profile.id ? 0.5 : 1,
-                        transition: "background 0.2s",
-                      }}
-                    >
-                      ❄️
-                    </button>
-                    <button
-                      onClick={() => openEncourage(profile)}
-                      title="Send encouragement"
-                      style={{
-                        width: 28, height: 28,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        background: sentReminderIds.has(profile.id) ? "var(--sage)" : "var(--cream)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 4,
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                        zIndex: 1,
-                        transition: "background 0.2s",
-                      }}
-                    >
-                      {sentReminderIds.has(profile.id) ? "✓" : "🔔"}
-                    </button>
-                  </div>
+                  {/* Single action button — freeze grant lives in the modal */}
+                  <button
+                    onClick={() => openEncourage(profile)}
+                    title="Send encouragement"
+                    style={{
+                      position: "absolute", top: 10, right: 10,
+                      width: 28, height: 28,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: sentReminderIds.has(profile.id) ? "var(--sage)" : "var(--cream)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      zIndex: 1,
+                      transition: "background 0.2s",
+                    }}
+                  >
+                    {sentReminderIds.has(profile.id) ? "✓" : "🔔"}
+                  </button>
                   </div>
                 );
               })}
@@ -734,7 +715,7 @@ export default function TeacherDashboard() {
               {encourageError}
             </p>
           )}
-          <div style={{ display: "flex", gap: "0.625rem" }}>
+          <div style={{ display: "flex", gap: "0.625rem", marginBottom: "0.75rem" }}>
             <button
               onClick={() => setEncourageTarget(null)}
               style={{ flex: 1, padding: "0.625rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: "none", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--muted)", cursor: "pointer" }}
@@ -749,6 +730,23 @@ export default function TeacherDashboard() {
               {encourageSending ? t.teacher.sending : t.teacher.sendEncourage}
             </button>
           </div>
+          <button
+            onClick={async () => {
+              if (!encourageTarget) return;
+              await grantFreeze(encourageTarget.id);
+              setEncourageTarget(null);
+            }}
+            disabled={grantingFreezeFor === encourageTarget?.id}
+            style={{
+              width: "100%", padding: "0.5rem", borderRadius: 3,
+              border: "1px solid var(--border)", background: "none",
+              fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
+              color: "var(--muted)", cursor: "pointer",
+              opacity: grantingFreezeFor === encourageTarget?.id ? 0.5 : 1,
+            }}
+          >
+            ❄️ Grant streak freeze
+          </button>
         </div>
       </div>
     )}
