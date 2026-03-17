@@ -23,6 +23,18 @@ interface SiblingProfile {
   hasPin: boolean;
 }
 
+// Inner component so it can read PlayerContext (which wraps it in the tree)
+function ScrollArea({ children }: { children: React.ReactNode }) {
+  const { current, discoverTrack, suppressMiniPlayer } = usePlayer();
+  const playerVisible = !suppressMiniPlayer && !!(current || discoverTrack);
+  // Mini player bar is ~48px; add that on top of the normal bottom padding when visible
+  return (
+    <div className="student-scroll-area" style={playerVisible ? { paddingBottom: "calc(72px + 48px)" } : undefined}>
+      {children}
+    </div>
+  );
+}
+
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
@@ -543,9 +555,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       </aside>
 
       {/* ── Scrollable content area ── */}
-      <div className="student-scroll-area">
-        {children}
-      </div>
+      <ScrollArea>{children}</ScrollArea>
 
       {/* ── Mobile bottom nav (hidden ≥700px via CSS) ── */}
       <nav className="student-bottom-nav" style={{
