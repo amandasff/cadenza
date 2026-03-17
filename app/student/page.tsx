@@ -322,8 +322,11 @@ export default function ThisWeek() {
               <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>{streakIcon}</span>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
                 {streakDays > 0 ? `${streakDays}-day streak` : "Start your streak"}
-                {freezeCount > 0 && streakDays > 0 && (
-                  <div style={{ fontSize: "0.625rem", color: "var(--sky)", fontWeight: 400, marginTop: 2 }}>freeze active</div>
+                {freezeCount > 0 && (
+                  <div style={{ fontSize: "0.625rem", color: "var(--sky)", fontWeight: 400, marginTop: 2 }}>
+                    <Snowflake size={9} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 2 }} />
+                    {freezeCount} freeze{freezeCount !== 1 ? "s" : ""} saved
+                  </div>
                 )}
               </div>
             </div>
