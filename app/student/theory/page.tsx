@@ -140,6 +140,23 @@ const INTERVAL_NAMES: Record<number, string> = {
   9: "Major 6th", 10: "Minor 7th", 11: "Major 7th", 12: "Octave",
 };
 
+// Mnemonic songs for each interval — one ascending, one descending
+const INTERVAL_REFS: Record<number, { asc: string; desc: string }> = {
+  0:  { asc: "Same note",                           desc: "Same note" },
+  1:  { asc: "Jaws theme (da-dum)",                 desc: "Joy to the World (opening)" },
+  2:  { asc: "Happy Birthday (first two notes)",    desc: "Mary Had a Little Lamb" },
+  3:  { asc: "Hey Jude (Hey… Jude)",                desc: "Brahms' Lullaby (opening)" },
+  4:  { asc: "When the Saints Go Marching In",      desc: "Swing Low, Sweet Chariot" },
+  5:  { asc: "Here Comes the Bride",                desc: "Eine Kleine Nachtmusik" },
+  6:  { asc: "The Simpsons theme",                  desc: "The Simpsons theme (↓)" },
+  7:  { asc: "Twinkle Twinkle (first leap)",        desc: "Flintstones theme" },
+  8:  { asc: "The Entertainer (Joplin)",            desc: "Turn! Turn! Turn! (Byrds)" },
+  9:  { asc: "My Bonnie Lies Over the Ocean",       desc: "Nobody Knows the Trouble I've Seen" },
+  10: { asc: "Somewhere (West Side Story)",         desc: "Watermelon Man (Hancock)" },
+  11: { asc: "Take On Me (A-ha, opening riff)",     desc: "I Love You (Cole Porter)" },
+  12: { asc: "Somewhere Over the Rainbow",          desc: "Willow Weep for Me" },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Chord data
 // ─────────────────────────────────────────────────────────────────────────────
@@ -217,12 +234,18 @@ function playTone(hz: number, ctx: AudioContext, when: number, dur = 1.4) {
   });
 }
 
-function playInterval(semitones: number, audioCtx: AudioContext) {
+function playInterval(semitones: number, audioCtx: AudioContext, direction: "asc" | "desc" = "asc") {
   audioCtx.resume(); // ensure not suspended on mobile
-  const root = midiToHz(60 + Math.floor(Math.random() * 13)); // C4–C5
-  const t    = audioCtx.currentTime;
-  playTone(root, audioCtx, t, 1.2);
-  playTone(root * Math.pow(2, semitones / 12), audioCtx, t + 0.7, 1.2);
+  const root  = midiToHz(60 + Math.floor(Math.random() * 13)); // C4–C5
+  const upper = root * Math.pow(2, semitones / 12);
+  const t     = audioCtx.currentTime;
+  if (direction === "asc") {
+    playTone(root,  audioCtx, t,       1.2);
+    playTone(upper, audioCtx, t + 0.7, 1.2);
+  } else {
+    playTone(upper, audioCtx, t,       1.2);
+    playTone(root,  audioCtx, t + 0.7, 1.2);
+  }
 }
 
 function playChord(quality: ChordQuality, audioCtx: AudioContext) {
@@ -628,27 +651,54 @@ const DIFF_INTERVALS: Record<Difficulty, number[]> = {
 };
 const DIFF_LABEL: Record<Difficulty, string> = { easy: "Prep–Grade 2", medium: "Grade 3–5", hard: "Grade 6–8" };
 
-function makeIntervalQ(diff: Difficulty) {
-  const pool   = DIFF_INTERVALS[diff];
-  const semi   = pool[Math.floor(Math.random() * pool.length)];
-  const wrongs = shuffle(pool.filter(s => s !== semi)).slice(0, 3);
-  const choices = shuffle([semi, ...wrongs]).map(s => INTERVAL_NAMES[s]);
-  return { semi, correct: INTERVAL_NAMES[semi], choices };
+function makeIntervalQ(diff: Difficulty, allowDescending = false) {
+  const pool      = DIFF_INTERVALS[diff];
+  const semi      = pool[Math.floor(Math.random() * pool.length)];
+  // Only offer descending for intervals > unison (unison sounds same either way)
+  const direction: "asc" | "desc" = allowDescending && semi > 0 && Math.random() < 0.5 ? "desc" : "asc";
+  const wrongs    = shuffle(pool.filter(s => s !== semi)).slice(0, 3);
+  const choices   = shuffle([semi, ...wrongs]).map(s => INTERVAL_NAMES[s]);
+  return { semi, correct: INTERVAL_NAMES[semi], choices, direction };
+}
+
+function IntervalRefPanel({ diff, allowDesc, onClose }: { diff: Difficulty; allowDesc: boolean; onClose: () => void }) {
+  const pool = DIFF_INTERVALS[diff];
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "#1a1a2e", zIndex: 20, overflowY: "auto", padding: "1rem 1.25rem", fontFamily: "Inter, sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: "1.25rem" }}>
+        <div style={{ flex: 1, fontWeight: 700, fontSize: "0.9375rem", color: "#FDFCFA" }}>Interval Reference</div>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: "1.25rem", padding: 0, lineHeight: 1 }}>✕</button>
+      </div>
+      {/* Column headers */}
+      <div style={{ display: "grid", gridTemplateColumns: allowDesc ? "1fr 1fr 1fr" : "1fr 1fr", gap: "0.375rem 0.75rem", marginBottom: "0.5rem" }}>
+        <div style={{ fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>Interval</div>
+        <div style={{ fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>↑ Ascending</div>
+        {allowDesc && <div style={{ fontSize: "0.5625rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>↓ Descending</div>}
+      </div>
+      {pool.map((semi, i) => (
+        <div key={semi} style={{ display: "grid", gridTemplateColumns: allowDesc ? "1fr 1fr 1fr" : "1fr 1fr", gap: "0.375rem 0.75rem", padding: "0.625rem 0", borderTop: i > 0 ? "1px solid rgba(255,255,255,0.06)" : "none", alignItems: "start" }}>
+          <div style={{ fontWeight: 700, fontSize: "0.8125rem", color: "#FDFCFA" }}>{INTERVAL_NAMES[semi]}</div>
+          <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.4 }}>{INTERVAL_REFS[semi].asc}</div>
+          {allowDesc && <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.4 }}>{INTERVAL_REFS[semi].desc}</div>}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function IntervalGame({ onBack }: { onBack: () => void }) {
   const { t } = useI18n();
-  const [diff, setDiff]   = useState<Difficulty>("easy");
-  const [q, setQ]         = useState(() => makeIntervalQ("easy"));
-  const [played, setPlayed] = useState(false);
+  const [diff, setDiff]       = useState<Difficulty>("easy");
+  const [allowDesc, setAllowDesc] = useState(false);
+  const [q, setQ]             = useState(() => makeIntervalQ("easy"));
+  const [played, setPlayed]   = useState(false);
+  const [showRef, setShowRef] = useState(false);
   const ctxRef = useRef<AudioContext | null>(null);
   const game = useGameState(`interval_${diff}`);
 
   useEffect(() => { game.loadHi(); }, [diff]); // eslint-disable-line
 
   function freshCtx() {
-    // Close any existing context to immediately stop all ringing notes
-    // from the previous question before starting new ones.
     if (ctxRef.current && ctxRef.current.state !== "closed") {
       ctxRef.current.close().catch(() => {});
     }
@@ -656,34 +706,28 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
     return ctxRef.current;
   }
 
-  function getCtx() {
-    if (!ctxRef.current || ctxRef.current.state === "closed") ctxRef.current = new AudioContext();
-    return ctxRef.current;
-  }
-
-  function playQ(semitones: number) {
-    // Replay: close old context so previous attempt doesn't overlap
-    playInterval(semitones, freshCtx());
+  function playQ(semitones: number, direction: "asc" | "desc") {
+    playInterval(semitones, freshCtx(), direction);
     setPlayed(true);
   }
 
-  function newQ(d: Difficulty) {
-    const next = makeIntervalQ(d);
+  function newQ(d: Difficulty, desc: boolean) {
+    const next = makeIntervalQ(d, desc);
     setQ(next);
     setPlayed(false);
     setTimeout(() => {
-      playInterval(next.semi, freshCtx());
-      setPlayed(true); // mark as played so button shows ↻, not ▶
+      playInterval(next.semi, freshCtx(), next.direction);
+      setPlayed(true);
     }, 300);
   }
 
   function start() {
     game.beginCountdown(() => {
-      const first = makeIntervalQ(diff);
+      const first = makeIntervalQ(diff, allowDesc);
       setQ(first); setPlayed(false);
       game.beginPlay();
       setTimeout(() => {
-        playInterval(first.semi, freshCtx());
+        playInterval(first.semi, freshCtx(), first.direction);
         setPlayed(true);
       }, 200);
     });
@@ -694,7 +738,7 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
     game.setSelected(choice);
     const ok = choice === q.correct;
     game.scoreAnswer(ok);
-    game.scheduleNext(ok, () => newQ(diff));
+    game.scheduleNext(ok, () => newQ(diff, allowDesc));
   }
 
   if (game.gs === "idle") {
@@ -706,7 +750,7 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
         extras={
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Difficulty · RCM level</div>
-            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginBottom: "1rem" }}>
               {(["easy", "medium", "hard"] as Difficulty[]).map(d => (
                 <button key={d} onClick={() => setDiff(d)} style={{ padding: "0.5rem 0.875rem", borderRadius: 20, cursor: "pointer", background: diff === d ? "#4CAF84" : "transparent", border: `1.5px solid ${diff === d ? "#4CAF84" : "rgba(255,255,255,0.2)"}`, color: diff === d ? "#fff" : "rgba(255,255,255,0.5)", fontSize: "0.75rem", fontFamily: "Inter, sans-serif", fontWeight: diff === d ? 600 : 400, transition: "all 0.15s" }}>
                   {d.charAt(0).toUpperCase() + d.slice(1)}<br />
@@ -714,6 +758,14 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
                 </button>
               ))}
             </div>
+            {/* Descending toggle */}
+            <button
+              onClick={() => setAllowDesc(v => !v)}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", margin: "0 auto", padding: "0.5rem 1rem", borderRadius: 20, cursor: "pointer", background: allowDesc ? "rgba(155,89,182,0.2)" : "transparent", border: `1.5px solid ${allowDesc ? "#9b59b6" : "rgba(255,255,255,0.15)"}`, color: allowDesc ? "#c39bd3" : "rgba(255,255,255,0.4)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", fontWeight: 500, transition: "all 0.15s" }}
+            >
+              <span style={{ fontSize: "1rem" }}>↕</span>
+              Include descending intervals
+            </button>
           </div>
         }
         onStart={start}
@@ -727,16 +779,28 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
 
   const isCorrect = game.selected === q.correct;
   return (
-    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
+      {showRef && <IntervalRefPanel diff={diff} allowDesc={allowDesc} onClose={() => setShowRef(false)} />}
       <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
         <Popups entries={game.popups} />
         <div style={{ maxWidth: 380, width: "100%" }}>
-          <div style={{ textAlign: "center", marginBottom: "1.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>What interval is this?</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem", gap: "0.75rem" }}>
+            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {q.direction === "desc" ? "↓ Descending — what interval?" : "What interval is this?"}
+            </div>
+            <button
+              onClick={() => setShowRef(v => !v)}
+              title="Show reference"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", fontFamily: "Inter, sans-serif", lineHeight: 1 }}
+            >
+              📖
+            </button>
+          </div>
 
           {/* Big play button */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
-            <button onClick={() => playQ(q.semi)} style={{ width: 80, height: 80, borderRadius: "50%", border: "none", background: played ? "rgba(255,255,255,0.08)" : "#4CAF84", color: "#fff", fontSize: "1.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: played ? "none" : "0 0 28px #4CAF8450", transition: "all 0.2s" }}>
+            <button onClick={() => playQ(q.semi, q.direction)} style={{ width: 80, height: 80, borderRadius: "50%", border: "none", background: played ? "rgba(255,255,255,0.08)" : "#4CAF84", color: "#fff", fontSize: "1.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: played ? "none" : "0 0 28px #4CAF8450", transition: "all 0.2s" }}>
               {played ? "↻" : "▶"}
             </button>
           </div>
