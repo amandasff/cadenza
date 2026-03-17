@@ -9,7 +9,7 @@ import { PracticeService } from "../../lib/services/PracticeService";
 import { Teacher } from "../../lib/models/Teacher";
 import type { ProfileRow, GoalRow, PracticeSessionRow } from "../../lib/types";
 import { useI18n } from "../../lib/context/I18nContext";
-import { Flame, Snowflake, Bell, Check } from "@phosphor-icons/react";
+import { Flame, Snowflake, Bell, Check } from "lucide-react";
 
 interface StudentWithGoals {
   profile: ProfileRow;
@@ -462,7 +462,7 @@ export default function TeacherDashboard() {
                               justifyContent: "center",
                               gap: "0.2rem",
                             }}>
-                              {liveStreak > 0 ? (frozen ? <Snowflake size={14} weight="light" color="var(--sky)" /> : <Flame size={14} weight="fill" color="#E6A817" />) : null}
+                              {liveStreak > 0 ? (frozen ? <Snowflake size={14} strokeWidth={1.5} color="var(--sky)" /> : <Flame size={14} fill="#E6A817" color="#E6A817" strokeWidth={0} />) : null}
                               {liveStreak}
                             </div>
                             <div style={{
@@ -516,7 +516,7 @@ export default function TeacherDashboard() {
                         color: "var(--muted)",
                         fontFamily: "Inter, sans-serif",
                       }}>
-                        <span style={{ display: "flex", alignItems: "center" }}><Snowflake size={14} weight="light" color="var(--muted)" /></span>
+                        <span style={{ display: "flex", alignItems: "center" }}><Snowflake size={14} strokeWidth={1.5} color="var(--muted)" /></span>
                         <span>{profile.streak_freeze_count} freeze{(profile.streak_freeze_count ?? 0) !== 1 ? "s" : ""} available</span>
                       </div>
                     )}
@@ -538,7 +538,7 @@ export default function TeacherDashboard() {
                       transition: "background 0.2s",
                     }}
                   >
-                    {sentReminderIds.has(profile.id) ? <Check size={14} weight="bold" color="var(--white)" /> : <Bell size={14} weight="light" color="var(--charcoal)" />}
+                    {sentReminderIds.has(profile.id) ? <Check size={14} strokeWidth={2.5} color="var(--white)" /> : <Bell size={14} strokeWidth={1.5} color="var(--charcoal)" />}
                   </button>
                   </div>
                 );
@@ -746,7 +746,7 @@ export default function TeacherDashboard() {
               opacity: grantingFreezeFor === encourageTarget?.id ? 0.5 : 1,
             }}
           >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}><Snowflake size={14} weight="light" /> Grant streak freeze</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}><Snowflake size={14} strokeWidth={1.5} /> Grant streak freeze</span>
           </button>
         </div>
       </div>

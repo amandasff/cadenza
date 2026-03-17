@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Timer, Flame, Target } from "@phosphor-icons/react";
+import { Timer, Flame, Target } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -276,7 +276,7 @@ export default function Home() {
       <div style={{ padding: "2rem 2rem 5rem", maxWidth: 1080, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem" }}>
           <div style={{ background: "#EBF3EE", border: "1px solid #B8D4C2", borderRadius: 14, padding: "2rem", transform: "rotate(-1.5deg)", boxShadow: "0 2px 20px rgba(44,40,36,0.06)" }}>
-            <div style={{ marginBottom: "1rem", lineHeight: 1 }}><Timer size={36} weight="light" color="#5B9E79" /></div>
+            <div style={{ marginBottom: "1rem", lineHeight: 1 }}><Timer size={36} strokeWidth={1.5} color="#5B9E79" /></div>
             <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.35rem", color: "#2C2824", marginBottom: "0.5rem" }}>
               One-tap practice timer
             </div>
@@ -286,7 +286,7 @@ export default function Home() {
           </div>
 
           <div style={{ background: "#FDF3E8", border: "1px solid #EAC98C", borderRadius: 14, padding: "2rem", transform: "rotate(1.2deg)", boxShadow: "0 2px 20px rgba(44,40,36,0.06)" }}>
-            <div style={{ marginBottom: "1rem", lineHeight: 1 }}><Flame size={36} weight="light" color="#C8911A" /></div>
+            <div style={{ marginBottom: "1rem", lineHeight: 1 }}><Flame size={36} strokeWidth={1.5} color="#C8911A" /></div>
             <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.35rem", color: "#2C2824", marginBottom: "0.5rem" }}>
               Streaks &amp; points
             </div>
@@ -296,7 +296,7 @@ export default function Home() {
           </div>
 
           <div style={{ background: "#F0EEFA", border: "1px solid #C4B8E8", borderRadius: 14, padding: "2rem", transform: "rotate(-0.8deg)", boxShadow: "0 2px 20px rgba(44,40,36,0.06)" }}>
-            <div style={{ marginBottom: "1rem", lineHeight: 1 }}><Target size={36} weight="light" color="#6B5C9E" /></div>
+            <div style={{ marginBottom: "1rem", lineHeight: 1 }}><Target size={36} strokeWidth={1.5} color="#6B5C9E" /></div>
             <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.35rem", color: "#2C2824", marginBottom: "0.5rem" }}>
               Goals from your teacher
             </div>

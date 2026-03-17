@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Bell } from "@phosphor-icons/react";
+import { Bell } from "lucide-react";
 
 function urlBase64ToUint8Array(base64: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -62,7 +62,7 @@ export default function PushSubscribeButton() {
         alignItems: "center",
         gap: "0.875rem",
       }}>
-        <Bell size={28} weight="light" color="#8A7A50" style={{ flexShrink: 0 }} />
+        <Bell size={28} strokeWidth={1.5} color="#8A7A50" style={{ flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "#2C2824", marginBottom: "0.2rem" }}>
             Daily practice reminders

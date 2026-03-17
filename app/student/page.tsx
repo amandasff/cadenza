@@ -13,7 +13,7 @@ import PushSubscribeButton from "../../components/PushSubscribeButton";
 import { usePractice } from "../../lib/context/PracticeContext";
 import Metronome from "../../components/Metronome";
 import { useI18n } from "../../lib/context/I18nContext";
-import { Flame, Snowflake, Sparkle, Star, MusicNote, PianoKeys, Headphones, BookOpen, Brain, Microphone } from "@phosphor-icons/react";
+import { Flame, Snowflake, Sparkles as Sparkle, Star, Music as MusicNote, Piano as PianoKeys, Headphones, BookOpen, Brain, Mic as Microphone } from "lucide-react";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -302,9 +302,9 @@ export default function ThisWeek() {
         // means the freeze is protecting them — show ice instead of fire
         const streakIcon: React.ReactNode = streakDays > 0
           ? (freezeCount > 0
-              ? <Snowflake size={16} weight="light" color="var(--sky)" />
-              : <Flame size={16} weight="fill" color="#E6A817" />)
-          : <Sparkle size={16} weight="light" color="var(--muted)" />;
+              ? <Snowflake size={16} strokeWidth={1.5} color="var(--sky)" />
+              : <Flame size={16} fill="#E6A817" color="#E6A817" strokeWidth={0} />)
+          : <Sparkle size={16} strokeWidth={1.5} color="var(--muted)" />;
         const streakColor = streakDays > 0 ? "var(--peach-bg)" : "var(--white)";
         const streakBorder = streakDays > 0 ? "var(--peach-light)" : "var(--border)";
         const streakLabel = freezeCount > 0 && streakDays > 0
@@ -334,7 +334,7 @@ export default function ThisWeek() {
               background: "var(--white)", border: "1px solid var(--border)",
               display: "flex", alignItems: "center", gap: "0.5rem",
             }}>
-              <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><Star size={16} weight="fill" color="#E6A817" /></span>
+              <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><Star size={16} fill="#E6A817" color="#E6A817" strokeWidth={0} /></span>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
                 {(student?.totalPoints ?? 0).toLocaleString()} pts
                 <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontWeight: 400, marginTop: 2 }}>{student?.getLevelLabel?.() ?? "Beginner"}</div>
@@ -580,7 +580,7 @@ export default function ThisWeek() {
             borderRadius: 4, padding: "0.875rem 1.125rem",
             display: "flex", alignItems: "center", gap: "0.875rem",
           }}>
-            <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><MusicNote size={18} weight="light" color="var(--muted)" /></span>
+            <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><MusicNote size={18} strokeWidth={1.5} color="var(--muted)" /></span>
             <div>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.875rem", color: "var(--charcoal)" }}>
                 {t.student.nextLesson}
@@ -636,11 +636,11 @@ export default function ThisWeek() {
                 memorize: "var(--lavender)", record: "var(--sage)",
               };
               const TYPE_ICON: Record<string, React.ReactNode> = {
-                practice: <PianoKeys size={14} weight="light" />,
-                listen: <Headphones size={14} weight="light" />,
-                theory: <BookOpen size={14} weight="light" />,
-                memorize: <Brain size={14} weight="light" />,
-                record: <Microphone size={14} weight="light" />,
+                practice: <PianoKeys size={14} strokeWidth={1.5} />,
+                listen: <Headphones size={14} strokeWidth={1.5} />,
+                theory: <BookOpen size={14} strokeWidth={1.5} />,
+                memorize: <Brain size={14} strokeWidth={1.5} />,
+                record: <Microphone size={14} strokeWidth={1.5} />,
               };
               const color = TYPE_COLORS[a.type] ?? "var(--muted)";
 
