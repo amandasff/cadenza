@@ -11,6 +11,7 @@ import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
 import { Camera, Palette, X } from "lucide-react";
+import LinkedAccountSwitcher from "../../components/LinkedAccountSwitcher";
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -320,6 +321,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
         {/* Footer */}
         <div style={{ paddingTop: "1.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+          <LinkedAccountSwitcher />
           <button
             onClick={toggleTheme}
             style={{
