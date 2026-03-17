@@ -58,6 +58,64 @@ function frequencyToNoteInfo(freq: number) {
   return { note: NOTE_NAMES[noteIndex], octave, cents };
 }
 
+// ── Karplus-Strong plucked string synthesis ──────────────────────────────────
+function pluckString(ctx: AudioContext, freq: number) {
+  const sampleRate = ctx.sampleRate;
+  // Delay line length = one period at the target frequency
+  const delayLen = Math.max(2, Math.round(sampleRate / freq));
+  const duration = freq < 120 ? 5 : freq < 250 ? 4 : 3;
+  const totalSamples = Math.round(sampleRate * duration);
+
+  const buffer = ctx.createBuffer(1, totalSamples, sampleRate);
+  const data = buffer.getChannelData(0);
+
+  // Seed delay line with bandlimited noise (slight low-pass to avoid harshness)
+  const delayLine = new Float32Array(delayLen);
+  for (let i = 0; i < delayLen; i++) {
+    delayLine[i] = Math.random() * 2 - 1;
+  }
+  // One-pass smoothing of seed noise
+  for (let i = 1; i < delayLen; i++) {
+    delayLine[i] = delayLine[i] * 0.6 + delayLine[i - 1] * 0.4;
+  }
+
+  // Damping coefficient — slightly lower for bass strings (more sustain)
+  const damping = freq < 100 ? 0.998 : freq < 200 ? 0.9975 : 0.996;
+
+  let pos = 0;
+  for (let i = 0; i < totalSamples; i++) {
+    const next = (pos + 1) % delayLen;
+    const sample = delayLine[pos];
+    data[i] = sample;
+    // Average + damping (Karplus-Strong filter step)
+    delayLine[pos] = damping * (sample + delayLine[next]) * 0.5;
+    pos = next;
+  }
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+
+  // Gentle high-shelf roll-off for warmth
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowshelf";
+  filter.frequency.value = 4000;
+  filter.gain.value = -6;
+
+  const gain = ctx.createGain();
+  // Pluck attack
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.85, ctx.currentTime + 0.003);
+  // Natural decay envelope
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  source.start();
+  source.stop(ctx.currentTime + duration);
+  return source;
+}
+
 // ── Instrument definitions ───────────────────────────────────────────────────
 interface StringDef {
   label: string;   // e.g. "E2"
@@ -68,7 +126,9 @@ interface StringDef {
 interface Instrument {
   name: string;
   strings: StringDef[];
-  columns: number;
+  /** For headstock layout: left pegs (low → high) then right pegs */
+  leftStrings: number[];   // indices into strings[]
+  rightStrings: number[];
 }
 
 const INSTRUMENTS: Record<string, Instrument> = {
@@ -82,7 +142,8 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "B3", freq: 246.94, stringNum: 2 },
       { label: "E4", freq: 329.63, stringNum: 1 },
     ],
-    columns: 6,
+    leftStrings: [0, 1, 2],
+    rightStrings: [5, 4, 3],
   },
   ukulele: {
     name: "Ukulele",
@@ -92,7 +153,8 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "E4", freq: 329.63, stringNum: 2 },
       { label: "A4", freq: 440.0,  stringNum: 1 },
     ],
-    columns: 4,
+    leftStrings: [0, 1],
+    rightStrings: [3, 2],
   },
   violin: {
     name: "Violin",
@@ -102,7 +164,8 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "A4", freq: 440.0,  stringNum: 2 },
       { label: "E5", freq: 659.25, stringNum: 1 },
     ],
-    columns: 4,
+    leftStrings: [0, 1],
+    rightStrings: [3, 2],
   },
   viola: {
     name: "Viola",
@@ -112,7 +175,8 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "D4", freq: 293.66, stringNum: 2 },
       { label: "A4", freq: 440.0,  stringNum: 1 },
     ],
-    columns: 4,
+    leftStrings: [0, 1],
+    rightStrings: [3, 2],
   },
   cello: {
     name: "Cello",
@@ -122,7 +186,8 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "D3", freq: 146.83, stringNum: 2 },
       { label: "A3", freq: 220.0,  stringNum: 1 },
     ],
-    columns: 4,
+    leftStrings: [0, 1],
+    rightStrings: [3, 2],
   },
   bass: {
     name: "Bass",
@@ -132,7 +197,8 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "D2", freq: 73.42,  stringNum: 2 },
       { label: "G2", freq: 98.0,   stringNum: 1 },
     ],
-    columns: 4,
+    leftStrings: [0, 1],
+    rightStrings: [3, 2],
   },
   mandolin: {
     name: "Mandolin",
@@ -142,10 +208,11 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "A4", freq: 440.0,  stringNum: 2 },
       { label: "E5", freq: 659.25, stringNum: 1 },
     ],
-    columns: 4,
+    leftStrings: [0, 1],
+    rightStrings: [3, 2],
   },
   banjo: {
-    name: "Banjo (5-str)",
+    name: "Banjo",
     strings: [
       { label: "G4", freq: 392.0,  stringNum: 5 },
       { label: "D3", freq: 146.83, stringNum: 4 },
@@ -153,7 +220,8 @@ const INSTRUMENTS: Record<string, Instrument> = {
       { label: "B3", freq: 246.94, stringNum: 2 },
       { label: "D4", freq: 293.66, stringNum: 1 },
     ],
-    columns: 5,
+    leftStrings: [0, 1, 2],
+    rightStrings: [4, 3],
   },
 };
 
@@ -168,6 +236,237 @@ function getTuningStatus(cents: number, inTune: string, slightlySharp: string, s
   return { label: cents > 0 ? tooSharp : tooFlat, color: "#E05252" };
 }
 
+// ── PegButton ─────────────────────────────────────────────────────────────────
+function PegButton({
+  s, isActive, isPlaying, onPlay, side,
+}: {
+  s: StringDef;
+  isActive: boolean;
+  isPlaying: boolean;
+  onPlay: () => void;
+  side: "left" | "right";
+}) {
+  const noteOnly = s.label.replace(/\d+/, "");
+  const octave = s.label.match(/\d+/)?.[0] ?? "";
+  const color = isActive ? "#4CAF84" : isPlaying ? "#E6A817" : "rgba(255,255,255,0.55)";
+  const bgColor = isActive ? "#4CAF8422" : isPlaying ? "#E6A81722" : "rgba(255,255,255,0.05)";
+  const borderColor = isActive ? "#4CAF84" : isPlaying ? "#E6A817" : "rgba(255,255,255,0.12)";
+  const glow = isActive ? "0 0 12px #4CAF8466" : isPlaying ? "0 0 12px #E6A81766" : "none";
+
+  return (
+    <button
+      onClick={onPlay}
+      style={{
+        display: "flex",
+        flexDirection: side === "left" ? "row" : "row-reverse",
+        alignItems: "center",
+        gap: "0.5rem",
+        background: bgColor,
+        border: `1.5px solid ${borderColor}`,
+        borderRadius: 10,
+        padding: "0.5rem 0.625rem",
+        cursor: "pointer",
+        transition: "all 0.15s",
+        boxShadow: glow,
+        minWidth: 68,
+      }}
+    >
+      {/* Peg circle */}
+      <div style={{
+        width: 28, height: 28, borderRadius: "50%",
+        background: isActive ? "#4CAF84" : isPlaying ? "#E6A817" : "#3A3A3C",
+        border: `2px solid ${isActive ? "#6DD4A8" : isPlaying ? "#F2C35A" : "rgba(255,255,255,0.15)"}`,
+        flexShrink: 0,
+        boxShadow: isActive || isPlaying ? `0 0 8px ${color}66` : "inset 0 1px 0 rgba(255,255,255,0.1)",
+        transition: "all 0.15s",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        {/* Peg slot */}
+        <div style={{ width: 3, height: 10, background: isActive || isPlaying ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.15)", borderRadius: 2 }} />
+      </div>
+      {/* Note name */}
+      <div style={{ lineHeight: 1 }}>
+        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color, transition: "color 0.15s" }}>
+          {noteOnly}
+        </div>
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em", marginTop: 1 }}>
+          {octave}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ── Headstock visual ──────────────────────────────────────────────────────────
+function Headstock({
+  instrument,
+  activeLabel,
+  playingLabel,
+  noteInfo,
+  onPlay,
+}: {
+  instrument: Instrument;
+  activeLabel: string | null;
+  playingLabel: string | null;
+  noteInfo: { note: string; octave: number; cents: number } | null;
+  onPlay: (s: StringDef) => void;
+}) {
+  const { strings, leftStrings, rightStrings } = instrument;
+  const leftPegs = leftStrings.map(i => strings[i]);
+  const rightPegs = rightStrings.map(i => strings[i]);
+  const maxRows = Math.max(leftPegs.length, rightPegs.length);
+
+  // All strings in order (low to high) for the string lines
+  const allStrings = [...strings].sort((a, b) => a.freq - b.freq);
+  const numStrings = allStrings.length;
+
+  return (
+    <div style={{
+      background: "#1A1A1C",
+      borderRadius: 18,
+      padding: "1.25rem 1rem 1.5rem",
+      boxShadow: "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.07)",
+    }}>
+      {/* Label */}
+      <div style={{
+        textAlign: "center",
+        fontFamily: "Inter, sans-serif",
+        fontSize: "0.5625rem",
+        fontWeight: 600,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        color: "rgba(255,255,255,0.25)",
+        marginBottom: "1.125rem",
+      }}>
+        {instrument.name} · Standard Tuning · Tap to hear
+      </div>
+
+      <div style={{ display: "flex", alignItems: "stretch", gap: "0.625rem" }}>
+        {/* Left pegs column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", justifyContent: "center" }}>
+          {leftPegs.map(s => (
+            <PegButton
+              key={s.label}
+              s={s}
+              isActive={activeLabel === s.label}
+              isPlaying={playingLabel === s.label}
+              onPlay={() => onPlay(s)}
+              side="left"
+            />
+          ))}
+          {/* Spacers for right-heavy instruments */}
+          {Array.from({ length: maxRows - leftPegs.length }).map((_, i) => (
+            <div key={i} style={{ height: 48 }} />
+          ))}
+        </div>
+
+        {/* Headstock body + strings */}
+        <div style={{ flex: 1, position: "relative", minHeight: maxRows * 56 }}>
+          {/* Headstock body shape */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(180deg, #2A2320 0%, #1E1B18 100%)",
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.07)",
+            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(255,255,255,0.04)",
+          }} />
+
+          {/* Nut line at bottom */}
+          <div style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 5,
+            background: "linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%)",
+            borderBottomLeftRadius: 12,
+            borderBottomRightRadius: 12,
+          }} />
+
+          {/* String lines */}
+          {allStrings.map((s, idx) => {
+            const isActive = activeLabel === s.label;
+            const isPlaying = playingLabel === s.label;
+            // Distribute strings evenly across the headstock width
+            const leftPct = 8 + (idx / (numStrings - 1 || 1)) * 84;
+            const stringThickness = 1 + (1 - idx / (numStrings - 1 || 1)) * 2.5; // thicker at left (low)
+            const color = isActive ? "#4CAF84" : isPlaying ? "#E6A817" : `rgba(255,255,255,${0.12 + (1 - idx / (numStrings - 1 || 1)) * 0.18})`;
+            const glow = isActive ? "#4CAF8488" : isPlaying ? "#E6A81788" : "transparent";
+
+            return (
+              <div
+                key={s.label}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: 0,
+                  left: `${leftPct}%`,
+                  width: stringThickness,
+                  transform: "translateX(-50%)",
+                  background: color,
+                  borderRadius: stringThickness,
+                  boxShadow: (isActive || isPlaying) ? `0 0 6px 2px ${glow}` : "none",
+                  transition: "background 0.2s, box-shadow 0.2s",
+                }}
+              />
+            );
+          })}
+
+          {/* Detected note overlay (when actively detecting a matching string) */}
+          {noteInfo && activeLabel && (() => {
+            const activeStr = strings.find(s => s.label === activeLabel);
+            if (!activeStr) return null;
+            const idx = allStrings.findIndex(s => s.label === activeLabel);
+            const leftPct = 8 + (idx / (numStrings - 1 || 1)) * 84;
+            return (
+              <div style={{
+                position: "absolute",
+                bottom: 8,
+                left: `${leftPct}%`,
+                transform: "translateX(-50%)",
+                background: "rgba(76,175,132,0.15)",
+                border: "1px solid rgba(76,175,132,0.4)",
+                borderRadius: 4,
+                padding: "1px 4px",
+                fontFamily: "Inter, sans-serif",
+                fontSize: "0.5rem",
+                fontWeight: 600,
+                color: "#4CAF84",
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+              }}>
+                {noteInfo.cents > 0 ? "+" : ""}{noteInfo.cents}¢
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Right pegs column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", justifyContent: "center" }}>
+          {rightPegs.map(s => (
+            <PegButton
+              key={s.label}
+              s={s}
+              isActive={activeLabel === s.label}
+              isPlaying={playingLabel === s.label}
+              onPlay={() => onPlay(s)}
+              side="right"
+            />
+          ))}
+          {Array.from({ length: maxRows - rightPegs.length }).map((_, i) => (
+            <div key={i} style={{ height: 48 }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function TunerPage() {
   const { t } = useI18n();
   const [listening, setListening] = useState(false);
@@ -176,14 +475,13 @@ export default function TunerPage() {
   const [instrumentKey, setInstrumentKey] = useState("guitar");
   const [playingString, setPlayingString] = useState<string | null>(null);
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioCtxRef  = useRef<AudioContext | null>(null);
   const analyserRef  = useRef<AnalyserNode | null>(null);
   const streamRef    = useRef<MediaStream | null>(null);
   const rafRef       = useRef<number>(0);
   const bufferRef    = useRef<Float32Array<ArrayBuffer> | null>(null);
   const toneCtxRef   = useRef<AudioContext | null>(null);
-  const toneOscRef   = useRef<OscillatorNode | null>(null);
-  const toneGainRef  = useRef<GainNode | null>(null);
+  const pluckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const detect = useCallback(() => {
     const analyser = analyserRef.current;
@@ -222,7 +520,7 @@ export default function TunerPage() {
 
   function stopListening() {
     cancelAnimationFrame(rafRef.current);
-    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current?.getTracks().forEach(tr => tr.stop());
     audioCtxRef.current?.close().catch(() => {});
     audioCtxRef.current = null;
     analyserRef.current = null;
@@ -231,93 +529,55 @@ export default function TunerPage() {
     setNoteInfo(null);
   }
 
-  // ── Reference tone playback ──────────────────────────────────────────────
-  function playTone(freq: number, label: string) {
-    // If already playing this string, stop it (toggle)
-    if (playingString === label) {
-      stopTone();
+  function playTone(s: StringDef) {
+    if (pluckTimerRef.current) clearTimeout(pluckTimerRef.current);
+
+    // Close previous tone context
+    if (toneCtxRef.current) {
+      toneCtxRef.current.close().catch(() => {});
+      toneCtxRef.current = null;
+    }
+
+    if (playingString === s.label) {
+      setPlayingString(null);
       return;
     }
-    // Stop any existing tone first
-    stopTone();
 
-    const ctx = toneCtxRef.current ?? new AudioContext();
+    const ctx = new AudioContext();
     toneCtxRef.current = ctx;
+    pluckString(ctx, s.freq);
+    setPlayingString(s.label);
 
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-    gain.connect(ctx.destination);
-    toneGainRef.current = gain;
-
-    const osc = ctx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    osc.connect(gain);
-    osc.start();
-    toneOscRef.current = osc;
-
-    // Add octave-up overtone so low notes are audible on small speakers
-    if (freq < 200) {
-      const overtoneGain = ctx.createGain();
-      overtoneGain.gain.setValueAtTime(0, ctx.currentTime);
-      overtoneGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
-      overtoneGain.connect(ctx.destination);
-      const overtone = ctx.createOscillator();
-      overtone.type = "sine";
-      overtone.frequency.setValueAtTime(freq * 2, ctx.currentTime);
-      overtone.connect(overtoneGain);
-      overtone.start();
-      // Stop overtone when main oscillator stops
-      osc.addEventListener("ended", () => {
-        try { overtone.stop(); overtoneGain.disconnect(); } catch {}
-      });
-    }
-
-    setPlayingString(label);
-
-    // Auto-stop after 3 seconds
-    setTimeout(() => {
-      if (toneOscRef.current === osc) stopTone();
-    }, 3000);
+    const duration = s.freq < 120 ? 5 : s.freq < 250 ? 4 : 3;
+    pluckTimerRef.current = setTimeout(() => {
+      setPlayingString(null);
+    }, duration * 1000);
   }
 
-  function stopTone() {
-    const gain = toneGainRef.current;
-    const osc = toneOscRef.current;
-    const ctx = toneCtxRef.current;
-    if (osc && gain && ctx) {
-      try {
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
-        osc.stop(ctx.currentTime + 0.06);
-      } catch {}
-    }
-    toneOscRef.current = null;
-    toneGainRef.current = null;
-    setPlayingString(null);
-  }
-
-  useEffect(() => () => {                // cleanup on unmount
+  useEffect(() => () => {
     stopListening();
-    stopTone();
+    if (pluckTimerRef.current) clearTimeout(pluckTimerRef.current);
     toneCtxRef.current?.close().catch(() => {});
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const instrument = INSTRUMENTS[instrumentKey];
-  const status = noteInfo ? getTuningStatus(noteInfo.cents, t.student.tunerInTune, t.student.tunerSlightlySharp, t.student.tunerSlightlyFlat, t.student.tunerSharp, t.student.tunerFlat, t.student.tunerTooSharp, t.student.tunerTooFlat) : null;
-  const needlePct = noteInfo ? Math.min(100, Math.max(0, ((noteInfo.cents + 50) / 100) * 100)) : 50;
 
-  // Find closest string to current note
-  function getClosestString() {
+  // Find active string (closest pitch match while listening)
+  const activeLabel = (() => {
     if (!noteInfo) return null;
-    const { note, octave } = noteInfo;
-    return instrument.strings.find(s => {
+    const match = instrument.strings.find(s => {
       const sNote = s.label.replace(/\d+/, "");
       const sOctave = parseInt(s.label.match(/\d+/)![0]);
-      return sNote === note && sOctave === octave;
-    }) ?? null;
-  }
-  const closestString = getClosestString();
+      return sNote === noteInfo.note && sOctave === noteInfo.octave;
+    });
+    return match?.label ?? null;
+  })();
+
+  const status = noteInfo
+    ? getTuningStatus(noteInfo.cents, t.student.tunerInTune, t.student.tunerSlightlySharp, t.student.tunerSlightlyFlat, t.student.tunerSharp, t.student.tunerFlat, t.student.tunerTooSharp, t.student.tunerTooFlat)
+    : null;
+
+  const needlePct = noteInfo ? Math.min(100, Math.max(0, ((noteInfo.cents + 50) / 100) * 100)) : 50;
 
   return (
     <div style={{
@@ -326,13 +586,13 @@ export default function TunerPage() {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      padding: "2rem 1.5rem 3rem",
+      padding: "2rem 1.25rem 3rem",
       fontFamily: "Inter, sans-serif",
     }}>
 
       {/* Header */}
-      <div style={{ width: "100%", maxWidth: 380, marginBottom: "1.75rem" }}>
-        <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "0.25rem" }}>
+      <div style={{ width: "100%", maxWidth: 400, marginBottom: "1.5rem" }}>
+        <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.25rem" }}>
           Cadenza
         </div>
         <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 500, color: "#FDFCFA", letterSpacing: "-0.01em" }}>
@@ -341,20 +601,18 @@ export default function TunerPage() {
       </div>
 
       {/* Instrument selector */}
-      <div style={{ width: "100%", maxWidth: 380, marginBottom: "1.5rem" }}>
-        <div style={{
-          display: "flex", flexWrap: "wrap", gap: "0.375rem",
-        }}>
+      <div style={{ width: "100%", maxWidth: 400, marginBottom: "1.25rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
           {INSTRUMENT_ORDER.map(key => (
             <button
               key={key}
-              onClick={() => { setNoteInfo(null); setInstrumentKey(key); }}
+              onClick={() => { setNoteInfo(null); setInstrumentKey(key); setPlayingString(null); }}
               style={{
                 padding: "0.375rem 0.75rem",
                 borderRadius: 20,
                 border: `1px solid ${instrumentKey === key ? "#4CAF84" : "rgba(255,255,255,0.12)"}`,
                 background: instrumentKey === key ? "#4CAF8422" : "transparent",
-                color: instrumentKey === key ? "#4CAF84" : "rgba(255,255,255,0.45)",
+                color: instrumentKey === key ? "#4CAF84" : "rgba(255,255,255,0.4)",
                 fontSize: "0.75rem",
                 fontFamily: "Inter, sans-serif",
                 fontWeight: instrumentKey === key ? 600 : 400,
@@ -369,77 +627,76 @@ export default function TunerPage() {
         </div>
       </div>
 
-      {/* Main display */}
+      {/* Headstock */}
+      <div style={{ width: "100%", maxWidth: 400, marginBottom: "1.25rem" }}>
+        <Headstock
+          instrument={instrument}
+          activeLabel={activeLabel}
+          playingLabel={playingString}
+          noteInfo={noteInfo}
+          onPlay={playTone}
+        />
+      </div>
+
+      {/* Pitch display + gauge */}
       <div style={{
-        width: "100%", maxWidth: 380,
+        width: "100%", maxWidth: 400,
         background: "#2C2C2E",
         borderRadius: 16,
-        padding: "2.5rem 2rem",
+        padding: "1.5rem 1.75rem",
         marginBottom: "1.25rem",
-        textAlign: "center",
-        boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
       }}>
-
-        {/* Closest string hint */}
-        {closestString && (
-          <div style={{ marginBottom: "0.75rem", fontSize: "0.6875rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            {t.student.tunerStringLabel} {closestString.stringNum} · {closestString.label}
-          </div>
-        )}
-
-        {/* Note display */}
-        <div style={{ marginBottom: "2rem" }}>
+        {/* Note + octave */}
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: "0.375rem", marginBottom: "1.25rem" }}>
           {noteInfo ? (
             <>
-              <div style={{
-                fontSize: "6rem",
-                fontWeight: 700,
+              <span style={{
+                fontSize: "5rem", fontWeight: 700, lineHeight: 1,
                 color: status?.color ?? "#FDFCFA",
-                lineHeight: 1,
                 letterSpacing: "-0.04em",
-                transition: "color 0.2s",
+                transition: "color 0.15s",
               }}>
                 {noteInfo.note}
-              </div>
-              <div style={{ fontSize: "1.5rem", color: "rgba(255,255,255,0.35)", marginTop: "0.25rem", fontWeight: 300 }}>
+              </span>
+              <span style={{ fontSize: "1.75rem", color: "rgba(255,255,255,0.3)", fontWeight: 300, alignSelf: "flex-end", paddingBottom: "0.5rem" }}>
                 {noteInfo.octave}
-              </div>
+              </span>
             </>
           ) : (
-            <div style={{ fontSize: "4rem", color: "rgba(255,255,255,0.1)", lineHeight: 1, letterSpacing: "-0.02em" }}>
-              —
-            </div>
+            <span style={{ fontSize: "4rem", color: "rgba(255,255,255,0.08)", lineHeight: 1, letterSpacing: "-0.02em" }}>
+              {listening ? "…" : "—"}
+            </span>
           )}
         </div>
 
-        {/* Cents gauge */}
-        <div style={{ marginBottom: "1rem" }}>
+        {/* Gauge */}
+        <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>{t.student.tunerFlatGauge}</span>
-            <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>{t.student.tunerSharpGauge}</span>
+            <span style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.25)", letterSpacing: "0.06em" }}>{t.student.tunerFlatGauge}</span>
+            <span style={{ fontSize: "0.5625rem", color: "rgba(255,255,255,0.25)", letterSpacing: "0.06em" }}>{t.student.tunerSharpGauge}</span>
           </div>
 
-          <div style={{
-            position: "relative", height: 6,
-            background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "visible",
-          }}>
+          <div style={{ position: "relative", height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 3, overflow: "visible" }}>
+            {/* Center tick */}
             <div style={{
-              position: "absolute", left: "50%", top: -4,
-              transform: "translateX(-50%)", width: 2, height: 14,
-              background: "rgba(255,255,255,0.15)", borderRadius: 1,
+              position: "absolute", left: "50%", top: -5,
+              transform: "translateX(-50%)", width: 1.5, height: 16,
+              background: "rgba(255,255,255,0.18)", borderRadius: 1,
             }} />
+            {/* Needle */}
             <div style={{
               position: "absolute", top: -5,
-              left: `calc(${needlePct}% - 6px)`,
-              width: 12, height: 16,
-              background: status?.color ?? "rgba(255,255,255,0.2)",
-              borderRadius: 2,
-              transition: "left 0.1s ease-out, background 0.2s",
-              boxShadow: noteInfo ? `0 0 8px ${status?.color}88` : "none",
+              left: `calc(${needlePct}% - 7px)`,
+              width: 14, height: 16,
+              background: status?.color ?? "rgba(255,255,255,0.15)",
+              borderRadius: 3,
+              transition: "left 0.08s ease-out, background 0.15s",
+              boxShadow: noteInfo ? `0 0 10px ${status?.color}88` : "none",
             }} />
           </div>
 
-          <div style={{ marginTop: "0.875rem", fontSize: "0.8125rem", color: status?.color ?? "rgba(255,255,255,0.2)", fontWeight: 500, transition: "color 0.2s" }}>
+          <div style={{ marginTop: "0.875rem", fontSize: "0.8125rem", textAlign: "center", color: status?.color ?? "rgba(255,255,255,0.2)", fontWeight: 500, transition: "color 0.15s" }}>
             {noteInfo ? (
               <>{noteInfo.cents > 0 ? "+" : ""}{noteInfo.cents} cents &nbsp;·&nbsp; {status?.label}</>
             ) : (
@@ -451,7 +708,7 @@ export default function TunerPage() {
 
       {/* Error */}
       {error && (
-        <div style={{ width: "100%", maxWidth: 380, background: "#3A1A1A", border: "1px solid #E05252", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8125rem", color: "#E05252" }}>
+        <div style={{ width: "100%", maxWidth: 400, background: "#3A1A1A", border: "1px solid #E05252", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.8125rem", color: "#E05252" }}>
           {error}
         </div>
       )}
@@ -463,9 +720,8 @@ export default function TunerPage() {
           width: 72, height: 72, borderRadius: "50%", border: "none", cursor: "pointer",
           background: listening ? "#E05252" : "#4CAF84",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: listening ? "0 0 24px #E0525260" : "0 0 24px #4CAF8460",
+          boxShadow: listening ? "0 0 28px #E0525255" : "0 0 28px #4CAF8455",
           transition: "all 0.2s",
-          marginBottom: "2.5rem",
         }}
       >
         {listening ? (
@@ -482,97 +738,6 @@ export default function TunerPage() {
         )}
       </button>
 
-      {/* String visualizer — Yousician-style stacked strings */}
-      <div style={{ width: "100%", maxWidth: 380 }}>
-        <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.875rem", textAlign: "center" }}>
-          {instrument.name} · {t.student.tunerStandardTuning} · {t.student.tunerTapToHear}
-        </div>
-        <div style={{ background: "#2C2C2E", borderRadius: 14, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.35)" }}>
-          {[...instrument.strings].reverse().map((s, idx, arr) => {
-            const sNote = s.label.replace(/\d+/, "");
-            const sOctave = parseInt(s.label.match(/\d+/)![0]);
-            const isActive = noteInfo ? noteInfo.note === sNote && noteInfo.octave === sOctave : false;
-            const isPlaying = playingString === s.label;
-            // String thickness: lower string number = higher pitch = thinner
-            const totalStrings = arr.length;
-            const reversedIdx = totalStrings - 1 - idx; // 0 = highest pitch (thinnest)
-            const stringThickness = 1.5 + (reversedIdx / (totalStrings - 1)) * 3.5;
-            const color = isPlaying ? "#E6A817" : isActive ? "#4CAF84" : "rgba(255,255,255,0.25)";
-            const glowColor = isPlaying ? "#E6A81760" : isActive ? "#4CAF8460" : "transparent";
-
-            return (
-              <button
-                key={`${s.label}-${s.stringNum}`}
-                onClick={() => playTone(s.freq, s.label)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0,
-                  background: isActive ? "#4CAF8410" : isPlaying ? "#E6A81710" : "transparent",
-                  border: "none",
-                  borderTop: idx > 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  transition: "background 0.2s",
-                  fontFamily: "Inter, sans-serif",
-                }}
-              >
-                {/* String label + number */}
-                <div style={{
-                  width: 64, flexShrink: 0, textAlign: "center",
-                  padding: "0.875rem 0",
-                  borderRight: "1px solid rgba(255,255,255,0.06)",
-                }}>
-                  <div style={{ fontSize: "1rem", fontWeight: 700, color: isActive ? "#4CAF84" : isPlaying ? "#E6A817" : "#FDFCFA", lineHeight: 1 }}>
-                    {sNote}
-                  </div>
-                  <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.3)", marginTop: 3, letterSpacing: "0.06em" }}>
-                    {t.student.tunerStringLabel} {s.stringNum}
-                  </div>
-                </div>
-
-                {/* The actual string line */}
-                <div style={{ flex: 1, position: "relative", height: 52, display: "flex", alignItems: "center" }}>
-                  <div style={{
-                    position: "absolute", left: 0, right: 0,
-                    height: stringThickness,
-                    background: color,
-                    borderRadius: stringThickness,
-                    boxShadow: isActive || isPlaying ? `0 0 8px 2px ${glowColor}` : "none",
-                    transition: "background 0.2s, box-shadow 0.2s",
-                  }} />
-                  {isPlaying && (
-                    <div style={{ position: "absolute", right: 12, fontSize: "0.625rem", color: "#E6A817", letterSpacing: "0.06em" }}>
-                      ♪
-                    </div>
-                  )}
-                  {isActive && !isPlaying && (
-                    <div style={{ position: "absolute", right: 12, fontSize: "0.625rem", color: "#4CAF84", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                      ✓
-                    </div>
-                  )}
-                </div>
-
-                {/* Octave + cents */}
-                <div style={{
-                  width: 52, flexShrink: 0, textAlign: "center",
-                  padding: "0.875rem 0",
-                  borderLeft: "1px solid rgba(255,255,255,0.06)",
-                }}>
-                  <div style={{ fontSize: "0.625rem", color: isActive ? "#4CAF84" : "rgba(255,255,255,0.2)", letterSpacing: "0.04em" }}>
-                    {isActive && noteInfo ? (
-                      <span style={{ fontWeight: 600 }}>{noteInfo.cents > 0 ? "+" : ""}{noteInfo.cents}¢</span>
-                    ) : (
-                      sOctave
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }
