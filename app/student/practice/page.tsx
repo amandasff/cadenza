@@ -283,7 +283,7 @@ function PracticeInner() {
         const mins = Math.max(1, Math.round(finalElapsed / 60));
         const lines: string[] = [];
         if (selectedPiece) lines.push(`🎵 Practiced: ${selectedPiece.title}${selectedPiece.composer ? ` — ${selectedPiece.composer}` : ""}`);
-        lines.push(`⏱ ${mins} min${moodData ? `  |  Mood: ${moodData.emoji} ${moodData.label}` : ""}${sessionSegments.length > 0 ? `  |  ${sessionSegments.length} segment${sessionSegments.length !== 1 ? "s" : ""}` : ""}`);
+        lines.push(`⏱ ${mins} min${moodData ? `  |  Mood: ${moodData.label}` : ""}${sessionSegments.length > 0 ? `  |  ${sessionSegments.length} segment${sessionSegments.length !== 1 ? "s" : ""}` : ""}`);
         if (wentWell.trim()) lines.push(`✅ Went well: ${wentWell.trim()}`);
         if (focusNext.trim()) lines.push(`🎯 Focus next: ${focusNext.trim()}`);
         sessionSegments.forEach(s =>
