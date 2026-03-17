@@ -16,7 +16,7 @@ import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeRe
 import YouTubeSearch from "../../../../components/YouTubeSearch";
 import { useLesson } from "../../../../lib/context/LessonContext";
 import { useI18n } from "../../../../lib/context/I18nContext";
-import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2, Flame } from "lucide-react";
+import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2, Flame, Snowflake } from "lucide-react";
 
 const CATEGORIES_BASE: { value: string; colorKey: keyof typeof CATEGORY_COLORS }[] = [
   { value: "technique",    colorKey: "technique" },
@@ -535,6 +535,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [briefOpen, setBriefOpen] = useState(false);
   const [awardSuccess, setAwardSuccess] = useState(false);
   const [awardError, setAwardError] = useState("");
+  const [grantingFreeze, setGrantingFreeze] = useState(false);
+  const [freezeSuccess, setFreezeSuccess] = useState(false);
 
   const [showAddPiece, setShowAddPiece] = useState(false);
   const [pieceForm, setPieceForm] = useState(emptyPieceForm());
@@ -654,6 +656,23 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       setAwardError((err as { message?: string })?.message ?? "Failed to award points");
     } finally {
       setAwarding(false);
+    }
+  }
+
+  async function handleGrantFreeze() {
+    if (!student || grantingFreeze) return;
+    setGrantingFreeze(true);
+    try {
+      await fetch("/api/student/grant-freeze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: student.id }),
+      });
+      setStudent(prev => prev ? { ...prev, streak_freeze_count: (prev.streak_freeze_count ?? 0) + 1 } : prev);
+      setFreezeSuccess(true);
+      setTimeout(() => setFreezeSuccess(false), 3000);
+    } finally {
+      setGrantingFreeze(false);
     }
   }
 
@@ -1460,6 +1479,30 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           <p style={{ marginTop: "1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}>
             {t.teacher.pointsNotification.replace("{name}", student.display_name.split(" ")[0])}
           </p>
+
+          {/* Grant streak freeze */}
+          <div style={{ borderTop: "1px solid var(--border)", marginTop: "1rem", paddingTop: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", fontWeight: 500 }}>
+                Streak freezes
+              </span>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--sky)" }}>
+                <Snowflake size={11} strokeWidth={1.5} style={{ display: "inline", verticalAlign: "middle", marginRight: 3 }} />
+                {student.streak_freeze_count ?? 0} banked
+              </span>
+            </div>
+            <button
+              onClick={handleGrantFreeze}
+              disabled={grantingFreeze}
+              style={{ width: "100%", padding: "0.5rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: freezeSuccess ? "var(--sky-bg, #EBF5FB)" : "none", color: freezeSuccess ? "var(--sky)" : "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: grantingFreeze ? "default" : "pointer", opacity: grantingFreeze ? 0.5 : 1, transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
+            >
+              <Snowflake size={13} strokeWidth={1.5} />
+              {freezeSuccess ? "Freeze granted!" : grantingFreeze ? "Granting…" : "Grant streak freeze"}
+            </button>
+            <p style={{ marginTop: "0.375rem", fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}>
+              Protects their streak if they miss a day.
+            </p>
+          </div>
         </div>
       </div>
 
