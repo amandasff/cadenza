@@ -210,13 +210,14 @@ function GoalItem({
 }
 
 function PieceBlock({
-  piece, color, addGoalFor, goalForm, addingGoal, completingGoalId, togglingGoalId,
+  piece, color, studentId, addGoalFor, goalForm, addingGoal, completingGoalId, togglingGoalId,
   uploadingPdf, uploadingScore, aiConverting, onSetAddGoalFor, onGoalFormChange, onAddGoal, onCompleteGoal, onToggleGoalStatus,
   onUploadSheetMusic, onUploadScore, onAiConvertScore, onAddRecording, onRemoveRecording, onSetPrimaryRecording,
   onDeleteGoal, onEditGoal, deletingGoalId,
 }: {
   piece: PieceWithGoals;
   color: string;
+  studentId: string;
   addGoalFor: string | "standalone" | null;
   goalForm: ReturnType<typeof emptyGoalForm>;
   addingGoal: boolean;
@@ -377,6 +378,15 @@ function PieceBlock({
           >
             {piece.recordings.length > 0 ? `Ref (${piece.recordings.length})` : "Ref +"}
           </button>
+          {piece.sheet_music_url && (
+            <Link
+              href={`/teacher/student/${studentId}/annotate/${piece.id}`}
+              style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              title="View student's sheet music annotations"
+            >
+              Notes
+            </Link>
+          )}
           <button
             onClick={() => onSetAddGoalFor(addGoalFor === piece.id ? null : piece.id)}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.6rem", fontSize: "0.6875rem", flexShrink: 0 }}
@@ -920,6 +930,8 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         goals: p.goals.filter(g => g.id !== goal.id),
       })));
       setStandaloneGoals(prev => prev.filter(g => g.id !== goal.id));
+    } catch (err) {
+      alert(`Could not delete goal: ${err instanceof Error ? err.message : "Unknown error"}. You may need to run the goals RLS migration in Supabase.`);
     } finally {
       setDeletingGoalId(null);
     }
@@ -1327,7 +1339,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
                       {section.items.map(piece => (
                         <PieceBlock
                           key={piece.id}
-                          piece={piece} color={section.color}
+                          piece={piece} color={section.color} studentId={id}
                           addGoalFor={addGoalFor} goalForm={goalForm} addingGoal={addingGoal}
                           completingGoalId={completingGoalId} togglingGoalId={togglingGoalId}
                           uploadingPdf={uploadingPdfFor === piece.id}
