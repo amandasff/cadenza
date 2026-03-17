@@ -205,7 +205,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
         {/* CTAs */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
           <button
-            onClick={() => router.replace("/student/pitch")}
+            onClick={() => router.replace("/student/theory?game=noteId")}
             className="btn btn-primary"
             style={{ width: "100%", padding: "0.875rem", fontSize: "0.9375rem" }}
           >

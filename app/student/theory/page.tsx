@@ -2607,7 +2607,11 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
 // Page root
 // ─────────────────────────────────────────────────────────────────────────────
 export default function TheoryPage() {
-  const [view, setView] = useState<View>("menu");
+  const searchParams = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : null;
+  const initialView = (searchParams?.get("game") as View | null) ?? "menu";
+  const [view, setView] = useState<View>(initialView);
   if (view === "menu")     return <Menu onSelect={setView} />;
   if (view === "noteId")   return <NoteIdGame onBack={() => setView("menu")} />;
   if (view === "interval") return <IntervalGame onBack={() => setView("menu")} />;
