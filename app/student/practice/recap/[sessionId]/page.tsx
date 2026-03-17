@@ -202,19 +202,19 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           </p>
         </div>
 
-        {/* Student notes */}
+        {/* Student notes — icon gives context without a text label */}
         {(wentWell || focusNext) && (
-          <div className="card-base" style={{ padding: "1rem 1.125rem", marginBottom: "1rem" }}>
+          <div className="card-base" style={{ padding: "1rem 1.125rem", marginBottom: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {wentWell && (
-              <div style={{ marginBottom: focusNext ? "0.625rem" : 0 }}>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>{t.student.recapWentWell}</div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.5 }}>{wentWell}</div>
+              <div style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start" }}>
+                <span style={{ fontSize: "0.875rem", flexShrink: 0, marginTop: "0.05rem", color: "var(--sage)" }}>✓</span>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.55 }}>{wentWell}</div>
               </div>
             )}
             {focusNext && (
-              <div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.25rem" }}>{t.student.recapFocusNext}</div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", lineHeight: 1.5 }}>{focusNext}</div>
+              <div style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start" }}>
+                <span style={{ fontSize: "0.875rem", flexShrink: 0, marginTop: "0.05rem", color: "var(--butter)" }}>→</span>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.55 }}>{focusNext}</div>
               </div>
             )}
           </div>
@@ -269,12 +269,7 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
           borderRadius: 10, padding: "1rem 1.125rem",
           marginBottom: "1.5rem",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.875rem" }}>🎼</span>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 700, color: "var(--butter)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Did you know?
-            </div>
-          </div>
+          <span style={{ fontSize: "1.125rem", display: "block", marginBottom: "0.5rem" }}>🎼</span>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", margin: 0, lineHeight: 1.6 }}>
             {factRef.current}
           </p>

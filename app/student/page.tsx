@@ -310,42 +310,31 @@ export default function ThisWeek() {
 
         return (
           <div style={{ padding: "0 1.5rem 1rem", display: "flex", gap: "0.5rem" }}>
-            {/* Streak */}
+            {/* Streak — value and label fused into one phrase */}
             <div style={{
               flex: 1, borderRadius: 8, padding: "0.625rem 0.875rem",
               background: streakColor, border: `1px solid ${streakBorder}`,
               display: "flex", alignItems: "center", gap: "0.5rem",
             }}>
-              <span style={{ fontSize: "1rem" }}>{streakIcon}</span>
-              <div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1 }}>
-                  {streakDays}
-                </div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
-                  day streak
-                </div>
+              <span style={{ fontSize: "1rem", flexShrink: 0 }}>{streakIcon}</span>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
+                {streakDays > 0 ? `${streakDays}-day streak` : "Start your streak"}
+                {freezeCount > 0 && streakDays > 0 && (
+                  <div style={{ fontSize: "0.625rem", color: "var(--sky)", fontWeight: 400, marginTop: 2 }}>freeze active</div>
+                )}
               </div>
-              {streakLabel && (
-                <div style={{ marginLeft: "auto", fontSize: "0.625rem", color: freezeCount > 0 ? "var(--sky)" : "var(--peach)", fontWeight: 500, flexShrink: 0 }}>
-                  {streakLabel}
-                </div>
-              )}
             </div>
 
-            {/* Points + Level */}
+            {/* Points — level gives the number meaning without a separate label */}
             <div style={{
               flex: 1, borderRadius: 8, padding: "0.625rem 0.875rem",
               background: "var(--white)", border: "1px solid var(--border)",
               display: "flex", alignItems: "center", gap: "0.5rem",
             }}>
-              <span style={{ fontSize: "1rem" }}>⭐</span>
-              <div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1 }}>
-                  {(student?.totalPoints ?? 0).toLocaleString()}
-                </div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
-                  pts · {student?.getLevelLabel?.() ?? "Beginner"}
-                </div>
+              <span style={{ fontSize: "1rem", flexShrink: 0 }}>⭐</span>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
+                {(student?.totalPoints ?? 0).toLocaleString()} pts
+                <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontWeight: 400, marginTop: 2 }}>{student?.getLevelLabel?.() ?? "Beginner"}</div>
               </div>
             </div>
           </div>
