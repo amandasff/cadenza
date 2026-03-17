@@ -39,14 +39,14 @@ export async function POST(request: Request) {
 
   if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
 
-  // Local date helpers
-  function toLocalDateStr(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // UTC date helpers — Vercel servers run UTC, so use UTC methods to stay
+  // consistent with the live-streak computation in AuthService.fetchUser().
+  function toUTCDateStr(d: Date): string {
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
   }
-  const todayStr = toLocalDateStr(new Date());
-  const yDate = new Date();
-  yDate.setDate(yDate.getDate() - 1);
-  const yesterdayStr = toLocalDateStr(yDate);
+  const now = new Date();
+  const todayStr = toUTCDateStr(now);
+  const yesterdayStr = toUTCDateStr(new Date(now.getTime() - 86_400_000));
 
   // Most recent session before this one
   const { data: prevSessions } = await admin
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   const lastDate = prevSessions?.[0]?.created_at
-    ? toLocalDateStr(new Date(prevSessions[0].created_at))
+    ? toUTCDateStr(new Date(prevSessions[0].created_at))
     : null;
 
   // Fetch current profile

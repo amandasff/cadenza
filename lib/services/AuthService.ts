@@ -130,14 +130,40 @@ export class AuthService {
   }
 
   private async fetchUser(id: string, email: string): Promise<AuthUser> {
-    const { data: profile, error } = await this.supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .single<ProfileRow>();
+    const [{ data: profile, error }, { data: lastSession }] = await Promise.all([
+      this.supabase.from('profiles').select('*').eq('id', id).single<ProfileRow>(),
+      this.supabase
+        .from('practice_sessions')
+        .select('created_at')
+        .eq('student_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single(),
+    ]);
 
     if (error || !profile) {
       throw new Error('Profile not found. Please try signing in again.');
+    }
+
+    // Compute live streak: if the last session was more than 1 day ago the
+    // streak is broken, even though streak_days in the DB still holds the old
+    // value (there is no scheduled job to zero it). This makes the displayed
+    // streak accurate whenever the profile is loaded.
+    if (profile.streak_days > 0) {
+      const lastAt = lastSession?.created_at ?? null;
+      if (!lastAt) {
+        profile.streak_days = 0;
+      } else {
+        const toUTCDateStr = (d: Date) =>
+          `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        const now = new Date();
+        const todayUTC = toUTCDateStr(now);
+        const yesterdayUTC = toUTCDateStr(new Date(now.getTime() - 86_400_000));
+        const lastUTC = toUTCDateStr(new Date(lastAt));
+        if (lastUTC !== todayUTC && lastUTC !== yesterdayUTC) {
+          profile.streak_days = 0;
+        }
+      }
     }
 
     return this.buildUser(profile, email);
