@@ -2,11 +2,12 @@
 
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {};
+  const origin = self.location.origin;
   event.waitUntil(
     self.registration.showNotification(data.title ?? 'Cadenza', {
       body: data.body ?? 'Time to practice!',
-      icon: '/icon',
-      badge: '/apple-icon',
+      icon: origin + '/icon-192.png',
+      badge: origin + '/badge-96.png',
       tag: 'practice-reminder',
       renotify: true,
       data: { url: data.url ?? '/student' },
