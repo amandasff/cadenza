@@ -176,6 +176,7 @@ function playTone(hz: number, ctx: AudioContext, when: number, dur = 1.4) {
 }
 
 function playInterval(semitones: number, audioCtx: AudioContext) {
+  audioCtx.resume(); // ensure not suspended on mobile
   const root = midiToHz(60 + Math.floor(Math.random() * 13)); // C4–C5
   const t    = audioCtx.currentTime;
   playTone(root, audioCtx, t, 1.2);
@@ -603,13 +604,24 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
 
   useEffect(() => { game.loadHi(); }, [diff]); // eslint-disable-line
 
+  function freshCtx() {
+    // Close any existing context to immediately stop all ringing notes
+    // from the previous question before starting new ones.
+    if (ctxRef.current && ctxRef.current.state !== "closed") {
+      ctxRef.current.close().catch(() => {});
+    }
+    ctxRef.current = new AudioContext();
+    return ctxRef.current;
+  }
+
   function getCtx() {
     if (!ctxRef.current || ctxRef.current.state === "closed") ctxRef.current = new AudioContext();
     return ctxRef.current;
   }
 
   function playQ(semitones: number) {
-    playInterval(semitones, getCtx());
+    // Replay: close old context so previous attempt doesn't overlap
+    playInterval(semitones, freshCtx());
     setPlayed(true);
   }
 
@@ -617,7 +629,10 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
     const next = makeIntervalQ(d);
     setQ(next);
     setPlayed(false);
-    setTimeout(() => playInterval(next.semi, getCtx()), 300);
+    setTimeout(() => {
+      playInterval(next.semi, freshCtx());
+      setPlayed(true); // mark as played so button shows ↻, not ▶
+    }, 300);
   }
 
   function start() {
@@ -625,7 +640,10 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
       const first = makeIntervalQ(diff);
       setQ(first); setPlayed(false);
       game.beginPlay();
-      setTimeout(() => playInterval(first.semi, getCtx()), 200);
+      setTimeout(() => {
+        playInterval(first.semi, freshCtx());
+        setPlayed(true);
+      }, 200);
     });
   }
 
