@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState, use, useRef } from "react";
+import React, { useEffect, useState, use, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "../../../../../lib/supabase/client";
 import { useAuth } from "../../../../../lib/context/AuthContext";
-import type { PracticeSessionRow } from "../../../../../lib/types";
+import type { PracticeSessionRow, ComposerAvatarRow, CollectibleDropResult } from "../../../../../lib/types";
 import { useI18n } from "../../../../../lib/context/I18nContext";
 import { PartyPopper, Smile, Frown, Check, Bot, Gamepad2, Send, Music } from "lucide-react";
 
@@ -124,6 +124,166 @@ function getRandomFact(): string {
 const fmt = (s: number) =>
   `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
+// ── Rarity config ─────────────────────────────────────────────────────────────
+const RARITY_GLOW: Record<string, string> = {
+  common:    "rgba(76, 175, 132, 0.5)",
+  rare:      "rgba(91, 158, 221, 0.6)",
+  epic:      "rgba(155, 89, 182, 0.7)",
+  legendary: "rgba(230, 168, 23, 0.8)",
+};
+const RARITY_COLOR: Record<string, string> = {
+  common:    "var(--sage)",
+  rare:      "var(--sky)",
+  epic:      "var(--lavender)",
+  legendary: "var(--butter)",
+};
+const RARITY_LABEL: Record<string, string> = {
+  common:    "Common",
+  rare:      "Rare",
+  epic:      "Epic",
+  legendary: "Legendary",
+};
+const METHOD_LABEL: Record<string, string> = {
+  practice_drop:      "Practice Drop",
+  streak_bonus:       "Streak Bonus",
+  goal_milestone:     "Goal Milestone",
+  performance_edition:"Performance Edition",
+  teacher_gift:       "Teacher Gift",
+  welcome_gift:       "Welcome Gift",
+};
+
+// ── Pack opening component ────────────────────────────────────────────────────
+function PackReveal({
+  result,
+  onDismiss,
+}: {
+  result: CollectibleDropResult;
+  onDismiss: () => void;
+}) {
+  const [phase, setPhase] = useState<"glow" | "reveal" | "done">("glow");
+  const avatar = result.avatar!;
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("reveal"), 600);
+    const t2 = setTimeout(() => setPhase("done"), 1600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  return (
+    <div
+      onClick={phase === "done" ? onDismiss : undefined}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        background: "rgba(20,18,18,0.92)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "2rem",
+        cursor: phase === "done" ? "pointer" : "default",
+      }}
+    >
+      {/* Glow ring */}
+      <div style={{
+        position: "relative",
+        width: 220,
+        height: 220,
+        marginBottom: "1.5rem",
+      }}>
+        {/* Glow */}
+        <div style={{
+          position: "absolute",
+          inset: -20,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${RARITY_GLOW[avatar.rarity]} 0%, transparent 70%)`,
+          opacity: phase === "glow" ? 0 : 1,
+          transition: "opacity 0.6s ease",
+        }} />
+
+        {/* Card */}
+        <div style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          borderRadius: 16,
+          overflow: "hidden",
+          border: `3px solid ${RARITY_COLOR[avatar.rarity]}`,
+          boxShadow: phase !== "glow" ? `0 0 32px ${RARITY_GLOW[avatar.rarity]}` : "none",
+          transform: phase === "glow" ? "scale(0.85)" : "scale(1)",
+          opacity: phase === "glow" ? 0 : 1,
+          transition: "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        }}>
+          <img
+            src={avatar.image_path}
+            alt={avatar.composer_name}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        </div>
+      </div>
+
+      {/* Info */}
+      <div style={{
+        textAlign: "center",
+        opacity: phase === "done" ? 1 : 0,
+        transform: phase === "done" ? "translateY(0)" : "translateY(10px)",
+        transition: "all 0.4s ease",
+      }}>
+        {result.isDuplicate ? (
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "0.375rem" }}>
+            Duplicate — shard added ✦
+          </div>
+        ) : (
+          <div style={{
+            fontFamily: "Inter, sans-serif",
+            fontSize: "0.5625rem",
+            color: RARITY_COLOR[avatar.rarity],
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            marginBottom: "0.375rem",
+          }}>
+            {RARITY_LABEL[avatar.rarity]} · {result.method ? METHOD_LABEL[result.method] : ""}
+          </div>
+        )}
+        <div style={{
+          fontFamily: "Cormorant Garamond, Georgia, serif",
+          fontSize: "2rem",
+          color: "white",
+          fontWeight: 600,
+          marginBottom: "0.25rem",
+          letterSpacing: "-0.01em",
+        }}>
+          {avatar.composer_name}
+        </div>
+        {!result.isDuplicate && avatar.fun_fact && (
+          <p style={{
+            fontFamily: "Inter, sans-serif",
+            fontSize: "0.8125rem",
+            color: "rgba(255,255,255,0.7)",
+            lineHeight: 1.6,
+            maxWidth: 300,
+            margin: "0.75rem auto 0",
+          }}>
+            {avatar.fun_fact}
+          </p>
+        )}
+        <div style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: "0.5rem",
+          color: "rgba(255,255,255,0.3)",
+          letterSpacing: "0.06em",
+          marginTop: "1.5rem",
+          textTransform: "uppercase",
+        }}>
+          Tap to continue
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PracticeRecapPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const { sessionId } = use(params);
   const router = useRouter();
@@ -144,6 +304,11 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
   const [feedback, setFeedback] = useState<string | null>(null);
   const factRef = useRef<string>(getRandomFact());
 
+  // Collectible state
+  const [dropResult, setDropResult] = useState<CollectibleDropResult | null>(null);
+  const [showPackReveal, setShowPackReveal] = useState(false);
+  const awardCalledRef = useRef(false);
+
   // Load session once — check for existing AI feedback, but don't poll
   useEffect(() => {
     supabase
@@ -163,6 +328,33 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
         }
       });
   }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Try to award a collectible drop for this session
+  const tryAwardDrop = useCallback(async () => {
+    if (awardCalledRef.current || !sessionId) return;
+    awardCalledRef.current = true;
+
+    try {
+      const res = await fetch("/api/collectibles/award", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      if (!res.ok) return;
+      const { result, alreadyAwarded } = await res.json();
+      if (!alreadyAwarded && result?.dropped && result?.avatar) {
+        setDropResult(result as CollectibleDropResult);
+        // Short delay so confetti fires first
+        setTimeout(() => setShowPackReveal(true), 1800);
+      }
+    } catch {
+      // non-critical — never block the recap page
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (session) tryAwardDrop();
+  }, [session, tryAwardDrop]);
 
   if (!session) {
     return (
@@ -185,6 +377,9 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
       justifyContent: "flex-start", padding: "2.5rem 1.25rem 4rem",
     }}>
       <Confetti />
+      {showPackReveal && dropResult?.avatar && (
+        <PackReveal result={dropResult} onDismiss={() => setShowPackReveal(false)} />
+      )}
       <div style={{ width: "100%", maxWidth: 360 }}>
 
         {/* Header */}
@@ -278,6 +473,33 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
 
         {/* CTAs */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+          {/* Composer drop teaser */}
+          {dropResult?.dropped && dropResult.avatar && (
+            <button
+              onClick={() => router.replace("/student/collection")}
+              style={{
+                width: "100%", padding: "0.875rem", fontSize: "0.9375rem",
+                background: "var(--charcoal)", border: "none",
+                borderRadius: 8, cursor: "pointer",
+                fontFamily: "Inter, sans-serif", color: "white",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+              }}
+            >
+              <span style={{ fontSize: "1rem" }}>🎭</span>
+              View your {dropResult.avatar.composer_name} card
+            </button>
+          )}
+          {dropResult && !dropResult.dropped && dropResult.sessionsUntilGuaranteed > 0 && (
+            <div style={{
+              width: "100%", padding: "0.75rem 1rem", fontSize: "0.8125rem",
+              background: "var(--cream-deep)", border: "1px solid var(--border)",
+              borderRadius: 8, textAlign: "center",
+              fontFamily: "Inter, sans-serif", color: "var(--muted)",
+              boxSizing: "border-box",
+            }}>
+              {dropResult.sessionsUntilGuaranteed} more session{dropResult.sessionsUntilGuaranteed !== 1 ? "s" : ""} until guaranteed composer drop
+            </div>
+          )}
           <button
             onClick={() => router.replace("/student/theory?game=noteId")}
             className="btn btn-primary"

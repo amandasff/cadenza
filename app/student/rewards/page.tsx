@@ -3,10 +3,12 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PracticeService } from "../../../lib/services/PracticeService";
+import { CollectibleService } from "../../../lib/services/CollectibleService";
 import { Student } from "../../../lib/models/Student";
-import type { PracticeSessionRow, GoalRow } from "../../../lib/types";
+import type { PracticeSessionRow, GoalRow, StudentCollectibleWithAvatar } from "../../../lib/types";
 import { useI18n } from "../../../lib/context/I18nContext";
 import { Flame } from "lucide-react";
+import Link from "next/link";
 
 // ── Level system ─────────────────────────────────────────────────────────────
 // Calibrated so:
@@ -113,6 +115,10 @@ export default function Rewards() {
   const [completedGoals, setCompletedGoals] = useState<GoalRow[]>([]);
   const [completedAssignments, setCompletedAssignments] = useState(0);
 
+  // Collectible state
+  const [collection, setCollection] = useState<StudentCollectibleWithAvatar[]>([]);
+  const [sessionsUntilDrop, setSessionsUntilDrop] = useState<number | null>(null);
+
   const [calendarDate, setCalendarDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -154,6 +160,17 @@ export default function Rewards() {
           .select("id")
           .eq("student_id", student.id);
         setCompletedAssignments((completions ?? []).length);
+      } catch { /* table may not exist yet */ }
+
+      // Collectibles
+      try {
+        const collectibleService = CollectibleService.create(supabase);
+        const [coll, sessions] = await Promise.all([
+          collectibleService.getCollection(student.id),
+          collectibleService.getSessionsUntilGuaranteed(student.id),
+        ]);
+        setCollection(coll);
+        setSessionsUntilDrop(sessions);
       } catch { /* table may not exist yet */ }
 
     } catch (err) {
@@ -279,6 +296,86 @@ export default function Rewards() {
             )}
           </div>
         </div>
+
+        {/* ── Composer collection card ── */}
+        <Link href="/student/collection" style={{ textDecoration: "none" }}>
+          <div className="card-base" style={{ padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", cursor: "pointer" }}>
+            {/* Owned avatars row (up to 5) */}
+            <div style={{ display: "flex", flexDirection: "row", gap: "-0.5rem", flexShrink: 0 }}>
+              {collection.slice(0, 5).map((c, i) => (
+                <div
+                  key={c.id}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    border: "2px solid var(--white)",
+                    marginLeft: i > 0 ? -10 : 0,
+                    position: "relative",
+                    zIndex: collection.length - i,
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src={c.composer_avatars.image_path}
+                    alt={c.composer_avatars.composer_name}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                </div>
+              ))}
+              {collection.length === 0 && (
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8,
+                  background: "var(--cream-deep)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "1.125rem",
+                }}>
+                  🎹
+                </div>
+              )}
+            </div>
+
+            {/* Text */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)" }}>
+                {collection.length === 0
+                  ? "Start your collection"
+                  : `${collection.length} composer${collection.length !== 1 ? "s" : ""} collected`}
+              </div>
+              {sessionsUntilDrop !== null && sessionsUntilDrop > 0 && (
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", marginTop: "0.2rem" }}>
+                  {sessionsUntilDrop} session{sessionsUntilDrop !== 1 ? "s" : ""} until guaranteed drop
+                </div>
+              )}
+              {sessionsUntilDrop === 0 && (
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--sage)", marginTop: "0.2rem", fontWeight: 600 }}>
+                  Composer drop ready — practice now!
+                </div>
+              )}
+            </div>
+
+            {/* Pity progress bar */}
+            {sessionsUntilDrop !== null && (
+              <div style={{ width: 48, flexShrink: 0 }}>
+                <div style={{ height: 4, background: "var(--cream-deep)", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${Math.max(5, ((10 - sessionsUntilDrop) / 10) * 100)}%`,
+                    background: sessionsUntilDrop === 0 ? "var(--sage)" : "var(--sky)",
+                    borderRadius: 2,
+                    transition: "width 0.6s ease",
+                  }} />
+                </div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.4375rem", color: "var(--muted)", textAlign: "right", marginTop: "0.2rem" }}>
+                  {sessionsUntilDrop === 0 ? "100%" : `${Math.round(((10 - sessionsUntilDrop) / 10) * 100)}%`}
+                </div>
+              </div>
+            )}
+
+            <div style={{ color: "var(--muted)", fontSize: "0.75rem", flexShrink: 0 }}>›</div>
+          </div>
+        </Link>
 
         {/* ── Stats + Calendar (side by side) ── */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: "0.5rem", alignItems: "stretch" }}>

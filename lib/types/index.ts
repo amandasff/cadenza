@@ -468,6 +468,51 @@ export interface RcmChecklistItemRow {
 }
 
 // ============================================================
+// Composer Collectibles
+// ============================================================
+
+export type CollectibleRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type CollectibleEra = 'baroque' | 'classical' | 'romantic' | 'impressionist';
+export type AcquisitionMethod = 'practice_drop' | 'streak_bonus' | 'goal_milestone' | 'performance_edition' | 'teacher_gift' | 'welcome_gift';
+
+export interface ComposerAvatarRow {
+  id: string;
+  composer_name: string;
+  era: CollectibleEra;
+  rarity: CollectibleRarity;
+  image_path: string;
+  fun_fact: string | null;
+  unlock_hint: string | null;
+  drop_weight: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface StudentCollectibleRow {
+  id: string;
+  student_id: string;
+  avatar_id: string;
+  acquired_at: string;
+  acquisition_method: AcquisitionMethod;
+  is_favorite: boolean;
+  shard_count: number;
+}
+
+export interface StudentCollectibleWithAvatar extends StudentCollectibleRow {
+  composer_avatars: ComposerAvatarRow;
+}
+
+// Returned by the award API
+export interface CollectibleDropResult {
+  dropped: boolean;
+  avatar: ComposerAvatarRow | null;
+  method: AcquisitionMethod | null;
+  isDuplicate: boolean;           // true if they already owned this one (shard added)
+  sessionsUntilGuaranteed: number; // how many more sessions until pity timer fires
+}
+
+// ============================================================
 // Availability
 // ============================================================
 
