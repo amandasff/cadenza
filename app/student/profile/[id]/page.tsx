@@ -14,6 +14,7 @@ type Profile = {
   avatar_url: string | null;
   bio: string | null;
   streak_days: number;
+  total_days_practiced: number;
   role: string | null;
   instrument: string | null;
 };
@@ -79,7 +80,7 @@ export default function PublicProfilePage() {
       setCurrentUserId(uid);
 
       const [profileRes, followerRes, followingRes, itemsRes] = await Promise.all([
-        supabase.from("profiles").select("id, display_name, avatar_url, bio, streak_days, role, instrument").eq("id", profileId).single(),
+        supabase.from("profiles").select("id, display_name, avatar_url, bio, streak_days, total_days_practiced, role, instrument").eq("id", profileId).single(),
         supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", profileId),
         supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", profileId),
         supabase.from("portfolio_items").select("*").eq("student_id", profileId).eq("is_public", true).order("created_at", { ascending: false }),
@@ -198,6 +199,11 @@ export default function PublicProfilePage() {
                 {profile.streak_days > 0 && (
                   <span style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem", background: "rgba(230,168,23,0.12)", border: "1px solid rgba(230,168,23,0.25)", borderRadius: 99, padding: "0.15rem 0.5rem", color: "#c47d10", fontWeight: 700, fontSize: "0.75rem" }}>
                     <Flame size={12} color="#E6A817" fill="#E6A817" strokeWidth={0} />{profile.streak_days} day streak
+                  </span>
+                )}
+                {(profile.total_days_practiced ?? 0) > 0 && (
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
+                    <strong style={{ color: "var(--charcoal)" }}>{profile.total_days_practiced}</strong> days practiced
                   </span>
                 )}
               </div>

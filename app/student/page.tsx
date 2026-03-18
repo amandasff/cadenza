@@ -331,7 +331,7 @@ export default function ThisWeek() {
               </div>
             </div>
 
-            {/* Points — level gives the number meaning without a separate label */}
+            {/* Points */}
             <div style={{
               flex: 1, borderRadius: 8, padding: "0.625rem 0.875rem",
               background: "var(--white)", border: "1px solid var(--border)",
@@ -340,7 +340,12 @@ export default function ThisWeek() {
               <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><Star size={16} fill="#E6A817" color="#E6A817" strokeWidth={0} /></span>
               <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
                 {(student?.totalPoints ?? 0).toLocaleString()} pts
-                <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontWeight: 400, marginTop: 2 }}>{student?.getLevelLabel?.() ?? "Beginner"}</div>
+                <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontWeight: 400, marginTop: 2 }}>
+                  {student?.getLevelLabel?.() ?? "Beginner"}
+                  {(student?.totalDaysPracticed ?? 0) > 0 && (
+                    <span style={{ marginLeft: "0.3rem" }}>· {student.totalDaysPracticed} day{student.totalDaysPracticed !== 1 ? "s" : ""} practiced</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

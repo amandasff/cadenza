@@ -4,6 +4,7 @@ import type { ProfileRow } from '../types';
 export class Student extends User {
   public streakDays: number;
   public totalPoints: number;
+  public totalDaysPracticed: number;
   public studioId: string | null;
   public streakFreezeCount: number;
 
@@ -17,6 +18,7 @@ export class Student extends User {
     );
     this.streakDays = profile.streak_days;
     this.totalPoints = profile.total_points;
+    this.totalDaysPracticed = profile.total_days_practiced ?? 0;
     this.studioId = profile.studio_id;
     this.streakFreezeCount = profile.streak_freeze_count ?? 0;
   }

@@ -97,7 +97,7 @@ export default function DiscoverPage() {
   const [likingId, setLikingId]                 = useState<string | null>(null);
   const [likeError, setLikeError]               = useState<string | null>(null);
 
-  const [leaderboard, setLeaderboard]           = useState<Array<{ id: string; display_name: string; avatar_url: string | null; streak_days: number; role: string | null }>>([]);
+  const [leaderboard, setLeaderboard]           = useState<Array<{ id: string; display_name: string; avatar_url: string | null; streak_days: number; total_days_practiced: number; role: string | null }>>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardLoaded, setLeaderboardLoaded]   = useState(false);
   const [followsMe, setFollowsMe]               = useState<Set<string>>(new Set());
@@ -211,7 +211,7 @@ export default function DiscoverPage() {
     try {
       const { data: users } = await supabase
         .from("profiles")
-        .select("id, display_name, avatar_url, streak_days, role")
+        .select("id, display_name, avatar_url, streak_days, total_days_practiced, role")
         .gt("streak_days", 0)
         .order("streak_days", { ascending: false })
         .limit(100);
@@ -589,8 +589,11 @@ export default function DiscoverPage() {
                       </Link>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.2rem" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.15rem", background: "rgba(230,168,23,0.12)", border: "1px solid rgba(230,168,23,0.25)", borderRadius: 99, padding: "0.1rem 0.4rem", color: "#c47d10", fontWeight: 700, fontSize: "0.625rem" }}>
-                          <Flame size={10} color="#E6A817" fill="#E6A817" strokeWidth={0} />{u.streak_days}d
+                          <Flame size={10} color="#E6A817" fill="#E6A817" strokeWidth={0} />{u.streak_days}d streak
                         </span>
+                        {(u.total_days_practiced ?? 0) > 0 && (
+                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500, color: "var(--muted)" }}>{u.total_days_practiced} days practiced</span>
+                        )}
                         {theyFollowMe && !isMe && (
                           <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sage)", background: "var(--sage-bg, #EFF7EF)", borderRadius: 99, padding: "0.1rem 0.4rem" }}>follows you</span>
                         )}
