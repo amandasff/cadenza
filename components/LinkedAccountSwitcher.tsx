@@ -82,10 +82,18 @@ export default function LinkedAccountSwitcher() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetUserId: targetId }),
       });
-      const { url, error } = await res.json();
-      if (error || !url) { alert(error ?? "Switch failed"); return; }
-      // Navigate to the magic link — Supabase handles sign-in and redirect
-      window.location.href = url;
+      const { token_hash, next, error } = await res.json();
+      if (error || !token_hash) { alert(error ?? "Switch failed"); return; }
+
+      // Verify the OTP token directly — no redirect URL config needed in Supabase
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        token_hash,
+        type: "magiclink",
+      });
+      if (otpError) { alert("Switch failed: " + otpError.message); return; }
+
+      // Session is now set as the target account — navigate to their dashboard
+      window.location.href = next;
     } finally {
       setSwitching(null);
     }

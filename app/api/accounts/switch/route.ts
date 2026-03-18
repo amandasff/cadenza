@@ -5,9 +5,10 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 /**
  * POST /api/accounts/switch
  * Body: { targetUserId: string }
- * Verifies the current user has a link to targetUserId, then generates
- * a one-time magic link for the target account and returns its URL.
- * The client navigates to the URL → Supabase signs them in as the target.
+ *
+ * Returns a token_hash the client can pass to supabase.auth.verifyOtp().
+ * This avoids the redirect_to / Site URL problem entirely — the session
+ * is established directly in the browser without any Supabase redirect.
  */
 export async function POST(request: Request) {
   const supabase = await getSupabaseServerClient();
@@ -28,29 +29,33 @@ export async function POST(request: Request) {
 
   if (!link) return NextResponse.json({ error: 'No link found' }, { status: 403 });
 
-  // Get target user's email and role so we can deep-link to the right dashboard
+  // Get target email + role
   const [{ data: targetAuth }, { data: targetProfile }] = await Promise.all([
     admin.auth.admin.getUserById(targetUserId),
     admin.from('profiles').select('role').eq('id', targetUserId).single(),
   ]);
 
-  if (!targetAuth.user?.email) return NextResponse.json({ error: 'Target account has no email' }, { status: 500 });
+  if (!targetAuth.user?.email) {
+    return NextResponse.json({ error: 'Target account has no email' }, { status: 500 });
+  }
 
-  const role = targetProfile?.role ?? 'student';
-  // Use the request origin so switching works in both dev and production
-  const origin = new URL(request.url).origin;
-  const redirectTo = `${origin}/${role}`;
+  const role = (targetProfile?.role as string | null) ?? 'student';
 
-  // Generate a one-time magic link for the target account
+  // Generate magic link — we only use the hashed_token, not the action_link URL,
+  // so Supabase's Site URL / Redirect URL config is irrelevant.
   const { data: linkData, error } = await admin.auth.admin.generateLink({
     type: 'magiclink',
     email: targetAuth.user.email,
-    options: { redirectTo },
+    // redirectTo can be anything valid; we ignore it on the client
+    options: { redirectTo: new URL(request.url).origin },
   });
 
-  if (error || !linkData?.properties?.action_link) {
-    return NextResponse.json({ error: 'Failed to generate switch link' }, { status: 500 });
+  if (error || !linkData?.properties?.hashed_token) {
+    return NextResponse.json({ error: 'Failed to generate switch token' }, { status: 500 });
   }
 
-  return NextResponse.json({ url: linkData.properties.action_link });
+  return NextResponse.json({
+    token_hash: linkData.properties.hashed_token,
+    next: `/${role}`,
+  });
 }
