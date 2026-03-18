@@ -2581,17 +2581,19 @@ function SightReadGame({ onBack }: { onBack: () => void }) {
 // Game: Sight Singing
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Positions match TREBLE_NOTES: C4=−2, D4=−1, E4=0, F4=1, G4=2, A4=3, B4=4,
+// C5=5, D5=6, E5=7. All natural notes — C major, no key signature needed.
 const SING_SCALE = [
-  { pos: 0, midi: 60, solfege: "Do" },
-  { pos: 1, midi: 62, solfege: "Re" },
-  { pos: 2, midi: 64, solfege: "Mi" },
-  { pos: 3, midi: 65, solfege: "Fa" },
-  { pos: 4, midi: 67, solfege: "Sol" },
-  { pos: 5, midi: 69, solfege: "La" },
-  { pos: 6, midi: 71, solfege: "Ti" },
-  { pos: 7, midi: 72, solfege: "Do" },
-  { pos: 8, midi: 74, solfege: "Re" },
-  { pos: 9, midi: 76, solfege: "Mi" },
+  { pos: -2, midi: 60, solfege: "Do" },  // C4
+  { pos: -1, midi: 62, solfege: "Re" },  // D4
+  { pos:  0, midi: 64, solfege: "Mi" },  // E4
+  { pos:  1, midi: 65, solfege: "Fa" },  // F4
+  { pos:  2, midi: 67, solfege: "Sol" }, // G4
+  { pos:  3, midi: 69, solfege: "La" },  // A4
+  { pos:  4, midi: 71, solfege: "Ti" },  // B4
+  { pos:  5, midi: 72, solfege: "Do" },  // C5
+  { pos:  6, midi: 74, solfege: "Re" },  // D5
+  { pos:  7, midi: 76, solfege: "Mi" },  // E5
 ] as const;
 type SingNote = { pos: number; midi: number; solfege: string };
 type SingSightLevel = "beginner" | "intermediate" | "advanced";
@@ -2618,9 +2620,9 @@ function generateSingMelody(level: SingSightLevel): SingNote[] {
 
 // Staff showing multiple notes left to right with solfège labels, active highlight
 function SingStaff({ notes, activeIdx }: { notes: SingNote[]; activeIdx: number }) {
-  const W = 300, H = 130;
+  const W = 300, H = 150;
   const LS_S = 14;
-  const botY  = 95;
+  const botY  = 88;  // leaves room above for stems and below for C4 ledger + solfège labels
   const noteR = 6;
   const startX = 28;
   const spacing = (W - startX - 20) / Math.max(notes.length, 1);
@@ -2854,7 +2856,7 @@ function SolfegeGame({ onBack }: { onBack: () => void }) {
 
         {/* Phase label */}
         <div style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
-          {phase === "idle"       ? "Listen first, then sing along" :
+          {phase === "idle"       ? "Sing from the score — or listen first for a hint" :
            phase === "previewing" ? "Playing melody…" :
            phase === "recording"  ? "Recording — sing now!" :
                                     "Review your recording"}
@@ -2863,14 +2865,14 @@ function SolfegeGame({ onBack }: { onBack: () => void }) {
         {/* Controls */}
         {phase === "idle" && (
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
-            <button onClick={handleListen}
-              style={{ ...btnBase, borderColor: "rgba(99,102,241,0.5)", background: "rgba(99,102,241,0.1)", color: "#a5b4fc" }}>
-              <Play size={14} strokeWidth={2} /> Listen
-            </button>
             <button onClick={handleRecord}
               style={{ ...btnBase, borderColor: "rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.08)", color: "#fca5a5" }}>
               <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-              Record
+              Sing it
+            </button>
+            <button onClick={handleListen}
+              style={{ ...btnBase, borderColor: "rgba(99,102,241,0.3)", background: "transparent", color: "rgba(165,180,252,0.6)", fontSize: "0.8125rem" }}>
+              <Play size={12} strokeWidth={2} /> Listen first
             </button>
           </div>
         )}
