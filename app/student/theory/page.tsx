@@ -2552,9 +2552,207 @@ function SightReadGame({ onBack }: { onBack: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Game: Solfège Ear Training
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SOLFEGE_NOTES = [
+  { syllable: "Do",  semitones: 0,  info: "Tonic" },
+  { syllable: "Re",  semitones: 2,  info: "Major 2nd" },
+  { syllable: "Mi",  semitones: 4,  info: "Major 3rd" },
+  { syllable: "Fa",  semitones: 5,  info: "Perfect 4th" },
+  { syllable: "Sol", semitones: 7,  info: "Perfect 5th" },
+  { syllable: "La",  semitones: 9,  info: "Major 6th" },
+  { syllable: "Ti",  semitones: 11, info: "Major 7th" },
+] as const;
+type SolfegeSyllable = typeof SOLFEGE_NOTES[number]["syllable"];
+type SolfegeLevel = "easy" | "medium" | "hard";
+
+const SOLFEGE_POOLS: Record<SolfegeLevel, SolfegeSyllable[]> = {
+  easy:   ["Do", "Mi", "Sol"],
+  medium: ["Do", "Re", "Mi", "Fa", "Sol", "La"],
+  hard:   ["Do", "Re", "Mi", "Fa", "Sol", "La", "Ti"],
+};
+const DO_MIDI = 60;
+
+function makeSolfegeQ(level: SolfegeLevel, prevSyllable?: string) {
+  const pool = SOLFEGE_POOLS[level].filter(s => s !== prevSyllable);
+  const syllable = pool[Math.floor(Math.random() * pool.length)] as SolfegeSyllable;
+  const note = SOLFEGE_NOTES.find(n => n.syllable === syllable)!;
+  return { syllable, semitones: note.semitones, info: note.info, choices: shuffle([...SOLFEGE_POOLS[level]]) };
+}
+
+function SolfegeGame({ onBack }: { onBack: () => void }) {
+  const [level, setLevel]   = useState<SolfegeLevel>("easy");
+  const [q, setQ]           = useState(() => makeSolfegeQ("easy"));
+  const [played, setPlayed] = useState(false);
+  const [phase, setPhase]   = useState<"do" | "question" | "idle">("idle");
+  const ctxRef      = useRef<AudioContext | null>(null);
+  const phaseTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const game = useGameState(`solfege_${level}`);
+
+  useEffect(() => { game.loadHi(); }, [level]); // eslint-disable-line
+  useEffect(() => () => { if (phaseTimer.current) clearTimeout(phaseTimer.current); }, []);
+
+  function freshCtx() {
+    if (ctxRef.current && ctxRef.current.state !== "closed") {
+      ctxRef.current.close().catch(() => {});
+    }
+    ctxRef.current = new AudioContext();
+    return ctxRef.current;
+  }
+
+  function playQ(semitones: number) {
+    setPlayed(false);
+    setPhase("do");
+    if (phaseTimer.current) clearTimeout(phaseTimer.current);
+    const ctx = freshCtx();
+    const t0  = ctx.currentTime;
+    playTone(midiToHz(DO_MIDI),             ctx, t0,       1.0);
+    playTone(midiToHz(DO_MIDI + semitones), ctx, t0 + 1.3, 1.6);
+    phaseTimer.current = setTimeout(() => { setPhase("question"); setPlayed(true); }, 1350);
+  }
+
+  function newQ(lv: SolfegeLevel, prev?: string) {
+    const next = makeSolfegeQ(lv, prev);
+    setQ(next);
+    setPhase("idle");
+    setTimeout(() => playQ(next.semitones), 250);
+  }
+
+  function start() {
+    game.beginCountdown(() => {
+      const first = makeSolfegeQ(level);
+      setQ(first);
+      game.beginPlay();
+      setTimeout(() => playQ(first.semitones), 200);
+    });
+  }
+
+  function answer(choice: string) {
+    if (game.selected || game.gs !== "playing" || !played) return;
+    game.setSelected(choice);
+    const ok = choice === q.syllable;
+    game.scoreAnswer(ok);
+    game.scheduleNext(ok, () => newQ(level, q.syllable));
+  }
+
+  if (game.gs === "results") {
+    return (
+      <ResultsScreen
+        score={game.score} correct={game.correct} total={game.total}
+        topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore}
+        gameLabel={`Solfège · ${level}`}
+        onPlayAgain={start} onMenu={onBack}
+      />
+    );
+  }
+  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
+
+  const isCorrect = game.selected === q.syllable;
+
+  if (game.gs === "idle") {
+    return (
+      <IdleCard
+        title="SOLFÈGE EAR TRAINING"
+        hiScore={game.hiScore}
+        description="Hear the reference Do, then identify the mystery note by its solfège syllable. Speed and streaks earn bonus points."
+        extras={
+          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>
+              {level === "easy" ? "Easy — Do · Mi · Sol" : level === "medium" ? "Medium — Do through La" : "Hard — All 7 syllables"}
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+              {(["easy", "medium", "hard"] as SolfegeLevel[]).map(lv => (
+                <button key={lv} onClick={() => setLevel(lv)}
+                  style={{ padding: "0.375rem 0.875rem", borderRadius: 99, border: "1.5px solid", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, letterSpacing: "0.02em", textTransform: "capitalize", borderColor: level === lv ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.15)", background: level === lv ? "rgba(255,255,255,0.1)" : "transparent", color: level === lv ? "#FDFCFA" : "rgba(255,255,255,0.4)" }}>
+                  {lv}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+        onStart={start}
+      />
+    );
+  }
+
+  const cols = q.choices.length <= 3 ? 3 : 3;
+
+  return (
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
+      <TopBar onBack={onBack} label="Solfège Ear Training" />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <Popups entries={game.popups} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+        <div style={{ maxWidth: 340, width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+          {/* Do → ? visual */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "1.25rem" }}>
+              {phase === "do" ? "Reference Do playing…" : phase === "question" ? "Identify this note:" : "What solfège syllable?"}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginBottom: "1.25rem" }}>
+              {/* Do bubble */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
+                <div style={{ width: 58, height: 58, borderRadius: "50%", transition: "all 0.25s", background: phase === "do" ? "rgba(76,175,132,0.2)" : "rgba(255,255,255,0.05)", border: `2px solid ${phase === "do" ? "#4CAF84" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: phase === "do" ? "#4CAF84" : "rgba(255,255,255,0.35)" }}>
+                  Do
+                </div>
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>reference</div>
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.18)", fontSize: "1.25rem" }}>→</div>
+              {/* Question bubble */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
+                <div style={{ width: 58, height: 58, borderRadius: "50%", transition: "all 0.25s", background: game.selected ? (isCorrect ? "rgba(76,175,132,0.2)" : "rgba(224,82,82,0.15)") : phase === "question" ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.05)", border: `2px solid ${game.selected ? (isCorrect ? "#4CAF84" : "#E05252") : phase === "question" ? "#6366f1" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: game.selected ? (isCorrect ? "#4CAF84" : "#E05252") : phase === "question" ? "#a5b4fc" : "rgba(255,255,255,0.2)" }}>
+                  {game.selected ? q.syllable : "?"}
+                </div>
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>identify</div>
+              </div>
+            </div>
+            {!game.selected && (
+              <button onClick={() => playQ(q.semitones)} style={{ padding: "0.4rem 1rem", borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+                <RefreshCw size={10} strokeWidth={2} /> Replay
+              </button>
+            )}
+            {game.selected && (
+              <div style={{ marginTop: "0.375rem", fontSize: "0.875rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
+                {isCorrect ? `✓ ${q.syllable} — ${q.info}` : `✗ ${q.syllable} — ${q.info}`}
+              </div>
+            )}
+          </div>
+
+          {/* Answer grid */}
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "0.625rem" }}>
+            {q.choices.map(c => {
+              const isSel  = game.selected === c;
+              const isRght = c === q.syllable;
+              let bg = "rgba(255,255,255,0.06)", bdr = "1px solid rgba(255,255,255,0.1)", clr = "#FDFCFA";
+              if (game.selected) {
+                if (isRght)      { bg = "rgba(76,175,132,0.2)";  bdr = "1.5px solid #4CAF84"; clr = "#4CAF84"; }
+                else if (isSel)  { bg = "rgba(224,82,82,0.2)";   bdr = "1.5px solid #E05252"; clr = "#E05252"; }
+                else             { bg = "rgba(255,255,255,0.03)"; bdr = "1px solid rgba(255,255,255,0.04)"; clr = "rgba(255,255,255,0.2)"; }
+              }
+              return (
+                <button key={c} onClick={() => answer(c)} disabled={!!game.selected || !played}
+                  style={{ padding: "1.125rem 0.5rem", borderRadius: 10, border: bdr, background: bg, color: clr, fontSize: "1.5rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: (game.selected || !played) ? "default" : "pointer", transition: "all 0.1s", textAlign: "center", opacity: !played ? 0.4 : 1 }}>
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ textAlign: "center", fontSize: "0.5625rem", color: "rgba(255,255,255,0.15)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            First note is always Do
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Menu
 // ─────────────────────────────────────────────────────────────────────────────
-type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm" | "fretboard" | "guitarChord" | "rhythmEcho" | "sightRead";
+type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm" | "fretboard" | "guitarChord" | "rhythmEcho" | "sightRead" | "solfege";
 
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   const { t } = useI18n();
@@ -2580,6 +2778,11 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     {
       view: "chord" as View, icon: "🎼", title: "Chord Quality", category: "Ear Training",
       desc: "A chord plays. Major, minor, diminished, or augmented — train your ear to tell them apart.",
+      badge: null, active: true,
+    },
+    {
+      view: "solfege" as View, icon: "🎵", title: "Solfège Ear Training", category: "Ear Training",
+      desc: "Hear the reference Do, then identify the mystery note by syllable (Do Re Mi Fa Sol La Ti). Three difficulty levels: tonic triad → all 7.",
       badge: null, active: true,
     },
     {
@@ -2749,5 +2952,6 @@ export default function TheoryPage() {
   if (view === "guitarChord") return <GuitarChordGame onBack={() => setView("menu")} />;
   if (view === "rhythmEcho")  return <RhythmEchoGame onBack={() => setView("menu")} />;
   if (view === "sightRead")   return <SightReadGame onBack={() => setView("menu")} />;
+  if (view === "solfege")     return <SolfegeGame onBack={() => setView("menu")} />;
   return null;
 }
