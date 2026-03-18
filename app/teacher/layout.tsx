@@ -28,8 +28,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher/review",       label: t.nav.review },
     { href: "/teacher/chat",         label: t.nav.chat },
     { href: "/teacher/inspirations", label: t.nav.inspire },
-    { href: "/teacher/studio",       label: t.nav.studio },
-    { href: "/student",              label: t.nav.practice },
   ];
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
