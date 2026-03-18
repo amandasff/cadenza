@@ -575,6 +575,63 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [nextLesson, setNextLesson] = useState<LessonRow | null>(null);
   const [studentAssignments, setStudentAssignments] = useState<AssignmentWithContext[]>([]);
 
+  // Quick-assign from student profile
+  const [showAssignForm, setShowAssignForm] = useState(false);
+  const [assignTitle, setAssignTitle] = useState("");
+  const [assignInstructions, setAssignInstructions] = useState("");
+  const [assignMins, setAssignMins] = useState("20");
+  const [assignTimesPerWeek, setAssignTimesPerWeek] = useState("5");
+  const [assignType, setAssignType] = useState<"practice" | "theory">("practice");
+  const [assignGame, setAssignGame] = useState<string | null>(null);
+  const [addingAssign, setAddingAssign] = useState(false);
+
+  const THEORY_GAMES = [
+    { key: "noteId",      icon: "♪",  label: "Note ID" },
+    { key: "interval",    icon: "👂", label: "Intervals" },
+    { key: "chord",       icon: "🎼", label: "Chords" },
+    { key: "solfege",     icon: "🎤", label: "Sight Singing" },
+    { key: "terms",       icon: "🗣", label: "Music Terms" },
+    { key: "keySig",      icon: "🔑", label: "Key Sigs" },
+    { key: "scale",       icon: "🎶", label: "Scales" },
+    { key: "fretboard",   icon: "𝄞",  label: "Fretboard" },
+    { key: "guitarChord", icon: "🤘", label: "Guitar Chords" },
+  ] as const;
+
+  async function addAssignmentFromProfile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!teacher?.studioId) return;
+    if (assignType === "practice" && !assignTitle.trim()) return;
+    if (assignType === "theory" && !assignGame) return;
+    setAddingAssign(true);
+    try {
+      const monday = (() => { const d = new Date(); const diff = d.getDay() === 0 ? -6 : 1 - d.getDay(); d.setDate(d.getDate() + diff); return d.toISOString().slice(0, 10); })();
+      const gameLabel = assignType === "theory"
+        ? THEORY_GAMES.find(g => g.key === assignGame)?.label ?? "Theory Game"
+        : null;
+      const assignmentSvc = AssignmentService.create(supabase);
+      await assignmentSvc.createAssignment({
+        studioId: teacher.studioId,
+        studentId: id,
+        teacherId: teacher.id,
+        title: assignType === "theory" ? (assignTitle.trim() || gameLabel!) : assignTitle.trim(),
+        instructions: assignInstructions.trim() || undefined,
+        type: assignType,
+        theoryGame: assignType === "theory" ? (assignGame ?? undefined) : undefined,
+        targetMinutesPerDay: assignType === "practice" ? (Number(assignMins) || undefined) : undefined,
+        weekStart: monday,
+        timesPerWeek: assignType === "practice" ? (Number(assignTimesPerWeek) || undefined) : undefined,
+        dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+      });
+      setAssignTitle(""); setAssignInstructions(""); setAssignGame(null); setAssignType("practice");
+      setShowAssignForm(false);
+      // Reload assignments
+      const updatedAssigns = await AssignmentService.create(supabase).getAssignmentsWithCompletions(teacher.id, id);
+      setStudentAssignments(updatedAssigns);
+    } finally {
+      setAddingAssign(false);
+    }
+  }
+
   const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
@@ -1208,44 +1265,107 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
           </div>
         )}
 
-        {/* Active assignments (pre-lesson report) */}
-        {studentAssignments.length > 0 && (
-          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem 1.25rem" }}>
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", margin: "0 0 0.625rem" }}>
+        {/* Active assignments */}
+        <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 4, padding: "1rem 1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.625rem" }}>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", margin: 0 }}>
               {t.teacher.thisWeeksAssignments}
-              <span style={{ marginLeft: "0.5rem", fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: "0.6875rem" }}>
-                {t.teacher.assignmentCompletion.replace("{done}", String(studentAssignments.filter(a => a.completion).length)).replace("{total}", String(studentAssignments.length))}
-              </span>
+              {studentAssignments.length > 0 && (
+                <span style={{ marginLeft: "0.5rem", fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: "0.6875rem" }}>
+                  {t.teacher.assignmentCompletion.replace("{done}", String(studentAssignments.filter(a => a.completion).length)).replace("{total}", String(studentAssignments.length))}
+                </span>
+              )}
             </p>
-            {studentAssignments.map(a => {
-              const RATING_COLORS: Record<string, string> = { struggling: "#dc2626", getting_there: "#d97706", nailed_it: "#16a34a" };
-              const RATING_ICON: Record<string, React.ReactNode> = { struggling: <Frown size={14} strokeWidth={1.5} />, getting_there: <Smile size={14} strokeWidth={1.5} />, nailed_it: <PartyPopper size={14} strokeWidth={1.5} /> };
-              return (
-                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-                    background: a.completion ? "#16a34a" : "var(--border-strong)",
-                  }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {a.title}
-                    </div>
-                    {a.piece_title && (
-                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
-                        {a.piece_title}{a.focus ? ` · ${a.focus}` : ""}
+            <button onClick={() => setShowAssignForm(v => !v)}
+              style={{ padding: "0.2rem 0.625rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", cursor: "pointer" }}>
+              + Add
+            </button>
+          </div>
+
+          {showAssignForm && (() => {
+            const INP: React.CSSProperties = { width: "100%", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--white)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" };
+            return (
+              <form onSubmit={addAssignmentFromProfile} style={{ background: "var(--cream)", borderRadius: 3, padding: "0.75rem", marginBottom: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.375rem" }}>
+                  {(["practice", "theory"] as const).map(tp => (
+                    <button key={tp} type="button" onClick={() => { setAssignType(tp); setAssignGame(null); }}
+                      style={{ flex: 1, padding: "0.35rem", borderRadius: 3, border: "1px solid", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, borderColor: assignType === tp ? "var(--charcoal)" : "var(--border-strong)", background: assignType === tp ? "var(--charcoal)" : "none", color: assignType === tp ? "var(--white)" : "var(--muted)", transition: "all 0.15s" }}>
+                      {tp === "practice" ? "Practice" : "Theory Game"}
+                    </button>
+                  ))}
+                </div>
+                {assignType === "practice" ? (
+                  <>
+                    <input required value={assignTitle} onChange={e => setAssignTitle(e.target.value)} placeholder="Assignment (e.g. Bars 1–16, slow)" style={INP} />
+                    <input value={assignInstructions} onChange={e => setAssignInstructions(e.target.value)} placeholder="Instructions (optional)" style={INP} />
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Min/day</label>
+                        <input type="number" min="1" value={assignMins} onChange={e => setAssignMins(e.target.value)} style={INP} />
                       </div>
-                    )}
+                      <div style={{ flex: 1 }}>
+                        <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Times/week</label>
+                        <input type="number" min="1" max="7" value={assignTimesPerWeek} onChange={e => setAssignTimesPerWeek(e.target.value)} style={INP} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
+                      {THEORY_GAMES.map(g => (
+                        <button key={g.key} type="button" onClick={() => setAssignGame(g.key)}
+                          style={{ padding: "0.4rem 0.25rem", borderRadius: 3, border: "1.5px solid", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 500, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.15rem", borderColor: assignGame === g.key ? "var(--charcoal)" : "var(--border-strong)", background: assignGame === g.key ? "var(--charcoal)" : "none", color: assignGame === g.key ? "var(--white)" : "var(--charcoal)", transition: "all 0.12s" }}>
+                          <span style={{ fontSize: "1rem", lineHeight: 1 }}>{g.icon}</span>
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                    <input value={assignTitle} onChange={e => setAssignTitle(e.target.value)} placeholder="Custom title (optional)" style={INP} />
+                    <input value={assignInstructions} onChange={e => setAssignInstructions(e.target.value)} placeholder="Instructions (optional)" style={INP} />
+                  </>
+                )}
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button type="submit" disabled={addingAssign || (assignType === "theory" && !assignGame)}
+                    style={{ flex: 1, padding: "0.5rem", borderRadius: 3, border: "none", background: "var(--charcoal)", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer", opacity: (addingAssign || (assignType === "theory" && !assignGame)) ? 0.4 : 1 }}>
+                    {addingAssign ? "Saving…" : "Add Assignment"}
+                  </button>
+                  <button type="button" onClick={() => { setShowAssignForm(false); setAssignType("practice"); setAssignGame(null); }}
+                    style={{ padding: "0.5rem 0.875rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            );
+          })()}
+
+          {studentAssignments.length === 0 && !showAssignForm && (
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: 0 }}>No assignments this week.</p>
+          )}
+          {studentAssignments.map(a => {
+            const RATING_COLORS: Record<string, string> = { struggling: "#dc2626", getting_there: "#d97706", nailed_it: "#16a34a" };
+            const RATING_ICON: Record<string, React.ReactNode> = { struggling: <Frown size={14} strokeWidth={1.5} />, getting_there: <Smile size={14} strokeWidth={1.5} />, nailed_it: <PartyPopper size={14} strokeWidth={1.5} /> };
+            return (
+              <div key={a.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.5rem" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: a.completion ? "#16a34a" : "var(--border-strong)" }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {a.title}
                   </div>
-                  {a.completion?.self_rating && (
-                    <span style={{ color: RATING_COLORS[a.completion.self_rating], flexShrink: 0, display: "inline-flex" }}>
-                      {RATING_ICON[a.completion.self_rating]}
-                    </span>
+                  {a.piece_title && (
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>
+                      {a.piece_title}{a.focus ? ` · ${a.focus}` : ""}
+                    </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        )}
+                {a.completion?.self_rating && (
+                  <span style={{ color: RATING_COLORS[a.completion.self_rating], flexShrink: 0, display: "inline-flex" }}>
+                    {RATING_ICON[a.completion.self_rating]}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Main layout */}
