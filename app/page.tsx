@@ -12,14 +12,15 @@ const TeacherHomeDemo = dynamic(() => import("../components/demo/TeacherHomeDemo
 const StudentHomeDemo = dynamic(() => import("../components/demo/StudentHomeDemo"), { ssr: false });
 
 const PROOF_LINES = [
-  "Builds real practice habits — students show up every day",
-  "Every session recorded and sent straight to their teacher",
-  "Composer collectibles that reward consistency",
-  "Goals from their teacher, progress visible to everyone",
+  "Records every practice session automatically",
+  "Streaks and composer collectibles to earn",
+  "Goals set by their teacher, tracked by the student",
+  "Teacher hears everything — no surprises at lessons",
 ];
 
 export default function Home() {
   const router = useRouter();
+  const [mode, setMode] = useState<"signup" | "signin">("signup");
   const [role, setRole] = useState<UserRole>("student");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,6 +28,12 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [unblurring, setUnblurring] = useState(false);
+
+  const switchMode = (m: "signup" | "signin") => {
+    setMode(m);
+    setError("");
+    setPassword("");
+  };
 
   // Redirect if already logged in
   useEffect(() => {
@@ -56,6 +63,22 @@ export default function Home() {
       setLoading(false);
     }
   }, [email, password, role, displayName, router]);
+
+  const handleSignIn = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const service = AuthService.getInstance(supabase);
+      const user = await service.signIn(email, password);
+      setUnblurring(true);
+      setTimeout(() => router.push(user.getHomeRoute()), 1600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed");
+      setLoading(false);
+    }
+  }, [email, password, router]);
 
   const handleGoogleSignup = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -120,9 +143,9 @@ export default function Home() {
         <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.75rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(253,252,250,0.9)" }}>
           Cadenza
         </span>
-        <Link href="/auth/login" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "rgba(253,252,250,0.6)", textDecoration: "none", fontWeight: 500 }}>
-          Sign in →
-        </Link>
+        <button onClick={() => switchMode(mode === "signin" ? "signup" : "signin")} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "rgba(253,252,250,0.6)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, padding: 0 }}>
+          {mode === "signin" ? "Create account →" : "Sign in →"}
+        </button>
       </div>
 
       {/* ── Layer 4: floating card ── */}
@@ -167,13 +190,13 @@ export default function Home() {
               fontSize: "clamp(2rem, 4vw, 3rem)", color: "#2C2824",
               lineHeight: 1.05, letterSpacing: "-0.02em", margin: "0 0 1rem",
             }}>
-              Daily practice,<br />without the battle.
+              The practice app<br />kids actually open.
             </h1>
 
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", color: "#6B6560", lineHeight: 1.7, margin: "0 0 1.5rem", maxWidth: 320 }}>
               {role === "teacher"
-                ? "Students record every session. You hear it. They build streaks, unlock composer cards, and show up every day — because they actually want to."
-                : "Streaks to protect, composer cards to unlock, goals from your teacher — practice stops feeling like a chore and starts feeling like a game."
+                ? "Cadenza records every practice session and delivers it to you — so you walk into every lesson knowing exactly where they left off."
+                : "Practice streaks, composer collectibles, and goals from your teacher — all in one place."
               }
             </p>
 
@@ -189,92 +212,95 @@ export default function Home() {
           </div>
 
           {/* RIGHT — form */}
-          <div className="landing-form-col" style={{ flex: "0 0 340px", minWidth: 0, display: "flex", flexDirection: "column" }}>
-            {/* Form header */}
-            <div style={{ padding: "1.75rem 1.75rem 0" }}>
-              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.875rem" }}>
-                Get started for free
-              </div>
+          <div className="landing-form-col" style={{ flex: "0 0 340px", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
 
-              {/* Role toggle */}
-              <div style={{ display: "flex", border: "1px solid #EDE8E0", borderRadius: 4, overflow: "hidden" }}>
-                {(["student", "teacher"] as UserRole[]).map(r => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    style={{
-                      flex: 1, padding: "0.5rem", border: "none", cursor: "pointer",
-                      background: role === r ? "#2C2824" : "transparent",
-                      fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
-                      color: role === r ? "#FDFCFA" : "#8A8580",
-                      transition: "all 0.15s", textTransform: "capitalize",
-                    }}
-                  >
-                    {r === "student" ? "Student" : "Teacher"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "0.875rem 1.75rem 1.25rem" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Name</label>
-                <input type="text" placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"} value={displayName} onChange={e => setDisplayName(e.target.value)} required style={inputStyle} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Email</label>
-                <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Password</label>
-                <input type="password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
-              </div>
-
-              {error && (
-                <div style={{ border: "1px solid #E8C4BA", borderRadius: 4, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif", background: "#FDF6F3" }}>
-                  {error}
+            {mode === "signup" ? (
+              <>
+                <div style={{ padding: "1.75rem 1.75rem 0" }}>
+                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.875rem" }}>
+                    Get started for free
+                  </div>
+                  <div style={{ display: "flex", border: "1px solid #EDE8E0", borderRadius: 4, overflow: "hidden" }}>
+                    {(["student", "teacher"] as UserRole[]).map(r => (
+                      <button key={r} type="button" onClick={() => setRole(r)} style={{ flex: 1, padding: "0.5rem", border: "none", cursor: "pointer", background: role === r ? "#2C2824" : "transparent", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: role === r ? "#FDFCFA" : "#8A8580", transition: "all 0.15s", textTransform: "capitalize" }}>
+                        {r === "student" ? "Student" : "Teacher"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || unblurring}
-                style={{
-                  borderRadius: 4,
-                  background: loading || unblurring ? "#ADA9A2" : "#4CAF84",
-                  color: "#fff", fontFamily: "Inter, sans-serif", fontWeight: 600,
-                  fontSize: "0.9375rem", padding: "0.75rem", border: "none",
-                  cursor: loading || unblurring ? "default" : "pointer",
-                  letterSpacing: "0.01em", transition: "background 0.15s", marginTop: "0.125rem",
-                }}
-              >
-                {unblurring ? "Welcome! Opening Cadenza…" : loading ? "Creating account..." : `Create ${role} account →`}
-              </button>
-            </form>
-
-            {/* Google + sign-in */}
-            <div style={{ padding: "0 1.75rem 1.5rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
-                <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
-                <span style={{ fontSize: "0.6875rem", color: "#ADA9A2", fontWeight: 500 }}>or</span>
-                <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
-              </div>
-              <button
-                type="button"
-                onClick={handleGoogleSignup}
-                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.625rem", border: "1px solid #D8D2C8", borderRadius: 4, background: "#FDFCFA", padding: "0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "#2C2824", transition: "background 0.15s" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-                Continue with Google
-              </button>
-              <div style={{ textAlign: "center", marginTop: "1rem" }}>
-                <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#ADA9A2", margin: 0 }}>
-                  Already have an account?{" "}
-                  <Link href="/auth/login" style={{ color: "#2C2824", fontWeight: 500, textDecoration: "underline", textUnderlineOffset: "2px" }}>Sign in</Link>
-                </p>
-              </div>
-            </div>
+                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "0.875rem 1.75rem 1.25rem" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Name</label>
+                    <input type="text" placeholder={role === "student" ? "Emma Chen" : "Ms. Rivera"} value={displayName} onChange={e => setDisplayName(e.target.value)} required style={inputStyle} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Email</label>
+                    <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Password</label>
+                    <input type="password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+                  </div>
+                  {error && <div style={{ border: "1px solid #E8C4BA", borderRadius: 4, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif", background: "#FDF6F3" }}>{error}</div>}
+                  <button type="submit" disabled={loading || unblurring} style={{ borderRadius: 4, background: loading || unblurring ? "#ADA9A2" : "#4CAF84", color: "#fff", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", padding: "0.75rem", border: "none", cursor: loading || unblurring ? "default" : "pointer", letterSpacing: "0.01em", transition: "background 0.15s", marginTop: "0.125rem" }}>
+                    {unblurring ? "Welcome! Opening Cadenza…" : loading ? "Creating account..." : `Create ${role} account →`}
+                  </button>
+                </form>
+                <div style={{ padding: "0 1.75rem 1.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
+                    <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
+                    <span style={{ fontSize: "0.6875rem", color: "#ADA9A2", fontWeight: 500 }}>or</span>
+                    <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
+                  </div>
+                  <button type="button" onClick={handleGoogleSignup} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.625rem", border: "1px solid #D8D2C8", borderRadius: 4, background: "#FDFCFA", padding: "0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "#2C2824" }}>
+                    <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                    Continue with Google
+                  </button>
+                  <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#ADA9A2", margin: "1rem 0 0", textAlign: "center" }}>
+                    Already have an account?{" "}
+                    <button onClick={() => switchMode("signin")} style={{ color: "#2C2824", fontWeight: 500, textDecoration: "underline", textUnderlineOffset: "2px", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", padding: 0 }}>Sign in</button>
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ padding: "1.75rem 1.75rem 0" }}>
+                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.25rem" }}>
+                    Welcome back
+                  </div>
+                  <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#8A8580", margin: "0 0 1.25rem" }}>Sign in to your account</p>
+                </div>
+                <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "0 1.75rem 1.25rem" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Email</label>
+                    <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <label style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", color: "#2C2824" }}>Password</label>
+                    <input type="password" placeholder="••••••" value={password} onChange={e => setPassword(e.target.value)} required style={inputStyle} />
+                  </div>
+                  {error && <div style={{ border: "1px solid #E8C4BA", borderRadius: 4, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif", background: "#FDF6F3" }}>{error}</div>}
+                  <button type="submit" disabled={loading || unblurring} style={{ borderRadius: 4, background: loading || unblurring ? "#ADA9A2" : "#4CAF84", color: "#fff", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", padding: "0.75rem", border: "none", cursor: loading || unblurring ? "default" : "pointer", letterSpacing: "0.01em", transition: "background 0.15s", marginTop: "0.125rem" }}>
+                    {unblurring ? "Welcome back! Opening Cadenza…" : loading ? "Signing in..." : "Sign in →"}
+                  </button>
+                </form>
+                <div style={{ padding: "0 1.75rem 1.75rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.875rem" }}>
+                    <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
+                    <span style={{ fontSize: "0.6875rem", color: "#ADA9A2", fontWeight: 500 }}>or</span>
+                    <div style={{ flex: 1, height: 1, background: "#EDE8E0" }} />
+                  </div>
+                  <button type="button" onClick={handleGoogleSignup} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.625rem", border: "1px solid #D8D2C8", borderRadius: 4, background: "#FDFCFA", padding: "0.625rem", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "#2C2824" }}>
+                    <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                    Continue with Google
+                  </button>
+                  <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "#ADA9A2", margin: "1rem 0 0", textAlign: "center" }}>
+                    Don&apos;t have an account?{" "}
+                    <button onClick={() => switchMode("signup")} style={{ color: "#2C2824", fontWeight: 500, textDecoration: "underline", textUnderlineOffset: "2px", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", padding: 0 }}>Create one</button>
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
