@@ -283,6 +283,7 @@ export interface AssignmentRow {
   status: AssignmentStatus;
   reference_audio_url: string | null;
   youtube_id: string | null;
+  theory_game: string | null;  // set when type === 'theory'; matches View keys in theory page
   created_at: string;
 }
 

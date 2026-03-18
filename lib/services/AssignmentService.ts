@@ -24,6 +24,7 @@ interface CreateAssignmentInput {
   dueDate?: string;           // "YYYY-MM-DD"
   referenceAudioUrl?: string;
   youtubeId?: string;
+  theoryGame?: string;
 }
 
 export class AssignmentService {
@@ -160,6 +161,7 @@ export class AssignmentService {
         due_date: input.dueDate ?? null,
         reference_audio_url: input.referenceAudioUrl ?? null,
         youtube_id: input.youtubeId ?? null,
+        theory_game: input.theoryGame ?? null,
         status: 'active',
       })
       .select()

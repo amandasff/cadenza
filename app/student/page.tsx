@@ -693,6 +693,12 @@ export default function ThisWeek() {
                     {a.reference_audio_url && (
                       <audio src={a.reference_audio_url} controls style={{ height: 28, maxWidth: 140 }} />
                     )}
+                    {a.type === "theory" && a.theory_game && (
+                      <Link href={`/student/theory?game=${a.theory_game}`}
+                        style={{ padding: "0.375rem 0.75rem", borderRadius: 3, border: "none", background: "var(--butter)", color: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", cursor: "pointer", whiteSpace: "nowrap", textDecoration: "none" }}>
+                        Play Game →
+                      </Link>
+                    )}
                     <button
                       onClick={() => { setRatingAssignment(a); setRatingValue(null); setRatingNote(""); }}
                       style={{

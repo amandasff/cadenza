@@ -55,7 +55,21 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
   const [assignInstructions, setAssignInstructions] = useState("");
   const [assignMins, setAssignMins] = useState("20");
   const [assignTimesPerWeek, setAssignTimesPerWeek] = useState("5");
+  const [assignType, setAssignType] = useState<"practice" | "theory">("practice");
+  const [assignGame, setAssignGame] = useState<string | null>(null);
   const [addingAssign, setAddingAssign] = useState(false);
+
+  const THEORY_GAMES = [
+    { key: "noteId",      icon: "♪",  label: "Note ID" },
+    { key: "interval",    icon: "👂", label: "Intervals" },
+    { key: "chord",       icon: "🎼", label: "Chords" },
+    { key: "solfege",     icon: "🎤", label: "Sight Singing" },
+    { key: "terms",       icon: "🗣", label: "Music Terms" },
+    { key: "keySig",      icon: "🔑", label: "Key Sigs" },
+    { key: "scale",       icon: "🎶", label: "Scales" },
+    { key: "fretboard",   icon: "𝄞",  label: "Fretboard" },
+    { key: "guitarChord", icon: "🤘", label: "Guitar Chords" },
+  ] as const;
 
   useEffect(() => {
     if (!teacher?.id) return;
@@ -118,25 +132,33 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
 
   async function addAssignment(e: React.FormEvent) {
     e.preventDefault();
-    if (!teacher?.studioId || !assignTitle.trim()) return;
+    if (!teacher?.studioId) return;
+    if (assignType === "practice" && !assignTitle.trim()) return;
+    if (assignType === "theory" && !assignGame) return;
     setAddingAssign(true);
     try {
       const monday = getMondayOfCurrentWeek();
+      const gameLabel = assignType === "theory"
+        ? THEORY_GAMES.find(g => g.key === assignGame)?.label ?? "Theory Game"
+        : null;
       await assignmentSvc.createAssignment({
         studioId: teacher.studioId,
         studentId,
         teacherId: teacher.id,
         lessonId,
-        title: assignTitle.trim(),
+        title: assignType === "theory" ? (assignTitle.trim() || gameLabel!) : assignTitle.trim(),
         instructions: assignInstructions.trim() || undefined,
-        type: "practice",
-        targetMinutesPerDay: Number(assignMins) || undefined,
+        type: assignType,
+        theoryGame: assignType === "theory" ? (assignGame ?? undefined) : undefined,
+        targetMinutesPerDay: assignType === "practice" ? (Number(assignMins) || undefined) : undefined,
         weekStart: monday,
-        timesPerWeek: Number(assignTimesPerWeek) || undefined,
+        timesPerWeek: assignType === "practice" ? (Number(assignTimesPerWeek) || undefined) : undefined,
         dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
       });
       setAssignTitle("");
       setAssignInstructions("");
+      setAssignGame(null);
+      setAssignType("practice");
       setShowAssignForm(false);
       await loadData();
     } finally {
@@ -281,40 +303,63 @@ export default function LessonNotesPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {showAssignForm && (
-          <form onSubmit={addAssignment} style={{ background: "var(--cream)", borderRadius: 3, padding: "0.875rem", marginBottom: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <input
-              required
-              value={assignTitle}
-              onChange={e => setAssignTitle(e.target.value)}
-              placeholder="Assignment (e.g. Bars 1–16, RH alone, slow)"
-              style={INP}
-            />
-            <input
-              value={assignInstructions}
-              onChange={e => setAssignInstructions(e.target.value)}
-              placeholder="Instructions (optional)"
-              style={INP}
-            />
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Min/day</label>
-                <input type="number" min="1" value={assignMins} onChange={e => setAssignMins(e.target.value)} style={INP} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Times/week</label>
-                <input type="number" min="1" max="7" value={assignTimesPerWeek} onChange={e => setAssignTimesPerWeek(e.target.value)} style={INP} />
-              </div>
+          <form onSubmit={addAssignment} style={{ background: "var(--cream)", borderRadius: 3, padding: "0.875rem", marginBottom: "0.875rem", display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            {/* Type toggle */}
+            <div style={{ display: "flex", gap: "0.375rem" }}>
+              {(["practice", "theory"] as const).map(tp => (
+                <button key={tp} type="button" onClick={() => { setAssignType(tp); setAssignGame(null); }}
+                  style={{ flex: 1, padding: "0.4rem 0.5rem", borderRadius: 3, border: "1px solid", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 500, borderColor: assignType === tp ? "var(--charcoal)" : "var(--border-strong)", background: assignType === tp ? "var(--charcoal)" : "none", color: assignType === tp ? "var(--white)" : "var(--muted)", transition: "all 0.15s" }}>
+                  {tp === "practice" ? "Practice" : "Theory Game"}
+                </button>
+              ))}
             </div>
+
+            {assignType === "practice" ? (
+              <>
+                <input required value={assignTitle} onChange={e => setAssignTitle(e.target.value)}
+                  placeholder="Assignment (e.g. Bars 1–16, RH alone, slow)" style={INP} />
+                <input value={assignInstructions} onChange={e => setAssignInstructions(e.target.value)}
+                  placeholder="Instructions (optional)" style={INP} />
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Min/day</label>
+                    <input type="number" min="1" value={assignMins} onChange={e => setAssignMins(e.target.value)} style={INP} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", display: "block", marginBottom: "0.2rem" }}>Times/week</label>
+                    <input type="number" min="1" max="7" value={assignTimesPerWeek} onChange={e => setAssignTimesPerWeek(e.target.value)} style={INP} />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Game picker grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.375rem" }}>
+                  {THEORY_GAMES.map(g => (
+                    <button key={g.key} type="button" onClick={() => setAssignGame(g.key)}
+                      style={{ padding: "0.5rem 0.25rem", borderRadius: 3, border: "1.5px solid", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 500, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem", borderColor: assignGame === g.key ? "var(--charcoal)" : "var(--border-strong)", background: assignGame === g.key ? "var(--charcoal)" : "none", color: assignGame === g.key ? "var(--white)" : "var(--charcoal)", transition: "all 0.12s" }}>
+                      <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>{g.icon}</span>
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+                <input value={assignTitle} onChange={e => setAssignTitle(e.target.value)}
+                  placeholder="Custom title (optional — defaults to game name)" style={INP} />
+                <input value={assignInstructions} onChange={e => setAssignInstructions(e.target.value)}
+                  placeholder="Instructions for the student (optional)" style={INP} />
+              </>
+            )}
+
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button type="submit" disabled={addingAssign} style={{
+              <button type="submit" disabled={addingAssign || (assignType === "theory" && !assignGame)} style={{
                 flex: 1, padding: "0.5rem", borderRadius: 3, border: "none",
                 background: "var(--charcoal)", color: "var(--white)",
                 fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500,
-                cursor: "pointer", opacity: addingAssign ? 0.5 : 1,
+                cursor: "pointer", opacity: (addingAssign || (assignType === "theory" && !assignGame)) ? 0.4 : 1,
               }}>
                 {addingAssign ? t.common.saving : t.schedule.addAssignment}
               </button>
-              <button type="button" onClick={() => setShowAssignForm(false)} style={{
+              <button type="button" onClick={() => { setShowAssignForm(false); setAssignType("practice"); setAssignGame(null); }} style={{
                 padding: "0.5rem 0.875rem", borderRadius: 3, border: "1px solid var(--border-strong)",
                 background: "none", color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
                 fontSize: "0.8125rem", cursor: "pointer",
