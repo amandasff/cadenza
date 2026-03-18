@@ -496,7 +496,11 @@ export default function MyPieces() {
                             </div>
                             <YouTubeSearch
                               placeholder={`${piece.title}${piece.composer ? ` ${piece.composer}` : ""}…`}
-                              onSelect={(v: YouTubeResult) => handleSearchPlay(v)}
+                              onSelect={(v: YouTubeResult) => {
+                                void handleAddRecording(piece.id, v);
+                                setSearchOpenFor(null);
+                                player.play({ id: v.id, title: v.title, thumbnail: v.thumbnail });
+                              }}
                             />
                           </div>
                         </div>
