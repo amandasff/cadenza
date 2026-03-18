@@ -694,10 +694,13 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
   const [q, setQ]             = useState(() => makeIntervalQ("easy"));
   const [played, setPlayed]   = useState(false);
   const [showRef, setShowRef] = useState(false);
-  const ctxRef = useRef<AudioContext | null>(null);
+  const [phase, setPhase]     = useState<"root" | "interval" | "idle">("idle");
+  const ctxRef     = useRef<AudioContext | null>(null);
+  const phaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const game = useGameState(`interval_${diff}`);
 
   useEffect(() => { game.loadHi(); }, [diff]); // eslint-disable-line
+  useEffect(() => () => { if (phaseTimer.current) clearTimeout(phaseTimer.current); }, []);
 
   function freshCtx() {
     if (ctxRef.current && ctxRef.current.state !== "closed") {
@@ -708,34 +711,31 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
   }
 
   function playQ(semitones: number, direction: "asc" | "desc") {
+    setPlayed(false);
+    setPhase("root");
+    if (phaseTimer.current) clearTimeout(phaseTimer.current);
     playInterval(semitones, freshCtx(), direction);
-    setPlayed(true);
+    phaseTimer.current = setTimeout(() => { setPhase("interval"); setPlayed(true); }, 750);
   }
 
   function newQ(d: Difficulty, desc: boolean) {
     const next = makeIntervalQ(d, desc);
     setQ(next);
-    setPlayed(false);
-    setTimeout(() => {
-      playInterval(next.semi, freshCtx(), next.direction);
-      setPlayed(true);
-    }, 300);
+    setPhase("idle");
+    setTimeout(() => playQ(next.semi, next.direction), 300);
   }
 
   function start() {
     game.beginCountdown(() => {
       const first = makeIntervalQ(diff, allowDesc);
-      setQ(first); setPlayed(false);
+      setQ(first);
       game.beginPlay();
-      setTimeout(() => {
-        playInterval(first.semi, freshCtx(), first.direction);
-        setPlayed(true);
-      }, 200);
+      setTimeout(() => playQ(first.semi, first.direction), 200);
     });
   }
 
   function answer(choice: string) {
-    if (game.selected || game.gs !== "playing") return;
+    if (game.selected || game.gs !== "playing" || !played) return;
     game.setSelected(choice);
     const ok = choice === q.correct;
     game.scoreAnswer(ok);
@@ -782,38 +782,64 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
       {showRef && <IntervalRefPanel diff={diff} allowDesc={allowDesc} onClose={() => setShowRef(false)} />}
+      <TopBar onBack={onBack} label="Interval Ear Training" />
       <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
-        <Popups entries={game.popups} />
-        <div style={{ maxWidth: 380, width: "100%" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem", gap: "0.75rem" }}>
-            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              {q.direction === "desc" ? "↓ Descending — what interval?" : "What interval is this?"}
+      <Popups entries={game.popups} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+        <div style={{ maxWidth: 340, width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+          {/* Phase label + two-note bubbles */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "1.25rem" }}>
+              {phase === "root" ? "First note playing…" : phase === "interval" ? "Second note — what interval?" : "What interval is this?"}
             </div>
-            <button
-              onClick={() => setShowRef(v => !v)}
-              title="Show reference"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", fontFamily: "Inter, sans-serif", lineHeight: 1 }}
-            >
-              📖
-            </button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginBottom: "1.25rem" }}>
+              {/* First note bubble */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
+                <div style={{ width: 58, height: 58, borderRadius: "50%", transition: "all 0.25s", background: phase === "root" ? "rgba(76,175,132,0.2)" : "rgba(255,255,255,0.05)", border: `2px solid ${phase === "root" ? "#4CAF84" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8125rem", fontWeight: 600, color: phase === "root" ? "#4CAF84" : "rgba(255,255,255,0.35)" }}>
+                  {q.direction === "asc" ? "Low" : "High"}
+                </div>
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>1st note</div>
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.25)", fontSize: "1.375rem", marginBottom: 14 }}>
+                {q.direction === "asc" ? "↑" : "↓"}
+              </div>
+              {/* Second note bubble */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
+                <div style={{ width: 58, height: 58, borderRadius: "50%", transition: "all 0.25s", background: game.selected ? (isCorrect ? "rgba(76,175,132,0.2)" : "rgba(224,82,82,0.15)") : phase === "interval" ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.05)", border: `2px solid ${game.selected ? (isCorrect ? "#4CAF84" : "#E05252") : phase === "interval" ? "#6366f1" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: game.selected ? "0.5625rem" : "0.8125rem", fontWeight: 600, color: game.selected ? (isCorrect ? "#4CAF84" : "#E05252") : phase === "interval" ? "#a5b4fc" : "rgba(255,255,255,0.2)", textAlign: "center", padding: "0 4px", lineHeight: 1.25 }}>
+                  {game.selected ? q.correct : (q.direction === "asc" ? "High" : "Low")}
+                </div>
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>2nd note</div>
+              </div>
+            </div>
+
+            {/* Replay + reference */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.625rem" }}>
+              {!game.selected && (
+                <button onClick={() => playQ(q.semi, q.direction)} style={{ padding: "0.4rem 1rem", borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
+                  <RefreshCw size={10} strokeWidth={2} /> Replay
+                </button>
+              )}
+              <button onClick={() => setShowRef(v => !v)} style={{ padding: "0.4rem 0.75rem", borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.35)", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>
+                📖 Reference
+              </button>
+            </div>
+
+            {game.selected && (
+              <div style={{ marginTop: "0.625rem", fontSize: "0.875rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
+                {isCorrect ? (game.streak >= 5 ? t.student.inARow.replace("{n}", String(game.streak)) : `✓ ${q.correct}`) : `✗ ${q.correct}`}
+              </div>
+            )}
+            {game.selected && INTERVAL_REFS[q.semi] && (
+              <div style={{ marginTop: "0.25rem", fontSize: "0.6875rem", color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>
+                {q.direction === "asc" ? INTERVAL_REFS[q.semi].asc : INTERVAL_REFS[q.semi].desc}
+              </div>
+            )}
           </div>
 
-          {/* Big play button */}
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.75rem" }}>
-            <button onClick={() => playQ(q.semi, q.direction)} style={{ width: 80, height: 80, borderRadius: "50%", border: "none", background: played ? "rgba(255,255,255,0.08)" : "#4CAF84", color: "#fff", fontSize: "1.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: played ? "none" : "0 0 28px #4CAF8450", transition: "all 0.2s" }}>
-              {played ? <RefreshCw size={14} strokeWidth={1.5} /> : <Play size={14} strokeWidth={1.5} fill="currentColor" />}
-            </button>
+          <div style={{ opacity: played ? 1 : 0.4, transition: "opacity 0.3s", pointerEvents: played ? "auto" : "none" }}>
+            <AnswerGrid choices={q.choices} selected={game.selected} correct={q.correct} onAnswer={answer} columns={2} />
           </div>
-          {played && !game.selected && <div style={{ textAlign: "center", marginBottom: "1rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.04em" }}>Tap to replay ↑</div>}
-
-          {game.selected && (
-            <div style={{ textAlign: "center", marginBottom: "0.875rem", fontSize: "1rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-              {isCorrect ? (game.streak >= 5 ? t.student.inARow.replace("{n}", String(game.streak)) : t.student.correctFeedback) : `It was ${q.correct}`}
-            </div>
-          )}
-
-          <AnswerGrid choices={q.choices} selected={game.selected} correct={q.correct} onAnswer={answer} columns={2} />
         </div>
       </div>
     </div>
@@ -2552,198 +2578,351 @@ function SightReadGame({ onBack }: { onBack: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Game: Solfège Ear Training
+// Game: Sight Singing
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SOLFEGE_NOTES = [
-  { syllable: "Do",  semitones: 0,  info: "Tonic" },
-  { syllable: "Re",  semitones: 2,  info: "Major 2nd" },
-  { syllable: "Mi",  semitones: 4,  info: "Major 3rd" },
-  { syllable: "Fa",  semitones: 5,  info: "Perfect 4th" },
-  { syllable: "Sol", semitones: 7,  info: "Perfect 5th" },
-  { syllable: "La",  semitones: 9,  info: "Major 6th" },
-  { syllable: "Ti",  semitones: 11, info: "Major 7th" },
+const SING_SCALE = [
+  { pos: 0, midi: 60, solfege: "Do" },
+  { pos: 1, midi: 62, solfege: "Re" },
+  { pos: 2, midi: 64, solfege: "Mi" },
+  { pos: 3, midi: 65, solfege: "Fa" },
+  { pos: 4, midi: 67, solfege: "Sol" },
+  { pos: 5, midi: 69, solfege: "La" },
+  { pos: 6, midi: 71, solfege: "Ti" },
+  { pos: 7, midi: 72, solfege: "Do" },
+  { pos: 8, midi: 74, solfege: "Re" },
+  { pos: 9, midi: 76, solfege: "Mi" },
 ] as const;
-type SolfegeSyllable = typeof SOLFEGE_NOTES[number]["syllable"];
-type SolfegeLevel = "easy" | "medium" | "hard";
+type SingNote = { pos: number; midi: number; solfege: string };
+type SingSightLevel = "beginner" | "intermediate" | "advanced";
+type SingPhase = "idle" | "previewing" | "recording" | "review";
 
-const SOLFEGE_POOLS: Record<SolfegeLevel, SolfegeSyllable[]> = {
-  easy:   ["Do", "Mi", "Sol"],
-  medium: ["Do", "Re", "Mi", "Fa", "Sol", "La"],
-  hard:   ["Do", "Re", "Mi", "Fa", "Sol", "La", "Ti"],
-};
-const DO_MIDI = 60;
+function generateSingMelody(level: SingSightLevel): SingNote[] {
+  const maxIdx = level === "beginner" ? 5 : level === "intermediate" ? 7 : 9;
+  const len    = level === "beginner" ? 4 : level === "intermediate" ? 5 : 6;
+  const notes: SingNote[] = [];
+  let cur = Math.floor(Math.random() * Math.min(3, maxIdx));
+  for (let i = 0; i < len; i++) {
+    notes.push(SING_SCALE[cur] as SingNote);
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const step = 1 + (Math.random() < 0.3 ? 1 : 0); // mostly steps, occasional skip
+    let next = cur + dir * step;
+    if (next < 0) next = cur + step;
+    if (next > maxIdx) next = cur - step;
+    if (next < 0) next = 0;
+    if (next > maxIdx) next = maxIdx;
+    cur = next;
+  }
+  return notes;
+}
 
-function makeSolfegeQ(level: SolfegeLevel, prevSyllable?: string) {
-  const pool = SOLFEGE_POOLS[level].filter(s => s !== prevSyllable);
-  const syllable = pool[Math.floor(Math.random() * pool.length)] as SolfegeSyllable;
-  const note = SOLFEGE_NOTES.find(n => n.syllable === syllable)!;
-  return { syllable, semitones: note.semitones, info: note.info, choices: shuffle([...SOLFEGE_POOLS[level]]) };
+// Staff showing multiple notes left to right with solfège labels, active highlight
+function SingStaff({ notes, activeIdx }: { notes: SingNote[]; activeIdx: number }) {
+  const W = 300, H = 130;
+  const LS_S = 14;
+  const botY  = 95;
+  const noteR = 6;
+  const startX = 28;
+  const spacing = (W - startX - 20) / Math.max(notes.length, 1);
+
+  function nY(pos: number) { return botY - pos * (LS_S / 2); }
+
+  const staffLines = [0, 2, 4, 6, 8].map(p => botY - p * (LS_S / 2));
+
+  return (
+    <svg width={W} height={H} style={{ overflow: "visible" }}>
+      {/* Staff lines */}
+      {staffLines.map((y, i) => (
+        <line key={i} x1={8} x2={W - 8} y1={y} y2={y} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
+      ))}
+      {/* Treble clef symbol */}
+      <text x={10} y={botY + 4} fontSize={52} fill="rgba(255,255,255,0.35)" fontFamily="serif" style={{ userSelect: "none" }}>𝄞</text>
+      {/* Notes */}
+      {notes.map((n, i) => {
+        const cx = startX + 24 + i * spacing;
+        const cy = nY(n.pos);
+        const isActive = i === activeIdx;
+        const isPast   = activeIdx >= 0 && i < activeIdx;
+        const noteColor = isActive ? "#a5b4fc" : isPast ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.7)";
+        // ledger lines
+        const ledgers: number[] = [];
+        if (n.pos <= -2) for (let p = -2; p >= n.pos; p -= 2) ledgers.push(p);
+        if (n.pos >= 10) for (let p = 10; p <= n.pos; p += 2) ledgers.push(p);
+        return (
+          <g key={i}>
+            {ledgers.map(lp => (
+              <line key={lp} x1={cx - noteR - 3} x2={cx + noteR + 3} y1={nY(lp)} y2={nY(lp)} stroke={noteColor} strokeWidth={1} />
+            ))}
+            {/* Stem */}
+            <line x1={cx + noteR - 1} x2={cx + noteR - 1} y1={cy} y2={cy - 28} stroke={noteColor} strokeWidth={1.5} />
+            {/* Note head */}
+            <ellipse cx={cx} cy={cy} rx={noteR} ry={noteR * 0.72} fill={noteColor} />
+            {/* Solfège label */}
+            <text x={cx} y={cy + 22} textAnchor="middle" fontSize={9} fill={isActive ? "#a5b4fc" : "rgba(255,255,255,0.3)"} fontFamily="Inter, sans-serif" fontWeight={isActive ? 700 : 400}>
+              {n.solfege}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
 }
 
 function SolfegeGame({ onBack }: { onBack: () => void }) {
-  const [level, setLevel]   = useState<SolfegeLevel>("easy");
-  const [q, setQ]           = useState(() => makeSolfegeQ("easy"));
-  const [played, setPlayed] = useState(false);
-  const [phase, setPhase]   = useState<"do" | "question" | "idle">("idle");
-  const ctxRef      = useRef<AudioContext | null>(null);
-  const phaseTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const game = useGameState(`solfege_${level}`);
+  const [level, setLevel]       = useState<SingSightLevel>("beginner");
+  const [melody, setMelody]     = useState<SingNote[]>(() => generateSingMelody("beginner"));
+  const [phase, setPhase]       = useState<SingPhase>("idle");
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
+  const [refUrl, setRefUrl]     = useState<string | null>(null);
 
-  useEffect(() => { game.loadHi(); }, [level]); // eslint-disable-line
-  useEffect(() => () => { if (phaseTimer.current) clearTimeout(phaseTimer.current); }, []);
+  const ctxRef       = useRef<AudioContext | null>(null);
+  const mediaRecRef  = useRef<MediaRecorder | null>(null);
+  const chunksRef    = useRef<Blob[]>([]);
+  const playTimers   = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const streamRef    = useRef<MediaStream | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => () => {
+    playTimers.current.forEach(t => clearTimeout(t));
+    if (ctxRef.current && ctxRef.current.state !== "closed") ctxRef.current.close().catch(() => {});
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+    if (refUrl) URL.revokeObjectURL(refUrl);
+  }, []); // eslint-disable-line
 
   function freshCtx() {
-    if (ctxRef.current && ctxRef.current.state !== "closed") {
-      ctxRef.current.close().catch(() => {});
-    }
+    if (ctxRef.current && ctxRef.current.state !== "closed") ctxRef.current.close().catch(() => {});
     ctxRef.current = new AudioContext();
     return ctxRef.current;
   }
 
-  function playQ(semitones: number) {
-    setPlayed(false);
-    setPhase("do");
-    if (phaseTimer.current) clearTimeout(phaseTimer.current);
+  function clearTimers() { playTimers.current.forEach(t => clearTimeout(t)); playTimers.current = []; }
+
+  function playMelody(notes: SingNote[], onDone?: () => void) {
+    clearTimers();
     const ctx = freshCtx();
-    const t0  = ctx.currentTime;
-    playTone(midiToHz(DO_MIDI),             ctx, t0,       1.0);
-    playTone(midiToHz(DO_MIDI + semitones), ctx, t0 + 1.3, 1.6);
-    phaseTimer.current = setTimeout(() => { setPhase("question"); setPlayed(true); }, 1350);
+    const NOTE_DUR  = 0.75;
+    const NOTE_GAP  = 0.1;
+    const STEP      = NOTE_DUR + NOTE_GAP;
+    setActiveIdx(0);
+    notes.forEach((n, i) => {
+      const t0 = ctx.currentTime + i * STEP;
+      playTone(midiToHz(n.midi), ctx, t0, NOTE_DUR);
+      const timer = setTimeout(() => setActiveIdx(i), i * STEP * 1000);
+      playTimers.current.push(timer);
+    });
+    const totalMs = notes.length * STEP * 1000 + 300;
+    const doneTimer = setTimeout(() => {
+      setActiveIdx(-1);
+      onDone?.();
+    }, totalMs);
+    playTimers.current.push(doneTimer);
   }
 
-  function newQ(lv: SolfegeLevel, prev?: string) {
-    const next = makeSolfegeQ(lv, prev);
-    setQ(next);
-    setPhase("idle");
-    setTimeout(() => playQ(next.semitones), 250);
+  function handleListen() {
+    setPhase("previewing");
+    playMelody(melody, () => setPhase("idle"));
   }
 
-  function start() {
-    game.beginCountdown(() => {
-      const first = makeSolfegeQ(level);
-      setQ(first);
-      game.beginPlay();
-      setTimeout(() => playQ(first.semitones), 200);
+  async function handleRecord() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
+      const rec = new MediaRecorder(stream);
+      mediaRecRef.current = rec;
+      rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+        setRecordingUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+        setPhase("review");
+      };
+      rec.start();
+      setPhase("recording");
+    } catch {
+      alert("Microphone access is required for sight singing practice.");
+    }
+  }
+
+  function handleStopRecording() {
+    mediaRecRef.current?.stop();
+  }
+
+  function handlePlayReference() {
+    // Build a reference audio blob via Web Audio rendered offline
+    const NOTE_DUR = 0.75;
+    const NOTE_GAP = 0.1;
+    const STEP     = NOTE_DUR + NOTE_GAP;
+    const totalSec = melody.length * STEP + 0.5;
+    const offCtx   = new OfflineAudioContext(1, Math.ceil(totalSec * 44100), 44100);
+    melody.forEach((n, i) => {
+      const t0 = i * STEP;
+      const hz = midiToHz(n.midi);
+      const harmonics = [1, 2, 3, 4, 5];
+      const amps      = [0.5, 0.25, 0.12, 0.06, 0.03];
+      harmonics.forEach((h, hi) => {
+        const osc  = offCtx.createOscillator();
+        const gain = offCtx.createGain();
+        osc.frequency.value = hz * h * (1 + (h - 1) * 0.0003);
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0, t0);
+        gain.gain.linearRampToValueAtTime(amps[hi], t0 + 0.01);
+        gain.gain.setValueAtTime(amps[hi], t0 + NOTE_DUR * 0.7);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + NOTE_DUR);
+        osc.connect(gain);
+        gain.connect(offCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + NOTE_DUR);
+      });
+    });
+    offCtx.startRendering().then(buf => {
+      // Convert AudioBuffer → WAV blob
+      const numSamples = buf.length;
+      const arrayBuf   = new ArrayBuffer(44 + numSamples * 2);
+      const view       = new DataView(arrayBuf);
+      const data       = buf.getChannelData(0);
+      function writeStr(o: number, s: string) { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); }
+      writeStr(0, "RIFF"); view.setUint32(4, 36 + numSamples * 2, true);
+      writeStr(8, "WAVE"); writeStr(12, "fmt ");
+      view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, 44100, true); view.setUint32(28, 44100 * 2, true);
+      view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      writeStr(36, "data"); view.setUint32(40, numSamples * 2, true);
+      for (let i = 0; i < numSamples; i++) {
+        const s = Math.max(-1, Math.min(1, data[i]));
+        view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      }
+      const wavBlob = new Blob([arrayBuf], { type: "audio/wav" });
+      if (refUrl) URL.revokeObjectURL(refUrl);
+      setRefUrl(URL.createObjectURL(wavBlob));
     });
   }
 
-  function answer(choice: string) {
-    if (game.selected || game.gs !== "playing" || !played) return;
-    game.setSelected(choice);
-    const ok = choice === q.syllable;
-    game.scoreAnswer(ok);
-    game.scheduleNext(ok, () => newQ(level, q.syllable));
+  function handleNewMelody() {
+    clearTimers();
+    setActiveIdx(-1);
+    if (recordingUrl) { URL.revokeObjectURL(recordingUrl); setRecordingUrl(null); }
+    if (refUrl) { URL.revokeObjectURL(refUrl); setRefUrl(null); }
+    setMelody(generateSingMelody(level));
+    setPhase("idle");
   }
 
-  if (game.gs === "results") {
-    return (
-      <ResultsScreen
-        score={game.score} correct={game.correct} total={game.total}
-        topStreak={game.topStreak} newRecord={game.newRecord} hiScore={game.hiScore}
-        gameLabel={`Solfège · ${level}`}
-        onPlayAgain={start} onMenu={onBack}
-      />
-    );
-  }
-  if (game.gs === "countdown") return <CountdownScreen n={game.countdown} />;
-
-  const isCorrect = game.selected === q.syllable;
-
-  if (game.gs === "idle") {
-    return (
-      <IdleCard
-        title="SOLFÈGE EAR TRAINING"
-        hiScore={game.hiScore}
-        description="Hear the reference Do, then identify the mystery note by its solfège syllable. Speed and streaks earn bonus points."
-        extras={
-          <div style={{ marginBottom: "1.5rem" }}>
-            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>
-              {level === "easy" ? "Easy — Do · Mi · Sol" : level === "medium" ? "Medium — Do through La" : "Hard — All 7 syllables"}
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-              {(["easy", "medium", "hard"] as SolfegeLevel[]).map(lv => (
-                <button key={lv} onClick={() => setLevel(lv)}
-                  style={{ padding: "0.375rem 0.875rem", borderRadius: 99, border: "1.5px solid", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, letterSpacing: "0.02em", textTransform: "capitalize", borderColor: level === lv ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.15)", background: level === lv ? "rgba(255,255,255,0.1)" : "transparent", color: level === lv ? "#FDFCFA" : "rgba(255,255,255,0.4)" }}>
-                  {lv}
-                </button>
-              ))}
-            </div>
-          </div>
-        }
-        onStart={start}
-      />
-    );
+  function handleLevelChange(lv: SingSightLevel) {
+    setLevel(lv);
+    clearTimers();
+    setActiveIdx(-1);
+    if (recordingUrl) { URL.revokeObjectURL(recordingUrl); setRecordingUrl(null); }
+    if (refUrl) { URL.revokeObjectURL(refUrl); setRefUrl(null); }
+    setMelody(generateSingMelody(lv));
+    setPhase("idle");
   }
 
-  const cols = q.choices.length <= 3 ? 3 : 3;
+  // Generate reference audio when entering review phase
+  useEffect(() => {
+    if (phase === "review" && !refUrl) handlePlayReference();
+  }, [phase]); // eslint-disable-line
+
+  const btnBase: React.CSSProperties = {
+    padding: "0.625rem 1.25rem", borderRadius: 99, border: "1.5px solid", cursor: "pointer",
+    fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 600, display: "inline-flex",
+    alignItems: "center", gap: "0.5rem", transition: "all 0.15s",
+  };
 
   return (
-    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
-      <TopBar onBack={onBack} label="Solfège Ear Training" />
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
-      <Popups entries={game.popups} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
-        <div style={{ maxWidth: 340, width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
+      <TopBar onBack={onBack} label="Sight Singing" />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem", gap: "1.75rem" }}>
 
-          {/* Do → ? visual */}
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "1.25rem" }}>
-              {phase === "do" ? "Reference Do playing…" : phase === "question" ? "Identify this note:" : "What solfège syllable?"}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginBottom: "1.25rem" }}>
-              {/* Do bubble */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
-                <div style={{ width: 58, height: 58, borderRadius: "50%", transition: "all 0.25s", background: phase === "do" ? "rgba(76,175,132,0.2)" : "rgba(255,255,255,0.05)", border: `2px solid ${phase === "do" ? "#4CAF84" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: phase === "do" ? "#4CAF84" : "rgba(255,255,255,0.35)" }}>
-                  Do
-                </div>
-                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>reference</div>
-              </div>
-              <div style={{ color: "rgba(255,255,255,0.18)", fontSize: "1.25rem" }}>→</div>
-              {/* Question bubble */}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem" }}>
-                <div style={{ width: 58, height: 58, borderRadius: "50%", transition: "all 0.25s", background: game.selected ? (isCorrect ? "rgba(76,175,132,0.2)" : "rgba(224,82,82,0.15)") : phase === "question" ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.05)", border: `2px solid ${game.selected ? (isCorrect ? "#4CAF84" : "#E05252") : phase === "question" ? "#6366f1" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 700, color: game.selected ? (isCorrect ? "#4CAF84" : "#E05252") : phase === "question" ? "#a5b4fc" : "rgba(255,255,255,0.2)" }}>
-                  {game.selected ? q.syllable : "?"}
-                </div>
-                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>identify</div>
-              </div>
-            </div>
-            {!game.selected && (
-              <button onClick={() => playQ(q.semitones)} style={{ padding: "0.4rem 1rem", borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                <RefreshCw size={10} strokeWidth={2} /> Replay
-              </button>
-            )}
-            {game.selected && (
-              <div style={{ marginTop: "0.375rem", fontSize: "0.875rem", fontWeight: 600, color: isCorrect ? "#4CAF84" : "#E05252" }}>
-                {isCorrect ? `✓ ${q.syllable} — ${q.info}` : `✗ ${q.syllable} — ${q.info}`}
-              </div>
-            )}
-          </div>
-
-          {/* Answer grid */}
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "0.625rem" }}>
-            {q.choices.map(c => {
-              const isSel  = game.selected === c;
-              const isRght = c === q.syllable;
-              let bg = "rgba(255,255,255,0.06)", bdr = "1px solid rgba(255,255,255,0.1)", clr = "#FDFCFA";
-              if (game.selected) {
-                if (isRght)      { bg = "rgba(76,175,132,0.2)";  bdr = "1.5px solid #4CAF84"; clr = "#4CAF84"; }
-                else if (isSel)  { bg = "rgba(224,82,82,0.2)";   bdr = "1.5px solid #E05252"; clr = "#E05252"; }
-                else             { bg = "rgba(255,255,255,0.03)"; bdr = "1px solid rgba(255,255,255,0.04)"; clr = "rgba(255,255,255,0.2)"; }
-              }
-              return (
-                <button key={c} onClick={() => answer(c)} disabled={!!game.selected || !played}
-                  style={{ padding: "1.125rem 0.5rem", borderRadius: 10, border: bdr, background: bg, color: clr, fontSize: "1.5rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: (game.selected || !played) ? "default" : "pointer", transition: "all 0.1s", textAlign: "center", opacity: !played ? 0.4 : 1 }}>
-                  {c}
-                </button>
-              );
-            })}
-          </div>
-
-          <div style={{ textAlign: "center", fontSize: "0.5625rem", color: "rgba(255,255,255,0.15)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            First note is always Do
-          </div>
+        {/* Level picker */}
+        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+          {(["beginner", "intermediate", "advanced"] as SingSightLevel[]).map(lv => (
+            <button key={lv} onClick={() => handleLevelChange(lv)}
+              style={{ padding: "0.3rem 0.75rem", borderRadius: 99, border: "1.5px solid", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.02em", textTransform: "capitalize", borderColor: level === lv ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.12)", background: level === lv ? "rgba(255,255,255,0.08)" : "transparent", color: level === lv ? "#FDFCFA" : "rgba(255,255,255,0.35)" }}>
+              {lv}
+            </button>
+          ))}
         </div>
+
+        {/* Staff */}
+        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: "1rem 0.75rem", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <SingStaff notes={melody} activeIdx={activeIdx} />
+        </div>
+
+        {/* Phase label */}
+        <div style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
+          {phase === "idle"       ? "Listen first, then sing along" :
+           phase === "previewing" ? "Playing melody…" :
+           phase === "recording"  ? "Recording — sing now!" :
+                                    "Review your recording"}
+        </div>
+
+        {/* Controls */}
+        {phase === "idle" && (
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
+            <button onClick={handleListen}
+              style={{ ...btnBase, borderColor: "rgba(99,102,241,0.5)", background: "rgba(99,102,241,0.1)", color: "#a5b4fc" }}>
+              <Play size={14} strokeWidth={2} /> Listen
+            </button>
+            <button onClick={handleRecord}
+              style={{ ...btnBase, borderColor: "rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.08)", color: "#fca5a5" }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+              Record
+            </button>
+          </div>
+        )}
+
+        {phase === "previewing" && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "rgba(255,255,255,0.3)", fontSize: "0.8125rem" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6366f1", display: "inline-block", animation: "pulse 1s infinite" }} />
+            Playing…
+          </div>
+        )}
+
+        {phase === "recording" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#fca5a5", fontSize: "0.875rem", fontWeight: 600 }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+              Recording…
+            </div>
+            <button onClick={handleStopRecording}
+              style={{ ...btnBase, borderColor: "rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.06)", color: "#FDFCFA" }}>
+              Stop
+            </button>
+          </div>
+        )}
+
+        {phase === "review" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.875rem", width: "100%", maxWidth: 320 }}>
+            {recordingUrl && (
+              <div style={{ width: "100%" }}>
+                <div style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>Your recording</div>
+                <audio src={recordingUrl} controls style={{ width: "100%", height: 36 }} />
+              </div>
+            )}
+            {refUrl && (
+              <div style={{ width: "100%" }}>
+                <div style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>Correct melody</div>
+                <audio src={refUrl} controls style={{ width: "100%", height: 36 }} />
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap", justifyContent: "center", marginTop: "0.25rem" }}>
+              <button onClick={handleRecord}
+                style={{ ...btnBase, borderColor: "rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.07)", color: "#fca5a5", fontSize: "0.8125rem" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+                Record again
+              </button>
+              <button onClick={handleNewMelody}
+                style={{ ...btnBase, borderColor: "rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.5)", fontSize: "0.8125rem" }}>
+                <RefreshCw size={12} strokeWidth={2} /> New melody
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -2781,8 +2960,8 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       badge: null, active: true,
     },
     {
-      view: "solfege" as View, icon: "🎵", title: "Solfège Ear Training", category: "Ear Training",
-      desc: "Hear the reference Do, then identify the mystery note by syllable (Do Re Mi Fa Sol La Ti). Three difficulty levels: tonic triad → all 7.",
+      view: "solfege" as View, icon: "🎤", title: "Sight Singing", category: "Ear Training",
+      desc: "A melody appears on the staff — listen to hear it, then sing it yourself and compare your recording to the correct version.",
       badge: null, active: true,
     },
     {
