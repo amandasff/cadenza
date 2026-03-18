@@ -544,7 +544,7 @@ export default function ThisWeek() {
           </div>
           <div>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Tuner</div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Tune by ear</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>In tune?</div>
           </div>
         </Link>
         <button
@@ -568,7 +568,7 @@ export default function ThisWeek() {
           </div>
           <div>
             <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>Metronome</div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Keep the beat</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>Keep tempo</div>
           </div>
         </button>
       </div>

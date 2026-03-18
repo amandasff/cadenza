@@ -586,7 +586,7 @@ function NoteIdGame({ onBack }: { onBack: () => void }) {
       <IdleCard
         title="Note Identification"
         hiScore={game.hiScore}
-        description={`30 seconds · name each note as fast as you can\nstreaks multiply your score up to 3×`}
+        description="Name each note on the staff."
         extras={
           <>
             <div style={{ background: "#252537", borderRadius: 14, padding: "0.75rem 0.5rem", marginBottom: "1.5rem", display: "flex", justifyContent: "center" }}>
@@ -747,7 +747,7 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
       <IdleCard
         title="Interval Ear Training"
         hiScore={game.hiScore}
-        description="Two notes play in sequence — identify the interval. Speed and streaks earn bonus points."
+        description="Two notes play — name the interval."
         extras={
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Difficulty · RCM level</div>
@@ -903,7 +903,7 @@ function ChordGame({ onBack }: { onBack: () => void }) {
       <IdleCard
         title="Chord Quality"
         hiScore={game.hiScore}
-        description="A chord plays — identify whether it's major, minor, diminished, or augmented."
+        description="A chord plays — major, minor, dim, or aug?"
         extras={
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Mode</div>
@@ -1073,7 +1073,7 @@ function MusicTermsGame({ onBack }: { onBack: () => void }) {
       <IdleCard
         title="Music Terms"
         hiScore={game.hiScore}
-        description="A term flashes — pick its definition as fast as you can. 30 seconds, streak multipliers."
+        description="A term flashes — pick its meaning."
         extras={
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Difficulty</div>
@@ -1228,7 +1228,7 @@ function KeySigGame({ onBack }: { onBack: () => void }) {
       <IdleCard
         title="Key Signatures"
         hiScore={game.hiScore}
-        description="See a key signature — identify the major key (or its relative minor). Essential for RCM exams."
+        description="Name the major key — or its relative minor."
         extras={
           <>
             <div style={{ marginBottom: "1.5rem" }}>
@@ -1405,7 +1405,7 @@ function ScaleGame({ onBack }: { onBack: () => void }) {
       <IdleCard
         title="Scale Ear Training"
         hiScore={game.hiScore}
-        description="A scale plays ascending and descending — identify whether it's major, natural minor, harmonic minor, or melodic minor."
+        description="A scale plays — what type is it?"
         extras={
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.625rem", textAlign: "center" }}>Difficulty · RCM level</div>
@@ -1763,7 +1763,7 @@ function FretboardGame({ onBack }: { onBack: () => void }) {
 
   if (game.gs === "idle") return (
     <IdleCard title="Fretboard Challenge" hiScore={game.hiScore}
-      description="A position lights up on the neck — name the note. 30s rounds, streak multipliers."
+      description="A position lights up — name the note."
       extras={
         <>
           <div style={{ background: "#252537", borderRadius: 12, padding: "1rem 0.75rem", marginBottom: "1.25rem", overflowX: "auto", display: "flex", justifyContent: "center" }}>
@@ -1923,7 +1923,7 @@ function GuitarChordGame({ onBack }: { onBack: () => void }) {
 
   if (game.gs === "idle") return (
     <IdleCard title="Guitar Chord Finder" hiScore={game.hiScore}
-      description="A chord diagram appears — identify it as fast as possible. Includes all common open chords and barre chords."
+      description="A chord diagram appears — name it."
       extras={
         <>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "1.25rem" }}>
@@ -2537,7 +2537,7 @@ function SightReadGame({ onBack }: { onBack: () => void }) {
 
   if (game.gs === "idle") return (
     <IdleCard title="Sight Reading" hiScore={game.hiScore}
-      description={`4 notes appear on the staff — name them left to right as fast as possible. ${SEQ_LEN} notes per sequence, 30s rounds.`}
+      description="Notes appear on the staff — name them left to right."
       extras={
         <>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "1.25rem" }}>
@@ -2856,7 +2856,7 @@ function SolfegeGame({ onBack }: { onBack: () => void }) {
 
         {/* Phase label */}
         <div style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
-          {phase === "idle"       ? "Sing from the score — or listen first for a hint" :
+          {phase === "idle"       ? "Sing it — or listen first" :
            phase === "previewing" ? "Playing melody…" :
            phase === "recording"  ? "Recording — sing now!" :
                                     "Review your recording"}
@@ -2946,61 +2946,61 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
 
   const games = [
     {
-      view: "noteId" as View, icon: "♪", title: "Note Identification", category: "Piano",
-      desc: "A note flashes on the staff — name it as fast as you can. 30s rounds, streak multipliers.",
+      view: "noteId" as View, icon: "♪", title: "Note ID", category: "Piano",
+      desc: "Name the note on the staff.",
       badge: scores.noteId_treble > 0 ? `🏆 ${Math.max(scores.noteId_treble, scores.noteId_bass).toLocaleString()}` : null,
       active: true,
     },
     {
-      view: "interval" as View, icon: "👂", title: "Interval Ear Training", category: "Ear Training",
-      desc: "Two notes play in sequence. Identify the interval. RCM-graded difficulty: Prep → Grade 8.",
+      view: "interval" as View, icon: "👂", title: "Intervals", category: "Ear Training",
+      desc: "Two notes play — name the interval.",
       badge: null, active: true,
     },
     {
       view: "chord" as View, icon: "🎼", title: "Chord Quality", category: "Ear Training",
-      desc: "A chord plays. Major, minor, diminished, or augmented — train your ear to tell them apart.",
+      desc: "Major, minor, dim, or aug?",
       badge: null, active: true,
     },
     {
       view: "solfege" as View, icon: "🎤", title: "Sight Singing", category: "Ear Training",
-      desc: "A melody appears on the staff — listen to hear it, then sing it yourself and compare your recording to the correct version.",
+      desc: "Read the melody and sing it.",
       badge: null, active: true,
     },
     {
       view: "terms" as View, icon: "🗣", title: "Music Terms", category: "Theory",
-      desc: "A term flashes — pick its definition. Covers all RCM vocabulary: tempo, dynamics, articulation, expression, form.",
+      desc: "Match the term to its meaning.",
       badge: null, active: true,
     },
     {
       view: "keySig" as View, icon: "🔑", title: "Key Signatures", category: "Theory",
-      desc: "See a key signature and identify the major key or its relative minor. All 15 major keys.",
+      desc: "Name the key signature.",
       badge: null, active: true,
     },
     {
       view: "scale" as View, icon: "🎶", title: "Scale Ear Training", category: "Ear Training",
-      desc: "A scale plays ascending and descending. Is it major, natural minor, harmonic minor, or melodic minor?",
+      desc: "Major or minor — what scale is it?",
       badge: null, active: true,
     },
     {
       view: "rcm" as View, icon: "≡", title: "RCM Exam Guide", category: "Reference",
-      desc: "Level-by-level breakdown of exam requirements: pieces, technical, ear training, theory co-requisites, and passing marks.",
+      desc: "Requirements by level.",
       badge: null, active: true,
     },
     {
       view: "menu" as View, icon: "📖", title: "Sight Reading", category: "Piano",
-      desc: "Four notes appear on the staff — name them left to right. Three levels: beginner to full treble + bass.", badge: null, active: false,
+      desc: "Name notes left to right.", badge: null, active: false,
     },
     {
       view: "menu" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm",
-      desc: "Listen to a rhythm, then tap it back. 5 rounds scored on accuracy. Three difficulty levels.", badge: null, active: false,
+      desc: "Hear it, tap it back.", badge: null, active: false,
     },
     {
       view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar",
-      desc: "A fret position lights up on the guitar neck — name the note. Three levels: open position to full neck.", badge: null, active: true,
+      desc: "Name the note on the neck.", badge: null, active: true,
     },
     {
-      view: "guitarChord" as View, icon: "🤘", title: "Guitar Chord Finder", category: "Guitar",
-      desc: "See a chord diagram and identify the chord name. Covers open chords, barre chords, and extended voicings.", badge: null, active: true,
+      view: "guitarChord" as View, icon: "🤘", title: "Guitar Chords", category: "Guitar",
+      desc: "Name the chord diagram.", badge: null, active: true,
     },
   ];
 
@@ -3018,7 +3018,7 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <div style={{ marginBottom: "2.5rem" }}>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>Music Games</div>
-          <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>Fast-paced rounds, streak multipliers, personal bests. The best theory practice happens in small daily doses.</p>
+          <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>Short rounds, streaks, personal bests.</p>
         </div>
         <div style={{ display: "grid", gap: "0.875rem" }}>
           {/* Note Identification + Interval first */}
