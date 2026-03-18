@@ -14,6 +14,7 @@ import type { PieceWithGoals } from "../../../lib/services/PieceService";
 import Metronome from "../../../components/Metronome";
 import { useI18n } from "../../../lib/context/I18nContext";
 import { Frown, Smile, PartyPopper, FileText, Circle, Square, Pause, Music, Play, Star, X } from "lucide-react";
+import { loadDraft, clearDraft, type PracticeDraft } from "../../../lib/practiceDb";
 
 type PracticeStep = "practice" | "reflect";
 type SegmentWithId = PracticeSegment & { id: string };
@@ -58,6 +59,7 @@ function PracticeInner() {
   };
 
   const [step, setStep] = useState<PracticeStep>("practice");
+  const [recoveryDraft, setRecoveryDraft] = useState<PracticeDraft | null>(null);
   const [pieces, setPieces] = useState<PieceWithGoals[]>([]);
   const [loadingPieces, setLoadingPieces] = useState(true);
   const [selectedPieceId, setSelectedPieceId] = useState<string>("");
@@ -111,6 +113,15 @@ function PracticeInner() {
   }, [student?.id, student?.studioId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ── Check for a crash-recovery draft ──
+  useEffect(() => {
+    if (isActive) return; // session already running, no need to recover
+    loadDraft().then(draft => {
+      if (draft && draft.chunks.length > 0) setRecoveryDraft(draft);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // only on mount
 
   // ── Auto-select piece from ?pieceId= query param ──
   useEffect(() => {
@@ -196,6 +207,22 @@ function PracticeInner() {
     }
     setFinalElapsed(finalElapsed);
     setStep("reflect");
+  }
+
+  function handleRecoverDraft() {
+    if (!recoveryDraft) return;
+    const blob = new Blob(recoveryDraft.chunks, { type: recoveryDraft.mimeType || "audio/webm" });
+    setRecordingBlob(blob);
+    setAudioBlobUrl(URL.createObjectURL(blob));
+    setFinalElapsed(recoveryDraft.elapsed);
+    setRecoveryDraft(null);
+    void clearDraft();
+    setStep("reflect");
+  }
+
+  function handleDiscardDraft() {
+    setRecoveryDraft(null);
+    void clearDraft();
   }
 
   function handleAddSegment() {
@@ -323,6 +350,28 @@ function PracticeInner() {
   if (step === "practice") {
     return (
       <div style={{ minHeight: "100dvh", background: "var(--cream)", display: "flex", flexDirection: "column" }}>
+
+        {/* Draft recovery banner */}
+        {recoveryDraft && (
+          <div style={{ background: "#FFF8E1", borderBottom: "1px solid #FFE082", padding: "0.75rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{ fontSize: "1rem" }}>💾</span>
+            <div style={{ flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#5D4037" }}>
+              <strong>Unsaved recording found</strong> — {fmt(recoveryDraft.elapsed)} from earlier
+            </div>
+            <button
+              onClick={handleRecoverDraft}
+              style={{ padding: "0.3rem 0.75rem", borderRadius: 6, border: "none", background: "#3D6B55", color: "#fff", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", flexShrink: 0 }}
+            >
+              Recover
+            </button>
+            <button
+              onClick={handleDiscardDraft}
+              style={{ padding: "0.3rem 0.5rem", borderRadius: 6, border: "1px solid #FFE082", background: "transparent", color: "#8D6E63", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", flexShrink: 0 }}
+            >
+              Discard
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div style={{ background: "var(--white)", borderBottom: "1px solid var(--border)", padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>

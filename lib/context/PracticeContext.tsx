@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from "react";
+import { saveDraft, clearDraft } from "../practiceDb";
 
 interface PracticeContextValue {
   /** A practice session is in progress (recording or paused) */
@@ -40,13 +41,55 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
   const micStreamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mimeTypeRef = useRef<string>("");
+  const elapsedRef = useRef(0);
 
   // Timer — increments only while recording
   useEffect(() => {
     if (!recording) return;
-    const id = setInterval(() => setElapsed(e => e + 1), 1000);
+    const id = setInterval(() => setElapsed(e => {
+      elapsedRef.current = e + 1;
+      return e + 1;
+    }), 1000);
     return () => clearInterval(id);
   }, [recording]);
+
+  // Auto-save draft to IndexedDB every 30 s while recording (crash recovery)
+  useEffect(() => {
+    if (!recording) return;
+    const id = setInterval(() => {
+      if (chunksRef.current.length > 0) {
+        void saveDraft({
+          chunks: [...chunksRef.current],
+          mimeType: mimeTypeRef.current,
+          elapsed: elapsedRef.current,
+          savedAt: Date.now(),
+        });
+      }
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [recording]);
+
+  // Warn before closing the tab while a session is active
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isActive) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isActive]);
+
+  // Resume AudioContext when the tab becomes visible again
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === "visible" && audioCtxRef.current?.state === "suspended") {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, []);
 
   const startPractice = useCallback(async () => {
     if (isActive) return;
@@ -124,9 +167,11 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
     setAnalyserNode(null);
     mediaRecorderRef.current = null;
     chunksRef.current = [];
+    elapsedRef.current = 0;
     setRecording(false);
     setIsActive(false);
     setElapsed(0);
+    void clearDraft();
   }, []);
 
   const finishPractice = useCallback((): Promise<{ blob: Blob | null; elapsed: number }> => {
