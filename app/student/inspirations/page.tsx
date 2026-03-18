@@ -300,7 +300,7 @@ export default function InspirationPage() {
                     <div
                       onClick={() => { setEditingNoteFor(ins.id); setNoteText(ins.notes ?? ""); }}
                       title="Click to edit note"
-                      style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontStyle: "italic", lineHeight: 1.4, cursor: "text", borderLeft: "2px solid var(--border)", paddingLeft: "0.375rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
+                      style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", fontStyle: "italic", lineHeight: 1.4, cursor: "text", borderLeft: "2px solid var(--border)", paddingLeft: "0.375rem" }}
                     >
                       {ins.notes}
                     </div>
