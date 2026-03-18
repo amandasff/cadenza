@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.composer_avatars (
   composer_name   TEXT NOT NULL UNIQUE,          -- "Bach", "Beethoven", etc.
   era             TEXT NOT NULL,                  -- 'baroque' | 'classical' | 'romantic' | 'impressionist'
   rarity          TEXT NOT NULL DEFAULT 'common', -- 'common' | 'rare' | 'epic' | 'legendary'
-  image_path      TEXT NOT NULL,                  -- e.g. '/composers/bach.jpg'
+  image_path      TEXT NOT NULL,                  -- e.g. '/composers/bach.png'
   fun_fact        TEXT,                           -- kid-friendly fact shown on unlock
   unlock_hint     TEXT,                           -- hint shown on the locked silhouette
   drop_weight     INTEGER NOT NULL DEFAULT 10,    -- higher = more likely in random pool
@@ -35,7 +35,7 @@ VALUES
     'Bach',
     'baroque',
     'common',
-    '/composers/bach.jpg',
+    '/composers/bach.png',
     'Bach had 20 children — several became famous composers. He basically started a music dynasty.',
     'A Baroque master who invented the rules of harmony everyone still uses today.',
     15,
@@ -45,7 +45,7 @@ VALUES
     'Mozart',
     'classical',
     'common',
-    '/composers/mozart.jpg',
+    '/composers/mozart.png',
     'Mozart wrote his first symphony at age 8. His first piano concerto? Age 4.',
     'The ultimate child prodigy — he was performing for kings before he could write his own name.',
     15,
@@ -55,7 +55,7 @@ VALUES
     'Haydn',
     'classical',
     'common',
-    '/composers/haydn.jpg',
+    '/composers/haydn.png',
     'Haydn was Mozart''s mentor and close friend. He''s often called the "father of the symphony."',
     'The composer who invented the symphony and string quartet as we know them.',
     12,
@@ -65,7 +65,7 @@ VALUES
     'Schubert',
     'romantic',
     'common',
-    '/composers/schubert.jpg',
+    '/composers/schubert.png',
     'Schubert wrote over 600 songs — and died at just 31. That''s one song every two weeks of his life.',
     'A Romantic poet of melody — he could write a masterpiece in a single afternoon.',
     12,
@@ -75,7 +75,7 @@ VALUES
     'Beethoven',
     'romantic',
     'rare',
-    '/composers/beethoven.jpg',
+    '/composers/beethoven.png',
     'Beethoven was completely deaf when he wrote his 9th Symphony. He never heard a single note of it performed.',
     'Unlock by reaching a 7-day practice streak.',
     8,
@@ -85,7 +85,7 @@ VALUES
     'Chopin',
     'romantic',
     'rare',
-    '/composers/chopin.jpg',
+    '/composers/chopin.png',
     'Chopin only performed publicly about 30 times in his entire life — he had terrible stage fright. Yet everyone knew who he was.',
     'The poet of the piano — unlock by practicing 5 hours total.',
     8,
@@ -95,7 +95,7 @@ VALUES
     'Brahms',
     'romantic',
     'rare',
-    '/composers/brahms.jpg',
+    '/composers/brahms.png',
     'Brahms burned most of his early compositions, convinced they weren''t good enough. He was a perfectionist to the end.',
     'The philosopher of music — unlock by completing 5 goals.',
     8,
@@ -105,7 +105,7 @@ VALUES
     'Tchaikovsky',
     'romantic',
     'rare',
-    '/composers/tchaikovsky.jpg',
+    '/composers/tchaikovsky.png',
     'Tchaikovsky hated The Nutcracker. He thought it was silly — it''s now the most-performed ballet in history.',
     'Master of drama and beauty — unlock by logging 20 practice sessions.',
     8,
@@ -115,11 +115,21 @@ VALUES
     'Debussy',
     'impressionist',
     'epic',
-    '/composers/debussy.jpg',
+    '/composers/debussy.png',
     'Debussy was nearly expelled from music school for his "unacceptable" chord ideas. Those ideas changed all music that came after.',
     'A rare find — unlocked by completing ear training exercises.',
     4,
     9
+  ),
+  (
+    'Vivaldi',
+    'baroque',
+    'rare',
+    '/composers/vivaldi.png',
+    'Vivaldi wrote The Four Seasons in 1723 — it became one of the most recognizable pieces of music ever written. He was also a priest who taught orphan girls to play violin.',
+    'The red-haired maestro — unlock by practicing a Baroque piece.',
+    8,
+    10
   )
 ON CONFLICT (composer_name) DO NOTHING;
 
