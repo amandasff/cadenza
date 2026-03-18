@@ -31,7 +31,7 @@ export default function Home() {
   // Redirect if already logged in
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: import("@supabase/supabase-js").Session | null } }) => {
       if (!session?.user) return;
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
       if (profile?.role === "teacher") router.replace("/teacher");
