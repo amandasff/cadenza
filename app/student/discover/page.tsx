@@ -5,7 +5,8 @@ import type { PortfolioItemRow } from "../../../lib/services/PortfolioService";
 import AudioPlayer from "../../../components/AudioPlayer";
 import { usePlayer } from "../../../lib/context/PlayerContext";
 import { useI18n } from "../../../lib/context/I18nContext";
-import { Flame, X, Guitar } from "lucide-react";
+import Link from "next/link";
+import { Flame, X, Guitar, Trophy } from "lucide-react";
 
 type Comment = {
   id: string;
@@ -68,7 +69,7 @@ const Avatar = ({ url, name, size }: { url?: string | null; name?: string | null
 export default function DiscoverPage() {
   const { playDiscover, stopDiscover, setSuppressMiniPlayer } = usePlayer();
   const { t } = useI18n();
-  const [tab, setTab] = useState<"everyone" | "following">("everyone");
+  const [tab, setTab] = useState<"everyone" | "following" | "leaderboard">("everyone");
 
   // When navigating away, release the mini-player suppression so audio keeps playing
   useEffect(() => {
@@ -95,6 +96,11 @@ export default function DiscoverPage() {
   const [commentPosting, setCommentPosting]     = useState(false);
   const [likingId, setLikingId]                 = useState<string | null>(null);
   const [likeError, setLikeError]               = useState<string | null>(null);
+
+  const [leaderboard, setLeaderboard]           = useState<Array<{ id: string; display_name: string; avatar_url: string | null; streak_days: number; role: string | null }>>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardLoaded, setLeaderboardLoaded]   = useState(false);
+  const [followsMe, setFollowsMe]               = useState<Set<string>>(new Set());
 
   const [profileInfo, setProfileInfo]           = useState<ProfileInfo | null>(null);
   const [profileItems, setProfileItems]         = useState<PublicItem[]>([]);
@@ -199,9 +205,38 @@ export default function DiscoverPage() {
     }
   }
 
-  function switchTab(t: "everyone" | "following") {
+  async function loadLeaderboard() {
+    if (leaderboardLoaded) return;
+    setLeaderboardLoading(true);
+    try {
+      const { data: users } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url, streak_days, role")
+        .gt("streak_days", 0)
+        .order("streak_days", { ascending: false })
+        .limit(100);
+
+      let followsMeSet = new Set<string>();
+      if (currentUserId) {
+        const { data: fmData } = await supabase
+          .from("follows")
+          .select("follower_id")
+          .eq("following_id", currentUserId);
+        followsMeSet = new Set((fmData ?? []).map((f: { follower_id: string }) => f.follower_id));
+      }
+
+      setLeaderboard(users ?? []);
+      setFollowsMe(followsMeSet);
+      setLeaderboardLoaded(true);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }
+
+  function switchTab(t: "everyone" | "following" | "leaderboard") {
     setTab(t);
     if (t === "following" && !followingLoaded) loadFollowingFeed();
+    if (t === "leaderboard" && !leaderboardLoaded) loadLeaderboard();
   }
 
   // ── Item open/close ─────────────────────────────────────────────────────────
@@ -303,7 +338,6 @@ export default function DiscoverPage() {
     try {
       if (isFollowing) {
         await supabase.from("follows").delete().eq("follower_id", currentUserId).eq("following_id", userId);
-        // Invalidate following feed
         setFollowingLoaded(false);
         setFollowingItems([]);
       } else {
@@ -430,16 +464,15 @@ export default function DiscoverPage() {
         </div>
         {/* Tabs */}
         <div style={{ display: "flex", padding: "0 1rem" }}>
-          {(["everyone", "following"] as const).map(tabKey => (
+          {(["everyone", "following", "leaderboard"] as const).map(tabKey => (
             <button key={tabKey} onClick={() => switchTab(tabKey)} style={{
               background: "none", border: "none", cursor: "pointer", padding: "0.5rem 1rem 0.625rem",
               fontFamily: "Inter, sans-serif", fontWeight: tab === tabKey ? 600 : 400, fontSize: "0.875rem",
               color: tab === tabKey ? "var(--charcoal)" : "var(--muted)",
               borderBottom: `2px solid ${tab === tabKey ? "var(--charcoal)" : "transparent"}`,
               transition: "all 0.15s",
-              textTransform: "capitalize",
             }}>
-              {tabKey === "everyone" ? t.student.everyoneTab : t.student.followingTab}
+              {tabKey === "everyone" ? t.student.everyoneTab : tabKey === "following" ? t.student.followingTab : "Leaderboard"}
               {tabKey === "following" && myFollows.size > 0 && (
                 <span style={{ marginLeft: "0.375rem", background: "var(--charcoal)", color: "var(--white)", borderRadius: 99, fontSize: "0.5625rem", fontWeight: 600, padding: "0.1rem 0.375rem" }}>
                   {myFollows.size}
@@ -494,6 +527,99 @@ export default function DiscoverPage() {
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: 280, margin: "0 auto" }}>
             {t.student.nothingSharedDesc}
           </p>
+        </div>
+      ) : tab === "leaderboard" ? (
+        <div style={{ padding: "0.75rem", paddingBottom: "5.5rem" }}>
+          {leaderboardLoading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {[1,2,3,4,5].map(i => (
+                <div key={i} style={{ background: "var(--white)", borderRadius: 10, padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <div className="skeleton" style={{ width: 28, height: 16, borderRadius: 4, flexShrink: 0 }} />
+                  <div className="skeleton" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton" style={{ height: 12, width: "50%", borderRadius: 4, marginBottom: 6 }} />
+                    <div className="skeleton" style={{ height: 10, width: "30%", borderRadius: 4 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : leaderboard.length === 0 ? (
+            <div style={{ padding: "3rem 1rem", textAlign: "center" }}>
+              <Trophy size={36} strokeWidth={1.5} color="var(--muted)" style={{ marginBottom: "0.75rem" }} />
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)", fontWeight: 500 }}>No streaks yet</div>
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.5rem" }}>Start practicing to appear on the leaderboard!</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+              {leaderboard.map((u, idx) => {
+                const rank = idx + 1;
+                const isMe = u.id === currentUserId;
+                const iFollow = myFollows.has(u.id);
+                const theyFollowMe = followsMe.has(u.id);
+                const medalColor = rank === 1 ? "#E6A817" : rank === 2 ? "#9E9E9E" : rank === 3 ? "#C07B4B" : null;
+                return (
+                  <div key={u.id} style={{
+                    background: isMe ? "var(--cream)" : "var(--white)",
+                    border: isMe ? "1.5px solid var(--charcoal)" : "1px solid var(--border)",
+                    borderRadius: 10,
+                    padding: "0.625rem 0.875rem",
+                    display: "flex", alignItems: "center", gap: "0.75rem",
+                  }}>
+                    {/* Rank */}
+                    <div style={{ width: 28, textAlign: "center", flexShrink: 0 }}>
+                      {medalColor ? (
+                        <Trophy size={18} strokeWidth={1.5} color={medalColor} fill={medalColor} />
+                      ) : (
+                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)" }}>#{rank}</span>
+                      )}
+                    </div>
+
+                    {/* Avatar — clickable → profile */}
+                    <Link href={`/student/profile/${u.id}`} style={{ flexShrink: 0 }}>
+                      <Avatar url={u.avatar_url} name={u.display_name} size={36} />
+                    </Link>
+
+                    {/* Name + badges */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Link href={`/student/profile/${u.id}`} style={{ textDecoration: "none" }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {u.display_name}
+                          {isMe && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 500, color: "var(--muted)", marginLeft: "0.375rem" }}>you</span>}
+                        </div>
+                      </Link>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.2rem" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.15rem", background: "rgba(230,168,23,0.12)", border: "1px solid rgba(230,168,23,0.25)", borderRadius: 99, padding: "0.1rem 0.4rem", color: "#c47d10", fontWeight: 700, fontSize: "0.625rem" }}>
+                          <Flame size={10} color="#E6A817" fill="#E6A817" strokeWidth={0} />{u.streak_days}d
+                        </span>
+                        {theyFollowMe && !isMe && (
+                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sage)", background: "var(--sage-bg, #EFF7EF)", borderRadius: 99, padding: "0.1rem 0.4rem" }}>follows you</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Follow button */}
+                    {!isMe && currentUserId && (
+                      <button
+                        onClick={() => toggleFollow(u.id)}
+                        disabled={followLoading}
+                        style={{
+                          padding: "0.35rem 0.875rem", borderRadius: 20, flexShrink: 0,
+                          fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem",
+                          cursor: followLoading ? "default" : "pointer", transition: "all 0.15s",
+                          border: iFollow ? "1.5px solid var(--border-strong)" : "none",
+                          background: iFollow ? "transparent" : "var(--charcoal)",
+                          color: iFollow ? "var(--charcoal)" : "var(--white)",
+                          opacity: followLoading ? 0.6 : 1,
+                        }}
+                      >
+                        {iFollow ? "Following" : "Follow"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", padding: "0.75rem", paddingBottom: "5.5rem" }}>
@@ -558,7 +684,12 @@ export default function DiscoverPage() {
               <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem", marginBottom: "0.75rem" }}>
                 <Avatar url={profileInfo.avatar_url} name={profileInfo.name} size={48} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{profileInfo.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{profileInfo.name}</div>
+                    <Link href={`/student/profile/${profileInfo.id}`} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px", flexShrink: 0 }}>
+                      View profile →
+                    </Link>
+                  </div>
                   <div style={{ display: "flex", gap: "1rem", marginTop: "0.375rem" }}>
                     <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>
                       <strong style={{ color: "var(--charcoal)" }}>{profileInfo.follower_count}</strong> {t.student.followersLabel}
