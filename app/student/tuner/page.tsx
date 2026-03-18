@@ -741,6 +741,37 @@ export default function TunerPage() {
         )}
       </button>
 
+      {/* Practice button */}
+      <a
+        href="/student/practice"
+        style={{
+          marginTop: "2rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.5rem",
+          width: "100%",
+          maxWidth: 400,
+          padding: "0.875rem",
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 12,
+          color: "rgba(255,255,255,0.75)",
+          fontFamily: "Inter, sans-serif",
+          fontSize: "0.875rem",
+          fontWeight: 500,
+          textDecoration: "none",
+          letterSpacing: "0.01em",
+          cursor: "pointer",
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+        </svg>
+        Start recording practice
+      </a>
+
     </div>
   );
 }
