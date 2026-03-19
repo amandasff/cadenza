@@ -289,27 +289,63 @@ export default function StudioManagementPage() {
       {studioSlug && (
         <div style={card}>
           <p style={sectionTitle}>{t.teacher.enrollmentForm}</p>
-          <p style={{ ...s, fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 0.75rem", lineHeight: 1.6 }}>
+          <p style={{ ...s, fontSize: "0.875rem", color: "var(--muted)", margin: "0 0 1.25rem", lineHeight: 1.6 }}>
             {t.teacher.enrollmentFormDesc}
           </p>
-          <div style={{
-            display: "flex", gap: "0.625rem", alignItems: "center",
-            background: "var(--cream)", border: "1px solid var(--border)",
-            borderRadius: 4, padding: "0.625rem 0.875rem",
-          }}>
-            <span style={{ ...s, fontSize: "0.875rem", color: "var(--charcoal)", flex: 1, wordBreak: "break-all" }}>
-              {enrollmentLink}
-            </span>
-            <button
-              onClick={() => { if (enrollmentLink) navigator.clipboard.writeText(enrollmentLink); }}
-              style={{
-                ...s, flexShrink: 0, background: "var(--charcoal)", color: "#fff",
-                border: "none", borderRadius: 4, padding: "0.375rem 0.75rem",
-                fontSize: "0.75rem", fontWeight: 500, cursor: "pointer", letterSpacing: "0.04em",
-              }}
-            >
-              {t.common.copy}
-            </button>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.875rem" }} className="enrollment-methods">
+            {/* Method 1: Search */}
+            <div style={{
+              border: "1px solid var(--border)", borderRadius: 4, padding: "1rem",
+              display: "flex", flexDirection: "column", gap: "0.375rem",
+            }}>
+              <div style={{ ...s, fontWeight: 600, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.04em" }}>
+                {t.teacher.enrollmentSearchMethod}
+              </div>
+              <div style={{ ...s, fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.5 }}>
+                {t.teacher.enrollmentSearchDesc}
+              </div>
+              <div style={{
+                marginTop: "0.375rem",
+                background: "var(--cream)", border: "1px solid var(--border)",
+                borderRadius: 4, padding: "0.375rem 0.625rem",
+                ...s, fontSize: "0.875rem", color: "var(--charcoal)", fontWeight: 500,
+              }}>
+                {teacher?.studioName ?? studioSlug}
+              </div>
+            </div>
+
+            {/* Method 2: Direct link */}
+            <div style={{
+              border: "1px solid var(--border)", borderRadius: 4, padding: "1rem",
+              display: "flex", flexDirection: "column", gap: "0.375rem",
+            }}>
+              <div style={{ ...s, fontWeight: 600, fontSize: "0.75rem", color: "var(--charcoal)", letterSpacing: "0.04em" }}>
+                {t.teacher.enrollmentLinkMethod}
+              </div>
+              <div style={{ ...s, fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.5 }}>
+                {t.teacher.enrollmentLinkDesc}
+              </div>
+              <div style={{
+                display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.375rem",
+                background: "var(--cream)", border: "1px solid var(--border)",
+                borderRadius: 4, padding: "0.375rem 0.625rem",
+              }}>
+                <span style={{ ...s, fontSize: "0.8125rem", color: "var(--charcoal)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {enrollmentLink}
+                </span>
+                <button
+                  onClick={() => { if (enrollmentLink) navigator.clipboard.writeText(enrollmentLink); }}
+                  style={{
+                    ...s, flexShrink: 0, background: "var(--charcoal)", color: "#fff",
+                    border: "none", borderRadius: 4, padding: "0.25rem 0.625rem",
+                    fontSize: "0.6875rem", fontWeight: 500, cursor: "pointer", letterSpacing: "0.04em",
+                  }}
+                >
+                  {t.common.copy}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -559,5 +595,10 @@ export default function StudioManagementPage() {
         </div>
       )}
     </div>
+    <style>{`
+      @media (max-width: 560px) {
+        .enrollment-methods { grid-template-columns: 1fr !important; }
+      }
+    `}</style>
   );
 }

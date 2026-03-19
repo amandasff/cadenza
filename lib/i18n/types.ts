@@ -434,6 +434,10 @@ export interface Translations {
     studioCoTeacher: string;
     enrollmentForm: string;
     enrollmentFormDesc: string;
+    enrollmentSearchMethod: string;
+    enrollmentSearchDesc: string;
+    enrollmentLinkMethod: string;
+    enrollmentLinkDesc: string;
     enrollmentApplications: string;
     newBadge: string;
     noApplications: string;
