@@ -331,14 +331,16 @@ export default function ThisWeek() {
               </div>
             </div>
 
-            {/* Points */}
-            <div style={{
+            {/* Points → Studio link */}
+            <Link href="/student/studio" style={{
               flex: 1, borderRadius: 8, padding: "0.625rem 0.875rem",
               background: "var(--white)", border: "1px solid var(--border)",
               display: "flex", alignItems: "center", gap: "0.5rem",
+              textDecoration: "none", cursor: "pointer",
+              transition: "border-color 0.15s",
             }}>
               <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><Star size={16} fill="#E6A817" color="#E6A817" strokeWidth={0} /></span>
-              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2 }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", lineHeight: 1.2, flex: 1 }}>
                 {(student?.totalPoints ?? 0).toLocaleString()} pts
                 <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontWeight: 400, marginTop: 2 }}>
                   {student?.getLevelLabel?.() ?? "Beginner"}
@@ -347,7 +349,8 @@ export default function ThisWeek() {
                   )}
                 </div>
               </div>
-            </div>
+              <span style={{ fontSize: "0.875rem", color: "var(--muted)", flexShrink: 0 }}>→</span>
+            </Link>
           </div>
         );
       })()}
