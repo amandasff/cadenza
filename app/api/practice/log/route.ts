@@ -71,27 +71,35 @@ export async function POST(request: Request) {
   if (profileFetchError) return NextResponse.json({ error: profileFetchError.message }, { status: 500 });
 
   const current = profile as { streak_days: number; total_points: number; streak_freeze_count: number; total_days_practiced: number };
-  const twoDaysAgoStr = toUTCDateStr(new Date(now.getTime() - 2 * 86_400_000));
+  // Compute gap in days between last session date and today
+  const lastDateMs = lastDate ? new Date(lastDate + 'T00:00:00Z').getTime() : null;
+  const todayMs = new Date(todayStr + 'T00:00:00Z').getTime();
+  const gapDays = lastDateMs !== null ? Math.round((todayMs - lastDateMs) / 86_400_000) : null;
+  // missedDays = days with no session between lastDate and today (gap=1 → practiced yesterday, 0 missed)
+  const missedDays = gapDays !== null ? gapDays - 1 : null;
+  const availableFreezes = current.streak_freeze_count ?? 0;
 
-  // Streak calculation — freeze protects exactly one missed day
+  // Streak calculation — each freeze protects one missed day
   let newStreak: number;
-  let consumeFreeze = false;
-  if (lastDate === null) {
+  let freezesConsumed = 0;
+  if (gapDays === null) {
     newStreak = 1;
-  } else if (lastDate === todayStr) {
+  } else if (gapDays === 0) {
+    // Already practiced today — no change
     newStreak = current.streak_days;
-  } else if (lastDate === yesterdayStr) {
+  } else if (gapDays === 1) {
+    // Practiced yesterday — streak continues
     newStreak = current.streak_days + 1;
-  } else if (lastDate === twoDaysAgoStr && (current.streak_freeze_count ?? 0) > 0) {
-    // Missed exactly one day but has a freeze — streak continues
+  } else if (missedDays! <= availableFreezes && availableFreezes > 0) {
+    // Freeze(s) cover all missed days — streak continues, consume one freeze per missed day
     newStreak = current.streak_days + 1;
-    consumeFreeze = true;
+    freezesConsumed = missedDays!;
   } else {
     newStreak = 1;
   }
 
   // Points calculation
-  const isFirstSessionToday = lastDate !== todayStr;
+  const isFirstSessionToday = gapDays !== 0;
   const sessionBonus = isFirstSessionToday ? 100 : 0;
   const weekStreakBonus = (newStreak > 0 && newStreak % 7 === 0) ? 500 : 0;
   const pointsEarned = sessionBonus + weekStreakBonus;
@@ -100,7 +108,7 @@ export async function POST(request: Request) {
   const updates: Record<string, number> = {};
   if (newStreak !== current.streak_days) updates.streak_days = newStreak;
   if (pointsEarned > 0) updates.total_points = current.total_points + pointsEarned;
-  if (consumeFreeze) updates.streak_freeze_count = Math.max(0, (current.streak_freeze_count ?? 0) - 1);
+  if (freezesConsumed > 0) updates.streak_freeze_count = Math.max(0, availableFreezes - freezesConsumed);
   if (isFirstSessionToday) updates.total_days_practiced = (current.total_days_practiced ?? 0) + 1;
 
   if (Object.keys(updates).length > 0) {

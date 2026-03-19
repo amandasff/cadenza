@@ -158,12 +158,15 @@ export class AuthService {
         const now = new Date();
         const todayUTC = toUTCDateStr(now);
         const yesterdayUTC = toUTCDateStr(new Date(now.getTime() - 86_400_000));
-        const twoDaysAgoUTC = toUTCDateStr(new Date(now.getTime() - 2 * 86_400_000));
         const lastUTC = toUTCDateStr(new Date(lastAt));
         if (lastUTC !== todayUTC && lastUTC !== yesterdayUTC) {
-          // Freeze protects exactly one missed day
+          // Check if freeze(s) cover all missed days
+          const lastMs = new Date(lastUTC + 'T00:00:00Z').getTime();
+          const todayMs = new Date(todayUTC + 'T00:00:00Z').getTime();
+          const gapDays = Math.round((todayMs - lastMs) / 86_400_000);
+          const missedDays = gapDays - 1;
           const hasFreezeProtection =
-            lastUTC === twoDaysAgoUTC && (profile.streak_freeze_count ?? 0) > 0;
+            missedDays >= 1 && missedDays <= (profile.streak_freeze_count ?? 0);
           if (!hasFreezeProtection) {
             profile.streak_days = 0;
           }
