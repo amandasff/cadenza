@@ -22,7 +22,13 @@ export default function TeacherOnboardPage() {
     try {
       const supabase = getSupabaseBrowserClient();
       const service = StudioService.create(supabase);
-      await service.createStudio(user.id, studioName.trim());
+      const studio = await service.createStudio(user.id, studioName.trim());
+      // Silently auto-create a linked student practice profile for this teacher
+      void fetch("/api/accounts/create-practice-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studioId: studio?.id }),
+      });
       await refresh();
       router.replace("/teacher");
     } catch (err: unknown) {

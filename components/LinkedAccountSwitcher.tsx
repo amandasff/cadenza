@@ -16,8 +16,8 @@ function initials(name: string | null) {
   return name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 }
 
-function RoleBadge({ role }: { role: string | null }) {
-  const label = role === "teacher" ? "Teacher" : "Student";
+function RoleBadge({ role, label }: { role: string | null; label?: string }) {
+  const displayLabel = label ?? (role === "teacher" ? "Teacher" : "Student");
   const color = role === "teacher" ? "#2C6E49" : "#1A4E8A";
   const bg   = role === "teacher" ? "#E8F5EE" : "#E5EEFF";
   return (
@@ -27,7 +27,7 @@ function RoleBadge({ role }: { role: string | null }) {
       background: bg, color, borderRadius: 3, padding: "0.1rem 0.3rem",
       flexShrink: 0,
     }}>
-      {label}
+      {displayLabel}
     </span>
   );
 }
@@ -46,6 +46,10 @@ export default function LinkedAccountSwitcher() {
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [showLinkForm, setShowLinkForm] = useState(false);
+  const [settingUpPractice, setSettingUpPractice] = useState(false);
+
+  const isTeacher = (user as { role?: string } | null)?.role === "teacher";
+  const hasPracticeProfile = accounts.some(a => a.role === "student");
 
   const loadAccounts = useCallback(async () => {
     if (!user?.id) return;
@@ -135,9 +139,21 @@ export default function LinkedAccountSwitcher() {
     }
   }
 
+  async function setupPracticeProfile() {
+    setSettingUpPractice(true);
+    try {
+      const res = await fetch("/api/accounts/create-practice-profile", { method: "POST" });
+      const { ok, student, error } = await res.json();
+      if (error) { alert(error); return; }
+      if (ok && student) setAccounts(prev => [...prev, student]);
+    } finally {
+      setSettingUpPractice(false);
+    }
+  }
+
   if (!open) {
     return (
-      <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ marginBottom: "1.5rem", paddingBottom: "1.25rem", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
         <button
           onClick={() => setOpen(true)}
           style={{
@@ -146,10 +162,11 @@ export default function LinkedAccountSwitcher() {
             fontSize: "0.625rem", fontFamily: "Inter, sans-serif", fontWeight: 500,
             color: "var(--muted)", letterSpacing: "0.04em", textTransform: "uppercase",
             transition: "all 0.15s", display: "flex", alignItems: "center", gap: "0.3rem",
+            alignSelf: "flex-start",
           }}
         >
           <ArrowLeftRight size={10} strokeWidth={1.5} />
-          Switch account
+          {isTeacher ? "My Practice" : "Switch account"}
         </button>
       </div>
     );
@@ -199,9 +216,9 @@ export default function LinkedAccountSwitcher() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {a.display_name ?? "Account"}
+                  {isTeacher && a.role === "student" ? "My Practice" : (a.display_name ?? "Account")}
                 </span>
-                <RoleBadge role={a.role} />
+                <RoleBadge role={a.role} label={isTeacher && a.role === "student" ? "Practice" : undefined} />
               </div>
             </div>
 
@@ -235,6 +252,30 @@ export default function LinkedAccountSwitcher() {
             </button>
           </div>
         ))
+      )}
+
+      {/* Set up practice profile (teachers without one) */}
+      {isTeacher && !hasPracticeProfile && !showLinkForm && (
+        <button
+          onClick={setupPracticeProfile}
+          disabled={settingUpPractice}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", gap: "0.5rem",
+            background: "var(--peach-bg)", border: "1px solid var(--peach-light)",
+            borderRadius: 6, padding: "0.45rem 0.625rem", cursor: "pointer",
+            marginBottom: "0.375rem", opacity: settingUpPractice ? 0.6 : 1,
+          }}
+        >
+          {settingUpPractice
+            ? <Loader size={12} strokeWidth={1.5} color="var(--charcoal)" style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />
+            : <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--peach)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <UserPlus size={12} strokeWidth={1.5} color="var(--white)" />
+              </div>
+          }
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", fontWeight: 500 }}>
+            {settingUpPractice ? "Setting up…" : "Set up my practice profile"}
+          </span>
+        </button>
       )}
 
       {/* Link account form */}
