@@ -242,8 +242,8 @@ export default function Home() {
             {mode === "signup" ? (
               <>
                 <div style={{ padding: "1.75rem 1.75rem 0" }}>
-                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.875rem" }}>
-                    Try for free in 30 seconds
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem", color: "#8A8580", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.875rem" }}>
+                    Create your account
                   </div>
                   <div style={{ display: "flex", border: "1px solid #EDE8E0", borderRadius: 4, overflow: "hidden" }}>
                     {(["student", "teacher"] as UserRole[]).map(r => (
