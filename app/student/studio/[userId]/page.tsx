@@ -215,7 +215,7 @@ export default function VisitorStudioPage() {
             No composers collected yet.
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "0.75rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(145px, 1fr))", gap: "0.75rem" }}>
             {composers.map(c => {
               const r = RARITY_COLORS[c.composer_avatars.rarity] ?? RARITY_COLORS.common;
               const quote = COMPOSER_QUOTES[c.composer_avatars.composer_name];
@@ -236,7 +236,9 @@ export default function VisitorStudioPage() {
                     position: "relative", overflow: "hidden",
                   }}
                 >
-                  <div style={{ fontSize: "2.25rem", lineHeight: 1 }}>{"🎼"}</div>
+                  <div style={{ width: 72, height: 72, borderRadius: 6, overflow: "hidden", flexShrink: 0 }}>
+                    <img src={c.composer_avatars.image_path} alt={c.composer_avatars.composer_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "var(--charcoal)" }}>{c.composer_avatars.composer_name}</div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: r.border === "var(--border-strong)" ? "var(--muted)" : r.border, textTransform: "uppercase", letterSpacing: "0.05em" }}>{r.label}</div>
                   {c.shard_count > 0 && (
