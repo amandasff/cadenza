@@ -11,8 +11,6 @@ import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
 import { Camera, Palette, X } from "lucide-react";
-import LinkedAccountSwitcher from "../../components/LinkedAccountSwitcher";
-
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
@@ -20,7 +18,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const { theme, toggleTheme } = useTheme();
   const { t } = useI18n();
 
-  const tabs = [
+  const studioTabs = [
     { href: "/teacher",              label: t.nav.students },
     { href: "/teacher/schedule",     label: t.nav.schedule },
     { href: "/teacher/billing",      label: t.nav.billing },
@@ -28,6 +26,18 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher/review",       label: t.nav.review },
     { href: "/teacher/chat",         label: t.nav.chat },
     { href: "/teacher/inspirations", label: t.nav.inspire },
+  ];
+
+  const practiceTabs = [
+    { href: "/student/practice",   label: t.nav.practice },
+    { href: "/student/journey",    label: t.nav.profile },
+    { href: "/student/collection", label: "Composers" },
+    { href: "/student/theory",     label: t.nav.games },
+    { href: "/student/ai-tutor",   label: t.nav.ai },
+    { href: "/student/discover",   label: t.nav.discover },
+    { href: "/student/pitch",      label: "Tuner" },
+    { href: "/student/pieces",     label: t.nav.pieces },
+    { href: "/student/rewards",    label: t.nav.awards },
   ];
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -290,12 +300,17 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         </div>
 
         {/* Nav links */}
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)" }}>
-          {tabs.map(t => {
-            const active = t.href === "/teacher" ? path === "/teacher" : path.startsWith(t.href);
-            const showDot = t.href === "/teacher/chat" && hasUnread && !active;
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)", overflowY: "auto" }}>
+
+          {/* Studio section */}
+          <div style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", padding: "0 0.75rem 0.375rem" }}>
+            Studio
+          </div>
+          {studioTabs.map(tab => {
+            const active = tab.href === "/teacher" ? path === "/teacher" : path.startsWith(tab.href);
+            const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
             return (
-              <Link key={t.href} href={t.href} style={{
+              <Link key={tab.href} href={tab.href} style={{
                 display: "flex", alignItems: "center",
                 padding: "0.5rem 0.75rem",
                 borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
@@ -305,13 +320,32 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 fontSize: "0.875rem", textDecoration: "none",
                 transition: "all 0.15s", letterSpacing: "0.005em",
               }}>
-                {t.label}
+                {tab.label}
                 {showDot && (
-                  <span style={{
-                    marginLeft: "auto", width: 6, height: 6,
-                    borderRadius: "50%", background: "#e85d4a", flexShrink: 0,
-                  }} />
+                  <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />
                 )}
+              </Link>
+            );
+          })}
+
+          {/* My Practice section */}
+          <div style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", padding: "0 0.75rem 0.375rem", marginTop: "1.25rem" }}>
+            My Practice
+          </div>
+          {practiceTabs.map(tab => {
+            const active = path.startsWith(tab.href);
+            return (
+              <Link key={tab.href} href={tab.href} style={{
+                display: "flex", alignItems: "center",
+                padding: "0.5rem 0.75rem",
+                borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
+                background: active ? "var(--cream-deep)" : "transparent",
+                color: active ? "var(--charcoal)" : "var(--muted)",
+                fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
+                fontSize: "0.875rem", textDecoration: "none",
+                transition: "all 0.15s", letterSpacing: "0.005em",
+              }}>
+                {tab.label}
               </Link>
             );
           })}
@@ -319,7 +353,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
         {/* Footer */}
         <div style={{ paddingTop: "1.5rem", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-          <LinkedAccountSwitcher />
           <button
             onClick={toggleTheme}
             style={{

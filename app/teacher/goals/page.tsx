@@ -21,8 +21,12 @@ export default function GoalBuilder() {
     { value: "theory", label: t.teacher.categoryTheory, color: "var(--butter)", bg: "var(--butter-bg)", icon: "★" },
   ];
 
+  const [mode, setMode] = useState<"students" | "self">("students");
   const [students, setStudents] = useState<ProfileRow[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
+
+  // When in self-assign mode, use the teacher's own id as the student
+  const effectiveStudentId = mode === "self" ? (teacher?.id ?? "") : selectedStudentId;
   const [studentGoals, setStudentGoals] = useState<GoalRow[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
 
@@ -62,16 +66,16 @@ export default function GoalBuilder() {
   }, [loadStudents]);
 
   const loadStudentGoals = useCallback(async () => {
-    if (!selectedStudentId || !teacher?.id) return;
+    if (!effectiveStudentId || !teacher?.id) return;
     try {
       const supabase = getSupabaseBrowserClient();
       const service = GoalService.create(supabase);
-      const goals = await service.getTeacherGoalsByStudent(teacher.id, selectedStudentId);
+      const goals = await service.getTeacherGoalsByStudent(teacher.id, effectiveStudentId);
       setStudentGoals(goals);
     } catch (err) {
       console.error(err);
     }
-  }, [selectedStudentId, teacher?.id]);
+  }, [effectiveStudentId, teacher?.id]);
 
   useEffect(() => {
     loadStudentGoals();
@@ -79,7 +83,7 @@ export default function GoalBuilder() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !selectedStudentId || !teacher?.studioId) return;
+    if (!title.trim() || !effectiveStudentId || !teacher?.studioId) return;
     setSaving(true);
     setError("");
     try {
@@ -87,7 +91,7 @@ export default function GoalBuilder() {
       const service = GoalService.create(supabase);
       await service.createGoal({
         studioId: teacher.studioId,
-        studentId: selectedStudentId,
+        studentId: effectiveStudentId,
         teacherId: teacher.id,
         title: title.trim(),
         description: desc.trim() || undefined,
@@ -118,49 +122,60 @@ export default function GoalBuilder() {
       <h1 style={{ fontWeight: 900, fontSize: "1.5rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
         {t.teacher.goalBuilderTitle}
       </h1>
-      <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.75rem" }}>
+      <p style={{ color: "var(--muted)", fontSize: "0.875rem", marginBottom: "1.25rem" }}>
         {t.teacher.goalBuilderSubtitle}
       </p>
+
+      {/* Mode toggle */}
+      <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", width: "fit-content", marginBottom: "1.75rem" }}>
+        {(["students", "self"] as const).map(m => (
+          <button key={m} type="button" onClick={() => setMode(m)} style={{
+            padding: "0.4rem 1rem", border: "none", cursor: "pointer",
+            background: mode === m ? "var(--charcoal)" : "transparent",
+            fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem",
+            color: mode === m ? "var(--white)" : "var(--muted)",
+            transition: "all 0.15s",
+          }}>
+            {m === "students" ? "For Students" : "My Goals"}
+          </button>
+        ))}
+      </div>
 
       <div className="r-two-col" style={{ gridTemplateColumns: "1fr 320px" }}>
 
         {/* Form */}
         <div className="card-base" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
 
-          {/* Student picker */}
-          <div>
-            <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              {t.teacher.goalStudent}
-            </label>
-            {loadingStudents ? (
-              <div className="skeleton" style={{ height: 42, borderRadius: 4 }} />
-            ) : students.length === 0 ? (
-              <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
-                {t.teacher.goalNoStudents}
-              </p>
-            ) : (
-              <select
-                value={selectedStudentId}
-                onChange={e => setSelectedStudentId(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.7rem 1rem",
-                  borderRadius: 4,
-                  border: "1px solid var(--border)",
-                                   fontWeight: 700,
-                  fontSize: "0.9rem",
-                  color: "var(--charcoal)",
-                  background: "var(--cream)",
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {students.map(s => (
-                  <option key={s.id} value={s.id}>{s.display_name}</option>
-                ))}
-              </select>
-            )}
-          </div>
+          {/* Student picker — hidden in self mode */}
+          {mode === "students" && (
+            <div>
+              <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {t.teacher.goalStudent}
+              </label>
+              {loadingStudents ? (
+                <div className="skeleton" style={{ height: 42, borderRadius: 4 }} />
+              ) : students.length === 0 ? (
+                <p style={{ color: "var(--muted)", fontSize: "0.875rem", margin: 0 }}>
+                  {t.teacher.goalNoStudents}
+                </p>
+              ) : (
+                <select
+                  value={selectedStudentId}
+                  onChange={e => setSelectedStudentId(e.target.value)}
+                  style={{
+                    width: "100%", padding: "0.7rem 1rem", borderRadius: 4,
+                    border: "1px solid var(--border)", fontWeight: 700,
+                    fontSize: "0.9rem", color: "var(--charcoal)",
+                    background: "var(--cream)", outline: "none", cursor: "pointer",
+                  }}
+                >
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>{s.display_name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
 
           {/* Title */}
           <div>
@@ -275,7 +290,7 @@ export default function GoalBuilder() {
 
           <button
             onClick={handleSubmit}
-            disabled={saving || !title.trim() || !selectedStudentId}
+            disabled={saving || !title.trim() || !effectiveStudentId}
             className="btn btn-primary"
             style={{ padding: "0.9rem", fontSize: "0.95rem", opacity: (saving || !title.trim() || !selectedStudentId) ? 0.65 : 1, background: saved ? "var(--sage)" : undefined }}
           >
@@ -286,7 +301,7 @@ export default function GoalBuilder() {
         {/* Path preview */}
         <div className="card-base" style={{ padding: "1.25rem" }}>
           <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-            {t.teacher.goalPathPreview.replace("{name}", students.find(s => s.id === selectedStudentId)?.display_name || "Student")}
+            {mode === "self" ? "My Path" : t.teacher.goalPathPreview.replace("{name}", students.find(s => s.id === selectedStudentId)?.display_name || "Student")}
           </div>
           {studentGoals.length === 0 && !title ? (
             <div style={{ textAlign: "center", padding: "2rem 0" }}>
