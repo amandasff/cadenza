@@ -47,6 +47,31 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // Mobile: 4 primary tabs, everything else in the "More" sheet
+  const primaryMobileTabs = [
+    { href: "/teacher",          label: t.nav.students },
+    { href: "/teacher/goals",    label: t.nav.goals },
+    { href: "/student/practice", label: t.nav.practice },
+    { href: "/student/journey",  label: t.nav.profile },
+  ];
+  const moreMobileStudioTabs = [
+    { href: "/teacher/schedule",     label: t.nav.schedule },
+    { href: "/teacher/billing",      label: t.nav.billing },
+    { href: "/teacher/review",       label: t.nav.review },
+    { href: "/teacher/chat",         label: t.nav.chat },
+    { href: "/teacher/inspirations", label: t.nav.inspire },
+  ];
+  const moreMobilePracticeTabs = [
+    { href: "/student/collection", label: "Composers" },
+    { href: "/student/theory",     label: t.nav.games },
+    { href: "/student/ai-tutor",   label: t.nav.ai },
+    { href: "/student/discover",   label: t.nav.discover },
+    { href: "/student/pitch",      label: "Tuner" },
+    { href: "/student/pieces",     label: t.nav.pieces },
+    { href: "/student/rewards",    label: t.nav.awards },
+  ];
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -408,6 +433,90 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       </div>
 
       <RecordingIndicator />
+
+      {/* ── Mobile bottom nav (hidden ≥700px via CSS) ── */}
+      <nav className="student-bottom-nav" style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        background: "var(--white)", borderTop: "1px solid var(--border)",
+        display: "flex", zIndex: 100, padding: "0.5rem 0 0.625rem",
+      }}>
+        {primaryMobileTabs.map(tab => {
+          const active = tab.href === "/teacher" ? path === "/teacher" : path.startsWith(tab.href);
+          return (
+            <Link key={tab.href} href={tab.href} style={{
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+              textDecoration: "none", padding: "0.375rem 0",
+              color: active ? "var(--charcoal)" : "var(--muted)",
+              transition: "color 0.15s", position: "relative",
+            }}>
+              {active && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 20, height: 1.5, background: "var(--charcoal)" }} />}
+              <span style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: active ? 600 : 400, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: "0.125rem" }}>
+                {tab.label}
+              </span>
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setMoreOpen(true)}
+          style={{
+            flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+            background: "none", border: "none", padding: "0.375rem 0", cursor: "pointer",
+            color: [...moreMobileStudioTabs, ...moreMobilePracticeTabs].some(tab => path.startsWith(tab.href)) ? "var(--charcoal)" : "var(--muted)",
+            position: "relative",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+          </svg>
+          <span style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 400, letterSpacing: "0.07em", textTransform: "uppercase", position: "relative" }}>
+            More
+            {hasUnread && !path.startsWith("/teacher/chat") && (
+              <span style={{ position: "absolute", top: -2, right: -7, width: 5, height: 5, borderRadius: "50%", background: "#e85d4a" }} />
+            )}
+          </span>
+        </button>
+      </nav>
+
+      {/* More sheet */}
+      {moreOpen && (
+        <div onClick={() => setMoreOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200 }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "var(--white)", borderRadius: "16px 16px 0 0", padding: "1rem 0 2rem" }}>
+            <div style={{ width: 36, height: 3, borderRadius: 2, background: "var(--border)", margin: "0 auto 1rem" }} />
+
+            <div style={{ padding: "0 1.5rem 0.5rem", fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>Studio</div>
+            {moreMobileStudioTabs.map(tab => {
+              const active = path.startsWith(tab.href);
+              const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
+              return (
+                <Link key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
+                  fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
+                  textDecoration: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                }}>
+                  {tab.label}
+                  {showDot && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e85d4a" }} />}
+                </Link>
+              );
+            })}
+
+            <div style={{ padding: "1rem 1.5rem 0.5rem", fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>My Practice</div>
+            {moreMobilePracticeTabs.map(tab => {
+              const active = path.startsWith(tab.href);
+              return (
+                <Link key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
+                  display: "flex", alignItems: "center",
+                  padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
+                  fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
+                  textDecoration: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                }}>
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Upload error toast */}
       {uploadError && (
