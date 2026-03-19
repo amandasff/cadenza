@@ -293,7 +293,7 @@ export default function StudioManagementPage() {
             {t.teacher.enrollmentFormDesc}
           </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.875rem" }} className="enrollment-methods">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.875rem" }}>
             {/* Method 1: Search */}
             <div style={{
               border: "1px solid var(--border)", borderRadius: 4, padding: "1rem",
@@ -595,10 +595,5 @@ export default function StudioManagementPage() {
         </div>
       )}
     </div>
-    <style>{`
-      @media (max-width: 560px) {
-        .enrollment-methods { grid-template-columns: 1fr !important; }
-      }
-    `}</style>
   );
 }
