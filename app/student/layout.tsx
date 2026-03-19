@@ -75,6 +75,51 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/inspirations", label: t.nav.inspire },
   ];
 
+  // Teacher-specific nav tabs (shown when a teacher accesses student features)
+  const teacherPrimaryMobileTabs = [
+    { href: "/teacher",          label: t.nav.students, exact: true },
+    { href: "/teacher/goals",    label: t.nav.goals,    exact: false },
+    { href: "/student/practice", label: t.nav.practice, exact: false },
+    { href: "/student/journey",  label: t.nav.profile,  exact: false },
+  ];
+  const teacherMoreStudioTabs = [
+    { href: "/teacher/schedule",     label: t.nav.schedule },
+    { href: "/teacher/billing",      label: t.nav.billing },
+    { href: "/teacher/review",       label: t.nav.review },
+    { href: "/teacher/chat",         label: t.nav.chat },
+    { href: "/teacher/inspirations", label: t.nav.inspire },
+  ];
+  const teacherMorePracticeTabs = [
+    { href: "/student/collection", label: "Composers" },
+    { href: "/student/theory",     label: t.nav.games },
+    { href: "/student/ai-tutor",   label: t.nav.ai },
+    { href: "/student/discover",   label: t.nav.discover },
+    { href: "/student/pitch",      label: "Tuner" },
+    { href: "/student/pieces",     label: t.nav.pieces },
+    { href: "/student/rewards",    label: t.nav.awards },
+  ];
+  // Full sidebar lists for desktop
+  const teacherSidebarStudioTabs = [
+    { href: "/teacher",              label: t.nav.students, exact: true },
+    { href: "/teacher/schedule",     label: t.nav.schedule, exact: false },
+    { href: "/teacher/billing",      label: t.nav.billing,  exact: false },
+    { href: "/teacher/goals",        label: t.nav.goals,    exact: false },
+    { href: "/teacher/review",       label: t.nav.review,   exact: false },
+    { href: "/teacher/chat",         label: t.nav.chat,     exact: false },
+    { href: "/teacher/inspirations", label: t.nav.inspire,  exact: false },
+  ];
+  const teacherSidebarPracticeTabs = [
+    { href: "/student/practice",   label: t.nav.practice },
+    { href: "/student/journey",    label: t.nav.profile },
+    { href: "/student/collection", label: "Composers" },
+    { href: "/student/theory",     label: t.nav.games },
+    { href: "/student/ai-tutor",   label: t.nav.ai },
+    { href: "/student/discover",   label: t.nav.discover },
+    { href: "/student/pitch",      label: "Tuner" },
+    { href: "/student/pieces",     label: t.nav.pieces },
+    { href: "/student/rewards",    label: t.nav.awards },
+  ];
+
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -476,31 +521,78 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         </div>
 
         {/* Nav links */}
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
-          {tabs.map(t => {
-            const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
-            const showDot = t.href === "/student/chat" && hasUnread && !active;
-            return (
-              <Link key={t.href} href={t.href} style={{
-                display: "flex", alignItems: "center",
-                padding: "0.5rem 0.75rem",
-                borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
-                background: active ? "var(--cream-deep)" : "transparent",
-                color: active ? "var(--charcoal)" : "var(--muted)",
-                fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
-                fontSize: "0.875rem", textDecoration: "none",
-                transition: "all 0.15s", letterSpacing: "0.005em",
-              }}>
-                {t.label}
-                {showDot && (
-                  <span style={{
-                    marginLeft: "auto", width: 6, height: 6,
-                    borderRadius: "50%", background: "#e85d4a", flexShrink: 0,
-                  }} />
-                )}
-              </Link>
-            );
-          })}
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
+          {isTeacherPracticing ? (
+            <>
+              <div style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", padding: "0 0.75rem 0.375rem" }}>
+                Studio
+              </div>
+              {teacherSidebarStudioTabs.map(tab => {
+                const active = tab.exact ? path === tab.href : path.startsWith(tab.href);
+                const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
+                return (
+                  <Link key={tab.href} href={tab.href} style={{
+                    display: "flex", alignItems: "center",
+                    padding: "0.5rem 0.75rem",
+                    borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
+                    background: active ? "var(--cream-deep)" : "transparent",
+                    color: active ? "var(--charcoal)" : "var(--muted)",
+                    fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
+                    fontSize: "0.875rem", textDecoration: "none",
+                    transition: "all 0.15s", letterSpacing: "0.005em",
+                  }}>
+                    {tab.label}
+                    {showDot && <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />}
+                  </Link>
+                );
+              })}
+              <div style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", padding: "0 0.75rem 0.375rem", marginTop: "1.25rem" }}>
+                My Practice
+              </div>
+              {teacherSidebarPracticeTabs.map(tab => {
+                const active = path.startsWith(tab.href);
+                return (
+                  <Link key={tab.href} href={tab.href} style={{
+                    display: "flex", alignItems: "center",
+                    padding: "0.5rem 0.75rem",
+                    borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
+                    background: active ? "var(--cream-deep)" : "transparent",
+                    color: active ? "var(--charcoal)" : "var(--muted)",
+                    fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
+                    fontSize: "0.875rem", textDecoration: "none",
+                    transition: "all 0.15s", letterSpacing: "0.005em",
+                  }}>
+                    {tab.label}
+                  </Link>
+                );
+              })}
+            </>
+          ) : (
+            tabs.map(t => {
+              const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
+              const showDot = t.href === "/student/chat" && hasUnread && !active;
+              return (
+                <Link key={t.href} href={t.href} style={{
+                  display: "flex", alignItems: "center",
+                  padding: "0.5rem 0.75rem",
+                  borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
+                  background: active ? "var(--cream-deep)" : "transparent",
+                  color: active ? "var(--charcoal)" : "var(--muted)",
+                  fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
+                  fontSize: "0.875rem", textDecoration: "none",
+                  transition: "all 0.15s", letterSpacing: "0.005em",
+                }}>
+                  {t.label}
+                  {showDot && (
+                    <span style={{
+                      marginLeft: "auto", width: 6, height: 6,
+                      borderRadius: "50%", background: "#e85d4a", flexShrink: 0,
+                    }} />
+                  )}
+                </Link>
+              );
+            })
+          )}
         </nav>
 
         {/* Footer: theme + sign out */}
@@ -518,7 +610,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           </button>
           <LanguageSwitcher />
           <Link
-            href="/student/settings"
+            href={isTeacherPracticing ? "/teacher/settings" : "/student/settings"}
             style={{
               width: "100%", background: "none", border: "1px solid var(--border)", borderRadius: 2,
               padding: "0.4rem 0.75rem", cursor: "pointer", fontSize: "0.6875rem",
@@ -558,71 +650,80 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       <ScrollArea>{children}</ScrollArea>
 
       {/* ── Mobile bottom nav (hidden ≥700px via CSS) ── */}
-      <nav className="student-bottom-nav" style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        background: "var(--white)", borderTop: "1px solid var(--border)",
-        display: "flex", zIndex: 100, padding: "0.5rem 0 0.625rem",
-      }}>
-        {primaryMobileTabs.map(t => {
-          const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
-          return (
-            <Link key={t.href} href={t.href} style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
-              textDecoration: "none", padding: "0.375rem 0",
-              color: active ? "var(--charcoal)" : "var(--muted)",
-              transition: "color 0.15s", position: "relative",
-            }}>
-              {active && (
+      {(() => {
+        const activePrimaryTabs = isTeacherPracticing ? teacherPrimaryMobileTabs : primaryMobileTabs;
+        const activeMoreTabs = isTeacherPracticing
+          ? [...teacherMoreStudioTabs, ...teacherMorePracticeTabs]
+          : moreMobileTabs;
+        const moreActive = activeMoreTabs.some(t => path.startsWith(t.href));
+        return (
+          <nav className="student-bottom-nav" style={{
+            position: "fixed", bottom: 0, left: 0, right: 0,
+            background: "var(--white)", borderTop: "1px solid var(--border)",
+            display: "flex", zIndex: 100, padding: "0.5rem 0 0.625rem",
+          }}>
+            {activePrimaryTabs.map(tab => {
+              const active = (tab as { exact?: boolean }).exact ? path === tab.href : path.startsWith(tab.href);
+              return (
+                <Link key={tab.href} href={tab.href} style={{
+                  flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+                  textDecoration: "none", padding: "0.375rem 0",
+                  color: active ? "var(--charcoal)" : "var(--muted)",
+                  transition: "color 0.15s", position: "relative",
+                }}>
+                  {active && (
+                    <div style={{
+                      position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+                      width: 20, height: 1.5, background: "var(--charcoal)",
+                    }} />
+                  )}
+                  <span style={{
+                    fontSize: "0.5625rem", fontFamily: "Inter, sans-serif",
+                    fontWeight: active ? 600 : 400, letterSpacing: "0.07em",
+                    textTransform: "uppercase", marginTop: "0.125rem",
+                  }}>
+                    {tab.label}
+                  </span>
+                </Link>
+              );
+            })}
+
+            {/* More button */}
+            <button
+              onClick={() => setMoreOpen(true)}
+              style={{
+                flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+                background: "none", border: "none", padding: "0.375rem 0", cursor: "pointer",
+                color: moreActive ? "var(--charcoal)" : "var(--muted)",
+                position: "relative",
+              }}
+            >
+              {moreActive && (
                 <div style={{
                   position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
                   width: 20, height: 1.5, background: "var(--charcoal)",
                 }} />
               )}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+              </svg>
               <span style={{
                 fontSize: "0.5625rem", fontFamily: "Inter, sans-serif",
-                fontWeight: active ? 600 : 400, letterSpacing: "0.07em",
-                textTransform: "uppercase", marginTop: "0.125rem",
+                fontWeight: moreActive ? 600 : 400,
+                letterSpacing: "0.07em", textTransform: "uppercase", position: "relative",
               }}>
-                {t.label}
+                {t.student.more}
+                {hasUnread && !path.startsWith("/student/chat") && !path.startsWith("/teacher/chat") && (
+                  <span style={{
+                    position: "absolute", top: -2, right: -7,
+                    width: 5, height: 5, borderRadius: "50%", background: "#e85d4a",
+                  }} />
+                )}
               </span>
-            </Link>
-          );
-        })}
-
-        {/* More button */}
-        <button
-          onClick={() => setMoreOpen(true)}
-          style={{
-            flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
-            background: "none", border: "none", padding: "0.375rem 0", cursor: "pointer",
-            color: moreMobileTabs.some(t => path.startsWith(t.href)) ? "var(--charcoal)" : "var(--muted)",
-            position: "relative",
-          }}
-        >
-          {moreMobileTabs.some(t => path.startsWith(t.href)) && (
-            <div style={{
-              position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
-              width: 20, height: 1.5, background: "var(--charcoal)",
-            }} />
-          )}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-          </svg>
-          <span style={{
-            fontSize: "0.5625rem", fontFamily: "Inter, sans-serif",
-            fontWeight: moreMobileTabs.some(t => path.startsWith(t.href)) ? 600 : 400,
-            letterSpacing: "0.07em", textTransform: "uppercase", position: "relative",
-          }}>
-            {t.student.more}
-            {hasUnread && !path.startsWith("/student/chat") && (
-              <span style={{
-                position: "absolute", top: -2, right: -7,
-                width: 5, height: 5, borderRadius: "50%", background: "#e85d4a",
-              }} />
-            )}
-          </span>
-        </button>
-      </nav>
+            </button>
+          </nav>
+        );
+      })()}
 
       {/* More sheet */}
       {moreOpen && (
@@ -639,32 +740,70 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             }}
           >
             <div style={{ width: 36, height: 3, borderRadius: 2, background: "var(--border)", margin: "0 auto 1rem" }} />
-            {moreMobileTabs.map(t => {
-              const active = path.startsWith(t.href);
-              const showDot = t.href === "/student/chat" && hasUnread && !active;
-              return (
-                <Link
-                  key={t.href}
-                  href={t.href}
-                  onClick={() => setMoreOpen(false)}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "0.875rem 1.5rem",
-                    fontFamily: "Inter, sans-serif", fontSize: "1rem",
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "var(--charcoal)" : "var(--muted)",
-                    textDecoration: "none",
-                    borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
-                    background: active ? "var(--cream)" : "transparent",
-                  }}
-                >
-                  {t.label}
-                  {showDot && (
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />
-                  )}
-                </Link>
-              );
-            })}
+
+            {isTeacherPracticing ? (
+              <>
+                <div style={{ padding: "0 1.5rem 0.5rem", fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>Studio</div>
+                {teacherMoreStudioTabs.map(tab => {
+                  const active = path.startsWith(tab.href);
+                  const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
+                  return (
+                    <Link key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
+                      fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
+                      textDecoration: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                      background: active ? "var(--cream)" : "transparent",
+                    }}>
+                      {tab.label}
+                      {showDot && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />}
+                    </Link>
+                  );
+                })}
+                <div style={{ padding: "1rem 1.5rem 0.5rem", fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>My Practice</div>
+                {teacherMorePracticeTabs.map(tab => {
+                  const active = path.startsWith(tab.href);
+                  return (
+                    <Link key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
+                      display: "flex", alignItems: "center",
+                      padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
+                      fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
+                      textDecoration: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                      background: active ? "var(--cream)" : "transparent",
+                    }}>
+                      {tab.label}
+                    </Link>
+                  );
+                })}
+              </>
+            ) : (
+              moreMobileTabs.map(t => {
+                const active = path.startsWith(t.href);
+                const showDot = t.href === "/student/chat" && hasUnread && !active;
+                return (
+                  <Link
+                    key={t.href}
+                    href={t.href}
+                    onClick={() => setMoreOpen(false)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "0.875rem 1.5rem",
+                      fontFamily: "Inter, sans-serif", fontSize: "1rem",
+                      fontWeight: active ? 600 : 400,
+                      color: active ? "var(--charcoal)" : "var(--muted)",
+                      textDecoration: "none",
+                      borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                      background: active ? "var(--cream)" : "transparent",
+                    }}
+                  >
+                    {t.label}
+                    {showDot && (
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />
+                    )}
+                  </Link>
+                );
+              })
+            )}
           </div>
         </div>
       )}
