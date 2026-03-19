@@ -22,7 +22,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher",              label: t.nav.students },
     { href: "/teacher/schedule",     label: t.nav.schedule },
     { href: "/teacher/billing",      label: t.nav.billing },
-    { href: "/teacher/goals",        label: t.nav.goals },
     { href: "/teacher/review",       label: t.nav.review },
     { href: "/teacher/chat",         label: t.nav.chat },
     { href: "/teacher/inspirations", label: t.nav.inspire },
@@ -51,7 +50,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   // Mobile: 4 primary tabs, everything else in the "More" sheet
   const primaryMobileTabs = [
     { href: "/teacher",          label: t.nav.students },
-    { href: "/teacher/goals",    label: t.nav.goals },
+    { href: "/teacher/schedule", label: t.nav.schedule },
     { href: "/student/practice", label: t.nav.practice },
     { href: "/student/journey",  label: t.nav.profile },
   ];
