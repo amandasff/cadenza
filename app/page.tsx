@@ -95,7 +95,7 @@ export default function Home() {
   };
 
   return (
-    <div style={{ position: "relative", height: "100dvh", width: "100%", overflow: "hidden", fontFamily: "Inter, sans-serif" }}>
+    <div style={{ position: "fixed", inset: 0, overflow: "hidden", fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Layer 1: blurred app background ── */}
       <div style={{
