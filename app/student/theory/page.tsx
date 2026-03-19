@@ -403,7 +403,7 @@ function TopBar({ onBack, label }: { onBack: () => void; label: string }) {
   );
 }
 
-function GameHeader({ timeLeft, score, streak }: { timeLeft: number; score: number; streak: number }) {
+function GameHeader({ timeLeft, score, streak, onBack }: { timeLeft: number; score: number; streak: number; onBack: () => void }) {
   const pct   = timeLeft / ROUND_SEC;
   const color = pct > 0.5 ? "#4CAF84" : pct > 0.25 ? "#E6A817" : "#E05252";
   const mult  = streakMult(streak);
@@ -413,6 +413,9 @@ function GameHeader({ timeLeft, score, streak }: { timeLeft: number; score: numb
         <div style={{ height: "100%", width: `${pct * 100}%`, background: color, transition: "width 0.9s linear, background 0.5s" }} />
       </div>
       <div style={{ padding: "0.75rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", padding: 0, flexShrink: 0 }}>
+          ←
+        </button>
         <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9375rem", fontWeight: 700, color, transition: "border-color 0.5s, color 0.5s", flexShrink: 0 }}>
           {timeLeft}
         </div>
@@ -614,7 +617,7 @@ function NoteIdGame({ onBack }: { onBack: () => void }) {
   const isCorrect = game.selected === q.correct;
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
         <Popups entries={game.popups} />
         <div style={{ maxWidth: 380, width: "100%" }}>
@@ -782,8 +785,7 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
       {showRef && <IntervalRefPanel diff={diff} allowDesc={allowDesc} onClose={() => setShowRef(false)} />}
-      <TopBar onBack={onBack} label="Interval Ear Training" />
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <Popups entries={game.popups} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
         <div style={{ maxWidth: 340, width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -928,7 +930,7 @@ function ChordGame({ onBack }: { onBack: () => void }) {
   const isCorrect = game.selected === q.correct;
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
         <Popups entries={game.popups} />
         <div style={{ maxWidth: 380, width: "100%" }}>
@@ -1098,7 +1100,7 @@ function MusicTermsGame({ onBack }: { onBack: () => void }) {
   const isCorrect = game.selected === q.correct;
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
         <Popups entries={game.popups} />
         <div style={{ maxWidth: 400, width: "100%" }}>
@@ -1265,7 +1267,7 @@ function KeySigGame({ onBack }: { onBack: () => void }) {
   const isCorrect = game.selected === q.correct;
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
         <Popups entries={game.popups} />
         <div style={{ maxWidth: 400, width: "100%" }}>
@@ -1431,7 +1433,7 @@ function ScaleGame({ onBack }: { onBack: () => void }) {
   const isCorrect = game.selected === q.scaleType;
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 1.5rem 1rem", position: "relative" }}>
         <Popups entries={game.popups} />
         <div style={{ maxWidth: 380, width: "100%" }}>
@@ -1786,8 +1788,7 @@ function FretboardGame({ onBack }: { onBack: () => void }) {
   const maxFret = level === "beginner" ? 5 : level === "intermediate" ? 7 : 12;
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
-      <TopBar onBack={onBack} label="Fretboard Challenge" />
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <Popups entries={game.popups} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.25rem", gap: "1.25rem" }}>
         <div style={{ background: "#252537", borderRadius: 12, padding: "1rem 0.75rem", overflowX: "auto", display: "flex", justifyContent: "center", width: "100%", maxWidth: 360 }}>
@@ -1949,8 +1950,7 @@ function GuitarChordGame({ onBack }: { onBack: () => void }) {
 
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
-      <TopBar onBack={onBack} label="Guitar Chord Finder" />
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <Popups entries={game.popups} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.25rem 1rem", gap: "1.25rem" }}>
         <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: 0, letterSpacing: "0.08em", textTransform: "uppercase" }}>Name this chord</p>
@@ -2558,8 +2558,7 @@ function SightReadGame({ onBack }: { onBack: () => void }) {
 
   return (
     <div style={{ minHeight: "100%", background: "#1a1a2e", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif", position: "relative" }}>
-      <TopBar onBack={onBack} label="Sight Reading" />
-      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} />
+      <GameHeader timeLeft={game.timeLeft} score={game.score} streak={game.streak} onBack={onBack} />
       <Popups entries={game.popups} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.25rem", gap: "1rem" }}>
         <div style={{ background: "#252537", borderRadius: 12, padding: "0.75rem 0.5rem", overflowX: "auto" }}>
