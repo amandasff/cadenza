@@ -35,7 +35,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/student/theory",     label: t.nav.games },
     { href: "/student/ai-tutor",   label: t.nav.ai },
     { href: "/student/discover",   label: t.nav.discover },
-    { href: "/student/pitch",      label: "Tuner" },
     { href: "/student/pieces",     label: t.nav.pieces },
     { href: "/student/rewards",    label: t.nav.awards },
   ];
@@ -68,7 +67,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/student/theory",     label: t.nav.games },
     { href: "/student/ai-tutor",   label: t.nav.ai },
     { href: "/student/discover",   label: t.nav.discover },
-    { href: "/student/pitch",      label: "Tuner" },
     { href: "/student/pieces",     label: t.nav.pieces },
     { href: "/student/rewards",    label: t.nav.awards },
   ];

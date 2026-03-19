@@ -53,7 +53,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/chat",         label: t.nav.chat },
     { href: "/student/journey",      label: t.nav.profile },
     { href: "/student/discover",     label: t.nav.discover },
-    { href: "/student/pitch",        label: "Tuner" },
     { href: "/student/rewards",      label: t.nav.awards },
     { href: "/student/collection",   label: "Composers" },
     { href: "/student/inspirations", label: t.nav.inspire },
@@ -71,7 +70,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/theory",       label: t.nav.games },
     { href: "/student/reference",    label: t.nav.reference },
     { href: "/student/ai-tutor",     label: t.student.aiTutor },
-    { href: "/student/pitch",        label: "Tuner" },
     { href: "/student/rewards",      label: t.nav.awards },
     { href: "/student/collection",   label: "Composers" },
     { href: "/student/inspirations", label: t.nav.inspire },
@@ -96,7 +94,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/theory",     label: t.nav.games },
     { href: "/student/ai-tutor",   label: t.nav.ai },
     { href: "/student/discover",   label: t.nav.discover },
-    { href: "/student/pitch",      label: "Tuner" },
     { href: "/student/pieces",     label: t.nav.pieces },
     { href: "/student/rewards",    label: t.nav.awards },
   ];
@@ -117,7 +114,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/theory",     label: t.nav.games },
     { href: "/student/ai-tutor",   label: t.nav.ai },
     { href: "/student/discover",   label: t.nav.discover },
-    { href: "/student/pitch",      label: "Tuner" },
     { href: "/student/pieces",     label: t.nav.pieces },
     { href: "/student/rewards",    label: t.nav.awards },
   ];
