@@ -30,6 +30,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const practiceTabs = [
     { href: "/student/practice",   label: t.nav.practice },
     { href: "/student/journey",    label: t.nav.profile },
+    { href: "/student/studio",     label: "Studio" },
+    { href: "/student/store",      label: "Shop" },
     { href: "/student/collection", label: "Composers" },
     { href: "/student/theory",     label: t.nav.games },
     { href: "/student/ai-tutor",   label: t.nav.ai },
@@ -62,6 +64,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher/inspirations", label: t.nav.inspire },
   ];
   const moreMobilePracticeTabs = [
+    { href: "/student/studio",     label: "Studio" },
+    { href: "/student/store",      label: "Shop" },
     { href: "/student/collection", label: "Composers" },
     { href: "/student/theory",     label: t.nav.games },
     { href: "/student/ai-tutor",   label: t.nav.ai },
