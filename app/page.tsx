@@ -12,10 +12,13 @@ const TeacherHomeDemo = dynamic(() => import("../components/demo/TeacherHomeDemo
 const StudentHomeDemo = dynamic(() => import("../components/demo/StudentHomeDemo"), { ssr: false });
 
 const PROOF_LINES = [
-  "Records every practice session automatically",
-  "Streaks and composer collectibles to earn",
-  "Goals set by your teacher, tracked by you",
-  "Your teacher hears it all — no surprises at lessons",
+  "Share your practice with teachers — get real feedback between lessons",
+  "Track your practice journey, share it, and discover others",
+  "Upload your pieces and sheet music, set goals, see progress",
+  "Earn streaks, collect composer cards, climb leaderboards, play music games",
+  "Ask the AI tutor anything — it always has time",
+  "Find and listen to music you actually want to learn",
+  "Tuner, metronome, and full chords directory",
 ];
 
 export default function Home() {
@@ -187,17 +190,14 @@ export default function Home() {
 
             <h1 style={{
               fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500,
-              fontSize: "clamp(2rem, 4vw, 3rem)", color: "#2C2824",
-              lineHeight: 1.05, letterSpacing: "-0.02em", margin: "0 0 1rem",
+              fontSize: "clamp(1.75rem, 4vw, 2.875rem)", color: "#2C2824",
+              lineHeight: 1.08, letterSpacing: "-0.02em", margin: "0 0 0.625rem",
             }}>
-              The practice app<br />you&apos;ll actually open.
+              Practice like<br />someone&apos;s listening.
             </h1>
 
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", color: "#6B6560", lineHeight: 1.7, margin: "0 0 1.5rem", maxWidth: 320 }}>
-              {role === "teacher"
-                ? "Cadenza records every practice session and delivers it to you — so you walk into every lesson knowing exactly where they left off."
-                : "Streaks, collectibles, and goals from your teacher — all in one place."
-              }
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9rem", color: "#8A8580", lineHeight: 1.5, margin: "0 0 1.5rem" }}>
+              Everything between lessons, in one place.
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.75rem" }}>
