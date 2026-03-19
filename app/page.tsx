@@ -22,7 +22,8 @@ const STUDENT_BULLETS = [
 ];
 
 const TEACHER_BULLETS = [
-  "Share your practice with teachers, receive feedback between lessons",
+  "Hear your students' practice and leave feedback between lessons",
+  "Easy studio management, lesson tracking, and billing",
   "Play music games, earn streaks, climb leaderboards, and collect avatars",
   "Upload pieces for easy access, and goal setting",
   "Learn anything from an AI tutor",
@@ -31,17 +32,15 @@ const TEACHER_BULLETS = [
   "Tuner, metronome, and full chords directory",
 ];
 
-const COPY: Record<string, { headline: string; subline: string; sub2: string; bullets: string[] }> = {
+const COPY: Record<string, { headline: string; subline: string; bullets: string[] }> = {
   student: {
     headline: "Practice every day.\nActually enjoy it.",
     subline: "Learn faster, level up, and keep everything in one place.",
-    sub2: "Try for free in 10 seconds.",
     bullets: STUDENT_BULLETS,
   },
   teacher: {
     headline: "Your students\nwill actually practice.",
     subline: "And you'll know exactly how it went.",
-    sub2: "Try for free in 10 seconds.",
     bullets: TEACHER_BULLETS,
   },
 };
@@ -222,11 +221,8 @@ export default function Home() {
               {(COPY[role] ?? COPY.student).headline}
             </h1>
 
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9rem", color: "#6B6560", lineHeight: 1.5, margin: "0 0 0.375rem" }}>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9rem", color: "#6B6560", lineHeight: 1.5, margin: "0 0 1.5rem" }}>
               {(COPY[role] ?? COPY.student).subline}
-            </p>
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8rem", color: "#5B9E79", fontWeight: 600, letterSpacing: "0.01em", margin: "0 0 1.25rem" }}>
-              {(COPY[role] ?? COPY.student).sub2}
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.75rem" }}>
@@ -247,7 +243,7 @@ export default function Home() {
               <>
                 <div style={{ padding: "1.75rem 1.75rem 0" }}>
                   <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.875rem" }}>
-                    Get started for free
+                    Try for free in 30 seconds
                   </div>
                   <div style={{ display: "flex", border: "1px solid #EDE8E0", borderRadius: 4, overflow: "hidden" }}>
                     {(["student", "teacher"] as UserRole[]).map(r => (
@@ -272,7 +268,7 @@ export default function Home() {
                   </div>
                   {error && <div style={{ border: "1px solid #E8C4BA", borderRadius: 4, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif", background: "#FDF6F3" }}>{error}</div>}
                   <button type="submit" disabled={loading || unblurring} style={{ borderRadius: 4, background: loading || unblurring ? "#ADA9A2" : "#4CAF84", color: "#fff", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", padding: "0.75rem", border: "none", cursor: loading || unblurring ? "default" : "pointer", letterSpacing: "0.01em", transition: "background 0.15s", marginTop: "0.125rem" }}>
-                    {unblurring ? "Welcome! Opening Cadenza…" : loading ? "Creating account..." : `Create ${role} account →`}
+                    {unblurring ? "Welcome! Opening Cadenza…" : loading ? "Creating account..." : "Try for free in 30 seconds →"}
                   </button>
                 </form>
                 <div style={{ padding: "0 1.75rem 1.5rem" }}>
