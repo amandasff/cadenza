@@ -128,11 +128,6 @@ export default function GoalDetail({ params }: { params: Promise<{ id: string }>
               <span style={{ background: statusBg, color: statusColor, padding: "0.25rem 0.75rem", borderRadius: 100, fontSize: "0.75rem", fontFamily: "Nunito, sans-serif", fontWeight: 700 }}>
                 {statusLabel}
               </span>
-              {goal.is_boss && (
-                <span style={{ background: "var(--butter-bg)", color: "var(--butter)", padding: "0.25rem 0.75rem", borderRadius: 100, fontSize: "0.75rem", fontFamily: "Nunito, sans-serif", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                  <Star size={12} strokeWidth={1.5} /> Boss Node
-                </span>
-              )}
             </div>
 
             {/* Main card */}

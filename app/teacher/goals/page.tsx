@@ -7,7 +7,7 @@ import { GoalService } from "../../../lib/services/GoalService";
 import { Teacher } from "../../../lib/models/Teacher";
 import { useI18n } from "../../../lib/context/I18nContext";
 import type { ProfileRow, GoalRow } from "../../../lib/types";
-import { Star, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 export default function GoalBuilder() {
   const { user } = useAuth();
@@ -38,7 +38,6 @@ export default function GoalBuilder() {
   const [hasBonus, setHasBonus] = useState(false);
   const [bonusTitle, setBonusTitle] = useState("");
   const [bonusPoints, setBonusPoints] = useState(75);
-  const [isBoss, setIsBoss] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -99,14 +98,13 @@ export default function GoalBuilder() {
         points,
         bonusTitle: hasBonus && bonusTitle.trim() ? bonusTitle.trim() : undefined,
         bonusPoints: hasBonus ? bonusPoints : undefined,
-        isBoss,
+        isBoss: false,
       });
       setSaved(true);
       setTitle("");
       setDesc("");
       setHasBonus(false);
       setBonusTitle("");
-      setIsBoss(false);
       setPoints(100);
       await loadStudentGoals();
       setTimeout(() => setSaved(false), 2500);
@@ -141,7 +139,7 @@ export default function GoalBuilder() {
         ))}
       </div>
 
-      <div className="r-two-col" style={{ gridTemplateColumns: "1fr 320px" }}>
+      <div style={{ maxWidth: 600 }}>
 
         {/* Form */}
         <div className="card-base" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
@@ -233,25 +231,19 @@ export default function GoalBuilder() {
             </div>
           </div>
 
-          {/* Points + Boss */}
-          <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                {t.teacher.goalPoints}
-              </label>
-              <input
-                type="number"
-                value={points}
-                onChange={e => setPoints(Number(e.target.value))}
-                min={10}
-                max={1000}
-                style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.75rem 1rem", fontWeight: 700, fontSize: "1rem", outline: "none", background: "var(--cream)", color: "var(--butter)", boxSizing: "border-box" }}
-              />
-            </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", paddingBottom: "0.65rem" }}>
-              <input type="checkbox" checked={isBoss} onChange={e => setIsBoss(e.target.checked)} style={{ width: 16, height: 16, accentColor: "var(--peach)" }} />
-              <span style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--charcoal)" }}>{t.teacher.goalBossNode}</span>
+          {/* Points */}
+          <div>
+            <label style={{ display: "block", fontWeight: 700, fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              {t.teacher.goalPoints}
             </label>
+            <input
+              type="number"
+              value={points}
+              onChange={e => setPoints(Number(e.target.value))}
+              min={10}
+              max={1000}
+              style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.75rem 1rem", fontWeight: 700, fontSize: "1rem", outline: "none", background: "var(--cream)", color: "var(--butter)", boxSizing: "border-box" }}
+            />
           </div>
 
           {/* Bonus challenge */}
@@ -296,55 +288,6 @@ export default function GoalBuilder() {
           >
             {saved ? t.teacher.goalAdded : saving ? t.common.saving : t.teacher.goalAddToPath}
           </button>
-        </div>
-
-        {/* Path preview */}
-        <div className="card-base" style={{ padding: "1.25rem" }}>
-          <div style={{ fontWeight: 700, fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>
-            {mode === "self" ? "My Path" : t.teacher.goalPathPreview.replace("{name}", students.find(s => s.id === selectedStudentId)?.display_name || "Student")}
-          </div>
-          {studentGoals.length === 0 && !title ? (
-            <div style={{ textAlign: "center", padding: "2rem 0" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🗺</div>
-              <p style={{ color: "var(--muted)", fontSize: "0.8rem", margin: 0 }}>{t.teacher.goalNoGoalsYet}</p>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              {studentGoals.map((g, i) => {
-                const a = AREAS.find(x => x.value === g.practice_area) ?? AREAS[0];
-                const statusColor = g.status === "completed" ? "var(--sage)" : g.status === "current" ? a.color : "var(--border)";
-                return (
-                  <div key={g.id} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: i % 2 === 0 ? "flex-end" : "flex-start" }}>
-                    {i > 0 && <div style={{ width: 2, height: 18, background: statusColor, opacity: 0.5, marginRight: i % 2 === 0 ? 23 : undefined, marginLeft: i % 2 === 0 ? undefined : 23 }} />}
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <div style={{
-                        width: 28, height: 28,
-                        borderRadius: g.is_boss ? 8 : 100,
-                        background: g.status === "completed" ? "var(--sage-bg)" : a.bg,
-                        border: `2px solid ${statusColor}`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "0.75rem", flexShrink: 0,
-                      }}>
-                        {g.status === "completed" ? <Check size={12} strokeWidth={2} /> : a.icon}
-                      </div>
-                      <span style={{ fontSize: "0.7rem", color: "var(--charcoal)", fontWeight: 600, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.title}</span>
-                    </div>
-                  </div>
-                );
-              })}
-              {title && (
-                <>
-                  <div style={{ width: 2, height: 18, background: "var(--border)", opacity: 0.5 }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", opacity: 0.7 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: isBoss ? 8 : 100, background: selectedArea.bg, border: `2px dashed ${selectedArea.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem" }}>
-                      {selectedArea.icon}
-                    </div>
-                    <span style={{ fontSize: "0.7rem", color: "var(--charcoal)", fontStyle: "italic", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

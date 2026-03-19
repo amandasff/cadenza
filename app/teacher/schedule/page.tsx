@@ -203,6 +203,10 @@ export default function SchedulePage() {
   const recordingChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // View toggle: list or week
+  const [viewMode, setViewMode] = useState<"list" | "week">("list");
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, etc.
+
   const loadData = useCallback(async () => {
     if (!teacher?.studioId) return;
     setLoading(true);
@@ -234,6 +238,7 @@ export default function SchedulePage() {
     try {
       const lessonService = LessonService.create(supabase);
       const lessonData = await lessonService.getUpcomingLessonsWithContext(teacher.id);
+      lessonData.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
       setLessons(lessonData);
 
       const noteDraftInit: Record<string, string> = {};
@@ -563,10 +568,68 @@ export default function SchedulePage() {
 
   const groups = groupByDay(lessons, t.schedule.today, t.schedule.tomorrow);
 
+  // ── Week view helpers ──────────────────────────────────────────
+  const HOUR_HEIGHT = 56; // px per hour
+  const DAY_START_HOUR = 7; // 7am
+  const DAY_END_HOUR = 21;  // 9pm
+  const TOTAL_HOURS = DAY_END_HOUR - DAY_START_HOUR;
+
+  function getWeekStart(offset: number): Date {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
+
+  const weekStartDate = getWeekStart(weekOffset);
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStartDate);
+    d.setDate(weekStartDate.getDate() + i);
+    return d;
+  });
+
+  const weekLessons = lessons.filter(l => {
+    const d = new Date(l.scheduled_at);
+    return d >= weekDays[0] && d < new Date(weekDays[6].getTime() + 24 * 3600 * 1000);
+  });
+
+  const studentColors = [
+    "var(--rose)", "var(--sky)", "var(--sage)", "var(--butter)", "var(--lavender)", "var(--peach)"
+  ];
+  const studentColorMap: Record<string, string> = {};
+  let colorIdx = 0;
+  for (const l of lessons) {
+    const key = l.student_id ?? l.external_student_id ?? "unknown";
+    if (!studentColorMap[key]) {
+      studentColorMap[key] = studentColors[colorIdx % studentColors.length];
+      colorIdx++;
+    }
+  }
+
+  const hourLabels = Array.from({ length: TOTAL_HOURS }, (_, i) => {
+    const h = DAY_START_HOUR + i;
+    return h === 12 ? "12pm" : h < 12 ? `${h}am` : `${h - 12}pm`;
+  });
+
+  const weekLabel = (() => {
+    const start = weekDays[0];
+    const end = weekDays[6];
+    const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+    if (start.getFullYear() !== end.getFullYear()) {
+      return `${start.toLocaleDateString([], { ...opts, year: "numeric" })} – ${end.toLocaleDateString([], { ...opts, year: "numeric" })}`;
+    }
+    if (start.getMonth() !== end.getMonth()) {
+      return `${start.toLocaleDateString([], opts)} – ${end.toLocaleDateString([], opts)}, ${end.getFullYear()}`;
+    }
+    return `${start.toLocaleDateString([], opts)} – ${end.getDate()}, ${end.getFullYear()}`;
+  })();
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1.5rem" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "0.75rem" }}>
         <div>
           <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 600, fontSize: "1.75rem", color: "var(--charcoal)", margin: 0 }}>
             {t.nav.schedule}
@@ -575,13 +638,169 @@ export default function SchedulePage() {
             {t.schedule.upcomingLessons}
           </p>
         </div>
-        <button onClick={() => setShowScheduleModal(true)} style={btnPrimary}>
-          + {t.schedule.scheduleLesson}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+          {/* View toggle */}
+          <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+            {(["list", "week"] as const).map(v => (
+              <button key={v} onClick={() => setViewMode(v)} style={{
+                padding: "0.375rem 0.875rem", border: "none", cursor: "pointer",
+                background: viewMode === v ? "var(--charcoal)" : "transparent",
+                color: viewMode === v ? "var(--white)" : "var(--muted)",
+                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 500,
+                transition: "all 0.15s",
+              }}>
+                {v === "list" ? "List" : "Week"}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowScheduleModal(true)} style={btnPrimary}>
+            + {t.schedule.scheduleLesson}
+          </button>
+        </div>
       </div>
 
+      {/* Week view */}
+      {viewMode === "week" && !loading && (
+        <div>
+          {/* Week navigation */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+            <button
+              onClick={() => setWeekOffset(w => w - 1)}
+              disabled={weekOffset <= 0}
+              style={{ padding: "0.375rem 0.75rem", border: "1px solid var(--border)", borderRadius: 4, background: "var(--white)", cursor: weekOffset <= 0 ? "default" : "pointer", opacity: weekOffset <= 0 ? 0.35 : 1, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)" }}
+            >◀</button>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 500, color: "var(--charcoal)", minWidth: 200, textAlign: "center" }}>{weekLabel}</span>
+            <button
+              onClick={() => setWeekOffset(w => w + 1)}
+              style={{ padding: "0.375rem 0.75rem", border: "1px solid var(--border)", borderRadius: 4, background: "var(--white)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)" }}
+            >▶</button>
+          </div>
+
+          {/* Week grid */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: 4, background: "var(--white)", overflow: "auto" }}>
+            {/* Day headers */}
+            <div style={{ display: "grid", gridTemplateColumns: "52px repeat(7, 1fr)", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ borderRight: "1px solid var(--border)" }} />
+              {weekDays.map(d => {
+                const isToday = d.toDateString() === new Date().toDateString();
+                return (
+                  <div key={d.toISOString()} style={{
+                    textAlign: "center", padding: "0.5rem 0.25rem",
+                    fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600,
+                    color: isToday ? "var(--charcoal)" : "var(--muted)",
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                    borderRight: "1px solid var(--border)",
+                    background: isToday ? "var(--cream)" : "transparent",
+                  }}>
+                    <div>{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][d.getDay() === 0 ? 6 : d.getDay() - 1]}</div>
+                    <div style={{
+                      marginTop: 2, fontSize: "1rem", fontWeight: isToday ? 700 : 400,
+                      color: isToday ? "var(--charcoal)" : "var(--muted)",
+                    }}>{d.getDate()}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Time grid */}
+            <div style={{ position: "relative", display: "grid", gridTemplateColumns: "52px repeat(7, 1fr)" }}>
+              {/* Hour rows */}
+              {hourLabels.map((label, i) => (
+                <React.Fragment key={label}>
+                  <div style={{
+                    height: HOUR_HEIGHT, borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border-light, var(--border))",
+                    display: "flex", alignItems: "flex-start", justifyContent: "flex-end",
+                    padding: "0.125rem 0.375rem 0 0",
+                    fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)",
+                    flexShrink: 0,
+                  }}>
+                    {i > 0 ? label : ""}
+                  </div>
+                  {weekDays.map(d => {
+                    const isToday = d.toDateString() === new Date().toDateString();
+                    return (
+                      <div key={d.toISOString()} style={{
+                        height: HOUR_HEIGHT, borderRight: "1px solid var(--border)", borderBottom: "1px solid rgba(0,0,0,0.04)",
+                        background: isToday ? "rgba(0,0,0,0.012)" : "transparent",
+                        position: "relative",
+                      }} />
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+
+              {/* Lesson blocks — overlay on top of time grid */}
+              {weekLessons.map(lesson => {
+                const d = new Date(lesson.scheduled_at);
+                const dayIdx = (() => {
+                  const dow = d.getDay(); // 0=Sun
+                  return dow === 0 ? 6 : dow - 1; // Mon=0..Sun=6
+                })();
+                const startMin = (d.getHours() - DAY_START_HOUR) * 60 + d.getMinutes();
+                const duration = lesson.duration_minutes ?? 45;
+                const top = (startMin / 60) * HOUR_HEIGHT;
+                const height = Math.max(22, (duration / 60) * HOUR_HEIGHT - 2);
+                const color = studentColorMap[lesson.student_id ?? lesson.external_student_id ?? "unknown"] ?? "var(--sage)";
+                return (
+                  <div
+                    key={lesson.id}
+                    onClick={() => { setViewMode("list"); setExpandedId(lesson.id); }}
+                    style={{
+                      position: "absolute",
+                      top: top + (d.getHours() >= DAY_START_HOUR ? 0 : 0),
+                      left: `calc(52px + ${dayIdx} * ((100% - 52px) / 7) + 2px)`,
+                      width: `calc((100% - 52px) / 7 - 4px)`,
+                      height,
+                      background: color,
+                      borderRadius: 3,
+                      padding: "0.125rem 0.375rem",
+                      cursor: "pointer",
+                      overflow: "hidden",
+                      zIndex: 1,
+                      opacity: 0.85,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 700, color: "var(--white)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {lesson.student_name}
+                    </div>
+                    {height > 30 && (
+                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "rgba(255,255,255,0.85)" }}>
+                        {d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Current time indicator */}
+              {(() => {
+                const now = new Date();
+                const isThisWeek = weekOffset === 0;
+                if (!isThisWeek) return null;
+                const nowMin = (now.getHours() - DAY_START_HOUR) * 60 + now.getMinutes();
+                if (nowMin < 0 || nowMin > TOTAL_HOURS * 60) return null;
+                const top = (nowMin / 60) * HOUR_HEIGHT;
+                const todayIdx = (() => { const dow = now.getDay(); return dow === 0 ? 6 : dow - 1; })();
+                return (
+                  <div style={{
+                    position: "absolute",
+                    top,
+                    left: `calc(52px + ${todayIdx} * ((100% - 52px) / 7))`,
+                    width: `calc((100% - 52px) / 7)`,
+                    height: 2, background: "#c0392b", zIndex: 2, pointerEvents: "none",
+                  }}>
+                    <div style={{ position: "absolute", left: -4, top: -4, width: 8, height: 8, borderRadius: "50%", background: "#c0392b" }} />
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Lesson list */}
-      {loading ? (
+      {viewMode === "list" && (loading ? (
         <div style={{ color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>Loading…</div>
       ) : groups.length === 0 ? (
         <div style={{
@@ -866,7 +1085,7 @@ export default function SchedulePage() {
             })}
           </div>
         ))
-      )}
+      ))}
 
       {/* ── Complete Lesson Modal ─────────────────────────────── */}
       {completingLesson && (
