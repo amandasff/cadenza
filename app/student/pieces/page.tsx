@@ -35,8 +35,23 @@ export default function MyPieces() {
     completed:         { label: t.student.statusCompleted,         icon: <Star size={12} strokeWidth={1.5} />, color: "#7A6A5A", bg: "rgba(138,122,106,0.1)" },
   };
 
+  const isTeacher = user?.role === "teacher";
+
+  const CATEGORIES = [
+    { value: "technique",     label: "Technique" },
+    { value: "etude",         label: "Etude" },
+    { value: "repertoire",    label: "Repertoire" },
+    { value: "theory",        label: "Theory" },
+    { value: "ear_training",  label: "Ear Training" },
+    { value: "sight_reading", label: "Sight Reading" },
+    { value: "free",          label: "Other" },
+  ];
+
   const [pieces, setPieces]               = useState<PieceWithGoals[]>([]);
   const [loading, setLoading]             = useState(true);
+  const [showAddPiece, setShowAddPiece]   = useState(false);
+  const [addingPiece, setAddingPiece]     = useState(false);
+  const [pieceForm, setPieceForm]         = useState({ title: "", composer: "", category: "repertoire" });
   const [searchOpenFor, setSearchOpenFor] = useState<string | null>(null);
   const [managingPieceId, setManagingPieceId] = useState<string | null>(null);
   const [uploadingFor, setUploadingFor]   = useState<string | null>(null);
@@ -263,6 +278,29 @@ export default function MyPieces() {
     } catch (err) { console.error(err); }
   }
 
+  async function handleAddPiece(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pieceForm.title.trim() || !student?.id || !student?.studioId) return;
+    setAddingPiece(true);
+    try {
+      const newPiece = await PieceService.create(supabase).createPiece({
+        studentId: student.id,
+        teacherId: student.id,
+        studioId: student.studioId,
+        title: pieceForm.title.trim(),
+        composer: pieceForm.composer.trim() || undefined,
+        category: pieceForm.category,
+      });
+      setPieces(prev => [...prev, { ...newPiece, goals: [], recordings: [] }]);
+      setPieceForm({ title: "", composer: "", category: "repertoire" });
+      setShowAddPiece(false);
+    } catch (err) {
+      setUploadError((err as { message?: string })?.message ?? "Could not add piece.");
+    } finally {
+      setAddingPiece(false);
+    }
+  }
+
   function handlePlayPiece(piece: PieceWithGoals) {
     if (!piece.recordings.length) return;
     const tracks = piece.recordings.map(r => ({ id: r.youtube_id, title: r.title, thumbnail: r.thumbnail_url ?? undefined }));
@@ -318,7 +356,52 @@ export default function MyPieces() {
         <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center", margin: "0.5rem 0 0", lineHeight: 1.5 }}>
           {t.student.myPiecesDesc}
         </p>
+        {isTeacher && (
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "1rem" }}>
+            <button
+              onClick={() => setShowAddPiece(v => !v)}
+              style={{ ...btnPrimary, fontSize: "0.8125rem", padding: "0.5rem 1.25rem" }}
+            >
+              {showAddPiece ? "Cancel" : "+ Add Piece"}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Add piece form (teachers only) */}
+      {isTeacher && showAddPiece && (
+        <form onSubmit={handleAddPiece} style={{ marginBottom: "1.5rem", padding: "1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 12, display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+          <input
+            required
+            value={pieceForm.title}
+            onChange={e => setPieceForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="Title (e.g. Waltz in A minor)"
+            style={{ padding: "0.625rem 0.875rem", borderRadius: 8, border: "1px solid var(--border)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none", width: "100%", boxSizing: "border-box" }}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+            <input
+              value={pieceForm.composer}
+              onChange={e => setPieceForm(f => ({ ...f, composer: e.target.value }))}
+              placeholder="Composer (optional)"
+              style={{ padding: "0.625rem 0.875rem", borderRadius: 8, border: "1px solid var(--border)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}
+            />
+            <select
+              value={pieceForm.category}
+              onChange={e => setPieceForm(f => ({ ...f, category: e.target.value }))}
+              style={{ padding: "0.625rem 0.875rem", borderRadius: 8, border: "1px solid var(--border)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", color: "var(--charcoal)", outline: "none" }}
+            >
+              {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={addingPiece || !pieceForm.title.trim()}
+            style={{ ...btnPrimary, opacity: addingPiece || !pieceForm.title.trim() ? 0.5 : 1, justifyContent: "center" }}
+          >
+            {addingPiece ? "Adding…" : "Add Piece"}
+          </button>
+        </form>
+      )}
 
       {/* Global error */}
       {uploadError && (
