@@ -11,15 +11,34 @@ import Link from "next/link";
 const TeacherHomeDemo = dynamic(() => import("../components/demo/TeacherHomeDemo"), { ssr: false });
 const StudentHomeDemo = dynamic(() => import("../components/demo/StudentHomeDemo"), { ssr: false });
 
-const PROOF_LINES = [
-  "Share your practice with teachers — get real feedback between lessons",
-  "Track your practice journey, share it, and discover others",
-  "Upload your pieces and sheet music, set goals, see progress",
-  "Earn streaks, collect composer cards, climb leaderboards, play music games",
-  "Ask the AI tutor anything — it always has time",
-  "Find and listen to music you actually want to learn",
-  "Tuner, metronome, and full chords directory",
-];
+const COPY = {
+  student: {
+    headline: "Practice like\nsomeone's listening.",
+    subline: "Everything between lessons, in one place.",
+    bullets: [
+      "Stuck on a passage? Your AI tutor is always there — any time, between lessons",
+      "Earn composer cards, keep your streak alive, climb leaderboards — practice feels like a game",
+      "Discover songs you love, then learn them — browse what everyone else is playing",
+      "Your teacher hears every session and leaves feedback right where you need it",
+      "Your pieces, sheet music, and goals — all in one place",
+      "Track your practice journey over time and share it",
+      "Tuner, metronome, and a complete chord library — always built in",
+    ],
+  },
+  teacher: {
+    headline: "Hear every practice,\nbefore every lesson.",
+    subline: "Your students practice more. You'll hear the difference.",
+    bullets: [
+      "Walk into every lesson already knowing what your student struggled with this week",
+      "Leave a voice note on the exact measure they got wrong — feedback that lands while it's fresh",
+      "Streaks and leaderboards make students want to practice — you stop chasing them",
+      "An AI tutor answers their questions between lessons — they arrive more prepared",
+      "Assign repertoire, set goals, and track every student from one place",
+      "Students discover music they love — less convincing them, more teaching them",
+      "Tuner, metronome, and chords built in — no excuses, no forgotten equipment",
+    ],
+  },
+};
 
 export default function Home() {
   const router = useRouter();
@@ -192,16 +211,17 @@ export default function Home() {
               fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500,
               fontSize: "clamp(1.75rem, 4vw, 2.875rem)", color: "#2C2824",
               lineHeight: 1.08, letterSpacing: "-0.02em", margin: "0 0 0.625rem",
+              whiteSpace: "pre-line",
             }}>
-              Practice like<br />someone&apos;s listening.
+              {COPY[role].headline}
             </h1>
 
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9rem", color: "#8A8580", lineHeight: 1.5, margin: "0 0 1.5rem" }}>
-              Everything between lessons, in one place.
+              {COPY[role].subline}
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.75rem" }}>
-              {PROOF_LINES.map(line => (
+              {COPY[role].bullets.map(line => (
                 <div key={line} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#2C2824" }}>
                   <span style={{ color: "#5B9E79", flexShrink: 0, lineHeight: "1.4rem" }}>—</span>
                   {line}
