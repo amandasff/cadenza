@@ -14,8 +14,8 @@ const StudentHomeDemo = dynamic(() => import("../components/demo/StudentHomeDemo
 const PROOF_LINES = [
   "Records every practice session automatically",
   "Streaks and composer collectibles to earn",
-  "Goals set by their teacher, tracked by the student",
-  "Teacher hears everything — no surprises at lessons",
+  "Goals set by your teacher, tracked by you",
+  "Your teacher hears it all — no surprises at lessons",
 ];
 
 export default function Home() {
@@ -190,13 +190,13 @@ export default function Home() {
               fontSize: "clamp(2rem, 4vw, 3rem)", color: "#2C2824",
               lineHeight: 1.05, letterSpacing: "-0.02em", margin: "0 0 1rem",
             }}>
-              The practice app<br />kids actually open.
+              The practice app<br />you&apos;ll actually open.
             </h1>
 
             <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", color: "#6B6560", lineHeight: 1.7, margin: "0 0 1.5rem", maxWidth: 320 }}>
               {role === "teacher"
                 ? "Cadenza records every practice session and delivers it to you — so you walk into every lesson knowing exactly where they left off."
-                : "Practice streaks, composer collectibles, and goals from your teacher — all in one place."
+                : "Streaks, collectibles, and goals from your teacher — all in one place."
               }
             </p>
 
