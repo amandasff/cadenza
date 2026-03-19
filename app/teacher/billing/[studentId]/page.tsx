@@ -129,9 +129,9 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
 
       const pm = periodMonth(year, month);
       const [lsns, inv, hist] = await Promise.all([
-        billing.getBillableLessons(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null, year, month),
+        billing.getBillableLessons(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null, year, month).catch(() => [] as LessonRow[]),
         cfg ? billing.getInvoice(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null, pm) : Promise.resolve(null),
-        cfg ? billing.getInvoices(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null) : Promise.resolve([]),
+        cfg ? billing.getInvoices(teacher.id, detectedIsExternal ? null : studentId, detectedIsExternal ? studentId : null).catch(() => [] as TuitionRecordRow[]) : Promise.resolve([]),
       ]);
 
       setLessons(lsns);
@@ -170,7 +170,8 @@ export default function StudentBillingPage({ params }: { params: Promise<{ stude
         setLinkableStudents(await resolveNames(otherConfigs));
       }
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to load billing data");
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Failed to load billing data";
+      setSaveError(msg);
     } finally {
       setLoading(false);
     }

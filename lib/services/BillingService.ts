@@ -89,7 +89,7 @@ export class BillingService {
       .eq('teacher_id', teacherId)
       .gte('scheduled_at', start)
       .lt('scheduled_at', nextMonth)
-      .neq('attendance', 'cancelled');
+      .or('attendance.neq.cancelled,attendance.is.null');
 
     if (studentId) {
       query = query.eq('student_id', studentId);

@@ -46,10 +46,12 @@ export default function BillingPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!teacher?.id || !teacher?.studioId) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const [configs, allProfiles, allExternal] = await Promise.all([
         billing.getAllConfigs(teacher.id),
@@ -92,6 +94,9 @@ export default function BillingPage() {
 
       result.sort((a, b) => a.student.name.localeCompare(b.student.name));
       setRows(result);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Failed to load billing data";
+      setLoadError(msg);
     } finally {
       setLoading(false);
     }
@@ -173,6 +178,12 @@ export default function BillingPage() {
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 68, borderRadius: 4 }} />)}
+        </div>
+      ) : loadError ? (
+        <div style={{ textAlign: "center", padding: "3rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
+          <div style={{ color: "#c0392b", marginBottom: "0.5rem" }}>Failed to load billing data</div>
+          <div style={{ color: "var(--muted)", fontSize: "0.75rem", fontFamily: "monospace" }}>{loadError}</div>
+          <div style={{ color: "var(--muted)", marginTop: "1rem", fontSize: "0.8125rem" }}>Make sure you have run <code>add_simple_billing.sql</code> and <code>add_family_billing.sql</code> in your Supabase dashboard.</div>
         </div>
       ) : rows.length === 0 ? (
         <div style={{ textAlign: "center", padding: "3rem 1.5rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
