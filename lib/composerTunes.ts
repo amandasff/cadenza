@@ -62,7 +62,7 @@ const MOTIFS: Record<string, Note[]> = {
   Chopin: [
     { freq: Bb4, duration: 0.45, delay: 0 },
     { freq: Eb5, duration: 0.35, delay: 0.55 },
-    { freq: Db5, duration: 0.20, delay: 1.00 }, // Cs5 = Db5
+    { freq: Cs5, duration: 0.20, delay: 1.00 }, // Db5 = Cs5
     { freq: Bb4, duration: 0.15, delay: 1.25 },
     { freq: A4,  duration: 0.15, delay: 1.45 }, // Ab4 approx A4 for simplicity
     { freq: G4,  duration: 0.50, delay: 1.65 },
