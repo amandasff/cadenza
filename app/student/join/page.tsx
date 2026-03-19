@@ -34,6 +34,7 @@ function StudentJoinInner() {
   const [joining, setJoining] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
   const [searchError, setSearchError] = useState("");
+  const [goingSolo, setGoingSolo] = useState(false);
 
   // ── Search ───────────────────────────────────────────────────
   const fetchStudios = useCallback(async (term: string) => {
@@ -86,6 +87,23 @@ function StudentJoinInner() {
   useEffect(() => {
     if (urlCode) lookupCode(urlCode);
   }, [urlCode, lookupCode]);
+
+  // ── Solo mode ─────────────────────────────────────────────────
+  async function handleGoSolo() {
+    if (!user || goingSolo) return;
+    setGoingSolo(true);
+    try {
+      await fetch("/api/student/solo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      await refresh();
+      router.replace("/student");
+    } catch {
+      setGoingSolo(false);
+    }
+  }
 
   // ── Join ──────────────────────────────────────────────────────
   async function handleJoin(studioId: string) {
@@ -343,15 +361,43 @@ function StudentJoinInner() {
           </>
         )}
 
+        {/* Divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "2rem 0 1.25rem" }}>
+          <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+        </div>
+
+        {/* Solo option */}
+        <button
+          onClick={handleGoSolo}
+          disabled={goingSolo}
+          style={{
+            width: "100%",
+            padding: "0.875rem",
+            borderRadius: 8,
+            border: "1.5px solid var(--border-strong)",
+            background: "transparent",
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 500,
+            fontSize: "0.9375rem",
+            color: "var(--charcoal)",
+            cursor: goingSolo ? "default" : "pointer",
+            opacity: goingSolo ? 0.6 : 1,
+            transition: "all 0.15s",
+          }}
+        >
+          {goingSolo ? "Setting up…" : "🎵 Learn on my own for now"}
+        </button>
         <p style={{
           textAlign: "center",
           fontFamily: "Inter, sans-serif",
           fontSize: "0.75rem",
           color: "var(--muted)",
-          marginTop: "2rem",
+          marginTop: "0.625rem",
           lineHeight: 1.6,
         }}>
-          {t.student.joinDontSee}
+          You can join a teacher&apos;s studio anytime later.
         </p>
 
       </div>

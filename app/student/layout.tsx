@@ -157,7 +157,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     if (user.role === "teacher") return;
     if (user.role !== "student") { router.replace("/auth/login"); return; }
     const student = user as Student;
-    if (!student.studioId && path !== "/student/join") {
+    if (!student.studioId && !student.isSolo && path !== "/student/join") {
       router.replace("/student/join");
     }
   }, [user, loading, path, router]);
@@ -649,7 +649,20 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       </aside>
 
       {/* ── Scrollable content area ── */}
-      <ScrollArea>{children}</ScrollArea>
+      <ScrollArea>
+        {/* Solo mode banner */}
+        {(user as Student | null)?.isSolo && !isTeacherPracticing && (
+          <div style={{ background: "var(--butter-bg)", borderBottom: "1px solid var(--butter-light, #f0d080)", padding: "0.625rem 1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", flex: 1 }}>
+              🎵 You&apos;re learning solo — join a teacher&apos;s studio to unlock goals, feedback, and lessons.
+            </span>
+            <a href="/student/join" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, color: "var(--charcoal)", textDecoration: "none", whiteSpace: "nowrap", border: "1px solid var(--charcoal)", borderRadius: 4, padding: "0.25rem 0.75rem" }}>
+              Find a teacher →
+            </a>
+          </div>
+        )}
+        {children}
+      </ScrollArea>
 
       {/* ── Mobile bottom nav (hidden ≥700px via CSS) ── */}
       {(() => {

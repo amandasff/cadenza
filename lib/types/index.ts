@@ -9,6 +9,7 @@ export interface ProfileRow {
   total_days_practiced?: number;
   streak_freeze_count?: number;
   studio_id: string | null;
+  is_solo?: boolean;
   avatar_url?: string | null;
   bio?: string | null;
   instrument?: string | null;

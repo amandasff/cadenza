@@ -7,6 +7,7 @@ export class Student extends User {
   public totalDaysPracticed: number;
   public studioId: string | null;
   public streakFreezeCount: number;
+  public isSolo: boolean;
 
   constructor(profile: ProfileRow, email: string) {
     super(
@@ -21,6 +22,7 @@ export class Student extends User {
     this.totalDaysPracticed = profile.total_days_practiced ?? 0;
     this.studioId = profile.studio_id;
     this.streakFreezeCount = profile.streak_freeze_count ?? 0;
+    this.isSolo = profile.is_solo ?? false;
   }
 
   getHomeRoute(): string {
