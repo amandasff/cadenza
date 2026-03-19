@@ -224,7 +224,7 @@ export default function TeacherDashboard() {
           letterSpacing: "-0.01em",
           lineHeight: 1.1,
         }}>
-          {getGreetingKey() === "morning" ? t.teacher.greetingMorning : getGreetingKey() === "afternoon" ? t.teacher.greetingAfternoon : t.teacher.greetingEvening}, {teacher?.displayName?.split(" ")[0]}.
+          {getGreetingKey() === "morning" ? t.teacher.greetingMorning : getGreetingKey() === "afternoon" ? t.teacher.greetingAfternoon : t.teacher.greetingEvening}, {teacher?.displayName}.
         </h1>
         <p style={{
           color: "var(--muted)",
@@ -306,6 +306,11 @@ export default function TeacherDashboard() {
             >
               {copied ? t.common.copied : t.common.copy}
             </button>
+          </div>
+
+          {/* Search row */}
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", lineHeight: 1.5 }}>
+            Students can also find your studio by searching for <span style={{ fontWeight: 600, color: "var(--charcoal)" }}>{teacher.studioName}</span> in Cadenza.
           </div>
         </div>
       )}
