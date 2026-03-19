@@ -11,32 +11,38 @@ import Link from "next/link";
 const TeacherHomeDemo = dynamic(() => import("../components/demo/TeacherHomeDemo"), { ssr: false });
 const StudentHomeDemo = dynamic(() => import("../components/demo/StudentHomeDemo"), { ssr: false });
 
-const COPY = {
+const STUDENT_BULLETS = [
+  "Play music games, earn streaks, climb leaderboards, and collect avatars",
+  "Learn anything from an AI tutor",
+  "Share your practice with teachers, receive feedback between lessons",
+  "Find and listen to music you like",
+  "Upload pieces for easy access, and goal setting",
+  "Track your practice journey, share it, and discover others",
+  "Tuner, metronome, and full chords directory",
+];
+
+const TEACHER_BULLETS = [
+  "Share your practice with teachers, receive feedback between lessons",
+  "Play music games, earn streaks, climb leaderboards, and collect avatars",
+  "Upload pieces for easy access, and goal setting",
+  "Learn anything from an AI tutor",
+  "Track your practice journey, share it, and discover others",
+  "Find and listen to music you like",
+  "Tuner, metronome, and full chords directory",
+];
+
+const COPY: Record<string, { headline: string; subline: string; sub2: string; bullets: string[] }> = {
   student: {
-    headline: "Practice like\nsomeone's listening.",
-    subline: "Everything between lessons, in one place.",
-    bullets: [
-      "Stuck on a passage? Your AI tutor is always there — any time, between lessons",
-      "Earn composer cards, keep your streak alive, climb leaderboards — practice feels like a game",
-      "Discover songs you love, then learn them — browse what everyone else is playing",
-      "Your teacher hears every session and leaves feedback right where you need it",
-      "Your pieces, sheet music, and goals — all in one place",
-      "Track your practice journey over time and share it",
-      "Tuner, metronome, and a complete chord library — always built in",
-    ],
+    headline: "Practice every day.\nActually enjoy it.",
+    subline: "Learn faster, level up, and keep everything in one place.",
+    sub2: "Try for free in 10 seconds.",
+    bullets: STUDENT_BULLETS,
   },
   teacher: {
-    headline: "Hear every practice,\nbefore every lesson.",
-    subline: "Your students practice more. You'll hear the difference.",
-    bullets: [
-      "Walk into every lesson already knowing what your student struggled with this week",
-      "Leave a voice note on the exact measure they got wrong — feedback that lands while it's fresh",
-      "Streaks and leaderboards make students want to practice — you stop chasing them",
-      "An AI tutor answers their questions between lessons — they arrive more prepared",
-      "Assign repertoire, set goals, and track every student from one place",
-      "Students discover music they love — less convincing them, more teaching them",
-      "Tuner, metronome, and chords built in — no excuses, no forgotten equipment",
-    ],
+    headline: "Your students\nwill actually practice.",
+    subline: "And you'll know exactly how it went.",
+    sub2: "Try for free in 10 seconds.",
+    bullets: TEACHER_BULLETS,
   },
 };
 
@@ -213,15 +219,18 @@ export default function Home() {
               lineHeight: 1.08, letterSpacing: "-0.02em", margin: "0 0 0.625rem",
               whiteSpace: "pre-line",
             }}>
-              {COPY[role].headline}
+              {(COPY[role] ?? COPY.student).headline}
             </h1>
 
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9rem", color: "#8A8580", lineHeight: 1.5, margin: "0 0 1.5rem" }}>
-              {COPY[role].subline}
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9rem", color: "#6B6560", lineHeight: 1.5, margin: "0 0 0.375rem" }}>
+              {(COPY[role] ?? COPY.student).subline}
+            </p>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8rem", color: "#5B9E79", fontWeight: 600, letterSpacing: "0.01em", margin: "0 0 1.25rem" }}>
+              {(COPY[role] ?? COPY.student).sub2}
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.75rem" }}>
-              {COPY[role].bullets.map(line => (
+              {(COPY[role] ?? COPY.student).bullets.map(line => (
                 <div key={line} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#2C2824" }}>
                   <span style={{ color: "#5B9E79", flexShrink: 0, lineHeight: "1.4rem" }}>—</span>
                   {line}
