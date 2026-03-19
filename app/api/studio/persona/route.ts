@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const composers = ((collectiblesRes.data ?? []) as Array<{ composer_avatars: { composer_name: string; rarity: string } | null }>)
-      .map(c => c.composer_avatars?.composer_name)
+    const composers = ((collectiblesRes.data ?? []) as Array<{ composer_avatars: { composer_name: string; rarity: string }[] | null }>)
+      .map(c => Array.isArray(c.composer_avatars) ? c.composer_avatars[0]?.composer_name : (c.composer_avatars as unknown as { composer_name: string } | null)?.composer_name)
       .filter(Boolean);
 
     const pieces = ((piecesRes.data ?? []) as Array<{ title: string; composer: string | null; status: string }>)
