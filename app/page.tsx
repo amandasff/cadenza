@@ -290,10 +290,9 @@ export default function Home() {
             ) : (
               <>
                 <div style={{ padding: "1.75rem 1.75rem 0" }}>
-                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500, fontSize: "1.25rem", color: "#2C2824", marginBottom: "0.25rem" }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem", color: "#8A8580", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.875rem" }}>
                     Welcome back
                   </div>
-                  <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#8A8580", margin: "0 0 1.25rem" }}>Sign in to your account</p>
                 </div>
                 <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "0 1.75rem 1.25rem" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
