@@ -533,19 +533,19 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 const active = tab.exact ? path === tab.href : path.startsWith(tab.href);
                 const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
                 return (
-                  <a key={tab.href} href={tab.href} style={{
-                    display: "flex", alignItems: "center",
-                    padding: "0.5rem 0.75rem",
+                  <button key={tab.href} onClick={() => { window.location.href = tab.href; }} style={{
+                    display: "flex", alignItems: "center", width: "100%",
+                    padding: "0.5rem 0.75rem", border: "none", cursor: "pointer",
                     borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
                     background: active ? "var(--cream-deep)" : "transparent",
                     color: active ? "var(--charcoal)" : "var(--muted)",
                     fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
-                    fontSize: "0.875rem", textDecoration: "none",
+                    fontSize: "0.875rem", textAlign: "left",
                     transition: "all 0.15s", letterSpacing: "0.005em",
                   }}>
                     {tab.label}
                     {showDot && <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />}
-                  </a>
+                  </button>
                 );
               })}
               <div style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", padding: "0 0.75rem 0.375rem", marginTop: "1.25rem" }}>
@@ -666,15 +666,15 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           }}>
             {activePrimaryTabs.map(tab => {
               const active = (tab as { exact?: boolean }).exact ? path === tab.href : path.startsWith(tab.href);
-              // Use <a> for cross-segment navigation (teacher ↔ student) — <Link> silently fails across App Router segment trees
-              const NavTag = tab.href.startsWith("/teacher/") || tab.href === "/teacher" ? "a" : Link;
-              return (
-                <NavTag key={tab.href} href={tab.href} style={{
-                  flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
-                  textDecoration: "none", padding: "0.375rem 0",
-                  color: active ? "var(--charcoal)" : "var(--muted)",
-                  transition: "color 0.15s", position: "relative",
-                }}>
+              const isTeacherRoute = tab.href.startsWith("/teacher/") || tab.href === "/teacher";
+              const sharedStyle = {
+                flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", gap: "3px",
+                textDecoration: "none", padding: "0.375rem 0",
+                color: active ? "var(--charcoal)" : "var(--muted)",
+                transition: "color 0.15s", position: "relative" as const,
+              };
+              const inner = (
+                <>
                   {active && (
                     <div style={{
                       position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
@@ -688,7 +688,19 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                   }}>
                     {tab.label}
                   </span>
-                </NavTag>
+                </>
+              );
+              if (isTeacherRoute) {
+                return (
+                  <button key={tab.href} onClick={() => { window.location.href = tab.href; }} style={{ ...sharedStyle, background: "none", border: "none", cursor: "pointer" }}>
+                    {inner}
+                  </button>
+                );
+              }
+              return (
+                <Link key={tab.href} href={tab.href} style={sharedStyle}>
+                  {inner}
+                </Link>
               );
             })}
 
@@ -752,17 +764,17 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                   const active = path.startsWith(tab.href);
                   const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
                   return (
-                    // Use <a> — all studio tabs point to /teacher/* (cross-segment from /student/*)
-                    <a key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                    <button key={tab.href} onClick={() => { setMoreOpen(false); window.location.href = tab.href; }} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
                       padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
                       fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
-                      textDecoration: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                      border: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
                       background: active ? "var(--cream)" : "transparent",
+                      cursor: "pointer", textAlign: "left",
                     }}>
                       {tab.label}
                       {showDot && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e85d4a", flexShrink: 0 }} />}
-                    </a>
+                    </button>
                   );
                 })}
                 <div style={{ padding: "1rem 1.5rem 0.5rem", fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>My Practice</div>

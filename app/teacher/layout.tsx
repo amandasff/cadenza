@@ -360,18 +360,18 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           {practiceTabs.map(tab => {
             const active = path.startsWith(tab.href);
             return (
-              <a key={tab.href} href={tab.href} style={{
-                display: "flex", alignItems: "center",
-                padding: "0.5rem 0.75rem",
+              <button key={tab.href} onClick={() => { window.location.href = tab.href; }} style={{
+                display: "flex", alignItems: "center", width: "100%",
+                padding: "0.5rem 0.75rem", border: "none", cursor: "pointer",
                 borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
                 background: active ? "var(--cream-deep)" : "transparent",
                 color: active ? "var(--charcoal)" : "var(--muted)",
                 fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
-                fontSize: "0.875rem", textDecoration: "none",
+                fontSize: "0.875rem", textAlign: "left",
                 transition: "all 0.15s", letterSpacing: "0.005em",
               }}>
                 {tab.label}
-              </a>
+              </button>
             );
           })}
         </nav>
@@ -442,19 +442,31 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       }}>
         {primaryMobileTabs.map(tab => {
           const active = tab.href === "/teacher" ? path === "/teacher" : path.startsWith(tab.href);
-          const Tag = tab.href.startsWith("/student/") ? "a" : Link;
-          return (
-            <Tag key={tab.href} href={tab.href} style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
-              textDecoration: "none", padding: "0.375rem 0",
-              color: active ? "var(--charcoal)" : "var(--muted)",
-              transition: "color 0.15s", position: "relative",
-            }}>
+          const sharedStyle = {
+            flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", gap: "3px",
+            textDecoration: "none", padding: "0.375rem 0",
+            color: active ? "var(--charcoal)" : "var(--muted)",
+            transition: "color 0.15s", position: "relative" as const,
+          };
+          const inner = (
+            <>
               {active && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 20, height: 1.5, background: "var(--charcoal)" }} />}
               <span style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: active ? 600 : 400, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: "0.125rem" }}>
                 {tab.label}
               </span>
-            </Tag>
+            </>
+          );
+          if (tab.href.startsWith("/student/")) {
+            return (
+              <button key={tab.href} onClick={() => { window.location.href = tab.href; }} style={{ ...sharedStyle, background: "none", border: "none", cursor: "pointer" }}>
+                {inner}
+              </button>
+            );
+          }
+          return (
+            <Link key={tab.href} href={tab.href} style={sharedStyle}>
+              {inner}
+            </Link>
           );
         })}
         <button
@@ -505,14 +517,15 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             {moreMobilePracticeTabs.map(tab => {
               const active = path.startsWith(tab.href);
               return (
-                <a key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
-                  display: "flex", alignItems: "center",
+                <button key={tab.href} onClick={() => { setMoreOpen(false); window.location.href = tab.href; }} style={{
+                  display: "flex", alignItems: "center", width: "100%",
                   padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
                   fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
-                  textDecoration: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                  background: "none", border: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
+                  cursor: "pointer", textAlign: "left",
                 }}>
                   {tab.label}
-                </a>
+                </button>
               );
             })}
           </div>
