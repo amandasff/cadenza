@@ -689,8 +689,8 @@ export default function DiscoverPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.2 }}>{profileInfo.name}</div>
-                    <Link href={`/student/profile/${profileInfo.id}`} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px", flexShrink: 0 }}>
-                      View profile →
+                    <Link href={`/student/studio/${profileInfo.id}`} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px", flexShrink: 0 }}>
+                      Visit studio →
                     </Link>
                   </div>
                   <div style={{ display: "flex", gap: "1rem", marginTop: "0.375rem" }}>

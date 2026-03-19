@@ -6,7 +6,15 @@ import { useAuth } from "../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
 import { ShopService } from "../../../../lib/services/ShopService";
 import { CollectibleService } from "../../../../lib/services/CollectibleService";
-import type { InventoryItemWithDetails, StudentCollectibleWithAvatar } from "../../../../lib/types";
+import type { InventoryItemWithDetails, StudentCollectibleWithAvatar, PieceRow, ShopItemRow, StudioGiftWithDetails } from "../../../../lib/types";
+import { playComposerTune } from "../../../../lib/composerTunes";
+
+const ERA_TINTS: Record<string, string> = {
+  baroque:      "rgba(180, 140, 60, 0.08)",
+  classical:    "rgba(100, 140, 200, 0.08)",
+  romantic:     "rgba(180, 80, 100, 0.08)",
+  impressionist:"rgba(100, 160, 140, 0.08)",
+};
 
 const RARITY_COLORS: Record<string, { border: string; glow: string; label: string }> = {
   common:    { border: "var(--border-strong)", glow: "transparent",    label: "Common"    },
@@ -28,12 +36,26 @@ const COMPOSER_QUOTES: Record<string, string> = {
   Handel:       "Whether I was in my body or out of my body when I wrote it, I know not.",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  learning:           "Learning",
+  polishing:          "Polishing",
+  performance_ready:  "Performance Ready",
+  completed:          "Completed",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  learning:           "var(--sky)",
+  polishing:          "var(--lavender)",
+  performance_ready:  "var(--sage)",
+  completed:          "var(--butter)",
+};
+
 const PRESET_REACTIONS = [
-  { id: "note",    emoji: "🎵", label: "Leave a note" },
-  { id: "fire",    emoji: "🔥", label: "On fire!" },
-  { id: "clap",    emoji: "👏", label: "Bravo!" },
-  { id: "star",    emoji: "⭐", label: "Stunning" },
-  { id: "love",    emoji: "🎶", label: "Love this" },
+  { id: "note",  emoji: "🎵", label: "Leave a note" },
+  { id: "fire",  emoji: "🔥", label: "On fire!" },
+  { id: "clap",  emoji: "👏", label: "Bravo!" },
+  { id: "star",  emoji: "⭐", label: "Stunning" },
+  { id: "love",  emoji: "🎶", label: "Love this" },
 ];
 
 interface ProfileData {
@@ -41,6 +63,11 @@ interface ProfileData {
   instrument: string | null;
   streak_days: number;
   total_points: number;
+  studio_name: string | null;
+  studio_tagline: string | null;
+  featured_avatar_id: string | null;
+  studio_persona: string | null;
+  studio_bio: string | null;
 }
 
 export default function VisitorStudioPage() {
@@ -53,12 +80,21 @@ export default function VisitorStudioPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [inventory, setInventory] = useState<InventoryItemWithDetails[]>([]);
   const [composers, setComposers] = useState<StudentCollectibleWithAvatar[]>([]);
+  const [pieces, setPieces] = useState<PieceRow[]>([]);
+  const [gifts, setGifts] = useState<StudioGiftWithDetails[]>([]);
+  const [shopItems, setShopItems] = useState<ShopItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [activeTab, setActiveTab] = useState<"composers" | "items">("composers");
+  const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey">("composers");
   const [hoveredComposer, setHoveredComposer] = useState<string | null>(null);
   const [reactionSent, setReactionSent] = useState<string | null>(null);
   const [floatingNotes, setFloatingNotes] = useState<{ id: number; emoji: string; x: number }[]>([]);
+  const [giftSheetOpen, setGiftSheetOpen] = useState(false);
+  const [selectedGiftItem, setSelectedGiftItem] = useState<ShopItemRow | null>(null);
+  const [giftMessage, setGiftMessage] = useState("");
+  const [sendingGift, setSendingGift] = useState(false);
+  const [giftSent, setGiftSent] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -67,15 +103,21 @@ export default function VisitorStudioPage() {
       try {
         const shop = ShopService.create(supabase);
         const collectibles = CollectibleService.create(supabase);
-        const [profileRes, inv, comps] = await Promise.all([
-          supabase.from("profiles").select("display_name,instrument,streak_days,total_points").eq("id", userId).maybeSingle(),
+        const [profileRes, inv, comps, piecesRes, giftsRes, allItems] = await Promise.all([
+          supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio").eq("id", userId).maybeSingle(),
           shop.getInventory(userId),
           collectibles.getCollection(userId),
+          supabase.from("pieces").select("*").eq("student_id", userId).order("created_at", { ascending: false }),
+          supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", userId).order("created_at", { ascending: false }).limit(20),
+          shop.getAllItems(),
         ]);
         if (!profileRes.data) { setNotFound(true); return; }
         setProfile(profileRes.data as ProfileData);
         setInventory(inv);
         setComposers(comps);
+        setPieces((piecesRes.data ?? []) as PieceRow[]);
+        setGifts((giftsRes.data ?? []) as StudioGiftWithDetails[]);
+        setShopItems(allItems);
       } catch (e) {
         console.error(e);
         setNotFound(true);
@@ -89,7 +131,6 @@ export default function VisitorStudioPage() {
   function sendReaction(reaction: typeof PRESET_REACTIONS[number]) {
     if (reactionSent) return;
     setReactionSent(reaction.id);
-    // Spawn 3–5 floating notes
     const count = 3 + Math.floor(Math.random() * 3);
     const notes = Array.from({ length: count }, (_, i) => ({
       id: Date.now() + i,
@@ -99,6 +140,33 @@ export default function VisitorStudioPage() {
     setFloatingNotes(prev => [...prev, ...notes]);
     setTimeout(() => setFloatingNotes(prev => prev.filter(n => !notes.find(nn => nn.id === n.id))), 3000);
   }
+
+  async function sendGift() {
+    if (!user?.id || !selectedGiftItem || sendingGift) return;
+    setSendingGift(true);
+    try {
+      await fetch("/api/studio/gift", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderId: user.id,
+          recipientId: userId,
+          itemId: selectedGiftItem.id,
+          message: giftMessage.trim() || null,
+        }),
+      });
+      setGiftSent(true);
+      setTimeout(() => { setGiftSheetOpen(false); setGiftSent(false); setSelectedGiftItem(null); setGiftMessage(""); }, 1500);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSendingGift(false);
+    }
+  }
+
+  const featuredComposer = composers.find(c => c.avatar_id === profile?.featured_avatar_id) ?? composers[0] ?? null;
+  const eraTint = featuredComposer ? ERA_TINTS[featuredComposer.composer_avatars.era] ?? ERA_TINTS.classical : undefined;
+  const studioTitle = profile?.studio_name || (profile?.display_name ? `${profile.display_name}'s Studio` : "");
 
   if (loading) return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1.5rem" }}>
@@ -135,16 +203,56 @@ export default function VisitorStudioPage() {
         }
       `}</style>
 
-      {/* Profile card */}
-      <div className="card-base" style={{ padding: "1.5rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
+      {/* ── Featured composer banner ── */}
+      {featuredComposer && (
+        <div style={{
+          background: eraTint ?? "var(--cream)",
+          border: `2px solid ${RARITY_COLORS[featuredComposer.composer_avatars.rarity]?.border ?? "var(--border)"}`,
+          borderRadius: 12, padding: "1.25rem 1.5rem", marginBottom: "1.25rem",
+          display: "flex", alignItems: "center", gap: "1.25rem",
+        }}>
+          <div style={{ width: 72, height: 72, borderRadius: 8, overflow: "hidden", flexShrink: 0, border: `1px solid ${RARITY_COLORS[featuredComposer.composer_avatars.rarity]?.border}` }}>
+            <img src={featuredComposer.composer_avatars.image_path} alt={featuredComposer.composer_avatars.composer_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.2rem" }}>Featured Composer</div>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.25rem", color: "var(--charcoal)" }}>{featuredComposer.composer_avatars.composer_name}</div>
+            {COMPOSER_QUOTES[featuredComposer.composer_avatars.composer_name] && (
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontStyle: "italic", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.2rem", lineHeight: 1.4 }}>
+                &ldquo;{COMPOSER_QUOTES[featuredComposer.composer_avatars.composer_name]}&rdquo;
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => playComposerTune(featuredComposer.composer_avatars.composer_name)}
+            title="Play motif"
+            style={{ width: 40, height: 40, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.125rem" }}
+          >
+            ♪
+          </button>
+        </div>
+      )}
+
+      {/* ── Profile card ── */}
+      <div className="card-base" style={{ padding: "1.5rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
         <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--white)", flexShrink: 0 }}>
           {profile?.display_name?.[0]?.toUpperCase() ?? "?"}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
-            {profile?.display_name}&apos;s Studio
+            {studioTitle}
           </div>
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.125rem" }}>
+          {profile?.studio_tagline && (
+            <div style={{ fontFamily: "Inter, sans-serif", fontStyle: "italic", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.125rem" }}>
+              {profile.studio_tagline}
+            </div>
+          )}
+          {profile?.studio_persona && (
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", marginTop: "0.2rem" }}>
+              ✦ {profile.studio_persona}
+            </div>
+          )}
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.25rem" }}>
             {profile?.instrument && <span>{profile.instrument} · </span>}
             {composers.length} composer{composers.length !== 1 ? "s" : ""} · {inventory.length} item{inventory.length !== 1 ? "s" : ""}
           </div>
@@ -162,11 +270,42 @@ export default function VisitorStudioPage() {
         )}
       </div>
 
-      {/* Reactions — only for visitors */}
-      {!isOwnStudio && (
-        <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.5rem" }}>
+      {/* ── AI Bio ── */}
+      {profile?.studio_bio && (
+        <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontStyle: "italic", fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.6 }}>
+            {profile.studio_bio}
+          </div>
+        </div>
+      )}
+
+      {/* ── Gifts shelf (visible to all) ── */}
+      {gifts.length > 0 && (
+        <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
-            Leave a reaction
+            🎁 Gifts
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {gifts.map(g => (
+              <div key={g.id} title={g.message ?? undefined} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", padding: "0.5rem 0.75rem", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <span style={{ fontSize: "1.5rem" }}>{g.shop_items?.emoji ?? "🎁"}</span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)" }}>{g.sender?.display_name ?? "Someone"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Reactions — only for visitors ── */}
+      {!isOwnStudio && user && (
+        <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              Leave a reaction
+            </div>
+            <button onClick={() => setGiftSheetOpen(true)} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, padding: "0.375rem 0.875rem", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 100, cursor: "pointer" }}>
+              🎁 Send a gift
+            </button>
           </div>
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             {PRESET_REACTIONS.map(r => (
@@ -194,9 +333,24 @@ export default function VisitorStudioPage() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* ── Repertoire Book button ── */}
+      {pieces.length > 0 && (
+        <button
+          onClick={() => setBookOpen(true)}
+          style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.875rem 1.25rem", marginBottom: "1.25rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 8, cursor: "pointer", width: "100%", textAlign: "left" }}
+        >
+          <span style={{ fontSize: "1.25rem" }}>📖</span>
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>Repertoire Book</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.1rem" }}>{pieces.length} piece{pieces.length !== 1 ? "s" : ""}</div>
+          </div>
+          <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: "0.875rem" }}>→</span>
+        </button>
+      )}
+
+      {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: "0", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", width: "fit-content", marginBottom: "1.5rem" }}>
-        {([["composers", `Composers (${composers.length})`], ["items", `Items (${inventory.length})`]] as const).map(([tab, label]) => (
+        {([["composers", `Composers (${composers.length})`], ["items", `Items (${inventory.length})`], ["journey", "Journey"]] as const).map(([tab, label]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             padding: "0.5rem 1.125rem", border: "none", cursor: "pointer",
             background: activeTab === tab ? "var(--charcoal)" : "transparent",
@@ -207,7 +361,7 @@ export default function VisitorStudioPage() {
         ))}
       </div>
 
-      {/* Content */}
+      {/* ── Content ── */}
       {activeTab === "composers" ? (
         composers.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
@@ -259,7 +413,7 @@ export default function VisitorStudioPage() {
             })}
           </div>
         )
-      ) : (
+      ) : activeTab === "items" ? (
         inventory.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🛋️</div>
@@ -287,6 +441,116 @@ export default function VisitorStudioPage() {
             })}
           </div>
         )
+      ) : (
+        /* Journey tab */
+        pieces.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
+            No pieces shared yet.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {pieces.map(piece => (
+              <div key={piece.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{piece.title}</div>
+                  {piece.composer && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>{piece.composer}</div>}
+                </div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: STATUS_COLORS[piece.status] ?? "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
+                  {STATUS_LABELS[piece.status] ?? piece.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* ── Gift sheet ── */}
+      {giftSheetOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setGiftSheetOpen(false)}>
+          <div style={{ background: "var(--white)", borderRadius: "20px 20px 0 0", maxHeight: "80dvh", width: "100%", maxWidth: 600, display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "0.875rem 1.25rem 0.5rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.125rem", color: "var(--charcoal)" }}>Send a gift</div>
+              <button onClick={() => setGiftSheetOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1.25rem", lineHeight: 1, padding: "0.25rem" }}>×</button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "1rem 1.25rem", flex: 1 }}>
+              {giftSent ? (
+                <div style={{ textAlign: "center", padding: "2rem", fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)" }}>
+                  🎁 Gift sent!
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Choose an item</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: "0.5rem", marginBottom: "1rem" }}>
+                    {shopItems.slice(0, 20).map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => setSelectedGiftItem(item)}
+                        style={{
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
+                          padding: "0.75rem 0.5rem", borderRadius: 8, border: `2px solid ${selectedGiftItem?.id === item.id ? "var(--charcoal)" : "var(--border)"}`,
+                          background: selectedGiftItem?.id === item.id ? "var(--cream)" : "transparent",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <span style={{ fontSize: "1.5rem" }}>{item.emoji}</span>
+                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--charcoal)", textAlign: "center", lineHeight: 1.3 }}>{item.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <textarea
+                      value={giftMessage}
+                      onChange={e => setGiftMessage(e.target.value)}
+                      placeholder="Add a message (optional)..."
+                      maxLength={120}
+                      rows={2}
+                      style={{ width: "100%", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "0.5rem 0.75rem", border: "1px solid var(--border)", borderRadius: 6, resize: "none", outline: "none", background: "var(--cream)", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <button
+                    onClick={sendGift}
+                    disabled={!selectedGiftItem || sendingGift}
+                    style={{
+                      width: "100%", padding: "0.75rem", borderRadius: 8, border: "none",
+                      background: selectedGiftItem ? "var(--charcoal)" : "var(--border)",
+                      color: selectedGiftItem ? "var(--white)" : "var(--muted)",
+                      fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem",
+                      cursor: selectedGiftItem && !sendingGift ? "pointer" : "default",
+                    }}
+                  >
+                    {sendingGift ? "Sending…" : "Send gift"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Repertoire Book modal ── */}
+      {bookOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setBookOpen(false)}>
+          <div style={{ background: "var(--white)", borderRadius: "20px 20px 0 0", maxHeight: "85dvh", width: "100%", maxWidth: 600, display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "0.875rem 1.25rem 0.5rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.25rem", color: "var(--charcoal)" }}>📖 Repertoire</div>
+              <button onClick={() => setBookOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "1.25rem", lineHeight: 1, padding: "0.25rem" }}>×</button>
+            </div>
+            <div style={{ overflowY: "auto", padding: "1rem 1.25rem", flex: 1 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                {pieces.map(piece => (
+                  <div key={piece.id} style={{ padding: "0.875rem", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.3 }}>{piece.title}</div>
+                    {piece.composer && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem" }}>{piece.composer}</div>}
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: STATUS_COLORS[piece.status] ?? "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.5rem" }}>
+                      {STATUS_LABELS[piece.status] ?? piece.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

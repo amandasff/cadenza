@@ -557,3 +557,18 @@ export interface StudentInventoryRow {
 export interface InventoryItemWithDetails extends StudentInventoryRow {
   shop_items: ShopItemRow;
 }
+
+export interface StudioGiftRow {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  item_id: string;
+  message: string | null;
+  seen: boolean;
+  created_at: string;
+}
+
+export interface StudioGiftWithDetails extends StudioGiftRow {
+  shop_items: ShopItemRow;
+  sender: { display_name: string } | null;
+}
