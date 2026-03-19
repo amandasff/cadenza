@@ -360,7 +360,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           {practiceTabs.map(tab => {
             const active = path.startsWith(tab.href);
             return (
-              <Link key={tab.href} href={tab.href} style={{
+              <a key={tab.href} href={tab.href} style={{
                 display: "flex", alignItems: "center",
                 padding: "0.5rem 0.75rem",
                 borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
@@ -371,7 +371,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 transition: "all 0.15s", letterSpacing: "0.005em",
               }}>
                 {tab.label}
-              </Link>
+              </a>
             );
           })}
         </nav>
@@ -442,8 +442,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       }}>
         {primaryMobileTabs.map(tab => {
           const active = tab.href === "/teacher" ? path === "/teacher" : path.startsWith(tab.href);
+          const Tag = tab.href.startsWith("/student/") ? "a" : Link;
           return (
-            <Link key={tab.href} href={tab.href} style={{
+            <Tag key={tab.href} href={tab.href} style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
               textDecoration: "none", padding: "0.375rem 0",
               color: active ? "var(--charcoal)" : "var(--muted)",
@@ -453,7 +454,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               <span style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: active ? 600 : 400, letterSpacing: "0.07em", textTransform: "uppercase", marginTop: "0.125rem" }}>
                 {tab.label}
               </span>
-            </Link>
+            </Tag>
           );
         })}
         <button
@@ -504,14 +505,14 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             {moreMobilePracticeTabs.map(tab => {
               const active = path.startsWith(tab.href);
               return (
-                <Link key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
+                <a key={tab.href} href={tab.href} onClick={() => setMoreOpen(false)} style={{
                   display: "flex", alignItems: "center",
                   padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
                   fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
                   textDecoration: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
                 }}>
                   {tab.label}
-                </Link>
+                </a>
               );
             })}
           </div>
