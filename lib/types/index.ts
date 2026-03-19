@@ -526,3 +526,34 @@ export interface AvailabilityBlockRow {
   active: boolean;
   created_at: string;
 }
+
+// ============================================================
+// Studio / Shop
+// ============================================================
+
+export type ShopCategory = 'instrument' | 'furniture' | 'decor' | 'plant' | 'trophy';
+export type ShopRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface ShopItemRow {
+  id: string;
+  name: string;
+  category: ShopCategory;
+  cost_points: number;
+  emoji: string;
+  description: string | null;
+  rarity: ShopRarity;
+  is_available: boolean;
+  sort_order: number;
+}
+
+export interface StudentInventoryRow {
+  id: string;
+  student_id: string;
+  item_id: string;
+  purchased_at: string;
+  gifted_by: string | null;
+}
+
+export interface InventoryItemWithDetails extends StudentInventoryRow {
+  shop_items: ShopItemRow;
+}

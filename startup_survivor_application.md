@@ -36,7 +36,7 @@ Music students consistently under-practice — leaving teachers frustrated and p
 
 **9. Idea Inspiration** *(max 75 words)*
 
-I have been immersed in music since age 4 — learning guitar, piano, and ukulele and teaching younger family members. I later taught privately and in studio, talking with dozens of teachers, parents, and students who all shared the same frustration: students don't practice. I always saw the problem but only recently gained the software engineering skills to solve it. I built Cadenza, tested it on my own students, and saw immediate results.
+I have been immersed in music since age 4 — learning guitar, piano, and ukulele and teaching younger family members. I later taught privately and in studio, talking with dozens of teachers, parents, and students who all shared the same frustration: students don't practice. I always saw the problem but only recently gained the software engin2eering skills to solve it. I built Cadenza, tested it on my own students, and saw immediate results.
 
 ---
 

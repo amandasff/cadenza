@@ -55,6 +55,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/discover",     label: t.nav.discover },
     { href: "/student/rewards",      label: t.nav.awards },
     { href: "/student/collection",   label: "Composers" },
+    { href: "/student/studio",       label: "Studio" },
+    { href: "/student/store",        label: "Shop" },
     { href: "/student/inspirations", label: t.nav.inspire },
   ];
 
@@ -72,6 +74,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/ai-tutor",     label: t.student.aiTutor },
     { href: "/student/rewards",      label: t.nav.awards },
     { href: "/student/collection",   label: "Composers" },
+    { href: "/student/studio",       label: "Studio" },
+    { href: "/student/store",        label: "Shop" },
     { href: "/student/inspirations", label: t.nav.inspire },
   ];
 
