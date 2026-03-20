@@ -47,13 +47,17 @@ function ComposerCard({
   owned,
   shards,
   isFavorite,
+  isFeatured,
   onToggleFavorite,
+  onSetFeatured,
 }: {
   avatar: ComposerAvatarRow;
   owned: boolean;
   shards: number;
   isFavorite: boolean;
+  isFeatured: boolean;
   onToggleFavorite: (avatarId: string, current: boolean) => void;
+  onSetFeatured: (avatarId: string) => void;
 }) {
   const [showFact, setShowFact] = useState(false);
 
@@ -210,6 +214,21 @@ function ComposerCard({
         </div>
       </div>
 
+      {/* Featured crown badge */}
+      {owned && isFeatured && (
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          fontSize: "1rem",
+          pointerEvents: "none",
+          filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))",
+        }}>
+          👑
+        </div>
+      )}
+
       {/* Fun fact overlay */}
       {owned && showFact && (
         <div style={{
@@ -218,9 +237,11 @@ function ComposerCard({
           background: "rgba(30,26,26,0.88)",
           backdropFilter: "blur(2px)",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           padding: "0.75rem",
+          gap: "0.5rem",
         }}>
           <p style={{
             fontFamily: "Inter, sans-serif",
@@ -232,6 +253,25 @@ function ComposerCard({
           }}>
             {avatar.fun_fact}
           </p>
+          <button
+            onClick={e => { e.stopPropagation(); onSetFeatured(avatar.id); }}
+            style={{
+              marginTop: "0.25rem",
+              padding: "0.25rem 0.625rem",
+              borderRadius: 3,
+              border: "none",
+              background: isFeatured ? "var(--butter)" : "rgba(255,255,255,0.15)",
+              color: isFeatured ? "var(--charcoal)" : "white",
+              fontFamily: "Inter, sans-serif",
+              fontSize: "0.5rem",
+              fontWeight: 600,
+              cursor: isFeatured ? "default" : "pointer",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            {isFeatured ? "👑 Featured" : "Set as featured"}
+          </button>
         </div>
       )}
     </div>
@@ -245,19 +285,22 @@ export default function CollectionPage() {
   const [collection, setCollection] = useState<StudentCollectibleWithAvatar[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionsUntilGuaranteed, setSessionsUntilGuaranteed] = useState<number | null>(null);
+  const [featuredAvatarId, setFeaturedAvatarId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     const supabase = getSupabaseBrowserClient();
     const service = CollectibleService.create(supabase);
-    const [avatars, coll, sessions] = await Promise.all([
+    const [avatars, coll, sessions, profile] = await Promise.all([
       service.getAllAvatars(),
       service.getCollection(user.id),
       service.getSessionsUntilGuaranteed(user.id),
+      supabase.from("profiles").select("featured_avatar_id").eq("id", user.id).single(),
     ]);
     setAllAvatars(avatars);
     setCollection(coll);
     setSessionsUntilGuaranteed(sessions);
+    setFeaturedAvatarId((profile.data as { featured_avatar_id: string | null } | null)?.featured_avatar_id ?? null);
     setLoading(false);
   }, [user?.id]);
 
@@ -270,6 +313,16 @@ export default function CollectionPage() {
     setCollection(prev =>
       prev.map(c => c.avatar_id === avatarId ? { ...c, is_favorite: !current } : c)
     );
+  };
+
+  const handleSetFeatured = async (avatarId: string) => {
+    if (!user?.id) return;
+    await fetch("/api/studio/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, featured_avatar_id: avatarId }),
+    });
+    setFeaturedAvatarId(avatarId);
   };
 
   if (!user) return null;
@@ -413,7 +466,9 @@ export default function CollectionPage() {
                       owned={!!owned}
                       shards={owned?.shard_count ?? 0}
                       isFavorite={owned?.is_favorite ?? false}
+                      isFeatured={featuredAvatarId === avatar.id}
                       onToggleFavorite={handleToggleFavorite}
+                      onSetFeatured={handleSetFeatured}
                     />
                   );
                 })}
