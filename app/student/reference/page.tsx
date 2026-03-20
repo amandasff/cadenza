@@ -357,25 +357,37 @@ function ChordDiagram({ chord, strings = 6, openFreqs, onPlay, playLabel = "▶ 
   chord: GChord; strings?: number; openFreqs: number[]; onPlay: () => void; playLabel?: string;
 }) {
   const FRETS = 5;
-  const SW = strings === 4 ? 26 : 24;   // spacing between strings
-  const FH = 22;                          // spacing between frets
-  const SIDE  = 18;                       // left padding (room for dots at edge)
-  const TOP   = 26;                       // space above nut for ○/× symbols
-  const BOT   = 12;                       // space below last fret
-  const RIGHT = 32;                       // space to right of grid for "Xfr" label
+  const SW = strings === 4 ? 26 : 24;
+  const FH = 22;
+  const SIDE  = 18;
+  const TOP   = 26;
+  const BOT   = 12;
+  const RIGHT = 32;
   const gridW = (strings - 1) * SW;
   const W = SIDE + gridW + RIGHT;
   const H = TOP + FRETS * FH + BOT;
   const baseFret = chord.baseFret ?? 1;
   const maxFret = Math.max(...chord.frets.filter(f => f > 0), 0);
   const displayBase = maxFret > FRETS ? baseFret : 1;
-  const DOT_R = strings === 4 ? 7 : 7;
+  const DOT_R = 7;
+
+  // Auto-detect barre: min non-zero fret on ≥2 strings spanning ≥3 string positions
+  const minFret = Math.min(...chord.frets.filter(f => f > 0));
+  const barreStringIndices = chord.frets.map((f, i) => f === minFret ? i : -1).filter(i => i >= 0);
+  const barreSpan = barreStringIndices.length >= 2
+    ? barreStringIndices[barreStringIndices.length - 1] - barreStringIndices[0]
+    : 0;
+  const isBarre = barreStringIndices.length >= 2 && barreSpan >= 3;
+  const barreDF = isBarre ? minFret - displayBase + 1 : 0;
+  const barreCY = isBarre && barreDF >= 1 && barreDF <= FRETS ? TOP + (barreDF - 0.5) * FH : null;
+  const barreX1 = isBarre ? SIDE + barreStringIndices[0] * SW : 0;
+  const barreX2 = isBarre ? SIDE + barreStringIndices[barreStringIndices.length - 1] * SW : 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
       <div style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--charcoal)", fontFamily: "Inter,sans-serif", paddingLeft: SIDE }}>{chord.name}</div>
       <svg width={W} height={H}>
-        {/* Nut (thick bar at top when starting from fret 1) */}
+        {/* Nut */}
         {displayBase === 1 && <rect x={SIDE} y={TOP} width={gridW} height={4} fill="var(--charcoal)" rx={1.5} />}
         {/* Fret lines */}
         {Array.from({ length: FRETS + 1 }, (_, f) => (
@@ -393,14 +405,24 @@ function ChordDiagram({ chord, strings = 6, openFreqs, onPlay, playLabel = "▶ 
             {fret === -1 ? "×" : "○"}
           </text>
         ) : null)}
-        {/* Finger dots */}
+        {/* Barre bar (index finger across strings) */}
+        {isBarre && barreCY != null && (
+          <>
+            <rect x={barreX1 - DOT_R} y={barreCY - DOT_R} width={barreX2 - barreX1 + DOT_R * 2} height={DOT_R * 2}
+              rx={DOT_R} fill="var(--charcoal)" />
+            <text x={(barreX1 + barreX2) / 2} y={barreCY + 4} textAnchor="middle"
+              fontSize={9} fill="white" fontFamily="Inter,sans-serif" fontWeight={700}>1</text>
+          </>
+        )}
+        {/* Finger dots (skip barre-fret strings covered by bar) */}
         {chord.frets.map((fret, s) => {
           if (fret <= 0) return null;
+          if (isBarre && fret === minFret) return null;
           const df = fret - displayBase + 1;
           if (df < 1 || df > FRETS) return null;
           return <circle key={s} cx={SIDE + s*SW} cy={TOP + (df - 0.5)*FH} r={DOT_R} fill="var(--charcoal)" />;
         })}
-        {/* Fret position label ("4fr") — right of grid, vertically centred on first fret row */}
+        {/* Fret position label */}
         {displayBase > 1 && (
           <text x={SIDE + gridW + 7} y={TOP + FH * 0.72}
             fontSize={10} fill="#888" fontFamily="Inter,sans-serif" fontWeight={500}>
