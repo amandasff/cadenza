@@ -153,22 +153,17 @@ export class PortfolioService {
 
     const artistCut = Math.floor(price * 0.8);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ops: Promise<any>[] = [
-      this.supabase.from('portfolio_collections').insert({ portfolio_item_id: itemId, collector_id: collectorId, points_paid: price }).then(),
-      this.supabase.from('portfolio_items').update({ collection_count: currentCount + 1 }).eq('id', itemId).then(),
-    ];
+    await this.supabase.from('portfolio_collections').insert({ portfolio_item_id: itemId, collector_id: collectorId, points_paid: price });
+    await this.supabase.from('portfolio_items').update({ collection_count: currentCount + 1 }).eq('id', itemId);
 
     if (price > 0) {
-      ops.push(this.supabase.from('profiles').update({ total_points: collectorPoints - price }).eq('id', collectorId).then());
+      await this.supabase.from('profiles').update({ total_points: collectorPoints - price }).eq('id', collectorId);
     }
 
     if (price > 0 && artistId && artistCut > 0) {
       const { data: artistProfile } = await this.supabase.from('profiles').select('total_points').eq('id', artistId).single();
       const artistPoints = (artistProfile as { total_points: number } | null)?.total_points ?? 0;
-      ops.push(this.supabase.from('profiles').update({ total_points: artistPoints + artistCut }).eq('id', artistId).then());
+      await this.supabase.from('profiles').update({ total_points: artistPoints + artistCut }).eq('id', artistId);
     }
-
-    await Promise.all(ops);
   }
 }
