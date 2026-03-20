@@ -319,8 +319,8 @@ function useGameState(gameKey: string) {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    getSupabaseBrowserClient().auth.getUser().then(({ data }) => {
-      userIdRef.current = data.user?.id ?? null;
+    getSupabaseBrowserClient().auth.getUser().then((res) => {
+      userIdRef.current = res.data.user?.id ?? null;
     });
   }, []);
 
