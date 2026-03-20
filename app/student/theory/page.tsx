@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useI18n } from "../../../lib/context/I18nContext";
 import { Flame, Music, Piano, Guitar, BarChart2, Clipboard, Play, RefreshCw, X } from "lucide-react";
+import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Staff layout constants (all in px)
@@ -272,6 +273,18 @@ function gradeOf(acc: number) {
 }
 function hiKey(game: string) { return `theory_hi_${game}`; }
 
+function toLogicalGame(gameKey: string): string {
+  if (gameKey.startsWith("nid_"))          return "noteId";
+  if (gameKey.startsWith("interval_"))     return "interval";
+  if (gameKey.startsWith("chord_finder_")) return "guitarChord";
+  if (gameKey.startsWith("chord_"))        return "chord";
+  if (gameKey.startsWith("terms_"))        return "terms";
+  if (gameKey.startsWith("keysig_"))       return "keySig";
+  if (gameKey.startsWith("scale_"))        return "scale";
+  if (gameKey.startsWith("fret_"))         return "fretboard";
+  return gameKey;
+}
+
 function shuffle<T>(a: T[]): T[] {
   const b = [...a];
   for (let i = b.length - 1; i > 0; i--) {
@@ -303,6 +316,13 @@ function useGameState(gameKey: string) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const advRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    getSupabaseBrowserClient().auth.getUser().then(({ data }) => {
+      userIdRef.current = data.user?.id ?? null;
+    });
+  }, []);
 
   function loadHi() {
     const v = Number(localStorage.getItem(hiKey(gameKey)) ?? 0);
@@ -347,6 +367,24 @@ function useGameState(gameKey: string) {
       return prev;
     });
   }
+
+  // Sync new hi score to leaderboard table (only if it beats the stored DB score)
+  useEffect(() => {
+    if (!newRecord || hiScore <= 0) return;
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const logicalGame = toLogicalGame(gameKey);
+    const sb = getSupabaseBrowserClient();
+    sb.from("game_leaderboard").select("score").eq("user_id", userId).eq("logical_game", logicalGame).maybeSingle().then(({ data }) => {
+      const existing = (data as { score: number } | null)?.score ?? 0;
+      if (hiScore > existing) {
+        sb.from("game_leaderboard").upsert(
+          { user_id: userId, logical_game: logicalGame, score: hiScore, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,logical_game" }
+        ).then();
+      }
+    });
+  }, [newRecord, hiScore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function scoreAnswer(isCorrect: boolean): { pts: number; mult: number } {
     const ms   = Date.now() - qStart;
@@ -2929,8 +2967,59 @@ function SolfegeGame({ onBack }: { onBack: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm" | "fretboard" | "guitarChord" | "rhythmEcho" | "sightRead" | "solfege";
 
+type LBEntry = { userId: string; name: string; total: number };
+
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   const { t } = useI18n();
+  const [leaderboard, setLeaderboard] = useState<LBEntry[]>([]);
+  const [myGameRanks, setMyGameRanks] = useState<Record<string, number>>({});
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const sb = getSupabaseBrowserClient();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      setMyUserId(user.id);
+
+      const { data: rows } = await sb.from("game_leaderboard").select("user_id, logical_game, score");
+      if (!rows || rows.length === 0) return;
+
+      // Aggregate per user and per game
+      const totals: Record<string, number> = {};
+      const perGame: Record<string, Array<{ userId: string; score: number }>> = {};
+      for (const row of rows as Array<{ user_id: string; logical_game: string; score: number }>) {
+        totals[row.user_id] = (totals[row.user_id] ?? 0) + row.score;
+        if (!perGame[row.logical_game]) perGame[row.logical_game] = [];
+        perGame[row.logical_game].push({ userId: row.user_id, score: row.score });
+      }
+
+      // Per-game rank for current user
+      const ranks: Record<string, number> = {};
+      for (const [game, entries] of Object.entries(perGame)) {
+        entries.sort((a, b) => b.score - a.score);
+        const idx = entries.findIndex(e => e.userId === user.id);
+        if (idx >= 0 && idx < 3) ranks[game] = idx + 1;
+      }
+      setMyGameRanks(ranks);
+
+      // Top 3 overall
+      const sorted = Object.entries(totals).sort(([, a], [, b]) => b - a).slice(0, 3);
+      const topIds = sorted.map(([id]) => id);
+      const { data: profiles } = await sb.from("profiles").select("id, display_name").in("id", topIds);
+      const nameMap: Record<string, string> = {};
+      for (const p of (profiles ?? []) as Array<{ id: string; display_name: string }>) {
+        nameMap[p.id] = p.display_name ?? "Musician";
+      }
+      setLeaderboard(sorted.map(([userId, total]) => ({
+        userId,
+        name: userId === user.id ? "You" : (nameMap[userId] ?? "Musician"),
+        total,
+      })));
+    }
+    load().catch(() => {});
+  }, []);
+
   const hi = (key: string) => typeof window !== "undefined" ? Number(localStorage.getItem(hiKey(key)) ?? 0) : 0;
   const scores = {
     noteId:      Math.max(hi("nid_treble"), hi("nid_bass")),
@@ -2944,22 +3033,30 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     rhythm:      Math.max(typeof window !== "undefined" ? Number(localStorage.getItem("theory_hi_rhythm_easy") ?? 0) : 0, typeof window !== "undefined" ? Number(localStorage.getItem("theory_hi_rhythm_medium") ?? 0) : 0, typeof window !== "undefined" ? Number(localStorage.getItem("theory_hi_rhythm_hard") ?? 0) : 0),
   };
 
+  const medals = ["🥇", "🥈", "🥉"];
+  function scoreBadge(logicalGame: string, score: number): string | null {
+    if (score <= 0) return null;
+    const rank = myGameRanks[logicalGame];
+    const icon = rank ? medals[rank - 1] : "🏆";
+    return `${icon} ${score.toLocaleString()}`;
+  }
+
   const games = [
     {
       view: "noteId" as View, icon: "♪", title: "Note ID", category: "Piano",
       desc: "Name the note on the staff.",
-      badge: scores.noteId > 0 ? `🏆 ${scores.noteId.toLocaleString()}` : null,
+      badge: scoreBadge("noteId", scores.noteId),
       active: true,
     },
     {
       view: "interval" as View, icon: "👂", title: "Intervals", category: "Ear Training",
       desc: "Two notes play — name the interval.",
-      badge: scores.interval > 0 ? `🏆 ${scores.interval.toLocaleString()}` : null, active: true,
+      badge: scoreBadge("interval", scores.interval), active: true,
     },
     {
       view: "chord" as View, icon: "🎼", title: "Chord Quality", category: "Ear Training",
       desc: "Major, minor, dim, or aug?",
-      badge: scores.chord > 0 ? `🏆 ${scores.chord.toLocaleString()}` : null, active: true,
+      badge: scoreBadge("chord", scores.chord), active: true,
     },
     {
       view: "solfege" as View, icon: "🎤", title: "Sight Singing", category: "Ear Training",
@@ -2969,17 +3066,17 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     {
       view: "terms" as View, icon: "🗣", title: "Music Terms", category: "Theory",
       desc: "Match the term to its meaning.",
-      badge: scores.terms > 0 ? `🏆 ${scores.terms.toLocaleString()}` : null, active: true,
+      badge: scoreBadge("terms", scores.terms), active: true,
     },
     {
       view: "keySig" as View, icon: "🔑", title: "Key Signatures", category: "Theory",
       desc: "Name the key signature.",
-      badge: scores.keySig > 0 ? `🏆 ${scores.keySig.toLocaleString()}` : null, active: true,
+      badge: scoreBadge("keySig", scores.keySig), active: true,
     },
     {
       view: "scale" as View, icon: "🎶", title: "Scale Ear Training", category: "Ear Training",
       desc: "Major or minor — what scale is it?",
-      badge: scores.scale > 0 ? `🏆 ${scores.scale.toLocaleString()}` : null, active: true,
+      badge: scoreBadge("scale", scores.scale), active: true,
     },
     {
       view: "rcm" as View, icon: "≡", title: "RCM Exam Guide", category: "Reference",
@@ -2996,11 +3093,11 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     },
     {
       view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar",
-      desc: "Name the note on the neck.", badge: scores.fretboard > 0 ? `🏆 ${scores.fretboard.toLocaleString()}` : null, active: true,
+      desc: "Name the note on the neck.", badge: scoreBadge("fretboard", scores.fretboard), active: true,
     },
     {
       view: "guitarChord" as View, icon: "🤘", title: "Guitar Chords", category: "Guitar",
-      desc: "Name the chord diagram.", badge: scores.guitarChord > 0 ? `🏆 ${scores.guitarChord.toLocaleString()}` : null, active: true,
+      desc: "Name the chord diagram.", badge: scoreBadge("guitarChord", scores.guitarChord), active: true,
     },
   ];
 
@@ -3016,10 +3113,25 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   return (
     <div style={{ minHeight: "100%", background: "var(--cream)", padding: "2.5rem 1.5rem", fontFamily: "Inter, sans-serif" }}>
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
-        <div style={{ marginBottom: "2.5rem" }}>
+        <div style={{ marginBottom: "2rem" }}>
           <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 500, color: "var(--charcoal)", marginBottom: "0.375rem", letterSpacing: "-0.01em" }}>Music Games</div>
           <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>Short rounds, streaks, personal bests.</p>
         </div>
+
+        {/* Leaderboard */}
+        {leaderboard.length > 0 && (
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+            <div style={{ fontSize: "0.6875rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.75rem" }}>All-Time Leaderboard</div>
+            {leaderboard.map((entry, i) => (
+              <div key={entry.userId} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.3rem 0", borderBottom: i < leaderboard.length - 1 ? "1px solid var(--border)" : "none" }}>
+                <span style={{ fontSize: "1.1rem", width: 24, flexShrink: 0 }}>{medals[i]}</span>
+                <span style={{ flex: 1, fontSize: "0.875rem", fontWeight: entry.userId === myUserId ? 600 : 400, color: entry.userId === myUserId ? "var(--charcoal)" : "var(--charcoal)" }}>{entry.name}</span>
+                <span style={{ fontSize: "0.8125rem", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{entry.total.toLocaleString()} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: "grid", gap: "0.875rem" }}>
           {/* Note Identification + Interval first */}
           {games.slice(0, 2).map(g => (
