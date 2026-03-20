@@ -558,6 +558,41 @@ const DYNAMICS = [
   ["decresc.","Decrescendo","Gradually softer"],
 ];
 
+// ── Key progression data ──────────────────────────────────────────────────────
+
+const MAJOR_STEPS  = [0, 2, 4, 5, 7, 9, 11];
+const MINOR_STEPS  = [0, 2, 3, 5, 7, 8, 10];
+const MAJOR_TYPES  = ["maj","min","min","maj","maj","min","dim"] as const;
+const MINOR_TYPES  = ["min","dim","maj","min","min","maj","maj"] as const;
+const MAJOR_NUMS   = ["I","ii","iii","IV","V","vi","vii°"];
+const MINOR_NUMS   = ["i","ii°","III","iv","v","VI","VII"];
+const CHORD_SUFFIX: Record<string, string> = { maj:"", min:"m", dim:"°" };
+const MAJOR_INTERVALS: Record<string,number[]> = { maj:[0,4,7], min:[0,3,7], dim:[0,3,6] };
+
+const COMMON_PROGS = [
+  // major (mode 0)
+  [
+    { name:"I – V – vi – IV", idx:[0,4,5,3], desc:"Pop classic · Let It Be, With or Without You" },
+    { name:"I – IV – V",      idx:[0,3,4],   desc:"Blues & rock standard" },
+    { name:"I – vi – IV – V", idx:[0,5,3,4], desc:"50s / Doo-wop progression" },
+    { name:"vi – IV – I – V", idx:[5,3,0,4], desc:"Modern pop · Rolling in the Deep" },
+  ],
+  // minor (mode 1)
+  [
+    { name:"i – VII – VI – VII", idx:[0,6,5,6], desc:"Minor anthem · Stairway, Wonderwall" },
+    { name:"i – VI – III – VII", idx:[0,5,2,6], desc:"Natural minor / cinematic" },
+    { name:"i – iv – v",         idx:[0,3,4],   desc:"Minor blues" },
+    { name:"i – VII – VI – V",   idx:[0,6,5,4], desc:"Andalusian cadence" },
+  ],
+];
+
+// ── Reference videos (update IDs to swap videos) ──────────────────────────────
+const REFERENCE_VIDEOS = [
+  { label:"Reading chord diagrams", id:"cGUGN2l9mEQ" },
+  { label:"Chord progressions 101", id:"ZoL8r0QFO1k" },
+  { label:"Finding good progressions", id:"LkVPrfneFMw" },
+];
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 type MainTab = "chords" | "practice" | "theory" | "rcm";
@@ -571,6 +606,15 @@ export default function ReferencePage() {
   // Piano state
   const [root, setRoot] = useState(0);
   const [chordType, setChordType] = useState("maj");
+
+  // Key explorer state
+  const [progKey, setProgKey] = useState(0);
+  const [progMode, setProgMode] = useState<"major"|"minor">("major");
+  const [highlightProg, setHighlightProg] = useState<number[]|null>(null);
+
+  // Video widget state
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoIdx, setVideoIdx] = useState(0);
 
   // Guitar/Uke state
   const [gQuality, setGQuality] = useState("major");
@@ -632,6 +676,74 @@ export default function ReferencePage() {
       {/* ── CHORDS TAB ── */}
       {mainTab === "chords" && (
         <div>
+
+          {/* ── Key Explorer ── */}
+          {(() => {
+            const steps   = progMode === "major" ? MAJOR_STEPS  : MINOR_STEPS;
+            const types   = progMode === "major" ? MAJOR_TYPES  : MINOR_TYPES;
+            const nums    = progMode === "major" ? MAJOR_NUMS   : MINOR_NUMS;
+            const progs   = COMMON_PROGS[progMode === "major" ? 0 : 1];
+            const diatonic = steps.map((step, i) => ({
+              noteIdx: (progKey + step) % 12,
+              type: types[i],
+              numeral: nums[i],
+            }));
+            return (
+              <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1.25rem", marginBottom:"1.5rem" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1rem", flexWrap:"wrap", gap:"0.5rem" }}>
+                  <div style={{ fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>♩ Key Explorer & Chord Progressions</div>
+                  <div style={{ display:"flex", gap:"0.375rem" }}>
+                    <button onClick={()=>setProgMode("major")} style={{ padding:"0.3125rem 0.75rem", borderRadius:4, border:"1px solid var(--border-strong)", background:progMode==="major"?"var(--charcoal)":"transparent", color:progMode==="major"?"var(--white)":"var(--charcoal)", fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer" }}>Major</button>
+                    <button onClick={()=>setProgMode("minor")} style={{ padding:"0.3125rem 0.75rem", borderRadius:4, border:"1px solid var(--border-strong)", background:progMode==="minor"?"var(--charcoal)":"transparent", color:progMode==="minor"?"var(--white)":"var(--charcoal)", fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer" }}>Minor</button>
+                  </div>
+                </div>
+
+                {/* Key picker */}
+                <div style={{ display:"flex", flexWrap:"wrap", gap:"0.3rem", marginBottom:"1.125rem" }}>
+                  {NOTE_NAMES.map((note, idx) => (
+                    <button key={idx} onClick={()=>{ setProgKey(idx); setHighlightProg(null); }} style={{
+                      padding:"0.3125rem 0.5625rem", borderRadius:4, border:"1px solid var(--border-strong)",
+                      background: progKey===idx ? "#B85C3A" : "transparent",
+                      color: progKey===idx ? "#fff" : "var(--charcoal)",
+                      fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", fontWeight:500, cursor:"pointer", minWidth:36,
+                    }}>{note}</button>
+                  ))}
+                </div>
+
+                {/* Diatonic chords */}
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"0.375rem", marginBottom:"1.125rem" }}>
+                  {diatonic.map((ch, i) => {
+                    const name = NOTE_NAMES[ch.noteIdx] + CHORD_SUFFIX[ch.type];
+                    const lit = highlightProg?.includes(i);
+                    return (
+                      <div key={i} onClick={()=>playSound(pianoChordFreqs(ch.noteIdx, MAJOR_INTERVALS[ch.type]), "piano")}
+                        style={{ textAlign:"center", background: lit ? "#B85C3A18" : "var(--cream)", border:`1px solid ${lit?"#B85C3A":"var(--border)"}`, borderRadius:6, padding:"0.5rem 0.25rem", cursor:"pointer", transition:"all 0.15s" }}>
+                        <div style={{ fontSize:"0.625rem", color:"var(--muted)", fontFamily:"Georgia,serif", marginBottom:2 }}>{ch.numeral}</div>
+                        <div style={{ fontWeight:600, fontSize:"0.8125rem", color:"var(--charcoal)" }}>{name}</div>
+                        <div style={{ fontSize:"0.5625rem", color:"var(--muted)", marginTop:2 }}>{ch.type === "maj" ? "major" : ch.type === "min" ? "minor" : "dim"}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize:"0.6875rem", color:"var(--muted)", marginBottom:"0.875rem" }}>Click any chord to hear it · Highlighted chords belong to the selected progression</div>
+
+                {/* Common progressions */}
+                <div style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.5rem" }}>Common progressions in {NOTE_NAMES[progKey]} {progMode}</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:"0.375rem" }}>
+                  {progs.map(p => (
+                    <button key={p.name} onClick={()=>setHighlightProg(prev => JSON.stringify(prev)===JSON.stringify(p.idx) ? null : p.idx)}
+                      style={{ display:"flex", alignItems:"center", gap:"0.75rem", padding:"0.5rem 0.75rem", borderRadius:6, border:`1px solid ${JSON.stringify(highlightProg)===JSON.stringify(p.idx)?"#B85C3A":"var(--border)"}`, background: JSON.stringify(highlightProg)===JSON.stringify(p.idx)?"#B85C3A0C":"transparent", cursor:"pointer", textAlign:"left" }}>
+                      <div style={{ fontFamily:"monospace", fontSize:"0.8125rem", fontWeight:600, color:"var(--charcoal)", minWidth:120 }}>
+                        {p.idx.map(i => NOTE_NAMES[(progKey + steps[i]) % 12] + CHORD_SUFFIX[types[i]]).join(" – ")}
+                      </div>
+                      <div style={{ fontSize:"0.75rem", color:"var(--muted)" }}>{p.name} · {p.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Instrument picker */}
           <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap", marginBottom:"1.5rem" }}>
             {instBtn("guitar", "Guitar")}
@@ -867,6 +979,47 @@ export default function ReferencePage() {
 
       {/* ── RCM TECHNIQUE TAB ── */}
       {mainTab === "rcm" && <RcmTechnique />}
+
+      {/* ── Floating video widget ── */}
+      <div style={{ position:"fixed", bottom:"5rem", right:"1.25rem", zIndex:50, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"0.5rem" }}>
+        {videoOpen && (
+          <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,0.14)", overflow:"hidden", width:300 }}>
+            {/* Topic switcher */}
+            <div style={{ display:"flex", borderBottom:"1px solid var(--border)", overflowX:"auto" }}>
+              {REFERENCE_VIDEOS.map((v,i) => (
+                <button key={i} onClick={()=>setVideoIdx(i)} style={{
+                  padding:"0.5rem 0.75rem", border:"none", whiteSpace:"nowrap", flexShrink:0,
+                  background: videoIdx===i ? "var(--charcoal)" : "transparent",
+                  color: videoIdx===i ? "var(--white)" : "var(--muted)",
+                  fontFamily:"Inter,sans-serif", fontSize:"0.6875rem", fontWeight: videoIdx===i ? 600 : 400,
+                  cursor:"pointer",
+                }}>{v.label}</button>
+              ))}
+            </div>
+            {/* YouTube embed */}
+            <iframe
+              key={REFERENCE_VIDEOS[videoIdx].id}
+              src={`https://www.youtube.com/embed/${REFERENCE_VIDEOS[videoIdx].id}?autoplay=0&rel=0`}
+              width="300" height="168"
+              style={{ display:"block", border:"none" }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        )}
+        <button onClick={()=>setVideoOpen(v=>!v)} style={{
+          display:"flex", alignItems:"center", gap:"0.5rem",
+          padding:"0.5625rem 1rem", borderRadius:100,
+          border:"1px solid var(--border-strong)",
+          background: videoOpen ? "var(--charcoal)" : "var(--white)",
+          color: videoOpen ? "var(--white)" : "var(--charcoal)",
+          fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", fontWeight:500,
+          cursor:"pointer", boxShadow:"0 2px 8px rgba(0,0,0,0.10)",
+        }}>
+          {videoOpen ? "✕ Close" : "▶ Learn"}
+        </button>
+      </div>
+
     </div>
   );
 }
