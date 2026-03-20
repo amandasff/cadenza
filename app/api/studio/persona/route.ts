@@ -4,16 +4,7 @@ import { getSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
 const client = new Anthropic();
 
-const PERSONA_TYPES = [
-  "The Romantic",
-  "The Architect",
-  "The Explorer",
-  "The Virtuoso",
-  "The Storyteller",
-  "The Minimalist",
-  "The Dreamer",
-  "The Maverick",
-];
+// Persona types are now derived by the AI from the student's actual data
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,10 +22,10 @@ export async function POST(req: NextRequest) {
 
     const profile = profileRes.data as { streak_days: number; total_points: number; instrument: string | null; studio_bio_updated_at: string | null } | null;
 
-    // Cache check — regenerate at most once per 24h
+    // Cache check — regenerate at most once per 6h
     if (profile?.studio_bio_updated_at) {
       const lastUpdate = new Date(profile.studio_bio_updated_at).getTime();
-      if (Date.now() - lastUpdate < 24 * 60 * 60 * 1000) {
+      if (Date.now() - lastUpdate < 6 * 60 * 60 * 1000) {
         const cached = await supabase.from("profiles").select("studio_persona, studio_bio").eq("id", userId).single();
         if (cached.data) return NextResponse.json(cached.data);
       }
@@ -47,25 +38,33 @@ export async function POST(req: NextRequest) {
     const pieces = ((piecesRes.data ?? []) as Array<{ title: string; composer: string | null; status: string }>)
       .map(p => `${p.title}${p.composer ? ` by ${p.composer}` : ""} (${p.status})`);
 
-    const prompt = `You are helping create a musical identity for a young music student's studio page.
+    const prompt = `You are a panel of three experts writing a young musician's studio legend card — the kind of profile that feels so cool and specific that the student wants to show it to everyone.
 
-Student profile:
-- Instrument: ${profile?.instrument ?? "unknown"}
+PANEL:
+- GAME DESIGNER: thinks about RPG character archetypes, what makes an identity feel rare and earned
+- BRAND STRATEGIST: thinks about what makes a profile memorable and shareable
+- MUSIC PSYCHOLOGIST: reads what a student's collected composers and repertoire reveals about their inner musical personality
+
+Student data:
+- Instrument: ${profile?.instrument ?? "not specified"}
 - Practice streak: ${profile?.streak_days ?? 0} days
-- Practice points earned: ${profile?.total_points ?? 0}
+- Total points earned: ${profile?.total_points ?? 0}
 - Composer cards collected: ${composers.length > 0 ? composers.join(", ") : "none yet"}
-- Pieces in repertoire: ${pieces.length > 0 ? pieces.slice(0, 5).join("; ") : "none yet"}
+- Current repertoire: ${pieces.length > 0 ? pieces.slice(0, 6).join("; ") : "none yet"}
 
-Based on this, choose ONE of these Musical Persona types that best fits this student:
-${PERSONA_TYPES.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+GAME DESIGNER: What rare archetype does this data suggest? (e.g. "The Storm Weaver", "The Clockwork Prodigy", "The Velvet Architect" — something vivid and specific to THEIR data, never generic)
+BRAND STRATEGIST: What one detail in their data is the most interesting hook?
+MUSIC PSYCHOLOGIST: What do their collected composers reveal about what moves them?
 
-Then write a 2-sentence studio bio in second person ("You are...") that captures their musical spirit. Make it warm, encouraging, and specific to their data. Keep it under 50 words.
+Now synthesize into the final output:
+1. "persona": A 2-4 word archetype title that feels legendary and specific to this student (NOT generic like "The Dreamer")
+2. "bio": Exactly 2 sentences, written in THIRD PERSON like a character card in a music RPG. Sentence 1 paints who they are right now using their actual data. Sentence 2 is an electrifying one-liner about where they're headed. Under 60 words total. Vivid, specific, zero clichés.
 
-Respond in JSON: { "persona": "<persona type>", "bio": "<two sentences>" }`;
+Respond ONLY in JSON: { "persona": "...", "bio": "..." }`;
 
     const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
+      model: "claude-sonnet-4-6",
+      max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
     });
 

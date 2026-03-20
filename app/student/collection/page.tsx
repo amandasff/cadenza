@@ -38,7 +38,21 @@ const ERA_SETS: Record<CollectibleEra, { bonus: string; color: string }> = {
   impressionist: { bonus: "Sound Painter",       color: "var(--peach)" },
 };
 
-// ── Composer birth years ──────────────────────────────────────────────────────
+// ── Composer birth years & countries ─────────────────────────────────────────
+const COMPOSER_COUNTRIES: Record<string, string> = {
+  Bach:         "🇩🇪 Germany",
+  Handel:       "🇩🇪 Germany",
+  Vivaldi:      "🇮🇹 Italy",
+  Mozart:       "🇦🇹 Austria",
+  Beethoven:    "🇩🇪 Germany",
+  Schubert:     "🇦🇹 Austria",
+  Chopin:       "🇵🇱 Poland",
+  Liszt:        "🇭🇺 Hungary",
+  Brahms:       "🇩🇪 Germany",
+  Tchaikovsky:  "🇷🇺 Russia",
+  Debussy:      "🇫🇷 France",
+};
+
 const BIRTH_YEARS: Record<string, number> = {
   Bach:         1685,
   Handel:       1685,
@@ -217,14 +231,18 @@ function ComposerCard({
         }}>
           {owned ? avatar.composer_name : "???"}
         </div>
-        {owned && BIRTH_YEARS[avatar.composer_name] && (
+        {owned && (BIRTH_YEARS[avatar.composer_name] || COMPOSER_COUNTRIES[avatar.composer_name]) && (
           <div style={{
             fontFamily: "Inter, sans-serif",
             fontSize: "0.4375rem",
             color: "var(--muted)",
             marginTop: "0.05rem",
+            display: "flex",
+            gap: "0.3rem",
+            flexWrap: "wrap",
           }}>
-            b. {BIRTH_YEARS[avatar.composer_name]}
+            {BIRTH_YEARS[avatar.composer_name] && <span>b. {BIRTH_YEARS[avatar.composer_name]}</span>}
+            {COMPOSER_COUNTRIES[avatar.composer_name] && <span>{COMPOSER_COUNTRIES[avatar.composer_name]}</span>}
           </div>
         )}
         <div style={{
