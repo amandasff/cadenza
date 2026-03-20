@@ -526,6 +526,24 @@ export default function TeacherDashboard() {
                       </div>
                     )}
                   </Link>
+                  {/* Studio link */}
+                  <Link
+                    href={`/student/studio/${profile.id}`}
+                    title="Visit student's studio"
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      position: "absolute", top: 10, right: 42,
+                      width: 28, height: 28,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "var(--cream)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      fontSize: "0.875rem",
+                      zIndex: 1,
+                      textDecoration: "none",
+                    }}
+                  >🏠</Link>
                   {/* Single action button — freeze grant lives in the modal */}
                   <button
                     onClick={() => openEncourage(profile)}
