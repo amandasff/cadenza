@@ -490,7 +490,7 @@ function ResultsScreen({
       <TopBar onBack={onMenu} label="Round complete" />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem" }}>
         <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
-          {newRecord && <div style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#FFD700", marginBottom: "0.75rem" }}>🏆 New Personal Best!</div>}
+          {newRecord && <div style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#FFD700", marginBottom: "0.75rem" }}>🏆 New High Score!</div>}
           <div style={{ fontSize: "5rem", fontWeight: 800, color: g.color, lineHeight: 1, marginBottom: "0.25rem", letterSpacing: "-0.04em" }}>{g.label}</div>
           <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "#FDFCFA", letterSpacing: "-0.03em", marginBottom: "0.25rem" }}>{score.toLocaleString()}</div>
           <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>pts · {gameLabel}</div>
@@ -506,7 +506,7 @@ function ResultsScreen({
               </div>
             ))}
           </div>
-          {hiScore > 0 && !newRecord && <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.3)", marginBottom: "1.5rem" }}>Best: {hiScore.toLocaleString()} pts</div>}
+          {hiScore > 0 && !newRecord && <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.3)", marginBottom: "1.5rem" }}>High Score: {hiScore.toLocaleString()} pts</div>}
           <div style={{ display: "flex", gap: "0.625rem" }}>
             <button onClick={onPlayAgain} style={{ flex: 1, padding: "0.875rem", borderRadius: 8, border: "none", background: "#4CAF84", color: "#fff", fontSize: "0.9375rem", fontFamily: "Inter, sans-serif", fontWeight: 700, cursor: "pointer", boxShadow: "0 0 20px #4CAF8440" }}>{t.student.playAgain}</button>
             <button onClick={onMenu} style={{ flex: 1, padding: "0.875rem", borderRadius: 8, border: "1.5px solid rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.6)", fontSize: "0.9375rem", fontFamily: "Inter, sans-serif", fontWeight: 500, cursor: "pointer" }}>Change Mode</button>
@@ -572,7 +572,7 @@ function IdleCard({
         <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.375rem" }}>{title}</div>
           <div style={{ marginBottom: "2rem" }}>
-            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.375rem" }}>Personal Best</div>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: "0.375rem" }}>High Score</div>
             <div style={{ fontSize: "3rem", fontWeight: 700, color: "#FDFCFA", letterSpacing: "-0.03em", lineHeight: 1 }}>{hiScore > 0 ? hiScore.toLocaleString() : "—"}</div>
           </div>
           {extras}
