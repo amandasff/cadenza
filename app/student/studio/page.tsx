@@ -73,6 +73,33 @@ interface ProfileData {
   featured_avatar_id: string | null;
   studio_persona: string | null;
   studio_bio: string | null;
+  theme_song_item_id: string | null;
+  theme_song_title: string | null;
+}
+
+interface PublicTrack {
+  id: string;
+  title: string;
+  description: string | null;
+  media_type: string | null;
+  collection_count: number;
+  price_points: number;
+  recording_url: string | null;
+  created_at: string;
+}
+
+interface CrateItem {
+  portfolio_item_id: string;
+  portfolio_items: {
+    id: string;
+    title: string;
+    recording_url: string | null;
+    student_id: string;
+    profiles: {
+      display_name: string;
+      avatar_url: string | null;
+    } | null;
+  } | null;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -88,7 +115,7 @@ export default function StudioPage() {
   const [pieces, setPieces] = useState<PieceRow[]>([]);
   const [gifts, setGifts] = useState<StudioGiftWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey" | "repertoire">("composers");
+  const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey" | "repertoire" | "music">("composers");
   const [hoveredComposer, setHoveredComposer] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -97,6 +124,18 @@ export default function StudioPage() {
   const [personaLoading, setPersonaLoading] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
   const stopTuneRef = useRef<(() => void) | null>(null);
+
+  // Theme song
+  const [themeSongUrl, setThemeSongUrl] = useState<string | null>(null);
+
+  // My Music tab
+  const [publicTracks, setPublicTracks] = useState<PublicTrack[]>([]);
+  const [crateItems, setCrateItems] = useState<CrateItem[]>([]);
+  const [musicLoaded, setMusicLoaded] = useState(false);
+  const [editingTrackId, setEditingTrackId] = useState<string | null>(null);
+  const [draftTrackTitle, setDraftTrackTitle] = useState("");
+  const [draftTrackPrice, setDraftTrackPrice] = useState(0);
+  const [savingTrack, setSavingTrack] = useState(false);
 
   const load = useCallback(async () => {
     if (!student?.id) return;
@@ -107,7 +146,7 @@ export default function StudioPage() {
       const [inv, comps, profileRes, piecesRes, giftsRes] = await Promise.all([
         shop.getInventory(student.id),
         collectibles.getCollection(student.id),
-        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio").eq("id", student.id).single(),
+        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", student.id).single(),
         supabase.from("pieces").select("*").eq("student_id", student.id).order("created_at", { ascending: false }),
         supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", student.id).order("created_at", { ascending: false }).limit(20),
       ]);
@@ -118,6 +157,15 @@ export default function StudioPage() {
         setProfile(p);
         setDraftName(p.studio_name ?? "");
         setDraftTagline(p.studio_tagline ?? "");
+        // Fetch theme song recording URL if set
+        if (p.theme_song_item_id) {
+          const { data: songData } = await supabase
+            .from("portfolio_items")
+            .select("recording_url")
+            .eq("id", p.theme_song_item_id)
+            .single();
+          setThemeSongUrl(songData?.recording_url ?? null);
+        }
       }
       setPieces((piecesRes.data ?? []) as PieceRow[]);
       setGifts((giftsRes.data ?? []) as StudioGiftWithDetails[]);
@@ -132,6 +180,30 @@ export default function StudioPage() {
 
   // Clean up tune on unmount
   useEffect(() => () => { stopTuneRef.current?.(); }, []);
+
+  // Load music tab data on first visit
+  useEffect(() => {
+    if (activeTab !== "music" || musicLoaded || !student?.id) return;
+    async function loadMusic() {
+      const [tracksRes, crateRes] = await Promise.all([
+        supabase
+          .from("portfolio_items")
+          .select("id,title,description,media_type,collection_count,price_points,recording_url,created_at")
+          .eq("student_id", student.id)
+          .eq("is_public", true)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("portfolio_collections")
+          .select("portfolio_item_id, portfolio_items(id, title, recording_url, student_id, profiles(display_name, avatar_url))")
+          .eq("collector_id", student.id)
+          .order("created_at", { ascending: false }),
+      ]);
+      setPublicTracks((tracksRes.data ?? []) as PublicTrack[]);
+      setCrateItems((crateRes.data ?? []) as CrateItem[]);
+      setMusicLoaded(true);
+    }
+    loadMusic();
+  }, [activeTab, musicLoaded, student?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const featuredComposer = composers.find(c => c.avatar_id === profile?.featured_avatar_id)
     ?? composers[0]
@@ -187,6 +259,27 @@ export default function StudioPage() {
     }
   }
 
+  function startEditTrack(track: PublicTrack) {
+    setEditingTrackId(track.id);
+    setDraftTrackTitle(track.title);
+    setDraftTrackPrice(track.price_points);
+  }
+
+  async function saveTrack(trackId: string) {
+    setSavingTrack(true);
+    const { data } = await supabase
+      .from("portfolio_items")
+      .update({ title: draftTrackTitle.trim(), price_points: draftTrackPrice })
+      .eq("id", trackId)
+      .select("id,title,price_points")
+      .single();
+    if (data) {
+      setPublicTracks(prev => prev.map(t => t.id === trackId ? { ...t, title: data.title, price_points: data.price_points } : t));
+    }
+    setSavingTrack(false);
+    setEditingTrackId(null);
+  }
+
   const weather = practiceWeather(profile?.streak_days ?? 0);
   const studioTitle = profile?.studio_name || (profile?.display_name ? `${profile.display_name}'s Studio` : "My Studio");
   const eraTint = featuredComposer ? ERA_TINTS[featuredComposer.composer_avatars.era] ?? ERA_TINTS.classical : undefined;
@@ -231,6 +324,31 @@ export default function StudioPage() {
           </button>
         </div>
       )}
+
+      {/* ── Theme Song ── */}
+      <div className="card-base" style={{ padding: "0.75rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <span style={{ fontSize: "1rem", flexShrink: 0 }}>♫</span>
+        {profile?.theme_song_title ? (
+          <>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>Your theme: </span>
+              <span style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontStyle: "italic", fontSize: "0.9375rem", color: "var(--charcoal)" }}>&ldquo;{profile.theme_song_title}&rdquo;</span>
+            </div>
+            {themeSongUrl && (
+              <audio
+                controls
+                src={themeSongUrl}
+                style={{ height: 28, minWidth: 0, maxWidth: 180, flexShrink: 1 }}
+              />
+            )}
+          </>
+        ) : (
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
+            No theme set —{" "}
+            <Link href="/student/discover" style={{ color: "var(--charcoal)", fontWeight: 600, textDecoration: "none" }}>find one in Discover</Link>
+          </span>
+        )}
+      </div>
 
       {/* ── Profile card ── */}
       <div className="card-base" style={{ padding: "1.5rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: "1.25rem", flexWrap: "wrap" }}>
@@ -361,7 +479,7 @@ export default function StudioPage() {
 
       {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: "0", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", width: "fit-content", marginBottom: "1.5rem" }}>
-        {([["composers", `Composers (${composers.length})`], ["items", `Studio (${inventory.length})`], ["journey", "Journey"]] as const).map(([tab, label]) => (
+        {([["composers", `Composers (${composers.length})`], ["items", `Studio (${inventory.length})`], ["journey", "Journey"], ["music", "My Music"]] as const).map(([tab, label]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             padding: "0.5rem 1.125rem", border: "none", cursor: "pointer",
             background: activeTab === tab ? "var(--charcoal)" : "transparent",
@@ -466,6 +584,124 @@ export default function StudioPage() {
             })}
           </div>
         )
+      ) : activeTab === "music" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+          {/* ── A. Published tracks ── */}
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
+              Your Discography
+            </div>
+            {!musicLoaded ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 64, borderRadius: 8 }} />)}
+              </div>
+            ) : publicTracks.length === 0 ? (
+              <div style={{ padding: "1.5rem 1rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center" }}>
+                Your recordings appear here when you publish them from the Practice page
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {publicTracks.map(track => (
+                  <div key={track.id} style={{ padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                    {editingTrackId === track.id ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        <input
+                          value={draftTrackTitle}
+                          onChange={e => setDraftTrackTitle(e.target.value)}
+                          maxLength={80}
+                          style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: 600, color: "var(--charcoal)", border: "1px solid var(--border)", borderRadius: 4, padding: "0.25rem 0.5rem", outline: "none", background: "var(--cream)" }}
+                        />
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <label style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>Price (pts):</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={draftTrackPrice}
+                            onChange={e => setDraftTrackPrice(Math.max(0, parseInt(e.target.value) || 0))}
+                            style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", border: "1px solid var(--border)", borderRadius: 4, padding: "0.25rem 0.5rem", outline: "none", background: "var(--cream)", width: 72 }}
+                          />
+                          <button onClick={() => saveTrack(track.id)} disabled={savingTrack} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, padding: "0.25rem 0.75rem", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                            {savingTrack ? "…" : "Save"}
+                          </button>
+                          <button onClick={() => setEditingTrackId(null)} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                            <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{track.title}</span>
+                            {track.media_type && (
+                              <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 3, padding: "0.1rem 0.35rem" }}>{track.media_type}</span>
+                            )}
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--charcoal)", background: "var(--butter)", borderRadius: 3, padding: "0.1rem 0.35rem" }}>
+                              {track.price_points === 0 ? "Free" : `${track.price_points} pts`}
+                            </span>
+                          </div>
+                          {track.description && (
+                            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.description}</div>
+                          )}
+                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", marginTop: "0.25rem" }}>{track.collection_count} collected</div>
+                        </div>
+                        <button
+                          onClick={() => startEditTrack(track)}
+                          title="Edit"
+                          style={{ flexShrink: 0, background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: "0.875rem", padding: "0.25rem" }}
+                        >
+                          ✎
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── B. The Crate ── */}
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
+              The Crate
+            </div>
+            {!musicLoaded ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 56, borderRadius: 8 }} />)}
+              </div>
+            ) : crateItems.length === 0 ? (
+              <div style={{ padding: "1.5rem 1rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center" }}>
+                Your Crate is empty — collect tracks from other artists in{" "}
+                <Link href="/student/discover" style={{ color: "var(--charcoal)", fontWeight: 600, textDecoration: "none" }}>Discover</Link>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {crateItems.map(item => {
+                  const pi = item.portfolio_items;
+                  if (!pi) return null;
+                  return (
+                    <div key={item.portfolio_item_id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{pi.title}</div>
+                        {pi.profiles?.display_name && (
+                          <Link href={`/student/studio/${pi.student_id}`} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", textDecoration: "none" }}>
+                            {pi.profiles.display_name}
+                          </Link>
+                        )}
+                      </div>
+                      {pi.recording_url && (
+                        <audio
+                          controls
+                          src={pi.recording_url}
+                          style={{ height: 28, minWidth: 0, maxWidth: 160, flexShrink: 1 }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       ) : (
         /* Journey tab */
         pieces.length === 0 ? (
