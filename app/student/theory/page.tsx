@@ -815,13 +815,8 @@ function IntervalGame({ onBack }: { onBack: () => void }) {
               </div>
             </div>
 
-            {/* Replay + reference */}
+            {/* Reference */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.625rem" }}>
-              {!game.selected && (
-                <button onClick={() => playQ(q.semi, q.direction)} style={{ padding: "0.4rem 1rem", borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.4)", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.375rem" }}>
-                  <RefreshCw size={10} strokeWidth={2} /> Replay
-                </button>
-              )}
               <button onClick={() => setShowRef(v => !v)} style={{ padding: "0.4rem 0.75rem", borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)", background: "transparent", color: "rgba(255,255,255,0.35)", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", cursor: "pointer" }}>
                 📖 Reference
               </button>
