@@ -97,6 +97,12 @@ export default function DiscoverPage() {
   const [likingId, setLikingId]                 = useState<string | null>(null);
   const [likeError, setLikeError]               = useState<string | null>(null);
 
+  const [collectedIds, setCollectedIds]         = useState<Set<string>>(new Set());
+  const [themeSongItemId, setThemeSongItemId]   = useState<string | null>(null);
+  const [collectingId, setCollectingId]         = useState<string | null>(null);
+  const [settingThemeId, setSettingThemeId]     = useState<string | null>(null);
+  const [collectToast, setCollectToast]         = useState(false);
+
   const [leaderboard, setLeaderboard]           = useState<Array<{ id: string; display_name: string; avatar_url: string | null; streak_days: number; total_days_practiced: number; role: string | null }>>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardLoaded, setLeaderboardLoaded]   = useState(false);
@@ -163,6 +169,18 @@ export default function DiscoverPage() {
         const { data: followData } = await supabase
           .from("follows").select("following_id").eq("follower_id", uid);
         setMyFollows(new Set((followData ?? []).map((f: { following_id: string }) => f.following_id)));
+
+        // Load crate (collected items)
+        const { data: crateData } = await supabase
+          .from("portfolio_collections").select("portfolio_item_id").eq("collector_id", uid);
+        setCollectedIds(new Set((crateData ?? []).map((c: { portfolio_item_id: string }) => c.portfolio_item_id)));
+
+        // Load current theme song
+        const { data: themeData } = await supabase
+          .from("profiles").select("theme_song_item_id").eq("id", uid).single();
+        if (themeData) {
+          setThemeSongItemId((themeData as { theme_song_item_id?: string | null }).theme_song_item_id ?? null);
+        }
       }
 
       const { data: itemData, error: itemError } = await supabase
@@ -289,6 +307,43 @@ export default function DiscoverPage() {
       setLikeError((err as { message?: string })?.message ?? "Could not save reaction");
       setTimeout(() => setLikeError(null), 4000);
     } finally { setLikingId(null); }
+  }
+
+  // ── Collect ──────────────────────────────────────────────────────────────────
+
+  async function collectItem(item: PublicItem) {
+    if (!currentUserId || collectingId === item.id) return;
+    if (item.student_id === currentUserId) return;
+    if (collectedIds.has(item.id)) return;
+    setCollectingId(item.id);
+    try {
+      const res = await fetch("/api/portfolio/collect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectorId: currentUserId, itemId: item.id }),
+      });
+      if (!res.ok) throw new Error("collect failed");
+      setCollectedIds(prev => new Set([...prev, item.id]));
+      setCollectToast(true);
+      setTimeout(() => setCollectToast(false), 2500);
+    } catch {
+      // silently ignore
+    } finally {
+      setCollectingId(null);
+    }
+  }
+
+  // ── Set as theme ─────────────────────────────────────────────────────────────
+
+  async function setTheme(item: PublicItem) {
+    if (!currentUserId || settingThemeId === item.id) return;
+    setSettingThemeId(item.id);
+    try {
+      await supabase.from("profiles").update({ theme_song_item_id: item.id, theme_song_title: item.title }).eq("id", currentUserId);
+      setThemeSongItemId(item.id);
+    } finally {
+      setSettingThemeId(null);
+    }
   }
 
   // ── Comments ─────────────────────────────────────────────────────────────────
@@ -661,6 +716,44 @@ export default function DiscoverPage() {
                       <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", fontWeight: 500 }}>{item.comment_count}</span>
                       <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", color: "var(--muted)", marginLeft: "auto" }}>{formatRelative(item.created_at, t.schedule.today, t.schedule.yesterday, t.schedule.daysAgo, t.student.weekAgo, t.student.monthAgo)}</span>
                     </div>
+                    {/* Collect + Set theme actions */}
+                    <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.25rem", flexWrap: "wrap" }}>
+                      {item.student_id !== currentUserId && (
+                        <button
+                          onClick={() => collectItem(item)}
+                          disabled={collectedIds.has(item.id) || collectingId === item.id}
+                          style={{
+                            background: "none", border: "1px solid var(--border)", borderRadius: 99,
+                            padding: "0.1rem 0.45rem", cursor: collectedIds.has(item.id) ? "default" : "pointer",
+                            fontFamily: "Inter, sans-serif", fontSize: "0.5rem", fontWeight: 500,
+                            color: collectedIds.has(item.id) ? "var(--muted)" : "var(--charcoal)",
+                            opacity: collectingId === item.id ? 0.5 : 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {collectedIds.has(item.id)
+                            ? "✓ In Crate"
+                            : (item as PublicItem & { price_points?: number }).price_points
+                              ? `+ Collect · ${(item as PublicItem & { price_points?: number }).price_points} pts`
+                              : "+ Collect"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setTheme(item)}
+                        disabled={settingThemeId === item.id}
+                        style={{
+                          background: "none", border: "1px solid var(--border)", borderRadius: 99,
+                          padding: "0.1rem 0.45rem", cursor: "pointer",
+                          fontFamily: "Inter, sans-serif", fontSize: "0.5rem", fontWeight: 500,
+                          color: themeSongItemId === item.id ? "#c47d10" : "var(--muted)",
+                          borderColor: themeSongItemId === item.id ? "rgba(230,168,23,0.4)" : "var(--border)",
+                          opacity: settingThemeId === item.id ? 0.5 : 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {themeSongItemId === item.id ? "♫ Theme" : "♫ Set theme"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -673,6 +766,13 @@ export default function DiscoverPage() {
       {likeError && (
         <div style={{ position: "fixed", bottom: "5.5rem", left: "50%", transform: "translateX(-50%)", zIndex: 600, background: "var(--charcoal)", color: "var(--white)", fontSize: "0.8125rem", fontWeight: 500, padding: "0.625rem 1.25rem", borderRadius: 24, boxShadow: "var(--shadow-md)", whiteSpace: "nowrap", pointerEvents: "none" }}>
           {likeError}
+        </div>
+      )}
+
+      {/* ── Collect toast ── */}
+      {collectToast && (
+        <div style={{ position: "fixed", bottom: "5.5rem", left: "50%", transform: "translateX(-50%)", zIndex: 600, background: "var(--charcoal)", color: "var(--white)", fontSize: "0.8125rem", fontWeight: 500, padding: "0.625rem 1.25rem", borderRadius: 24, boxShadow: "var(--shadow-md)", whiteSpace: "nowrap", pointerEvents: "none" }}>
+          Added to crate!
         </div>
       )}
 
@@ -896,6 +996,51 @@ export default function DiscoverPage() {
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     {expandedItem.comment_count > 0 ? `${expandedItem.comment_count}` : t.student.feedbackAction}
+                  </button>
+
+                  {/* Collect button */}
+                  {expandedItem.student_id !== currentUserId && (
+                    <button
+                      onClick={() => collectItem(expandedItem)}
+                      disabled={collectedIds.has(expandedItem.id) || collectingId === expandedItem.id}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "0.4rem",
+                        padding: "0.5rem 1rem", borderRadius: 20,
+                        border: `1.5px solid ${collectedIds.has(expandedItem.id) ? "var(--border)" : "var(--border)"}`,
+                        background: "none",
+                        cursor: collectedIds.has(expandedItem.id) ? "default" : "pointer",
+                        fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
+                        color: collectedIds.has(expandedItem.id) ? "var(--muted)" : "var(--charcoal)",
+                        fontWeight: 500, transition: "all 0.15s",
+                        opacity: collectingId === expandedItem.id ? 0.5 : 1,
+                      }}
+                    >
+                      {collectedIds.has(expandedItem.id)
+                        ? "✓ In Crate"
+                        : (expandedItem as PublicItem & { price_points?: number }).price_points
+                          ? `+ Collect · ${(expandedItem as PublicItem & { price_points?: number }).price_points} pts`
+                          : "+ Collect"}
+                    </button>
+                  )}
+
+                  {/* Set as theme button */}
+                  <button
+                    onClick={() => setTheme(expandedItem)}
+                    disabled={settingThemeId === expandedItem.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.4rem",
+                      padding: "0.5rem 1rem", borderRadius: 20,
+                      border: `1.5px solid ${themeSongItemId === expandedItem.id ? "rgba(230,168,23,0.5)" : "var(--border)"}`,
+                      background: "none",
+                      cursor: "pointer",
+                      fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
+                      color: themeSongItemId === expandedItem.id ? "#c47d10" : "var(--muted)",
+                      fontWeight: themeSongItemId === expandedItem.id ? 600 : 400,
+                      transition: "all 0.15s",
+                      opacity: settingThemeId === expandedItem.id ? 0.5 : 1,
+                    }}
+                  >
+                    {themeSongItemId === expandedItem.id ? "♫ Theme" : "♫ Set theme"}
                   </button>
 
                   {/* View count */}
