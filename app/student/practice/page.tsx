@@ -119,9 +119,10 @@ function PracticeInner() {
   // ── Load artist name for privacy picker ──
   useEffect(() => {
     if (!user?.id) return;
-    getSupabaseBrowserClient().from("profiles").select("artist_name").eq("id", user.id).single().then((res) => {
-      setArtistName((res.data as { artist_name?: string | null } | null)?.artist_name ?? null);
-    }).catch(() => {});
+    (async () => {
+      const { data } = await getSupabaseBrowserClient().from("profiles").select("artist_name").eq("id", user.id).single();
+      setArtistName((data as { artist_name?: string | null } | null)?.artist_name ?? null);
+    })();
   }, [user?.id]);
 
   // ── Check for a crash-recovery draft ──
