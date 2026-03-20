@@ -204,25 +204,20 @@ export class AssignmentService {
     rating: SelfRating,
     notes?: string
   ): Promise<void> {
-    // Insert completion record
-    const { error: completionError } = await this.supabase
-      .from('assignment_completions')
-      .insert({
+    // Insert completion record and mark assignment completed in parallel
+    const [{ error: completionError }, { error: updateError }] = await Promise.all([
+      this.supabase.from('assignment_completions').insert({
         assignment_id: assignmentId,
         student_id: studentId,
         self_rating: rating,
         student_notes: notes ?? null,
-      });
+      }),
+      this.supabase.from('assignments').update({ status: 'completed' })
+        .eq('id', assignmentId)
+        .eq('student_id', studentId),
+    ]);
 
     if (completionError) throw completionError;
-
-    // Mark assignment as completed
-    const { error: updateError } = await this.supabase
-      .from('assignments')
-      .update({ status: 'completed' })
-      .eq('id', assignmentId)
-      .eq('student_id', studentId);
-
     if (updateError) throw updateError;
 
     // Award 50 points for completing an assignment (silently — don't block if points fail)

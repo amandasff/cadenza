@@ -52,27 +52,27 @@ export class PracticeService {
     yDate.setDate(yDate.getDate() - 1);
     const yesterdayStr = toLocalDateStr(yDate);
 
-    // Most recent session BEFORE this one
-    const { data: prevSessions } = await this.supabase
-      .from('practice_sessions')
-      .select('created_at')
-      .eq('student_id', input.studentId)
-      .neq('id', data.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // Fetch previous session and current profile in parallel
+    const [{ data: prevSessions }, { data: profile, error: profileFetchError }] = await Promise.all([
+      this.supabase
+        .from('practice_sessions')
+        .select('created_at')
+        .eq('student_id', input.studentId)
+        .neq('id', data.id)
+        .order('created_at', { ascending: false })
+        .limit(1),
+      this.supabase
+        .from('profiles')
+        .select('streak_days, total_points')
+        .eq('id', input.studentId)
+        .single(),
+    ]);
+
+    if (profileFetchError) throw profileFetchError;
 
     const lastDate = prevSessions?.[0]?.created_at
       ? toLocalDateStr(new Date(prevSessions[0].created_at))
       : null;
-
-    // Fetch current profile (streak + points)
-    const { data: profile, error: profileFetchError } = await this.supabase
-      .from('profiles')
-      .select('streak_days, total_points')
-      .eq('id', input.studentId)
-      .single();
-
-    if (profileFetchError) throw profileFetchError;
 
     const current = profile as { streak_days: number; total_points: number };
 

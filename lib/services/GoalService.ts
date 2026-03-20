@@ -97,38 +97,25 @@ export class GoalService {
     studentId: string,
     pointsToAward: number
   ): Promise<void> {
-    // Fetch bonus_points from goal before marking complete
-    const { data: goalData } = await this.supabase
-      .from('goals')
-      .select('bonus_points')
-      .eq('id', goalId)
-      .single();
-
-    const bonusPoints = (goalData as { bonus_points: number | null } | null)?.bonus_points ?? 0;
-    const totalToAward = pointsToAward + bonusPoints;
-
-    const { error: goalError } = await this.supabase
-      .from('goals')
-      .update({ status: 'completed' })
-      .eq('id', goalId);
-
-    if (goalError) throw goalError;
-
-    const { data: profile, error: profileFetchError } = await this.supabase
-      .from('profiles')
-      .select('total_points')
-      .eq('id', studentId)
-      .single();
+    // Fetch goal bonus_points and current profile in parallel
+    const [{ data: goalData }, { data: profile, error: profileFetchError }] = await Promise.all([
+      this.supabase.from('goals').select('bonus_points').eq('id', goalId).single(),
+      this.supabase.from('profiles').select('total_points').eq('id', studentId).single(),
+    ]);
 
     if (profileFetchError) throw profileFetchError;
 
+    const bonusPoints = (goalData as { bonus_points: number | null } | null)?.bonus_points ?? 0;
+    const totalToAward = pointsToAward + bonusPoints;
     const current = profile as { total_points: number };
 
-    const { error: updateError } = await this.supabase
-      .from('profiles')
-      .update({ total_points: current.total_points + totalToAward })
-      .eq('id', studentId);
+    // Write goal status + profile points in parallel
+    const [{ error: goalError }, { error: updateError }] = await Promise.all([
+      this.supabase.from('goals').update({ status: 'completed' }).eq('id', goalId),
+      this.supabase.from('profiles').update({ total_points: current.total_points + totalToAward }).eq('id', studentId),
+    ]);
 
+    if (goalError) throw goalError;
     if (updateError) throw updateError;
   }
 

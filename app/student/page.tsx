@@ -124,74 +124,82 @@ export default function ThisWeek() {
   const load = useCallback(async () => {
     if (!student?.id) return;
     setLoading(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
 
-      const { data: goalsData } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("student_id", student.id)
-        .eq("status", "current")
-        .order("path_order", { ascending: true });
+    await Promise.allSettled([
+      // Block 1: goals → pieces (pieces depend on goals, so stays sequential internally)
+      (async () => {
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data: goalsData } = await supabase
+            .from("goals")
+            .select("*")
+            .eq("student_id", student.id)
+            .eq("status", "current")
+            .order("path_order", { ascending: true });
 
-      const rawGoals = (goalsData ?? []) as GoalRow[];
-
-      const pieceIds = [...new Set(rawGoals.filter(g => g.piece_id).map(g => g.piece_id!))];
-      let piecesMap: Record<string, PieceRow> = {};
-      if (pieceIds.length > 0) {
-        const { data: piecesData } = await supabase
-          .from("pieces")
-          .select("*")
-          .in("id", pieceIds);
-        for (const p of (piecesData ?? []) as PieceRow[]) {
-          piecesMap[p.id] = p;
+          const rawGoals = (goalsData ?? []) as GoalRow[];
+          const pieceIds = [...new Set(rawGoals.filter(g => g.piece_id).map(g => g.piece_id!))];
+          let piecesMap: Record<string, PieceRow> = {};
+          if (pieceIds.length > 0) {
+            const { data: piecesData } = await supabase
+              .from("pieces")
+              .select("*")
+              .in("id", pieceIds);
+            for (const p of (piecesData ?? []) as PieceRow[]) {
+              piecesMap[p.id] = p;
+            }
+          }
+          setGoals(rawGoals.map(g => ({
+            ...g,
+            piece: g.piece_id ? (piecesMap[g.piece_id] ?? null) : null,
+          })));
+        } catch (err) {
+          console.error("load error:", err);
         }
-      }
+      })(),
 
-      setGoals(rawGoals.map(g => ({
-        ...g,
-        piece: g.piece_id ? (piecesMap[g.piece_id] ?? null) : null,
-      })));
-    } catch (err) {
-      console.error("load error:", err);
-    } finally {
-      setLoading(false);
-    }
+      // Block 2: lessons + assignments (already parallel)
+      (async () => {
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const lessonService = LessonService.create(supabase);
+          const assignmentService = AssignmentService.create(supabase);
+          const [lesson, activeAssignments] = await Promise.all([
+            lessonService.getStudentNextLesson(student.id),
+            assignmentService.getActiveAssignments(student.id),
+          ]);
+          setNextLesson(lesson);
+          setAssignments(activeAssignments);
+        } catch {
+          // Silently ignore — lessons table may not exist yet
+        }
+      })(),
 
-    // Load lessons + assignments separately — requires lessons SQL to be run in Supabase
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const lessonService = LessonService.create(supabase);
-      const assignmentService = AssignmentService.create(supabase);
-      const [lesson, activeAssignments] = await Promise.all([
-        lessonService.getStudentNextLesson(student.id),
-        assignmentService.getActiveAssignments(student.id),
-      ]);
-      setNextLesson(lesson);
-      setAssignments(activeAssignments);
-    } catch {
-      // Silently ignore — lessons table may not exist yet
-    } finally {
-      setLoading(false);
-    }
+      // Block 3: chat preview — studio fetch, then chat + teacher profile in parallel
+      (async () => {
+        if (!student.studioId) return;
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data: studioData } = await supabase
+            .from("studios").select("owner_id").eq("id", student.studioId).single();
+          const tId = studioData?.owner_id ?? null;
+          if (tId) {
+            setChatTeacherId(tId);
+            const chatService = ChatService.create(supabase);
+            const [msgs, tpResult] = await Promise.all([
+              chatService.getPrivateThread(student.studioId, student.id, tId),
+              supabase.from("profiles").select("display_name, avatar_url").eq("id", tId).single(),
+            ]);
+            setRecentMessages(msgs.slice(-15));
+            const tpd = tpResult.data as { display_name: string; avatar_url?: string | null } | null;
+            setTeacherName(tpd?.display_name ?? "Your teacher");
+            setTeacherAvatarUrl(tpd?.avatar_url ?? null);
+          }
+        } catch { /* ignore */ }
+      })(),
+    ]);
 
-    // Load chat preview
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { data: studioData } = await supabase
-        .from("studios").select("owner_id").eq("id", student.studioId!).single();
-      const tId = studioData?.owner_id ?? null;
-      if (tId) {
-        setChatTeacherId(tId);
-        const chatService = ChatService.create(supabase);
-        const msgs = await chatService.getPrivateThread(student.studioId!, student.id, tId);
-        setRecentMessages(msgs.slice(-15));
-        const { data: tp } = await supabase.from("profiles").select("display_name, avatar_url").eq("id", tId).single();
-        const tpd = tp as { display_name: string; avatar_url?: string | null } | null;
-        setTeacherName(tpd?.display_name ?? "Your teacher");
-        setTeacherAvatarUrl(tpd?.avatar_url ?? null);
-      }
-    } catch { /* ignore */ }
+    setLoading(false);
   }, [student?.id]);
 
   useEffect(() => { load(); }, [load]);
