@@ -38,6 +38,21 @@ const ERA_SETS: Record<CollectibleEra, { bonus: string; color: string }> = {
   impressionist: { bonus: "Sound Painter",       color: "var(--peach)" },
 };
 
+// ── Composer birth years ──────────────────────────────────────────────────────
+const BIRTH_YEARS: Record<string, number> = {
+  Bach:         1685,
+  Handel:       1685,
+  Vivaldi:      1678,
+  Mozart:       1756,
+  Beethoven:    1770,
+  Schubert:     1797,
+  Chopin:       1810,
+  Liszt:        1811,
+  Brahms:       1833,
+  Tchaikovsky:  1840,
+  Debussy:      1862,
+};
+
 // ── Silhouette overlay (CSS filter) ──────────────────────────────────────────
 const LOCKED_FILTER = "grayscale(1) brightness(0.35) contrast(0.6)";
 
@@ -202,6 +217,16 @@ function ComposerCard({
         }}>
           {owned ? avatar.composer_name : "???"}
         </div>
+        {owned && BIRTH_YEARS[avatar.composer_name] && (
+          <div style={{
+            fontFamily: "Inter, sans-serif",
+            fontSize: "0.4375rem",
+            color: "var(--muted)",
+            marginTop: "0.05rem",
+          }}>
+            b. {BIRTH_YEARS[avatar.composer_name]}
+          </div>
+        )}
         <div style={{
           fontFamily: "Inter, sans-serif",
           fontSize: "0.4375rem",
