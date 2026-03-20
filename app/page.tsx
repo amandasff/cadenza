@@ -225,7 +225,7 @@ export default function Home() {
               {(COPY[role] ?? COPY.student).subline}
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.75rem" }}>
+            <div className="landing-bullets" style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.75rem" }}>
               {(COPY[role] ?? COPY.student).bullets.map(line => (
                 <div key={line} style={{ display: "flex", alignItems: "flex-start", gap: "0.625rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#2C2824" }}>
                   <span style={{ color: "#5B9E79", flexShrink: 0, lineHeight: "1.4rem" }}>—</span>
@@ -332,11 +332,11 @@ export default function Home() {
       {/* ── Mobile: stack copy above form ── */}
       <style>{`
         @media (max-width: 640px) {
-          .landing-card { flex-direction: column !important; max-height: 100dvh; overflow-y: auto; }
-          .landing-copy { border-right: none !important; border-bottom: 1px solid rgba(44,40,36,0.08) !important; padding: 1.75rem 1.5rem 1.25rem !important; }
-          .landing-copy h1 { font-size: 1.75rem !important; }
-          .landing-copy p, .landing-copy .proof { display: none !important; }
-          .landing-form-col { flex: 1 1 auto !important; }
+          .landing-card { flex-direction: column !important; height: 100dvh; overflow: hidden; }
+          .landing-copy { border-right: none !important; border-bottom: 1px solid rgba(44,40,36,0.08) !important; padding: 1.25rem 1.25rem 1rem !important; flex-shrink: 0 !important; }
+          .landing-copy h1 { font-size: 1.5rem !important; margin-bottom: 0 !important; }
+          .landing-copy p, .landing-copy .proof, .landing-bullets { display: none !important; }
+          .landing-form-col { flex: 1 1 0 !important; overflow-y: auto !important; min-height: 0 !important; }
         }
       `}</style>
     </div>
