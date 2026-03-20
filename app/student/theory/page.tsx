@@ -1842,37 +1842,38 @@ function FretboardGame({ onBack }: { onBack: () => void }) {
 // Game: Guitar Chord Finder
 // ─────────────────────────────────────────────────────────────────────────────
 // frets: array of 6 (low-E to high-e): -1=muted, 0=open, N=fret N
-// barre: optional { fret, fromStr, toStr }
-type ChordDiagram = { name: string; frets: number[]; startFret?: number };
+// fingers: parallel array — 1=index 2=middle 3=ring 4=pinky 0=open/muted
+// barre: fret number where index finger barres multiple strings
+type ChordDiagram = { name: string; frets: number[]; fingers?: number[]; barre?: number; startFret?: number };
 
 const GUITAR_CHORDS_BEGINNER: ChordDiagram[] = [
-  { name: "Em",  frets: [0,2,2,0,0,0] },
-  { name: "Am",  frets: [-1,0,2,2,1,0] },
-  { name: "E",   frets: [0,2,2,1,0,0] },
-  { name: "A",   frets: [-1,0,2,2,2,0] },
-  { name: "D",   frets: [-1,-1,0,2,3,2] },
-  { name: "Dm",  frets: [-1,-1,0,2,3,1] },
-  { name: "G",   frets: [3,2,0,0,0,3] },
-  { name: "C",   frets: [-1,3,2,0,1,0] },
+  { name: "Em",   frets: [0,2,2,0,0,0],    fingers: [0,2,3,0,0,0] },
+  { name: "Am",   frets: [-1,0,2,2,1,0],   fingers: [0,0,2,3,1,0] },
+  { name: "E",    frets: [0,2,2,1,0,0],    fingers: [0,2,3,1,0,0] },
+  { name: "A",    frets: [-1,0,2,2,2,0],   fingers: [0,0,2,3,4,0] },
+  { name: "D",    frets: [-1,-1,0,2,3,2],  fingers: [0,0,0,1,3,2] },
+  { name: "Dm",   frets: [-1,-1,0,2,3,1],  fingers: [0,0,0,2,3,1] },
+  { name: "G",    frets: [3,2,0,0,0,3],    fingers: [3,2,0,0,0,4] },
+  { name: "C",    frets: [-1,3,2,0,1,0],   fingers: [0,3,2,0,1,0] },
 ];
 const GUITAR_CHORDS_INTERMEDIATE: ChordDiagram[] = [
   ...GUITAR_CHORDS_BEGINNER,
-  { name: "B7",   frets: [-1,2,1,2,0,2] },
-  { name: "A7",   frets: [-1,0,2,0,2,0] },
-  { name: "E7",   frets: [0,2,0,1,0,0] },
-  { name: "D7",   frets: [-1,-1,0,2,1,2] },
-  { name: "G7",   frets: [3,2,0,0,0,1] },
-  { name: "Cadd9",frets: [-1,3,2,0,3,3] },
-  { name: "Dsus2",frets: [-1,-1,0,2,3,0] },
-  { name: "Asus2",frets: [-1,0,2,2,0,0] },
+  { name: "B7",    frets: [-1,2,1,2,0,2],  fingers: [0,2,1,3,0,4] },
+  { name: "A7",    frets: [-1,0,2,0,2,0],  fingers: [0,0,2,0,3,0] },
+  { name: "E7",    frets: [0,2,0,1,0,0],   fingers: [0,2,0,1,0,0] },
+  { name: "D7",    frets: [-1,-1,0,2,1,2], fingers: [0,0,0,3,1,2] },
+  { name: "G7",    frets: [3,2,0,0,0,1],   fingers: [3,2,0,0,0,1] },
+  { name: "Cadd9", frets: [-1,3,2,0,3,3],  fingers: [0,3,2,0,4,3] },
+  { name: "Dsus2", frets: [-1,-1,0,2,3,0], fingers: [0,0,0,1,3,0] },
+  { name: "Asus2", frets: [-1,0,2,2,0,0],  fingers: [0,0,2,3,0,0] },
 ];
 const GUITAR_CHORDS_ADVANCED: ChordDiagram[] = [
   ...GUITAR_CHORDS_INTERMEDIATE,
-  { name: "F",    frets: [1,3,3,2,1,1], startFret: 1 },
-  { name: "Bm",   frets: [-1,2,4,4,3,2], startFret: 2 },
-  { name: "F#m",  frets: [-1,-1,4,6,7,5], startFret: 4 },
-  { name: "Bb",   frets: [-1,1,3,3,3,1], startFret: 1 },
-  { name: "Cm",   frets: [-1,3,5,5,4,3], startFret: 3 },
+  { name: "F",   frets: [1,3,3,2,1,1],    fingers: [1,3,4,2,1,1], barre: 1, startFret: 1 },
+  { name: "Bm",  frets: [-1,2,4,4,3,2],   fingers: [0,1,3,4,2,1], barre: 2, startFret: 2 },
+  { name: "F#m", frets: [-1,-1,4,6,7,5],  fingers: [0,0,1,3,4,2], startFret: 4 },
+  { name: "Bb",  frets: [-1,1,3,3,3,1],   fingers: [0,1,3,4,3,1], barre: 1, startFret: 1 },
+  { name: "Cm",  frets: [-1,3,5,5,4,3],   fingers: [0,1,3,4,2,1], barre: 3, startFret: 3 },
 ];
 
 type ChordFinderLevel = "beginner" | "intermediate" | "advanced";
@@ -1882,44 +1883,70 @@ const CHORD_FINDER_POOLS: Record<ChordFinderLevel, ChordDiagram[]> = {
   advanced: GUITAR_CHORDS_ADVANCED,
 };
 
-function ChordDiagramSVG({ chord, dim = false }: { chord: ChordDiagram; dim?: boolean }) {
+function ChordDiagramSVG({ chord, dim = false, large = false }: { chord: ChordDiagram; dim?: boolean; large?: boolean }) {
   const sf = chord.startFret ?? 1;
   const FRETS = 5, STRINGS = 6;
-  const W = 80, H = 90;
-  const strGap = (W - 20) / (STRINGS - 1);
-  const fretGap = (H - 32) / FRETS;
-  const topY = 22, leftX = 10;
+  const scale = large ? 1.6 : 1;
+  const W = 80 * scale, H = 100 * scale;
+  const strGap = (W - 20 * scale) / (STRINGS - 1);
+  const fretGap = (H - 35 * scale) / FRETS;
+  const topY = 24 * scale, leftX = 10 * scale;
+  const r = 7 * scale;
+
+  // Barre: find the range of strings that participate in the barre
+  const barreY = chord.barre != null ? topY + (chord.barre - sf + 0.5) * fretGap : null;
+  const barreStrings = chord.barre != null
+    ? chord.frets.map((f, i) => f === chord.barre ? i : -1).filter(i => i >= 0)
+    : [];
+  const barreFromX = barreStrings.length ? leftX + barreStrings[0] * strGap : 0;
+  const barreToX   = barreStrings.length ? leftX + barreStrings[barreStrings.length - 1] * strGap : 0;
 
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block", opacity: dim ? 0.4 : 1 }}>
       {/* String labels (X/O) */}
       {chord.frets.map((f, s) => (
-        <text key={s} x={leftX + s * strGap} y={13} fontSize={8} fontFamily="Inter, sans-serif"
+        <text key={s} x={leftX + s * strGap} y={14 * scale} fontSize={8 * scale} fontFamily="Inter, sans-serif"
           fill={f === -1 ? "#E05252" : f === 0 ? "#4CAF84" : "transparent"} textAnchor="middle" fontWeight={700}>
           {f === -1 ? "×" : f === 0 ? "○" : ""}
         </text>
       ))}
       {/* Nut or start fret indicator */}
       {sf === 1 ? (
-        <line x1={leftX} y1={topY} x2={leftX + (STRINGS-1)*strGap} y2={topY} stroke="rgba(255,255,255,0.7)" strokeWidth={3} />
+        <line x1={leftX} y1={topY} x2={leftX + (STRINGS-1)*strGap} y2={topY} stroke="rgba(255,255,255,0.75)" strokeWidth={3 * scale} />
       ) : (
-        <text x={leftX + (STRINGS - 1) * strGap + 6} y={topY + fretGap * 0.5 + 4} fontSize={8} fill="rgba(255,255,255,0.5)" fontFamily="Inter, sans-serif">{sf}fr</text>
+        <text x={leftX + (STRINGS - 1) * strGap + 5 * scale} y={topY + fretGap * 0.5 + 4 * scale} fontSize={7 * scale} fill="rgba(255,255,255,0.5)" fontFamily="Inter, sans-serif">{sf}fr</text>
       )}
       {/* Fret lines */}
-      {Array.from({length: FRETS}, (_,f) => f).map(f => (
-        <line key={f} x1={leftX} y1={topY + f * fretGap} x2={leftX + (STRINGS-1)*strGap} y2={topY + f * fretGap} stroke="rgba(255,255,255,0.18)" strokeWidth={1} />
+      {Array.from({length: FRETS}, (_, f) => f).map(f => (
+        <line key={f} x1={leftX} y1={topY + f * fretGap} x2={leftX + (STRINGS-1)*strGap} y2={topY + f * fretGap} stroke="rgba(255,255,255,0.18)" strokeWidth={scale} />
       ))}
       {/* String lines */}
-      {Array.from({length: STRINGS}, (_,s) => s).map(s => (
-        <line key={s} x1={leftX + s * strGap} y1={topY} x2={leftX + s * strGap} y2={topY + FRETS * fretGap} stroke="rgba(255,255,255,0.45)" strokeWidth={s === 0 || s === 5 ? 1.5 : 1} />
+      {Array.from({length: STRINGS}, (_, s) => s).map(s => (
+        <line key={s} x1={leftX + s * strGap} y1={topY} x2={leftX + s * strGap} y2={topY + FRETS * fretGap} stroke="rgba(255,255,255,0.45)" strokeWidth={(s === 0 || s === 5 ? 1.5 : 1) * scale} />
       ))}
-      {/* Finger dots */}
+      {/* Barre bar */}
+      {barreY != null && barreStrings.length >= 2 && (
+        <rect x={barreFromX - r} y={barreY - r} width={barreToX - barreFromX + r * 2} height={r * 2}
+          rx={r} fill="rgba(255,255,255,0.88)" />
+      )}
+      {/* Finger dots (skip barre-fret strings — the bar covers them) */}
       {chord.frets.map((f, s) => {
         if (f <= 0) return null;
+        if (chord.barre != null && f === chord.barre) return null; // covered by barre bar
         const cy = topY + (f - sf + 0.5) * fretGap;
         const cx = leftX + s * strGap;
-        return <circle key={s} cx={cx} cy={cy} r={6} fill="rgba(255,255,255,0.9)" />;
+        const finger = chord.fingers?.[s];
+        return (
+          <g key={s}>
+            <circle cx={cx} cy={cy} r={r} fill="rgba(255,255,255,0.9)" />
+            {finger ? <text x={cx} y={cy + 3 * scale} fontSize={8 * scale} fontFamily="Inter, sans-serif" fill="#1a1a2e" textAnchor="middle" fontWeight={700}>{finger}</text> : null}
+          </g>
+        );
       })}
+      {/* Finger number on barre bar (always "1" = index finger) */}
+      {barreY != null && barreStrings.length >= 2 && (
+        <text x={(barreFromX + barreToX) / 2} y={barreY + 3 * scale} fontSize={8 * scale} fontFamily="Inter, sans-serif" fill="#1a1a2e" textAnchor="middle" fontWeight={700}>1</text>
+      )}
     </svg>
   );
 }
@@ -1967,7 +1994,7 @@ function GuitarChordGame({ onBack }: { onBack: () => void }) {
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", marginBottom: "0.75rem" }}>
             {GUITAR_CHORDS_BEGINNER.slice(0, 4).map(c => (
               <div key={c.name} style={{ textAlign: "center" }}>
                 <ChordDiagramSVG chord={c} />
@@ -1975,6 +2002,10 @@ function GuitarChordGame({ onBack }: { onBack: () => void }) {
               </div>
             ))}
           </div>
+          <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.35)", margin: "0 0 1rem", textAlign: "center", lineHeight: 1.7 }}>
+            Numbers = which finger (1 index · 2 middle · 3 ring · 4 pinky)<br />
+            × = don&apos;t play · ○ = open string · bar = barre (one finger across)
+          </p>
         </>
       }
       onStart={start}
@@ -1987,8 +2018,17 @@ function GuitarChordGame({ onBack }: { onBack: () => void }) {
       <Popups entries={game.popups} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "1.25rem 1rem", gap: "1.25rem" }}>
         <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", margin: 0, letterSpacing: "0.08em", textTransform: "uppercase" }}>Name this chord</p>
-        <div style={{ background: "#252537", borderRadius: 14, padding: "1.25rem 2rem", display: "flex", justifyContent: "center" }}>
-          <ChordDiagramSVG chord={q.target} />
+        <div style={{ background: "#252537", borderRadius: 14, padding: "1.25rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.625rem" }}>
+          <ChordDiagramSVG chord={q.target} large />
+          {q.target.barre != null && (
+            <p style={{ margin: 0, fontSize: "0.6875rem", color: "rgba(255,255,255,0.45)", textAlign: "center" }}>
+              Bar your index finger (1) across the strings on the shaded bar
+            </p>
+          )}
+          <div style={{ display: "flex", gap: "1rem", fontSize: "0.6rem", color: "rgba(255,255,255,0.3)", fontFamily: "Inter, sans-serif" }}>
+            <span>1=index · 2=middle · 3=ring · 4=pinky</span>
+            <span>× don&apos;t play · ○ open</span>
+          </div>
         </div>
         {/* 2×2 name buttons */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem", width: "100%", maxWidth: 320 }}>
