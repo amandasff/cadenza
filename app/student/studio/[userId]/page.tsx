@@ -102,6 +102,7 @@ export default function VisitorStudioPage() {
   const [gifts, setGifts] = useState<StudioGiftWithDetails[]>([]);
   const [shopItems, setShopItems] = useState<ShopItemRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tabsLoading, setTabsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey" | "music">("composers");
   const [hoveredComposer, setHoveredComposer] = useState<string | null>(null);
@@ -140,13 +141,26 @@ export default function VisitorStudioPage() {
     if (!userId) return;
     async function load() {
       setLoading(true);
+      setTabsLoading(true);
       try {
-        const shop = ShopService.create(supabase);
         const collectibles = CollectibleService.create(supabase);
-        const [profileRes, inv, comps, piecesRes, giftsRes, allItems, followCountRes, shoutoutsRes, discRes, crateRes] = await Promise.all([
+
+        // ── Phase 1: above-fold content (profile + composers) ──
+        const [profileRes, comps] = await Promise.all([
           supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
-          shop.getInventory(userId),
           collectibles.getCollection(userId),
+        ]);
+
+        if (!profileRes.data) { setNotFound(true); setLoading(false); return; }
+        const profileData = profileRes.data as ProfileData;
+        setProfile(profileData);
+        setComposers(comps);
+        setLoading(false); // show the page now
+
+        // ── Phase 2: tab content in background ──
+        const shop = ShopService.create(supabase);
+        const [inv, piecesRes, giftsRes, allItems, followCountRes, shoutoutsRes, discRes, crateRes] = await Promise.all([
+          shop.getInventory(userId),
           supabase.from("pieces").select("*").eq("student_id", userId).order("created_at", { ascending: false }),
           supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", userId).order("created_at", { ascending: false }).limit(20),
           shop.getAllItems(),
@@ -156,18 +170,12 @@ export default function VisitorStudioPage() {
           supabase.from("portfolio_collections").select("portfolio_item_id, portfolio_items(*, profiles(display_name, avatar_url))").eq("collector_id", userId).order("created_at", { ascending: false }),
         ]);
 
-        if (!profileRes.data) { setNotFound(true); return; }
-        const profileData = profileRes.data as ProfileData;
-        setProfile(profileData);
         setInventory(inv);
-        setComposers(comps);
         setPieces((piecesRes.data ?? []) as PieceRow[]);
         setGifts((giftsRes.data ?? []) as StudioGiftWithDetails[]);
         setShopItems(allItems);
         setFollowerCount(followCountRes.count ?? 0);
         setShoutouts((shoutoutsRes.data ?? []) as ShoutoutRow[]);
-
-        // Discography
         setDiscography((discRes.data ?? []) as PortfolioItemRow[]);
         const crateItems = ((crateRes.data ?? []) as unknown as Array<{
           portfolio_item_id: string;
@@ -179,7 +187,7 @@ export default function VisitorStudioPage() {
         }));
         setCrate(crateItems);
 
-        // Theme song
+        // Theme song (parallel with phase 2 above would be ideal but depends on profileData)
         if (profileData.theme_song_item_id) {
           const { data: songItem } = await supabase
             .from("portfolio_items")
@@ -206,6 +214,7 @@ export default function VisitorStudioPage() {
         setNotFound(true);
       } finally {
         setLoading(false);
+        setTabsLoading(false);
       }
     }
     load();
@@ -563,6 +572,11 @@ export default function VisitorStudioPage() {
       </div>
 
       {/* ── Tab content ── */}
+      {tabsLoading && activeTab !== "composers" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "0.75rem", marginTop: "0.75rem" }}>
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 140, borderRadius: 8 }} />)}
+        </div>
+      )}
       {activeTab === "composers" ? (
         composers.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
