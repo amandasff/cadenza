@@ -33,6 +33,7 @@ interface AddItemInput {
   sessionId?: string;
   mediaType?: 'audio' | 'video';
   isPublic?: boolean;
+  displayAs?: 'real' | 'alias' | 'anonymous';
 }
 
 export class PortfolioService {
@@ -79,6 +80,7 @@ export class PortfolioService {
         session_id: input.sessionId ?? null,
         media_type: input.mediaType ?? 'audio',
         is_public: input.isPublic ?? false,
+        display_as: input.displayAs ?? 'real',
       })
       .select()
       .single();

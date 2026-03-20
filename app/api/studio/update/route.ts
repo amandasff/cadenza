@@ -3,7 +3,7 @@ import { getSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, studio_name, studio_tagline, featured_avatar_id } = await req.json();
+    const { userId, studio_name, studio_tagline, featured_avatar_id, artist_name } = await req.json();
     if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
     const supabase = getSupabaseAdminClient();
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     if (studio_name !== undefined) updates.studio_name = studio_name ?? null;
     if (studio_tagline !== undefined) updates.studio_tagline = studio_tagline ?? null;
     if (featured_avatar_id !== undefined) updates.featured_avatar_id = featured_avatar_id ?? null;
+    if (artist_name !== undefined) updates.artist_name = artist_name ?? null;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ ok: true });

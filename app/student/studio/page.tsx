@@ -120,6 +120,7 @@ export default function StudioPage() {
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftTagline, setDraftTagline] = useState("");
+  const [draftArtistName, setDraftArtistName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [personaLoading, setPersonaLoading] = useState(false);
   const [personaError, setPersonaError] = useState<string | null>(null);
@@ -147,7 +148,7 @@ export default function StudioPage() {
       const [inv, comps, profileRes, piecesRes, giftsRes] = await Promise.all([
         shop.getInventory(student.id),
         collectibles.getCollection(student.id),
-        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", student.id).single(),
+        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title,artist_name").eq("id", student.id).single(),
         supabase.from("pieces").select("*").eq("student_id", student.id).order("created_at", { ascending: false }),
         supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", student.id).order("created_at", { ascending: false }).limit(20),
       ]);
@@ -223,9 +224,9 @@ export default function StudioPage() {
     await fetch("/api/studio/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: student.id, studio_name: draftName.trim() || null, studio_tagline: draftTagline.trim() || null }),
+      body: JSON.stringify({ userId: student.id, studio_name: draftName.trim() || null, studio_tagline: draftTagline.trim() || null, artist_name: draftArtistName.trim() || null }),
     });
-    setProfile(p => p ? { ...p, studio_name: draftName.trim() || null, studio_tagline: draftTagline.trim() || null } : p);
+    setProfile(p => p ? { ...p, studio_name: draftName.trim() || null, studio_tagline: draftTagline.trim() || null, artist_name: draftArtistName.trim() || null } : p);
     setSavingName(false);
     setEditingName(false);
   }
@@ -378,6 +379,17 @@ export default function StudioPage() {
                 maxLength={80}
                 style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", border: "1px solid var(--border)", borderRadius: 4, padding: "0.25rem 0.5rem", outline: "none", background: "var(--cream)" }}
               />
+              <div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.25rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>🎭 Stage name (optional)</div>
+                <input
+                  value={draftArtistName}
+                  onChange={e => setDraftArtistName(e.target.value)}
+                  placeholder="e.g. MidnightPianist"
+                  maxLength={40}
+                  style={{ width: "100%", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", border: "1px solid var(--border)", borderRadius: 4, padding: "0.25rem 0.5rem", outline: "none", background: "var(--cream)", boxSizing: "border-box" }}
+                />
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.2rem" }}>Post recordings anonymously or under this name in Discover</div>
+              </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button onClick={saveName} disabled={savingName} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, padding: "0.25rem 0.75rem", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 4, cursor: "pointer" }}>
                   {savingName ? "…" : "Save"}
@@ -391,7 +403,7 @@ export default function StudioPage() {
                 <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
                   {studioTitle}
                 </div>
-                <button onClick={() => setEditingName(true)} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", padding: "0.125rem 0.375rem", borderRadius: 3, transition: "background 0.15s" }}>
+                <button onClick={() => { setDraftName(profile?.studio_name ?? ""); setDraftTagline(profile?.studio_tagline ?? ""); setDraftArtistName((profile as { artist_name?: string | null } | null)?.artist_name ?? ""); setEditingName(true); }} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", background: "none", border: "none", cursor: "pointer", padding: "0.125rem 0.375rem", borderRadius: 3, transition: "background 0.15s" }}>
                   Edit
                 </button>
               </div>

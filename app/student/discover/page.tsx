@@ -24,6 +24,8 @@ type PublicItem = PortfolioItemRow & {
   comment_count: number;
   user_liked: boolean;
   view_count: number;
+  display_as?: string;
+  is_anonymous?: boolean;
 };
 
 type ProfileInfo = {
@@ -124,10 +126,10 @@ export default function DiscoverPage() {
     if (rows.length === 0) return [];
     const studentIds = [...new Set(rows.map(r => r.student_id))];
     const { data: profiles } = await supabase
-      .from("profiles").select("id, display_name, avatar_url, streak_days").in("id", studentIds);
-    const profileMap: Record<string, { display_name: string; avatar_url: string | null; streak_days: number }> = {};
-    (profiles ?? []).forEach((p: { id: string; display_name?: string; avatar_url?: string | null; streak_days?: number }) => {
-      profileMap[p.id] = { display_name: p.display_name ?? "", avatar_url: p.avatar_url ?? null, streak_days: p.streak_days ?? 0 };
+      .from("profiles").select("id, display_name, artist_name, avatar_url, streak_days").in("id", studentIds);
+    const profileMap: Record<string, { display_name: string; artist_name: string | null; avatar_url: string | null; streak_days: number }> = {};
+    (profiles ?? []).forEach((p: { id: string; display_name?: string; artist_name?: string | null; avatar_url?: string | null; streak_days?: number }) => {
+      profileMap[p.id] = { display_name: p.display_name ?? "", artist_name: p.artist_name ?? null, avatar_url: p.avatar_url ?? null, streak_days: p.streak_days ?? 0 };
     });
 
     const itemIds = rows.map(r => r.id);
@@ -138,16 +140,28 @@ export default function DiscoverPage() {
     const likesData = (likesRes.data ?? []) as { portfolio_item_id: string; user_id: string }[];
     const commentsData = (commentsRes.data ?? []) as { portfolio_item_id: string }[];
 
-    return rows.map(row => ({
-      ...row,
-      display_name: profileMap[row.student_id]?.display_name,
-      avatar_url: profileMap[row.student_id]?.avatar_url ?? null,
-      streak_days: profileMap[row.student_id]?.streak_days ?? 0,
-      like_count: likesData.filter(l => l.portfolio_item_id === row.id).length,
-      comment_count: commentsData.filter(c => c.portfolio_item_id === row.id).length,
-      user_liked: likesData.some(l => l.portfolio_item_id === row.id && l.user_id === userId),
-      view_count: (row as PortfolioItemRow & { view_count?: number }).view_count ?? 0,
-    }));
+    return rows.map(row => {
+      const displayAs = (row as PortfolioItemRow & { display_as?: string }).display_as ?? "real";
+      const isAnonymous = displayAs === "anonymous";
+      const profile = profileMap[row.student_id];
+      let displayName: string | undefined;
+      if (isAnonymous) displayName = undefined;
+      else if (displayAs === "alias" && profile?.artist_name) displayName = profile.artist_name;
+      else displayName = profile?.display_name;
+
+      return {
+        ...row,
+        display_name: displayName,
+        avatar_url: isAnonymous ? null : (profile?.avatar_url ?? null),
+        streak_days: profile?.streak_days ?? 0,
+        display_as: displayAs,
+        is_anonymous: isAnonymous,
+        like_count: likesData.filter(l => l.portfolio_item_id === row.id).length,
+        comment_count: commentsData.filter(c => c.portfolio_item_id === row.id).length,
+        user_liked: likesData.some(l => l.portfolio_item_id === row.id && l.user_id === userId),
+        view_count: (row as PortfolioItemRow & { view_count?: number }).view_count ?? 0,
+      };
+    });
   }
 
   // ── Initial load ────────────────────────────────────────────────────────────
@@ -693,16 +707,16 @@ export default function DiscoverPage() {
                   )}
                 </div>
                 <div style={{ display: "flex", gap: "0.4rem", padding: "0.4rem 0.1rem 0" }}>
-                  <div onClick={e => { e.stopPropagation(); openProfile(item.student_id); }}>
-                    <Avatar url={item.avatar_url} name={item.display_name} size={26} />
+                  <div onClick={item.is_anonymous ? undefined : e => { e.stopPropagation(); openProfile(item.student_id); }} style={{ cursor: item.is_anonymous ? "default" : "pointer" }}>
+                    <Avatar url={item.is_anonymous ? null : item.avatar_url} name={item.is_anonymous ? "?" : item.display_name} size={26} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem", color: "var(--charcoal)", lineHeight: 1.35, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, marginBottom: "0.15rem" }}>
                       {item.title}
                     </div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)", lineHeight: 1.3, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "0.25rem" }}>
-                      <span>{item.display_name ?? t.student.musicianFallback}</span>
-                      {myFollows.has(item.student_id) && <span style={{ color: "var(--sage)", fontWeight: 600 }}>· {t.student.followingBadge}</span>}
+                      <span>{item.is_anonymous ? "👻 Anonymous" : (item.display_name ?? t.student.musicianFallback)}</span>
+                      {!item.is_anonymous && myFollows.has(item.student_id) && <span style={{ color: "var(--sage)", fontWeight: 600 }}>· {t.student.followingBadge}</span>}
                       {(item.streak_days ?? 0) > 0 && (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.15rem", background: "rgba(230,168,23,0.12)", border: "1px solid rgba(230,168,23,0.25)", borderRadius: 99, padding: "0.05rem 0.35rem", color: "#c47d10", fontWeight: 700, fontSize: "0.5rem", letterSpacing: "0.01em" }}>
                           <Flame size={10} color="#E6A817" fill="#E6A817" strokeWidth={0} />{item.streak_days}
@@ -915,7 +929,7 @@ export default function DiscoverPage() {
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "#fff", lineHeight: 1.3 }}>{expandedItem.title}</div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "rgba(255,255,255,0.6)", marginTop: "0.25rem" }}>{expandedItem.display_name ?? t.student.musicianFallback}</div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "rgba(255,255,255,0.6)", marginTop: "0.25rem" }}>{expandedItem.is_anonymous ? "👻 Anonymous" : (expandedItem.display_name ?? t.student.musicianFallback)}</div>
                   </div>
                 </div>
               )}
@@ -929,16 +943,16 @@ export default function DiscoverPage() {
                   <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.3, marginBottom: "0.375rem" }}>{expandedItem.title}</div>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: expandedItem.description ? "0.625rem" : 0 }}>
-                  <div onClick={() => openProfile(expandedItem.student_id)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", flex: 1, minWidth: 0 }}>
-                    <Avatar url={expandedItem.avatar_url} name={expandedItem.display_name} size={28} />
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, textDecoration: "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px" }}>
-                      {expandedItem.display_name ?? t.student.musicianFallback}
+                  <div onClick={expandedItem.is_anonymous ? undefined : () => openProfile(expandedItem.student_id)} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: expandedItem.is_anonymous ? "default" : "pointer", flex: 1, minWidth: 0 }}>
+                    <Avatar url={expandedItem.is_anonymous ? null : expandedItem.avatar_url} name={expandedItem.is_anonymous ? "?" : expandedItem.display_name} size={28} />
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", fontWeight: 500, textDecoration: expandedItem.is_anonymous ? "none" : "underline", textDecorationColor: "var(--border)", textUnderlineOffset: "2px" }}>
+                      {expandedItem.is_anonymous ? "👻 Anonymous" : (expandedItem.display_name ?? t.student.musicianFallback)}
                     </div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>
                       · {formatRelative(expandedItem.created_at, t.schedule.today, t.schedule.yesterday, t.schedule.daysAgo, t.student.weekAgo, t.student.monthAgo)}
                     </div>
                   </div>
-                  {currentUserId && currentUserId !== expandedItem.student_id && (
+                  {currentUserId && currentUserId !== expandedItem.student_id && !expandedItem.is_anonymous && (
                     <button
                       onClick={() => toggleFollow(expandedItem.student_id)}
                       disabled={followLoading}
