@@ -51,84 +51,6 @@ const STATUS_COLORS: Record<string, string> = {
   completed:          "var(--butter)",
 };
 
-const POLLS = [
-  {
-    id: "most_likely",
-    question: "Most likely to…",
-    options: [
-      { id: "carnegie",  label: "Sell out Carnegie Hall" },
-      { id: "viral",     label: "Go viral on the internet" },
-      { id: "cry",       label: "Make the whole audience cry" },
-      { id: "soundtrack",label: "Write a movie soundtrack" },
-    ],
-  },
-  {
-    id: "walkon",
-    question: "Their walk-on song is:",
-    options: [
-      { id: "eyetiger",  label: "Eye of the Tiger 🥊" },
-      { id: "starwars",  label: "Star Wars theme 🌟" },
-      { id: "shakeitoff",label: "Shake It Off 🎀" },
-      { id: "clair",     label: "Clair de Lune 🌙" },
-    ],
-  },
-  {
-    id: "season",
-    question: "Their music is giving…",
-    options: [
-      { id: "spring",  label: "Spring — bright and surprising" },
-      { id: "summer",  label: "Summer — loud and electric" },
-      { id: "fall",    label: "Autumn — deep and cozy" },
-      { id: "winter",  label: "Winter — precise and a little haunting" },
-    ],
-  },
-  {
-    id: "movie",
-    question: "The movie of their life would be:",
-    options: [
-      { id: "superhero", label: "Epic superhero origin story" },
-      { id: "underdog",  label: "Classic underdog who wins it all" },
-      { id: "animated",  label: "Animated musical, obviously" },
-      { id: "mystery",   label: "Mystery where they're always right" },
-    ],
-  },
-  {
-    id: "soundtrack",
-    question: "Soundtrack of their life:",
-    options: [
-      { id: "starwars",  label: "Star Wars / John Williams adventure" },
-      { id: "disney",    label: "Full Disney soundtrack" },
-      { id: "game",      label: "Video game OST that hits different" },
-      { id: "pop",       label: "Current pop hits, no skips" },
-    ],
-  },
-  {
-    id: "era",
-    question: "They are so in their…",
-    options: [
-      { id: "main",      label: "Main character era" },
-      { id: "training",  label: "Training arc era" },
-      { id: "glowup",    label: "Glow up era" },
-      { id: "goat",      label: "GOAT era" },
-    ],
-  },
-  {
-    id: "vibe",
-    question: "Their vibe is giving…",
-    options: [
-      { id: "main",    label: "Main character energy" },
-      { id: "quiet",   label: "Quiet one who's secretly a genius" },
-      { id: "hype",    label: "Hype person for everyone around them" },
-      { id: "legend",  label: "Living legend in the making" },
-    ],
-  },
-];
-
-function getPoll(userId: string) {
-  let hash = 0;
-  for (const ch of userId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return POLLS[hash % POLLS.length];
-}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -183,7 +105,6 @@ export default function VisitorStudioPage() {
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey" | "music">("composers");
   const [hoveredComposer, setHoveredComposer] = useState<string | null>(null);
-  const [floatingNotes, setFloatingNotes] = useState<{ id: number; emoji: string; x: number }[]>([]);
   const [giftSheetOpen, setGiftSheetOpen] = useState(false);
   const [selectedGiftItem, setSelectedGiftItem] = useState<ShopItemRow | null>(null);
   const [giftMessage, setGiftMessage] = useState("");
@@ -209,11 +130,6 @@ export default function VisitorStudioPage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
 
-  // Poll
-  const poll = getPoll(userId);
-  const [pollVotes, setPollVotes] = useState<Record<string, number>>({});
-  const [myPollVote, setMyPollVote] = useState<string | null>(null);
-  const [submittingVote, setSubmittingVote] = useState(false);
 
   // Guestbook
   const [shoutouts, setShoutouts] = useState<ShoutoutRow[]>([]);
@@ -227,7 +143,7 @@ export default function VisitorStudioPage() {
       try {
         const shop = ShopService.create(supabase);
         const collectibles = CollectibleService.create(supabase);
-        const [profileRes, inv, comps, piecesRes, giftsRes, allItems, followCountRes, shoutoutsRes, pollVotesRes, discRes, crateRes] = await Promise.all([
+        const [profileRes, inv, comps, piecesRes, giftsRes, allItems, followCountRes, shoutoutsRes, discRes, crateRes] = await Promise.all([
           supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
           shop.getInventory(userId),
           collectibles.getCollection(userId),
@@ -236,7 +152,6 @@ export default function VisitorStudioPage() {
           shop.getAllItems(),
           supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
           supabase.from("studio_shoutouts").select("*").eq("studio_owner_id", userId).order("created_at", { ascending: false }).limit(20),
-          supabase.from("studio_poll_votes").select("option_id").eq("studio_owner_id", userId).eq("poll_id", getPoll(userId).id),
           supabase.from("portfolio_items").select("*").eq("student_id", userId).eq("is_public", true).order("created_at", { ascending: false }),
           supabase.from("portfolio_collections").select("portfolio_item_id, portfolio_items(*, profiles(display_name, avatar_url))").eq("collector_id", userId).order("created_at", { ascending: false }),
         ]);
@@ -251,13 +166,6 @@ export default function VisitorStudioPage() {
         setShopItems(allItems);
         setFollowerCount(followCountRes.count ?? 0);
         setShoutouts((shoutoutsRes.data ?? []) as ShoutoutRow[]);
-
-        // Aggregate poll vote counts
-        const counts: Record<string, number> = {};
-        for (const v of (pollVotesRes.data ?? []) as { option_id: string }[]) {
-          counts[v.option_id] = (counts[v.option_id] ?? 0) + 1;
-        }
-        setPollVotes(counts);
 
         // Discography
         setDiscography((discRes.data ?? []) as PortfolioItemRow[]);
@@ -286,13 +194,11 @@ export default function VisitorStudioPage() {
 
         // Current user's data
         if (user?.id) {
-          const [followRes, myVoteRes, myCollectionsRes] = await Promise.all([
+          const [followRes, myCollectionsRes] = await Promise.all([
             supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle(),
-            supabase.from("studio_poll_votes").select("option_id").eq("studio_owner_id", userId).eq("voter_id", user.id).eq("poll_id", getPoll(userId).id).maybeSingle(),
             supabase.from("portfolio_collections").select("portfolio_item_id").eq("collector_id", user.id),
           ]);
           setIsFollowing(!!followRes.data);
-          if (myVoteRes.data) setMyPollVote((myVoteRes.data as { option_id: string }).option_id);
           setMyCollectedIds(new Set((myCollectionsRes.data ?? []).map((r: { portfolio_item_id: string }) => r.portfolio_item_id)));
         }
       } catch (e) {
@@ -335,28 +241,6 @@ export default function VisitorStudioPage() {
       }
     } finally {
       setFollowLoading(false);
-    }
-  }
-
-  // ── Poll vote ───────────────────────────────────────────────────────────────
-
-  async function submitPollVote(optionId: string) {
-    if (!user?.id || submittingVote || myPollVote !== null || isOwnStudio) return;
-    setSubmittingVote(true);
-    try {
-      await supabase.from("studio_poll_votes").insert({
-        studio_owner_id: userId, voter_id: user.id, poll_id: poll.id, option_id: optionId,
-      });
-      setMyPollVote(optionId);
-      setPollVotes(prev => ({ ...prev, [optionId]: (prev[optionId] ?? 0) + 1 }));
-      // Burst animation
-      const notes = Array.from({ length: 5 + Math.floor(Math.random() * 4) }, (_, i) => ({
-        id: Date.now() + i, emoji: poll.options.find(o => o.id === optionId)?.label.slice(-2) ?? "🎵", x: 10 + Math.random() * 80,
-      }));
-      setFloatingNotes(prev => [...prev, ...notes]);
-      setTimeout(() => setFloatingNotes(prev => prev.filter(n => !notes.find(nn => nn.id === n.id))), 3000);
-    } finally {
-      setSubmittingVote(false);
     }
   }
 
@@ -450,22 +334,6 @@ export default function VisitorStudioPage() {
       {/* Theme song */}
       {themeSongUrl && <audio ref={audioRef} src={themeSongUrl} autoPlay loop style={{ display: "none" }} />}
 
-      {/* Floating reaction emojis */}
-      {floatingNotes.map(note => (
-        <div key={note.id} style={{
-          position: "fixed", bottom: "30%", left: `${note.x}%`,
-          fontSize: "1.75rem", zIndex: 100, pointerEvents: "none",
-          animation: "floatUp 3s ease-out forwards",
-        }}>
-          {note.emoji}
-        </div>
-      ))}
-      <style>{`
-        @keyframes floatUp {
-          0%   { transform: translateY(0) scale(1);       opacity: 1; }
-          100% { transform: translateY(-180px) scale(0.6); opacity: 0; }
-        }
-      `}</style>
 
       {/* ── Featured composer banner ── */}
       {featuredComposer && (
@@ -585,79 +453,6 @@ export default function VisitorStudioPage() {
           </div>
         </div>
       )}
-
-      {/* ── Poll ── */}
-      <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
-        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.625rem" }}>
-          Vibe Check
-        </div>
-        <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.0625rem", color: "var(--charcoal)", marginBottom: "0.875rem" }}>
-          {poll.question.replace("[Name]", profile?.display_name?.split(" ")[0] ?? "They")}
-        </div>
-        {(() => {
-          const totalVotes = Object.values(pollVotes).reduce((a, b) => a + b, 0);
-          const voted = myPollVote !== null;
-          return (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {poll.options.map(opt => {
-                const count = pollVotes[opt.id] ?? 0;
-                const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                const isMyVote = myPollVote === opt.id;
-                return (
-                  <div key={opt.id}>
-                    {voted ? (
-                      /* Results view */
-                      <div style={{ position: "relative" }}>
-                        <div style={{
-                          position: "absolute", left: 0, top: 0, bottom: 0,
-                          width: `${pct}%`, borderRadius: 6,
-                          background: isMyVote ? "var(--charcoal)" : "var(--cream)",
-                          transition: "width 0.6s ease",
-                        }} />
-                        <div style={{
-                          position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between",
-                          padding: "0.5rem 0.75rem", borderRadius: 6,
-                          border: `1.5px solid ${isMyVote ? "var(--charcoal)" : "var(--border)"}`,
-                        }}>
-                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: isMyVote ? 600 : 400, color: isMyVote ? "var(--white)" : "var(--charcoal)" }}>
-                            {opt.label}{isMyVote && " ✓"}
-                          </span>
-                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: isMyVote ? "var(--white)" : "var(--muted)", flexShrink: 0 }}>
-                            {pct}%
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Voting view */
-                      <button
-                        onClick={() => submitPollVote(opt.id)}
-                        disabled={submittingVote || isOwnStudio || !user}
-                        style={{
-                          width: "100%", textAlign: "left", padding: "0.5625rem 0.875rem", borderRadius: 6,
-                          border: "1.5px solid var(--border)", background: "transparent",
-                          fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)",
-                          cursor: isOwnStudio || !user ? "default" : "pointer",
-                          transition: "border-color 0.15s, background 0.15s",
-                          opacity: submittingVote ? 0.6 : 1,
-                        }}
-                        onMouseEnter={e => { if (!isOwnStudio && user) (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--charcoal)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; }}
-                      >
-                        {opt.label}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
-        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", marginTop: "0.625rem" }}>
-          {Object.values(pollVotes).reduce((a, b) => a + b, 0)} vote{Object.values(pollVotes).reduce((a, b) => a + b, 0) !== 1 ? "s" : ""}
-          {isOwnStudio && " · your studio"}
-          {!user && " · log in to vote"}
-        </div>
-      </div>
 
       {/* ── Guestbook ── */}
       <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
