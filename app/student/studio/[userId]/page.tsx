@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "../../../../lib/context/AuthContext";
@@ -8,6 +8,7 @@ import { ShopService } from "../../../../lib/services/ShopService";
 import { CollectibleService } from "../../../../lib/services/CollectibleService";
 import type { InventoryItemWithDetails, StudentCollectibleWithAvatar, PieceRow, ShopItemRow, StudioGiftWithDetails } from "../../../../lib/types";
 import { playComposerAudio } from "../../../../lib/composerTunes";
+import type { PortfolioItemRow } from "../../../../lib/services/PortfolioService";
 
 const ERA_TINTS: Record<string, string> = {
   baroque:      "rgba(180, 140, 60, 0.08)",
@@ -68,7 +69,11 @@ interface ProfileData {
   featured_avatar_id: string | null;
   studio_persona: string | null;
   studio_bio: string | null;
+  theme_song_item_id: string | null;
+  theme_song_title: string | null;
 }
+
+type CrateItem = PortfolioItemRow & { display_name?: string; avatar_url?: string | null };
 
 export default function VisitorStudioPage() {
   const params = useParams();
@@ -85,7 +90,7 @@ export default function VisitorStudioPage() {
   const [shopItems, setShopItems] = useState<ShopItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey">("composers");
+  const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey" | "music">("composers");
   const [hoveredComposer, setHoveredComposer] = useState<string | null>(null);
   const [reactionSent, setReactionSent] = useState<string | null>(null);
   const [floatingNotes, setFloatingNotes] = useState<{ id: number; emoji: string; x: number }[]>([]);
@@ -96,6 +101,19 @@ export default function VisitorStudioPage() {
   const [giftSent, setGiftSent] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
 
+  // Theme song
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [themeSongUrl, setThemeSongUrl] = useState<string | null>(null);
+  const [themeSongTitle, setThemeSongTitle] = useState<string | null>(null);
+  const [themeMuted, setThemeMuted] = useState(false);
+
+  // Music tab
+  const [discography, setDiscography] = useState<PortfolioItemRow[]>([]);
+  const [crate, setCrate] = useState<CrateItem[]>([]);
+  const [myCollectedIds, setMyCollectedIds] = useState<Set<string>>(new Set());
+  const [collectingId, setCollectingId] = useState<string | null>(null);
+  const [justCollected, setJustCollected] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (!userId) return;
     async function load() {
@@ -104,7 +122,7 @@ export default function VisitorStudioPage() {
         const shop = ShopService.create(supabase);
         const collectibles = CollectibleService.create(supabase);
         const [profileRes, inv, comps, piecesRes, giftsRes, allItems] = await Promise.all([
-          supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio").eq("id", userId).maybeSingle(),
+          supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
           shop.getInventory(userId),
           collectibles.getCollection(userId),
           supabase.from("pieces").select("*").eq("student_id", userId).order("created_at", { ascending: false }),
@@ -112,12 +130,51 @@ export default function VisitorStudioPage() {
           shop.getAllItems(),
         ]);
         if (!profileRes.data) { setNotFound(true); return; }
-        setProfile(profileRes.data as ProfileData);
+        const profileData = profileRes.data as ProfileData;
+        setProfile(profileData);
         setInventory(inv);
         setComposers(comps);
         setPieces((piecesRes.data ?? []) as PieceRow[]);
         setGifts((giftsRes.data ?? []) as StudioGiftWithDetails[]);
         setShopItems(allItems);
+
+        // Theme song: if set, fetch recording URL
+        if (profileData.theme_song_item_id) {
+          const { data: songItem } = await supabase
+            .from("portfolio_items")
+            .select("recording_url, title")
+            .eq("id", profileData.theme_song_item_id)
+            .maybeSingle();
+          if (songItem?.recording_url) {
+            setThemeSongUrl(songItem.recording_url as string);
+            setThemeSongTitle((profileData.theme_song_title ?? (songItem as { title?: string }).title) ?? null);
+          }
+        }
+
+        // Music tab: discography + visited user's crate
+        const [discRes, crateRes] = await Promise.all([
+          supabase.from("portfolio_items").select("*").eq("student_id", userId).eq("is_public", true).order("created_at", { ascending: false }),
+          supabase.from("portfolio_collections").select("portfolio_item_id, portfolio_items(*, profiles(display_name, avatar_url))").eq("collector_id", userId).order("created_at", { ascending: false }),
+        ]);
+        setDiscography((discRes.data ?? []) as PortfolioItemRow[]);
+        const crateItems = ((crateRes.data ?? []) as unknown as Array<{
+          portfolio_item_id: string;
+          portfolio_items: PortfolioItemRow & { profiles?: { display_name: string; avatar_url: string | null } };
+        }>).map(r => ({
+          ...r.portfolio_items,
+          display_name: r.portfolio_items?.profiles?.display_name,
+          avatar_url: r.portfolio_items?.profiles?.avatar_url ?? null,
+        }));
+        setCrate(crateItems);
+
+        // My collected IDs (so we can show "In your Crate")
+        if (user?.id) {
+          const { data: myCollections } = await supabase
+            .from("portfolio_collections")
+            .select("portfolio_item_id")
+            .eq("collector_id", user.id);
+          setMyCollectedIds(new Set((myCollections ?? []).map((r: { portfolio_item_id: string }) => r.portfolio_item_id)));
+        }
       } catch (e) {
         console.error(e);
         setNotFound(true);
@@ -127,6 +184,29 @@ export default function VisitorStudioPage() {
     }
     load();
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Set audio volume via ref once URL is known
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.25;
+    }
+  }, [themeSongUrl]);
+
+  // Mute/unmute toggle
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = themeMuted;
+    }
+  }, [themeMuted]);
+
+  // Cleanup audio on unmount / navigation away
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
 
   function sendReaction(reaction: typeof PRESET_REACTIONS[number]) {
     if (reactionSent) return;
@@ -164,6 +244,26 @@ export default function VisitorStudioPage() {
     }
   }
 
+  async function collectItem(item: PortfolioItemRow) {
+    if (!user?.id || collectingId) return;
+    setCollectingId(item.id);
+    try {
+      await fetch("/api/portfolio/collect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collectorId: user.id, itemId: item.id }),
+      });
+      setMyCollectedIds(prev => new Set([...prev, item.id]));
+      setJustCollected(prev => new Set([...prev, item.id]));
+      // Update local collection_count
+      setDiscography(prev => prev.map(d => d.id === item.id ? { ...d, collection_count: (d.collection_count ?? 0) + 1 } : d));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCollectingId(null);
+    }
+  }
+
   const featuredComposer = composers.find(c => c.avatar_id === profile?.featured_avatar_id) ?? composers[0] ?? null;
   const eraTint = featuredComposer ? ERA_TINTS[featuredComposer.composer_avatars.era] ?? ERA_TINTS.classical : undefined;
   const studioTitle = profile?.studio_name || (profile?.display_name ? `${profile.display_name}'s Studio` : "");
@@ -185,6 +285,11 @@ export default function VisitorStudioPage() {
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1.5rem", position: "relative" }}>
+
+      {/* Theme song audio element */}
+      {themeSongUrl && (
+        <audio ref={audioRef} src={themeSongUrl} autoPlay loop style={{ display: "none" }} />
+      )}
 
       {/* Floating reaction notes */}
       {floatingNotes.map(note => (
@@ -239,8 +344,23 @@ export default function VisitorStudioPage() {
           {profile?.display_name?.[0]?.toUpperCase() ?? "?"}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
-            {studioTitle}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
+              {studioTitle}
+            </div>
+            {/* Theme song pill */}
+            {themeSongUrl && themeSongTitle && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.1875rem 0.625rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 100, flexShrink: 0 }}>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>♫ {themeSongTitle}</span>
+                <button
+                  onClick={() => setThemeMuted(m => !m)}
+                  title={themeMuted ? "Unmute" : "Mute"}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "0.75rem", color: "var(--muted)" }}
+                >
+                  {themeMuted ? "🔇" : "🔊"}
+                </button>
+              </div>
+            )}
           </div>
           {profile?.studio_tagline && (
             <div style={{ fontFamily: "Inter, sans-serif", fontStyle: "italic", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.125rem" }}>
@@ -350,7 +470,7 @@ export default function VisitorStudioPage() {
 
       {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: "0", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", width: "fit-content", marginBottom: "1.5rem" }}>
-        {([["composers", `Composers (${composers.length})`], ["items", `Items (${inventory.length})`], ["journey", "Journey"]] as const).map(([tab, label]) => (
+        {([["composers", `Composers (${composers.length})`], ["items", `Items (${inventory.length})`], ["journey", "Journey"], ["music", "Music"]] as const).map(([tab, label]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             padding: "0.5rem 1.125rem", border: "none", cursor: "pointer",
             background: activeTab === tab ? "var(--charcoal)" : "transparent",
@@ -441,7 +561,7 @@ export default function VisitorStudioPage() {
             })}
           </div>
         )
-      ) : (
+      ) : activeTab === "journey" ? (
         /* Journey tab */
         pieces.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
@@ -463,6 +583,109 @@ export default function VisitorStudioPage() {
             ))}
           </div>
         )
+      ) : (
+        /* Music tab */
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+
+          {/* A. Discography */}
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
+              Discography
+            </div>
+            {discography.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "2.5rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎙️</div>
+                No published tracks yet.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {discography.map(track => {
+                  const collected = myCollectedIds.has(track.id) || justCollected.has(track.id);
+                  const isOwn = track.student_id === user?.id;
+                  const price = track.price_points ?? 0;
+                  const isCollecting = collectingId === track.id;
+                  return (
+                    <div key={track.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{track.title}</div>
+                        {track.description && (
+                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.description}</div>
+                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem", flexWrap: "wrap" }}>
+                          {track.media_type && (
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sky)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.125rem 0.375rem", background: "rgba(100,180,220,0.12)", borderRadius: 4 }}>{track.media_type}</span>
+                          )}
+                          {(track.collection_count ?? 0) > 0 && (
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{track.collection_count} collected</span>
+                          )}
+                          {price > 0 && (
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--butter)" }}>{price} pts</span>
+                          )}
+                        </div>
+                      </div>
+                      {!isOwn && user && (
+                        <button
+                          onClick={() => !collected && collectItem(track)}
+                          disabled={collected || isCollecting}
+                          style={{
+                            padding: "0.4375rem 0.875rem", borderRadius: 100, border: "none", flexShrink: 0,
+                            background: collected ? "var(--cream)" : "var(--charcoal)",
+                            color: collected ? "var(--muted)" : "var(--white)",
+                            fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600,
+                            cursor: collected || isCollecting ? "default" : "pointer",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          {collected
+                            ? "✓ In your Crate"
+                            : isCollecting
+                              ? "…"
+                              : price === 0
+                                ? "Collect (free)"
+                                : `Collect · ${price} pts`}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* B. Their Crate */}
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
+              Their Crate
+            </div>
+            {crate.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "2.5rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                Their Crate is empty.
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.5rem" }}>
+                {crate.map(track => (
+                  <div key={track.id} style={{ padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>{track.title}</div>
+                    {track.display_name && (
+                      <Link
+                        href={`/student/studio/${track.student_id}`}
+                        style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", textDecoration: "none" }}
+                      >
+                        {track.display_name} →
+                      </Link>
+                    )}
+                    {track.media_type && (
+                      <div style={{ marginTop: "0.375rem" }}>
+                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sky)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.125rem 0.375rem", background: "rgba(100,180,220,0.12)", borderRadius: 4 }}>{track.media_type}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
       )}
 
       {/* ── Gift sheet ── */}
