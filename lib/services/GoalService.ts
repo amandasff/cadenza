@@ -15,6 +15,7 @@ interface CreateGoalInput {
   dueDate?: string;
   pieceId?: string;
   initialStatus?: 'locked' | 'current';
+  targetMinutesPerDay?: number;
 }
 
 export class GoalService {
@@ -82,6 +83,7 @@ export class GoalService {
         is_boss: input.isBoss ?? false,
         due_date: input.dueDate ?? null,
         piece_id: input.pieceId ?? null,
+        target_minutes_per_day: input.targetMinutesPerDay ?? null,
         status: input.initialStatus ?? 'current',
         path_order: nextOrder,
       })

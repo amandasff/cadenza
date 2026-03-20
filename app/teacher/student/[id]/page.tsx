@@ -52,7 +52,7 @@ function timeAgo(iso: string, yesterdayLabel: string) {
 }
 
 const emptyPieceForm = () => ({ title: "", composer: "", book: "", category: "repertoire" });
-const emptyGoalForm = () => ({ title: "", description: "", points: 20, status: "current" as "locked" | "current" });
+const emptyGoalForm = () => ({ title: "", description: "", points: 20, status: "current" as "locked" | "current", minutesPerDay: "" as string });
 
 const inputStyle: React.CSSProperties = {
   width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)",
@@ -108,6 +108,12 @@ function GoalForm({
           style={{ ...inputStyle, width: 90 }}
         />
         <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)" }}>{t.goals.pts}</span>
+        <input
+          type="number" min={1} max={180} value={form.minutesPerDay}
+          onChange={e => onChange({ ...form, minutesPerDay: e.target.value })}
+          placeholder="min/day"
+          style={{ ...inputStyle, width: 80 }}
+        />
         <select
           value={form.status}
           onChange={e => onChange({ ...form, status: e.target.value as "locked" | "current" })}
@@ -166,7 +172,7 @@ function GoalItem({
           {goal.title}
         </div>
         <div style={{ fontSize: "0.625rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginTop: "0.1rem" }}>
-          {goal.points} {t.goals.pts} · {isDone ? t.goals.done : isCurrent ? t.goals.thisWeek : t.goals.locked}
+          {goal.points} {t.goals.pts}{goal.target_minutes_per_day ? ` · ${goal.target_minutes_per_day} min/day` : ""} · {isDone ? t.goals.done : isCurrent ? t.goals.thisWeek : t.goals.locked}
         </div>
       </div>
       <div style={{ display: "flex", gap: "0.375rem", flexShrink: 0 }}>
@@ -1012,6 +1018,7 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
         title: goalForm.title.trim(),
         description: goalForm.description.trim() || undefined,
         practiceArea, points: goalForm.points,
+        targetMinutesPerDay: goalForm.minutesPerDay ? parseInt(goalForm.minutesPerDay) : undefined,
         pieceId, initialStatus: goalForm.status,
       });
       if (pieceId) {

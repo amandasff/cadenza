@@ -5,15 +5,14 @@ import { useAuth } from "../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
 import { Student } from "../../lib/models/Student";
 import { LessonService } from "../../lib/services/LessonService";
-import { AssignmentService } from "../../lib/services/AssignmentService";
 import { ChatService } from "../../lib/services/ChatService";
-import type { GoalRow, PieceRow, LessonRow, AssignmentWithContext, SelfRating, MessageRow } from "../../lib/types";
+import type { GoalRow, PieceRow, LessonRow, MessageRow } from "../../lib/types";
 import { useRouter } from "next/navigation";
 import PushSubscribeButton from "../../components/PushSubscribeButton";
 import { usePractice } from "../../lib/context/PracticeContext";
 import Metronome from "../../components/Metronome";
 import { useI18n } from "../../lib/context/I18nContext";
-import { Flame, Snowflake, Sparkles as Sparkle, Star, Music as MusicNote, Piano as PianoKeys, Headphones, BookOpen, Brain, Mic as Microphone, Video, Frown, Smile, PartyPopper } from "lucide-react";
+import { Flame, Snowflake, Sparkles as Sparkle, Star, Music as MusicNote, Video } from "lucide-react";
 
 type GoalWithPiece = GoalRow & { piece: PieceRow | null };
 
@@ -108,16 +107,10 @@ export default function ThisWeek() {
   const [goals, setGoals] = useState<GoalWithPiece[]>([]);
   const [loading, setLoading] = useState(true);
   const [nextLesson, setNextLesson] = useState<LessonRow | null>(null);
-  const [assignments, setAssignments] = useState<AssignmentWithContext[]>([]);
   const [recentMessages, setRecentMessages] = useState<MessageRow[]>([]);
   const [teacherName, setTeacherName] = useState<string | null>(null);
   const [teacherAvatarUrl, setTeacherAvatarUrl] = useState<string | null>(null);
   const [chatTeacherId, setChatTeacherId] = useState<string | null>(null);
-  // Self-rating modal
-  const [ratingAssignment, setRatingAssignment] = useState<AssignmentWithContext | null>(null);
-  const [ratingValue, setRatingValue] = useState<SelfRating | null>(null);
-  const [ratingNote, setRatingNote] = useState("");
-  const [ratingSaving, setRatingSaving] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const [showMetronome, setShowMetronome] = useState(false);
 
@@ -158,18 +151,12 @@ export default function ThisWeek() {
         }
       })(),
 
-      // Block 2: lessons + assignments (already parallel)
+      // Block 2: next lesson
       (async () => {
         try {
           const supabase = getSupabaseBrowserClient();
-          const lessonService = LessonService.create(supabase);
-          const assignmentService = AssignmentService.create(supabase);
-          const [lesson, activeAssignments] = await Promise.all([
-            lessonService.getStudentNextLesson(student.id),
-            assignmentService.getActiveAssignments(student.id),
-          ]);
+          const lesson = await LessonService.create(supabase).getStudentNextLesson(student.id);
           setNextLesson(lesson);
-          setAssignments(activeAssignments);
         } catch {
           // Silently ignore — lessons table may not exist yet
         }
@@ -210,25 +197,6 @@ export default function ThisWeek() {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [recentMessages]);
-
-  async function handleCompleteAssignment() {
-    if (!ratingAssignment || !ratingValue) return;
-    setRatingSaving(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      await AssignmentService.create(supabase).completeAssignment(
-        ratingAssignment.id, student.id, ratingValue, ratingNote || undefined
-      );
-      setAssignments(prev => prev.filter(a => a.id !== ratingAssignment.id));
-      setRatingAssignment(null);
-      setRatingValue(null);
-      setRatingNote("");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRatingSaving(false);
-    }
-  }
 
   const grouped = groupGoals(goals);
 
@@ -636,98 +604,6 @@ export default function ThisWeek() {
         </div>
       </div>
 
-      {/* Assignments this week */}
-      {assignments.length > 0 && (
-        <div style={{ padding: "0 1.5rem 1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.875rem" }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--rose)", flexShrink: 0 }} />
-            <span style={{
-              fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.6875rem",
-              letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--charcoal)",
-            }}>
-              {t.student.assignmentsThisWeek}
-            </span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {assignments.map(a => {
-              const TYPE_COLORS: Record<string, string> = {
-                practice: "var(--rose)", listen: "var(--sky)", theory: "var(--butter)",
-                memorize: "var(--lavender)", record: "var(--sage)",
-              };
-              const TYPE_ICON: Record<string, React.ReactNode> = {
-                practice: <PianoKeys size={14} strokeWidth={1.5} />,
-                listen: <Headphones size={14} strokeWidth={1.5} />,
-                theory: <BookOpen size={14} strokeWidth={1.5} />,
-                memorize: <Brain size={14} strokeWidth={1.5} />,
-                record: <Microphone size={14} strokeWidth={1.5} />,
-              };
-              const color = TYPE_COLORS[a.type] ?? "var(--muted)";
-
-              return (
-                <div key={a.id} style={{
-                  background: "var(--white)", border: "1px solid var(--border)",
-                  borderRadius: 4, padding: "0.875rem 1rem",
-                  display: "flex", alignItems: "flex-start", gap: "0.875rem",
-                }}>
-                  {/* Type badge */}
-                  <span style={{
-                    fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.04em",
-                    textTransform: "uppercase", padding: "0.2rem 0.4rem", borderRadius: 2,
-                    background: color, color: "var(--white)", fontFamily: "Inter, sans-serif",
-                    flexShrink: 0, marginTop: "0.125rem",
-                  }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}>{TYPE_ICON[a.type]} {a.type}</span>
-                  </span>
-
-                  {/* Content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.9rem", color: "var(--charcoal)" }}>
-                      {a.title}
-                    </div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.2rem" }}>
-                      {[
-                        a.piece_title,
-                        a.focus,
-                        a.target_minutes_per_day ? `${a.target_minutes_per_day} min/day` : null,
-                        a.due_date ? `Due ${new Date(a.due_date + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}` : null,
-                      ].filter(Boolean).join(" · ")}
-                    </div>
-                    {a.instructions && (
-                      <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem", fontStyle: "italic" }}>
-                        {a.instructions}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", flexShrink: 0, alignItems: "flex-end" }}>
-                    {a.reference_audio_url && (
-                      <audio src={a.reference_audio_url} controls style={{ height: 28, maxWidth: 140 }} />
-                    )}
-                    {a.type === "theory" && a.theory_game && (
-                      <Link href={`/student/theory?game=${a.theory_game}`}
-                        style={{ padding: "0.375rem 0.75rem", borderRadius: 3, border: "none", background: "var(--butter)", color: "var(--charcoal)", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", cursor: "pointer", whiteSpace: "nowrap", textDecoration: "none" }}>
-                        Play Game →
-                      </Link>
-                    )}
-                    <button
-                      onClick={() => { setRatingAssignment(a); setRatingValue(null); setRatingNote(""); }}
-                      style={{
-                        padding: "0.375rem 0.75rem", borderRadius: 3, border: "none",
-                        background: "var(--charcoal)", color: "var(--white)",
-                        fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.75rem", cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {t.student.markComplete}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Notebook sections */}
       <div style={{ padding: "0 1.5rem 3rem", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -926,7 +802,7 @@ export default function ThisWeek() {
                                           color: section.color,
                                           letterSpacing: "0.02em",
                                         }}>
-                                          {goal.points} pts
+                                          {goal.points} pts{goal.target_minutes_per_day ? ` · ${goal.target_minutes_per_day} min/day` : ""}
                                         </span>
                                         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="var(--muted)" strokeWidth="1.5">
                                           <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
@@ -1060,88 +936,6 @@ export default function ThisWeek() {
         )}
       </div>
 
-      {/* Self-rating modal */}
-      {ratingAssignment && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 200, padding: "1rem",
-        }}>
-          <div style={{
-            background: "var(--white)", borderRadius: 8, width: "100%", maxWidth: 400,
-            padding: "1.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-          }}>
-            <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "1.25rem", fontWeight: 600, color: "var(--charcoal)", margin: "0 0 0.25rem" }}>
-              {t.student.howDidItGo}
-            </h3>
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", margin: "0 0 1.25rem" }}>
-              {ratingAssignment.title}
-            </p>
-
-            <div style={{ display: "flex", gap: "0.625rem", marginBottom: "1.25rem" }}>
-              {(["struggling", "getting_there", "nailed_it"] as SelfRating[]).map(r => {
-                const config = { struggling: { icon: <Frown size={24} strokeWidth={1.5} />, label: t.student.stillStruggling }, getting_there: { icon: <Smile size={24} strokeWidth={1.5} />, label: t.student.gettingThere }, nailed_it: { icon: <PartyPopper size={24} strokeWidth={1.5} />, label: t.student.nailedIt } }[r];
-                const selected = ratingValue === r;
-                return (
-                  <button
-                    key={r}
-                    onClick={() => setRatingValue(r)}
-                    style={{
-                      flex: 1, padding: "0.75rem 0.5rem", borderRadius: 4, cursor: "pointer",
-                      border: selected ? "2px solid var(--charcoal)" : "1px solid var(--border-strong)",
-                      background: selected ? "var(--cream)" : "var(--white)",
-                      fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: selected ? 600 : 400,
-                      color: "var(--charcoal)", textAlign: "center", transition: "all 0.12s",
-                    }}
-                  >
-                    <div style={{ marginBottom: "0.25rem", display: "flex", justifyContent: "center" }}>{config.icon}</div>
-                    {config.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <textarea
-              value={ratingNote}
-              onChange={e => setRatingNote(e.target.value)}
-              placeholder={t.student.optionalNoteForTeacher}
-              rows={2}
-              style={{
-                width: "100%", borderRadius: 3, border: "1px solid var(--border-strong)",
-                padding: "0.5rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
-                background: "var(--white)", color: "var(--charcoal)", outline: "none",
-                boxSizing: "border-box", resize: "none", marginBottom: "1rem",
-              }}
-            />
-
-            <div style={{ display: "flex", gap: "0.625rem", justifyContent: "flex-end" }}>
-              <button
-                onClick={() => setRatingAssignment(null)}
-                style={{
-                  padding: "0.5rem 0.875rem", borderRadius: 3,
-                  border: "1px solid var(--border-strong)", background: "transparent",
-                  color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: "pointer",
-                }}
-              >
-                {t.common.cancel}
-              </button>
-              <button
-                onClick={handleCompleteAssignment}
-                disabled={!ratingValue || ratingSaving}
-                style={{
-                  padding: "0.5rem 0.875rem", borderRadius: 3, border: "none",
-                  background: ratingValue ? "var(--charcoal)" : "var(--border)",
-                  color: "var(--white)", fontFamily: "Inter, sans-serif",
-                  fontWeight: 500, fontSize: "0.8125rem",
-                  cursor: ratingValue ? "pointer" : "not-allowed",
-                }}
-              >
-                {ratingSaving ? t.common.saving : t.common.save}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

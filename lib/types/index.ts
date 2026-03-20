@@ -94,6 +94,7 @@ export interface GoalRow {
   due_date: string | null;
   teacher_feedback: string | null;
   piece_id: string | null;
+  target_minutes_per_day: number | null;
   created_at: string;
 }
 
