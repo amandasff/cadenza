@@ -16,7 +16,7 @@ import type { ProfileRow, GoalRow, PracticeSessionRow, PieceRecording, YouTubeRe
 import YouTubeSearch from "../../../../components/YouTubeSearch";
 import { useLesson } from "../../../../lib/context/LessonContext";
 import { useI18n } from "../../../../lib/context/I18nContext";
-import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2, Flame, Snowflake } from "lucide-react";
+import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2, Flame, Snowflake, Play } from "lucide-react";
 
 const CATEGORIES_BASE: { value: string; colorKey: keyof typeof CATEGORY_COLORS }[] = [
   { value: "technique",    colorKey: "technique" },
@@ -246,6 +246,8 @@ function PieceBlock({
   const [addingRecording, setAddingRecording] = useState(false);
   const [pasteMode, setPasteMode] = useState(false);
   const [pendingPastes, setPendingPastes] = useState<File[]>([]);
+  const [pastePreviewUrls, setPastePreviewUrls] = useState<string[]>([]);
+  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
 
   // Keep a stable ref so the upload handler doesn't stale-close
   const uploadRef = useRef(onUploadSheetMusic);
@@ -257,7 +259,10 @@ function PieceBlock({
       const imageItem = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith("image/"));
       if (imageItem) {
         const file = imageItem.getAsFile();
-        if (file) setPendingPastes(prev => [...prev, file]);
+        if (file) {
+          setPendingPastes(prev => [...prev, file]);
+          setPastePreviewUrls(prev => [...prev, URL.createObjectURL(file)]);
+        }
       }
     }
     document.addEventListener("paste", onPaste);
@@ -267,12 +272,14 @@ function PieceBlock({
   function cancelPaste() {
     setPasteMode(false);
     setPendingPastes([]);
+    setPastePreviewUrls(prev => { prev.forEach(u => URL.revokeObjectURL(u)); return []; });
   }
 
   function uploadPastes() {
     if (pendingPastes.length > 0) uploadRef.current(piece.id, pendingPastes);
     setPasteMode(false);
     setPendingPastes([]);
+    setPastePreviewUrls(prev => { prev.forEach(u => URL.revokeObjectURL(u)); return []; });
   }
 
   const sheetInputId = `sheet-${piece.id}`;
@@ -398,24 +405,30 @@ function PieceBlock({
 
       {/* Paste mode banner */}
       {pasteMode && (
-        <div style={{
-          padding: "0.5rem 1rem", background: "var(--charcoal)",
-          display: "flex", alignItems: "center", gap: "0.75rem",
-        }}>
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--white)", flex: 1 }}>
-            {pendingPastes.length === 0
-              ? <>Press <strong>Ctrl+V</strong> / <strong>⌘V</strong> to paste — keep pasting to add more pages</>
-              : <>{pendingPastes.length} screenshot{pendingPastes.length > 1 ? "s" : ""} — paste more or click Upload</>}
-          </span>
-          {pendingPastes.length > 0 && (
-            <button
-              onClick={uploadPastes}
-              style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 2, cursor: "pointer", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, padding: "0.2rem 0.625rem", letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap" }}
-            >
-              Upload {pendingPastes.length}
-            </button>
+        <div style={{ background: "var(--charcoal)" }}>
+          <div style={{ padding: "0.5rem 1rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--white)", flex: 1 }}>
+              {pendingPastes.length === 0
+                ? <>Press <strong>Ctrl+V</strong> / <strong>⌘V</strong> to paste an image — paste again for more pages</>
+                : <>{pendingPastes.length} image{pendingPastes.length > 1 ? "s" : ""} ready — paste more or click Upload</>}
+            </span>
+            {pendingPastes.length > 0 && (
+              <button
+                onClick={uploadPastes}
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 2, cursor: "pointer", color: "var(--white)", fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, padding: "0.2rem 0.625rem", letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap" }}
+              >
+                Upload {pendingPastes.length}
+              </button>
+            )}
+            <button onClick={cancelPaste} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", lineHeight: 1, padding: 0 }}><X size={14} strokeWidth={1.5} /></button>
+          </div>
+          {pastePreviewUrls.length > 0 && (
+            <div style={{ display: "flex", gap: "0.375rem", padding: "0 1rem 0.625rem", overflowX: "auto" }}>
+              {pastePreviewUrls.map((url, i) => (
+                <img key={i} src={url} alt={`Page ${i + 1}`} style={{ height: 64, width: "auto", borderRadius: 3, border: "1px solid rgba(255,255,255,0.2)", flexShrink: 0, objectFit: "cover" }} />
+              ))}
+            </div>
           )}
-          <button onClick={cancelPaste} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.6)", lineHeight: 1, padding: 0 }}><X size={14} strokeWidth={1.5} /></button>
         </div>
       )}
 
@@ -428,28 +441,47 @@ function PieceBlock({
           {piece.recordings.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", marginBottom: "0.75rem" }}>
               {piece.recordings.map(rec => (
-                <div key={rec.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.375rem 0.5rem", background: "var(--cream)", borderRadius: 3, border: "1px solid var(--border)" }}>
-                  {rec.thumbnail_url && (
-                    <img src={rec.thumbnail_url} alt="" style={{ width: 48, height: 27, objectFit: "cover", borderRadius: 2, flexShrink: 0 }} />
-                  )}
-                  <span style={{ flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {rec.is_primary && <Star size={10} fill="currentColor" strokeWidth={0} style={{ marginRight: "0.25rem", color: "var(--muted)", verticalAlign: "middle" }} />}
-                    {rec.title}
-                  </span>
-                  <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0 }}>
-                    {!rec.is_primary && (
-                      <button
-                        onClick={() => onSetPrimaryRecording(rec.id, piece.id)}
-                        style={{ ...ghostBtnStyle, padding: "0.125rem 0.375rem", fontSize: "0.5625rem" }}
-                        title="Set as primary"
-                      ><Star size={10} fill="currentColor" strokeWidth={0} /></button>
-                    )}
+                <div key={rec.id}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.375rem 0.5rem", background: "var(--cream)", borderRadius: playingRecordingId === rec.id ? "3px 3px 0 0" : 3, border: "1px solid var(--border)", borderBottom: playingRecordingId === rec.id ? "none" : "1px solid var(--border)" }}>
                     <button
-                      onClick={() => onRemoveRecording(rec.id, piece.id)}
-                      style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, cursor: "pointer", color: "var(--muted)", fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}
-                      title="Remove"
-                    ><X size={12} strokeWidth={1.5} /></button>
+                      onClick={() => setPlayingRecordingId(playingRecordingId === rec.id ? null : rec.id)}
+                      title={playingRecordingId === rec.id ? "Close player" : "Play on YouTube"}
+                      style={{ width: 36, height: 27, borderRadius: 2, background: playingRecordingId === rec.id ? "var(--charcoal)" : "#FF0000", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                    >
+                      {playingRecordingId === rec.id
+                        ? <X size={12} strokeWidth={2} color="#fff" />
+                        : <Play size={11} strokeWidth={0} fill="#fff" />}
+                    </button>
+                    <span style={{ flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {rec.is_primary && <Star size={10} fill="currentColor" strokeWidth={0} style={{ marginRight: "0.25rem", color: "var(--muted)", verticalAlign: "middle" }} />}
+                      {rec.title}
+                    </span>
+                    <div style={{ display: "flex", gap: "0.25rem", flexShrink: 0 }}>
+                      {!rec.is_primary && (
+                        <button
+                          onClick={() => onSetPrimaryRecording(rec.id, piece.id)}
+                          style={{ ...ghostBtnStyle, padding: "0.125rem 0.375rem", fontSize: "0.5625rem" }}
+                          title="Set as primary"
+                        ><Star size={10} fill="currentColor" strokeWidth={0} /></button>
+                      )}
+                      <button
+                        onClick={() => onRemoveRecording(rec.id, piece.id)}
+                        style={{ background: "none", border: "1px solid var(--border)", borderRadius: 2, cursor: "pointer", color: "var(--muted)", fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}
+                        title="Remove"
+                      ><X size={12} strokeWidth={1.5} /></button>
+                    </div>
                   </div>
+                  {playingRecordingId === rec.id && (
+                    <div style={{ border: "1px solid var(--border)", borderTop: "none", borderRadius: "0 0 3px 3px", overflow: "hidden", background: "#000" }}>
+                      <iframe
+                        src={`https://www.youtube.com/embed/${rec.youtube_id}?autoplay=1`}
+                        title={rec.title}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        style={{ width: "100%", height: 180, border: "none", display: "block" }}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
