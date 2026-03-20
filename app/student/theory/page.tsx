@@ -2931,29 +2931,35 @@ type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "sca
 
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   const { t } = useI18n();
+  const hi = (key: string) => typeof window !== "undefined" ? Number(localStorage.getItem(hiKey(key)) ?? 0) : 0;
   const scores = {
-    noteId_treble: Number(typeof window !== "undefined" ? localStorage.getItem(hiKey("nid_treble")) ?? 0 : 0),
-    noteId_bass:   Number(typeof window !== "undefined" ? localStorage.getItem(hiKey("nid_bass"))   ?? 0 : 0),
-    interval:      Number(typeof window !== "undefined" ? localStorage.getItem(hiKey("interval_easy")) ?? localStorage.getItem(hiKey("interval_medium")) ?? localStorage.getItem(hiKey("interval_hard")) ?? 0 : 0),
-    chord:         Number(typeof window !== "undefined" ? localStorage.getItem(hiKey("chord_easy")) ?? localStorage.getItem(hiKey("chord_medium")) ?? 0 : 0),
+    noteId:      Math.max(hi("nid_treble"), hi("nid_bass")),
+    interval:    Math.max(hi("interval_easy"), hi("interval_medium"), hi("interval_hard")),
+    chord:       Math.max(hi("chord_easy"), hi("chord_medium")),
+    terms:       Math.max(hi("terms_easy"), hi("terms_medium"), hi("terms_hard")),
+    keySig:      Math.max(hi("keysig_major_beginner"), hi("keysig_major_advanced"), hi("keysig_relative_beginner"), hi("keysig_relative_advanced")),
+    scale:       Math.max(hi("scale_easy"), hi("scale_medium"), hi("scale_hard")),
+    fretboard:   Math.max(hi("fret_easy"), hi("fret_medium"), hi("fret_hard")),
+    guitarChord: Math.max(hi("chord_finder_easy"), hi("chord_finder_medium"), hi("chord_finder_hard")),
+    rhythm:      Math.max(typeof window !== "undefined" ? Number(localStorage.getItem("theory_hi_rhythm_easy") ?? 0) : 0, typeof window !== "undefined" ? Number(localStorage.getItem("theory_hi_rhythm_medium") ?? 0) : 0, typeof window !== "undefined" ? Number(localStorage.getItem("theory_hi_rhythm_hard") ?? 0) : 0),
   };
 
   const games = [
     {
       view: "noteId" as View, icon: "♪", title: "Note ID", category: "Piano",
       desc: "Name the note on the staff.",
-      badge: scores.noteId_treble > 0 ? `🏆 ${Math.max(scores.noteId_treble, scores.noteId_bass).toLocaleString()}` : null,
+      badge: scores.noteId > 0 ? `🏆 ${scores.noteId.toLocaleString()}` : null,
       active: true,
     },
     {
       view: "interval" as View, icon: "👂", title: "Intervals", category: "Ear Training",
       desc: "Two notes play — name the interval.",
-      badge: null, active: true,
+      badge: scores.interval > 0 ? `🏆 ${scores.interval.toLocaleString()}` : null, active: true,
     },
     {
       view: "chord" as View, icon: "🎼", title: "Chord Quality", category: "Ear Training",
       desc: "Major, minor, dim, or aug?",
-      badge: null, active: true,
+      badge: scores.chord > 0 ? `🏆 ${scores.chord.toLocaleString()}` : null, active: true,
     },
     {
       view: "solfege" as View, icon: "🎤", title: "Sight Singing", category: "Ear Training",
@@ -2963,17 +2969,17 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     {
       view: "terms" as View, icon: "🗣", title: "Music Terms", category: "Theory",
       desc: "Match the term to its meaning.",
-      badge: null, active: true,
+      badge: scores.terms > 0 ? `🏆 ${scores.terms.toLocaleString()}` : null, active: true,
     },
     {
       view: "keySig" as View, icon: "🔑", title: "Key Signatures", category: "Theory",
       desc: "Name the key signature.",
-      badge: null, active: true,
+      badge: scores.keySig > 0 ? `🏆 ${scores.keySig.toLocaleString()}` : null, active: true,
     },
     {
       view: "scale" as View, icon: "🎶", title: "Scale Ear Training", category: "Ear Training",
       desc: "Major or minor — what scale is it?",
-      badge: null, active: true,
+      badge: scores.scale > 0 ? `🏆 ${scores.scale.toLocaleString()}` : null, active: true,
     },
     {
       view: "rcm" as View, icon: "≡", title: "RCM Exam Guide", category: "Reference",
@@ -2986,15 +2992,15 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
     },
     {
       view: "menu" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm",
-      desc: "Hear it, tap it back.", badge: null, active: false,
+      desc: "Hear it, tap it back.", badge: scores.rhythm > 0 ? `🏆 ${scores.rhythm.toLocaleString()}` : null, active: false,
     },
     {
       view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar",
-      desc: "Name the note on the neck.", badge: null, active: true,
+      desc: "Name the note on the neck.", badge: scores.fretboard > 0 ? `🏆 ${scores.fretboard.toLocaleString()}` : null, active: true,
     },
     {
       view: "guitarChord" as View, icon: "🤘", title: "Guitar Chords", category: "Guitar",
-      desc: "Name the chord diagram.", badge: null, active: true,
+      desc: "Name the chord diagram.", badge: scores.guitarChord > 0 ? `🏆 ${scores.guitarChord.toLocaleString()}` : null, active: true,
     },
   ];
 
