@@ -586,11 +586,11 @@ const COMMON_PROGS = [
   ],
 ];
 
-// ── Reference videos (update IDs to swap videos) ──────────────────────────────
+// ── Reference videos ──────────────────────────────────────────────────────────
 const REFERENCE_VIDEOS = [
-  { label:"Reading chord diagrams", id:"cGUGN2l9mEQ" },
-  { label:"Chord progressions 101", id:"ZoL8r0QFO1k" },
-  { label:"Finding good progressions", id:"LkVPrfneFMw" },
+  { label:"Reading chord diagrams", id:"LlN2yrFQKzY" },
+  { label:"Chord progressions 101", id:"OkcSCIIXukk" },
+  { label:"Writing progressions",   id:"lY_llceEGFI" },
 ];
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -608,9 +608,11 @@ export default function ReferencePage() {
   const [chordType, setChordType] = useState("maj");
 
   // Key explorer state
+  const [progOpen, setProgOpen] = useState(false);
   const [progKey, setProgKey] = useState(0);
   const [progMode, setProgMode] = useState<"major"|"minor">("major");
   const [highlightProg, setHighlightProg] = useState<number[]|null>(null);
+  const [selectedDiatonic, setSelectedDiatonic] = useState<number|null>(null);
 
   // Video widget state
   const [videoOpen, setVideoOpen] = useState(false);
@@ -677,69 +679,128 @@ export default function ReferencePage() {
       {mainTab === "chords" && (
         <div>
 
-          {/* ── Key Explorer ── */}
+          {/* ── Key Explorer (collapsible) ── */}
           {(() => {
-            const steps   = progMode === "major" ? MAJOR_STEPS  : MINOR_STEPS;
-            const types   = progMode === "major" ? MAJOR_TYPES  : MINOR_TYPES;
-            const nums    = progMode === "major" ? MAJOR_NUMS   : MINOR_NUMS;
-            const progs   = COMMON_PROGS[progMode === "major" ? 0 : 1];
+            const steps    = progMode === "major" ? MAJOR_STEPS  : MINOR_STEPS;
+            const types    = progMode === "major" ? MAJOR_TYPES  : MINOR_TYPES;
+            const nums     = progMode === "major" ? MAJOR_NUMS   : MINOR_NUMS;
+            const progs    = COMMON_PROGS[progMode === "major" ? 0 : 1];
             const diatonic = steps.map((step, i) => ({
               noteIdx: (progKey + step) % 12,
               type: types[i],
               numeral: nums[i],
             }));
+            // Find guitar chord for selected diatonic index
+            const selCh = selectedDiatonic !== null ? diatonic[selectedDiatonic] : null;
+            const selChordName = selCh ? NOTE_NAMES[selCh.noteIdx] + CHORD_SUFFIX[selCh.type] : null;
+            // Look up in guitar chord db (major → "major", minor → "minor", dim → "diminished")
+            const qualityMap: Record<string,string> = { maj:"major", min:"minor", dim:"diminished" };
+            const selGuitarChord = selCh
+              ? (GUITAR_CHORDS[qualityMap[selCh.type] as keyof typeof GUITAR_CHORDS] ?? []).find(c => c.name === selChordName)
+              : null;
+
             return (
-              <div style={{ background:"var(--white)", border:"1px solid var(--border)", borderRadius:10, padding:"1.25rem", marginBottom:"1.5rem" }}>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1rem", flexWrap:"wrap", gap:"0.5rem" }}>
-                  <div style={{ fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)" }}>♩ Key Explorer & Chord Progressions</div>
-                  <div style={{ display:"flex", gap:"0.375rem" }}>
-                    <button onClick={()=>setProgMode("major")} style={{ padding:"0.3125rem 0.75rem", borderRadius:4, border:"1px solid var(--border-strong)", background:progMode==="major"?"var(--charcoal)":"transparent", color:progMode==="major"?"var(--white)":"var(--charcoal)", fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer" }}>Major</button>
-                    <button onClick={()=>setProgMode("minor")} style={{ padding:"0.3125rem 0.75rem", borderRadius:4, border:"1px solid var(--border-strong)", background:progMode==="minor"?"var(--charcoal)":"transparent", color:progMode==="minor"?"var(--white)":"var(--charcoal)", fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer" }}>Minor</button>
+              <div style={{ border:"1px solid var(--border)", borderRadius:10, marginBottom:"1.5rem", overflow:"hidden" }}>
+                {/* Header — always visible */}
+                <button onClick={()=>{ setProgOpen(v=>!v); setSelectedDiatonic(null); }} style={{
+                  width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
+                  padding:"0.875rem 1.25rem", background:"var(--cream)", border:"none", cursor:"pointer", textAlign:"left",
+                }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:"0.625rem" }}>
+                    <span style={{ fontSize:"0.9375rem" }}>♩</span>
+                    <span style={{ fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)", fontFamily:"Inter,sans-serif" }}>Key Explorer & Chord Progressions</span>
                   </div>
-                </div>
+                  <span style={{ fontSize:"0.75rem", color:"var(--muted)", fontFamily:"Inter,sans-serif" }}>{progOpen ? "▲ hide" : "▼ show"}</span>
+                </button>
 
-                {/* Key picker */}
-                <div style={{ display:"flex", flexWrap:"wrap", gap:"0.3rem", marginBottom:"1.125rem" }}>
-                  {NOTE_NAMES.map((note, idx) => (
-                    <button key={idx} onClick={()=>{ setProgKey(idx); setHighlightProg(null); }} style={{
-                      padding:"0.3125rem 0.5625rem", borderRadius:4, border:"1px solid var(--border-strong)",
-                      background: progKey===idx ? "#B85C3A" : "transparent",
-                      color: progKey===idx ? "#fff" : "var(--charcoal)",
-                      fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", fontWeight:500, cursor:"pointer", minWidth:36,
-                    }}>{note}</button>
-                  ))}
-                </div>
-
-                {/* Diatonic chords */}
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"0.375rem", marginBottom:"1.125rem" }}>
-                  {diatonic.map((ch, i) => {
-                    const name = NOTE_NAMES[ch.noteIdx] + CHORD_SUFFIX[ch.type];
-                    const lit = highlightProg?.includes(i);
-                    return (
-                      <div key={i} onClick={()=>playSound(pianoChordFreqs(ch.noteIdx, MAJOR_INTERVALS[ch.type]), "piano")}
-                        style={{ textAlign:"center", background: lit ? "#B85C3A18" : "var(--cream)", border:`1px solid ${lit?"#B85C3A":"var(--border)"}`, borderRadius:6, padding:"0.5rem 0.25rem", cursor:"pointer", transition:"all 0.15s" }}>
-                        <div style={{ fontSize:"0.625rem", color:"var(--muted)", fontFamily:"Georgia,serif", marginBottom:2 }}>{ch.numeral}</div>
-                        <div style={{ fontWeight:600, fontSize:"0.8125rem", color:"var(--charcoal)" }}>{name}</div>
-                        <div style={{ fontSize:"0.5625rem", color:"var(--muted)", marginTop:2 }}>{ch.type === "maj" ? "major" : ch.type === "min" ? "minor" : "dim"}</div>
+                {progOpen && (
+                  <div style={{ padding:"1.25rem", background:"var(--white)" }}>
+                    {/* Mode + key picker row */}
+                    <div style={{ display:"flex", alignItems:"center", gap:"0.625rem", flexWrap:"wrap", marginBottom:"1rem" }}>
+                      <button onClick={()=>setProgMode("major")} style={{ padding:"0.3125rem 0.75rem", borderRadius:4, border:"1px solid var(--border-strong)", background:progMode==="major"?"var(--charcoal)":"transparent", color:progMode==="major"?"var(--white)":"var(--charcoal)", fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer" }}>Major</button>
+                      <button onClick={()=>setProgMode("minor")} style={{ padding:"0.3125rem 0.75rem", borderRadius:4, border:"1px solid var(--border-strong)", background:progMode==="minor"?"var(--charcoal)":"transparent", color:progMode==="minor"?"var(--white)":"var(--charcoal)", fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer" }}>Minor</button>
+                      <div style={{ width:1, height:20, background:"var(--border)" }} />
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
+                        {NOTE_NAMES.map((note, idx) => (
+                          <button key={idx} onClick={()=>{ setProgKey(idx); setHighlightProg(null); setSelectedDiatonic(null); }} style={{
+                            padding:"0.25rem 0.5rem", borderRadius:4, border:"1px solid var(--border-strong)",
+                            background: progKey===idx ? "#B85C3A" : "transparent",
+                            color: progKey===idx ? "#fff" : "var(--charcoal)",
+                            fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", fontWeight:500, cursor:"pointer", minWidth:32,
+                          }}>{note}</button>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-                <div style={{ fontSize:"0.6875rem", color:"var(--muted)", marginBottom:"0.875rem" }}>Click any chord to hear it · Highlighted chords belong to the selected progression</div>
+                    </div>
 
-                {/* Common progressions */}
-                <div style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.5rem" }}>Common progressions in {NOTE_NAMES[progKey]} {progMode}</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:"0.375rem" }}>
-                  {progs.map(p => (
-                    <button key={p.name} onClick={()=>setHighlightProg(prev => JSON.stringify(prev)===JSON.stringify(p.idx) ? null : p.idx)}
-                      style={{ display:"flex", alignItems:"center", gap:"0.75rem", padding:"0.5rem 0.75rem", borderRadius:6, border:`1px solid ${JSON.stringify(highlightProg)===JSON.stringify(p.idx)?"#B85C3A":"var(--border)"}`, background: JSON.stringify(highlightProg)===JSON.stringify(p.idx)?"#B85C3A0C":"transparent", cursor:"pointer", textAlign:"left" }}>
-                      <div style={{ fontFamily:"monospace", fontSize:"0.8125rem", fontWeight:600, color:"var(--charcoal)", minWidth:120 }}>
-                        {p.idx.map(i => NOTE_NAMES[(progKey + steps[i]) % 12] + CHORD_SUFFIX[types[i]]).join(" – ")}
+                    {/* Diatonic chord grid */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:"0.375rem", marginBottom:"0.625rem" }}>
+                      {diatonic.map((ch, i) => {
+                        const name = NOTE_NAMES[ch.noteIdx] + CHORD_SUFFIX[ch.type];
+                        const lit  = highlightProg?.includes(i);
+                        const sel  = selectedDiatonic === i;
+                        return (
+                          <div key={i}
+                            onClick={()=>{
+                              playSound(pianoChordFreqs(ch.noteIdx, MAJOR_INTERVALS[ch.type]), "piano");
+                              setSelectedDiatonic(sel ? null : i);
+                            }}
+                            style={{ textAlign:"center", background: sel ? "#B85C3A" : lit ? "#B85C3A18" : "var(--cream)", border:`1px solid ${sel?"#B85C3A":lit?"#B85C3A":"var(--border)"}`, borderRadius:6, padding:"0.5rem 0.25rem", cursor:"pointer", transition:"all 0.15s" }}>
+                            <div style={{ fontSize:"0.625rem", color: sel ? "rgba(255,255,255,0.7)" : "var(--muted)", fontFamily:"Georgia,serif", marginBottom:2 }}>{ch.numeral}</div>
+                            <div style={{ fontWeight:600, fontSize:"0.8125rem", color: sel ? "#fff" : "var(--charcoal)" }}>{name}</div>
+                            <div style={{ fontSize:"0.5rem", color: sel ? "rgba(255,255,255,0.6)" : "var(--muted)", marginTop:2 }}>{ch.type==="maj"?"maj":ch.type==="min"?"min":"dim"}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ fontSize:"0.6875rem", color:"var(--muted)", marginBottom:"1rem" }}>Click to hear · click again to see diagram</div>
+
+                    {/* Chord diagram panel */}
+                    {selCh && (
+                      <div style={{ background:"var(--cream)", border:"1px solid var(--border)", borderRadius:8, padding:"1rem", marginBottom:"1rem", display:"flex", gap:"1.25rem", alignItems:"flex-start", flexWrap:"wrap" }}>
+                        <div>
+                          <div style={{ fontWeight:600, fontSize:"1rem", color:"var(--charcoal)", marginBottom:"0.25rem" }}>{selChordName}</div>
+                          <div style={{ fontSize:"0.75rem", color:"var(--muted)", marginBottom:"0.5rem" }}>
+                            {NOTE_NAMES.filter((_,ii) => MAJOR_INTERVALS[selCh.type].map(iv=>(selCh.noteIdx+iv)%12).includes(ii)).join(" · ")}
+                            {" · "}{selCh.type==="maj"?"major":selCh.type==="min"?"minor":"diminished"}
+                          </div>
+                          {selGuitarChord ? (
+                            <ChordDiagram chord={selGuitarChord} strings={6} openFreqs={GUITAR_OPEN_FREQS}
+                              onPlay={()=>playSound(chordFreqs(selGuitarChord.frets, GUITAR_OPEN_FREQS), "pluck")} playLabel="Play guitar" />
+                          ) : (
+                            <div style={{ fontSize:"0.8125rem", color:"var(--muted)" }}>Guitar diagram not in library for this voicing.</div>
+                          )}
+                        </div>
+                        <div style={{ flex:1, minWidth:160 }}>
+                          <div style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:"0.5rem" }}>Notes in chord</div>
+                          <div style={{ display:"flex", gap:"0.375rem", flexWrap:"wrap" }}>
+                            {MAJOR_INTERVALS[selCh.type].map((iv,ii) => (
+                              <div key={ii} style={{ padding:"0.375rem 0.625rem", background:"var(--white)", border:"1px solid var(--border)", borderRadius:6, fontWeight:600, fontSize:"0.8125rem", color:"var(--charcoal)" }}>
+                                {NOTE_NAMES[(selCh.noteIdx+iv)%12]}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize:"0.75rem", color:"var(--muted)" }}>{p.name} · {p.desc}</div>
-                    </button>
-                  ))}
-                </div>
+                    )}
+
+                    {/* Common progressions */}
+                    <div style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.5rem" }}>Common progressions in {NOTE_NAMES[progKey]} {progMode}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:"0.375rem" }}>
+                      {progs.map(p => {
+                        const active = JSON.stringify(highlightProg)===JSON.stringify(p.idx);
+                        return (
+                          <button key={p.name} onClick={()=>setHighlightProg(active ? null : p.idx)}
+                            style={{ display:"flex", alignItems:"center", gap:"0.75rem", padding:"0.5rem 0.75rem", borderRadius:6, border:`1px solid ${active?"#B85C3A":"var(--border)"}`, background: active?"#B85C3A0C":"transparent", cursor:"pointer", textAlign:"left" }}>
+                            <div style={{ fontFamily:"monospace", fontSize:"0.8125rem", fontWeight:600, color:"var(--charcoal)", minWidth:130, flexShrink:0 }}>
+                              {p.idx.map(i => NOTE_NAMES[(progKey + steps[i]) % 12] + CHORD_SUFFIX[types[i]]).join(" – ")}
+                            </div>
+                            <div style={{ fontSize:"0.75rem", color:"var(--muted)" }}>{p.name} · {p.desc}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
