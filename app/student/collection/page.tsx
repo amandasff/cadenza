@@ -4,6 +4,7 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { CollectibleService } from "../../../lib/services/CollectibleService";
 import type { ComposerAvatarRow, StudentCollectibleWithAvatar, CollectibleEra } from "../../../lib/types";
+import { playComposerAudio } from "../../../lib/composerTunes";
 
 // ── Rarity config ─────────────────────────────────────────────────────────────
 const RARITY_LABEL: Record<string, string> = {
@@ -56,9 +57,17 @@ function ComposerCard({
 }) {
   const [showFact, setShowFact] = useState(false);
 
+  function handleCardClick() {
+    if (!owned) return;
+    setShowFact(f => !f);
+    if (avatar.youtube_id) {
+      playComposerAudio(avatar.youtube_id);
+    }
+  }
+
   return (
     <div
-      onClick={() => owned && setShowFact(f => !f)}
+      onClick={handleCardClick}
       style={{
         position: "relative",
         borderRadius: 12,
@@ -115,6 +124,24 @@ function ComposerCard({
             fontFamily: "Inter, sans-serif",
           }}>
             +{shards} ✦
+          </div>
+        )}
+
+        {/* Audio badge — shown when a YouTube video is linked */}
+        {owned && avatar.youtube_id && (
+          <div style={{
+            position: "absolute",
+            bottom: 5,
+            right: 5,
+            background: "rgba(0,0,0,0.55)",
+            borderRadius: 4,
+            padding: "1px 5px",
+            fontSize: "0.5rem",
+            color: "white",
+            fontFamily: "Inter, sans-serif",
+            lineHeight: 1.4,
+          }}>
+            ♪
           </div>
         )}
 

@@ -508,6 +508,7 @@ export interface ComposerAvatarRow {
   drop_weight: number;
   sort_order: number;
   is_active: boolean;
+  youtube_id: string | null;
   created_at: string;
 }
 

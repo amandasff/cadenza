@@ -7,7 +7,7 @@ import { ShopService } from "../../../lib/services/ShopService";
 import { CollectibleService } from "../../../lib/services/CollectibleService";
 import { Student } from "../../../lib/models/Student";
 import type { InventoryItemWithDetails, StudentCollectibleWithAvatar, PieceRow, StudioGiftWithDetails } from "../../../lib/types";
-import { playComposerTune } from "../../../lib/composerTunes";
+import { playComposerAudio } from "../../../lib/composerTunes";
 
 // ── Era background tints ───────────────────────────────────────────────────
 
@@ -140,7 +140,7 @@ export default function StudioPage() {
   function playFeaturedTune() {
     stopTuneRef.current?.();
     if (featuredComposer) {
-      stopTuneRef.current = playComposerTune(featuredComposer.composer_avatars.composer_name);
+      stopTuneRef.current = playComposerAudio(featuredComposer.composer_avatars.youtube_id);
     }
   }
 

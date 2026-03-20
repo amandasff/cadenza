@@ -7,7 +7,7 @@ import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
 import { ShopService } from "../../../../lib/services/ShopService";
 import { CollectibleService } from "../../../../lib/services/CollectibleService";
 import type { InventoryItemWithDetails, StudentCollectibleWithAvatar, PieceRow, ShopItemRow, StudioGiftWithDetails } from "../../../../lib/types";
-import { playComposerTune } from "../../../../lib/composerTunes";
+import { playComposerAudio } from "../../../../lib/composerTunes";
 
 const ERA_TINTS: Record<string, string> = {
   baroque:      "rgba(180, 140, 60, 0.08)",
@@ -224,7 +224,7 @@ export default function VisitorStudioPage() {
             )}
           </div>
           <button
-            onClick={() => playComposerTune(featuredComposer.composer_avatars.composer_name)}
+            onClick={() => playComposerAudio(featuredComposer.composer_avatars.youtube_id)}
             title="Play motif"
             style={{ width: 40, height: 40, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.125rem" }}
           >
