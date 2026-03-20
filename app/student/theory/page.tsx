@@ -2968,12 +2968,14 @@ function SolfegeGame({ onBack }: { onBack: () => void }) {
 type View = "menu" | "noteId" | "interval" | "chord" | "terms" | "keySig" | "scale" | "rcm" | "fretboard" | "guitarChord" | "rhythmEcho" | "sightRead" | "solfege";
 
 type LBEntry = { userId: string; name: string; total: number };
+type GameTop3Entry = { userId: string; name: string; score: number };
 
 function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   const { t } = useI18n();
   const [leaderboard, setLeaderboard] = useState<LBEntry[]>([]);
   const [myGameRanks, setMyGameRanks] = useState<Record<string, number>>({});
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [perGameTop3, setPerGameTop3] = useState<Record<string, GameTop3Entry[]>>({});
 
   useEffect(() => {
     async function load() {
@@ -2994,10 +2996,15 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
         perGame[row.logical_game].push({ userId: row.user_id, score: row.score });
       }
 
-      // Per-game rank for current user
+      // Sort per-game entries, compute current user's rank, collect all top-3 IDs
       const ranks: Record<string, number> = {};
+      const allTopIds = new Set<string>();
+      const perGameTop3Raw: Record<string, Array<{ userId: string; score: number }>> = {};
       for (const [game, entries] of Object.entries(perGame)) {
         entries.sort((a, b) => b.score - a.score);
+        const top3 = entries.slice(0, 3);
+        perGameTop3Raw[game] = top3;
+        top3.forEach(e => allTopIds.add(e.userId));
         const idx = entries.findIndex(e => e.userId === user.id);
         if (idx >= 0 && idx < 3) ranks[game] = idx + 1;
       }
@@ -3005,17 +3012,22 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
 
       // Top 3 overall
       const sorted = Object.entries(totals).sort(([, a], [, b]) => b - a).slice(0, 3);
-      const topIds = sorted.map(([id]) => id);
-      const { data: profiles } = await sb.from("profiles").select("id, display_name").in("id", topIds);
+      sorted.forEach(([id]) => allTopIds.add(id));
+
+      // Fetch all names in one query
+      const { data: profiles } = await sb.from("profiles").select("id, display_name").in("id", [...allTopIds]);
       const nameMap: Record<string, string> = {};
       for (const p of (profiles ?? []) as Array<{ id: string; display_name: string }>) {
         nameMap[p.id] = p.display_name ?? "Musician";
       }
-      setLeaderboard(sorted.map(([userId, total]) => ({
-        userId,
-        name: userId === user.id ? "You" : (nameMap[userId] ?? "Musician"),
-        total,
-      })));
+      const resolveName = (id: string) => id === user.id ? "You" : (nameMap[id] ?? "Musician");
+
+      setLeaderboard(sorted.map(([userId, total]) => ({ userId, name: resolveName(userId), total })));
+      const resolved: Record<string, GameTop3Entry[]> = {};
+      for (const [game, entries] of Object.entries(perGameTop3Raw)) {
+        resolved[game] = entries.map(e => ({ userId: e.userId, name: resolveName(e.userId), score: e.score }));
+      }
+      setPerGameTop3(resolved);
     }
     load().catch(() => {});
   }, []);
@@ -3042,63 +3054,30 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
   }
 
   const games = [
-    {
-      view: "noteId" as View, icon: "♪", title: "Note ID", category: "Piano",
-      desc: "Name the note on the staff.",
-      badge: scoreBadge("noteId", scores.noteId),
-      active: true,
-    },
-    {
-      view: "interval" as View, icon: "👂", title: "Intervals", category: "Ear Training",
-      desc: "Two notes play — name the interval.",
-      badge: scoreBadge("interval", scores.interval), active: true,
-    },
-    {
-      view: "chord" as View, icon: "🎼", title: "Chord Quality", category: "Ear Training",
-      desc: "Major, minor, dim, or aug?",
-      badge: scoreBadge("chord", scores.chord), active: true,
-    },
-    {
-      view: "solfege" as View, icon: "🎤", title: "Sight Singing", category: "Ear Training",
-      desc: "Read the melody and sing it.",
-      badge: null, active: true,
-    },
-    {
-      view: "terms" as View, icon: "🗣", title: "Music Terms", category: "Theory",
-      desc: "Match the term to its meaning.",
-      badge: scoreBadge("terms", scores.terms), active: true,
-    },
-    {
-      view: "keySig" as View, icon: "🔑", title: "Key Signatures", category: "Theory",
-      desc: "Name the key signature.",
-      badge: scoreBadge("keySig", scores.keySig), active: true,
-    },
-    {
-      view: "scale" as View, icon: "🎶", title: "Scale Ear Training", category: "Ear Training",
-      desc: "Major or minor — what scale is it?",
-      badge: scoreBadge("scale", scores.scale), active: true,
-    },
-    {
-      view: "rcm" as View, icon: "≡", title: "RCM Exam Guide", category: "Reference",
-      desc: "Requirements by level.",
-      badge: null, active: true,
-    },
-    {
-      view: "menu" as View, icon: "📖", title: "Sight Reading", category: "Piano",
-      desc: "Name notes left to right.", badge: null, active: false,
-    },
-    {
-      view: "menu" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm",
-      desc: "Hear it, tap it back.", badge: scores.rhythm > 0 ? `🏆 ${scores.rhythm.toLocaleString()}` : null, active: false,
-    },
-    {
-      view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar",
-      desc: "Name the note on the neck.", badge: scoreBadge("fretboard", scores.fretboard), active: true,
-    },
-    {
-      view: "guitarChord" as View, icon: "🤘", title: "Guitar Chords", category: "Guitar",
-      desc: "Name the chord diagram.", badge: scoreBadge("guitarChord", scores.guitarChord), active: true,
-    },
+    { view: "noteId" as View, icon: "♪", title: "Note ID", category: "Piano", logicalGame: "noteId",
+      desc: "Name the note on the staff.", badge: scoreBadge("noteId", scores.noteId), active: true },
+    { view: "interval" as View, icon: "👂", title: "Intervals", category: "Ear Training", logicalGame: "interval",
+      desc: "Two notes play — name the interval.", badge: scoreBadge("interval", scores.interval), active: true },
+    { view: "chord" as View, icon: "🎼", title: "Chord Quality", category: "Ear Training", logicalGame: "chord",
+      desc: "Major, minor, dim, or aug?", badge: scoreBadge("chord", scores.chord), active: true },
+    { view: "solfege" as View, icon: "🎤", title: "Sight Singing", category: "Ear Training", logicalGame: "",
+      desc: "Read the melody and sing it.", badge: null, active: true },
+    { view: "terms" as View, icon: "🗣", title: "Music Terms", category: "Theory", logicalGame: "terms",
+      desc: "Match the term to its meaning.", badge: scoreBadge("terms", scores.terms), active: true },
+    { view: "keySig" as View, icon: "🔑", title: "Key Signatures", category: "Theory", logicalGame: "keySig",
+      desc: "Name the key signature.", badge: scoreBadge("keySig", scores.keySig), active: true },
+    { view: "scale" as View, icon: "🎶", title: "Scale Ear Training", category: "Ear Training", logicalGame: "scale",
+      desc: "Major or minor — what scale is it?", badge: scoreBadge("scale", scores.scale), active: true },
+    { view: "rcm" as View, icon: "≡", title: "RCM Exam Guide", category: "Reference", logicalGame: "",
+      desc: "Requirements by level.", badge: null, active: true },
+    { view: "menu" as View, icon: "📖", title: "Sight Reading", category: "Piano", logicalGame: "",
+      desc: "Name notes left to right.", badge: null, active: false },
+    { view: "menu" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm", logicalGame: "",
+      desc: "Hear it, tap it back.", badge: scores.rhythm > 0 ? `🏆 ${scores.rhythm.toLocaleString()}` : null, active: false },
+    { view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar", logicalGame: "fretboard",
+      desc: "Name the note on the neck.", badge: scoreBadge("fretboard", scores.fretboard), active: true },
+    { view: "guitarChord" as View, icon: "🤘", title: "Guitar Chords", category: "Guitar", logicalGame: "guitarChord",
+      desc: "Name the chord diagram.", badge: scoreBadge("guitarChord", scores.guitarChord), active: true },
   ];
 
   const categoryColors: Record<string, { bg: string; text: string }> = {
@@ -3145,6 +3124,15 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
                     {g.badge && <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{g.badge}</span>}
                   </div>
                   <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>{g.desc}</p>
+                  {g.logicalGame && perGameTop3[g.logicalGame]?.length > 0 && (
+                    <div style={{ display: "flex", gap: "0.875rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                      {perGameTop3[g.logicalGame].map((e, i) => (
+                        <span key={e.userId} style={{ fontSize: "0.7rem", color: e.userId === myUserId ? "var(--charcoal)" : "var(--muted)", fontWeight: e.userId === myUserId ? 600 : 400 }}>
+                          {medals[i]} {e.name} {e.score.toLocaleString()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {g.active && <span style={{ fontSize: "1rem", color: "var(--muted)", flexShrink: 0, alignSelf: "center" }}>›</span>}
               </div>
@@ -3213,6 +3201,15 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
                     {g.badge && <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{g.badge}</span>}
                   </div>
                   <p style={{ fontSize: "0.8125rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>{g.desc}</p>
+                  {g.logicalGame && perGameTop3[g.logicalGame]?.length > 0 && (
+                    <div style={{ display: "flex", gap: "0.875rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                      {perGameTop3[g.logicalGame].map((e, i) => (
+                        <span key={e.userId} style={{ fontSize: "0.7rem", color: e.userId === myUserId ? "var(--charcoal)" : "var(--muted)", fontWeight: e.userId === myUserId ? 600 : 400 }}>
+                          {medals[i]} {e.name} {e.score.toLocaleString()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {g.active && <span style={{ fontSize: "1rem", color: "var(--muted)", flexShrink: 0, alignSelf: "center" }}>›</span>}
               </div>
