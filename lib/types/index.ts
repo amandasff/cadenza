@@ -18,6 +18,8 @@ export interface ProfileRow {
   music_since?: string | null;
   stripe_customer_id?: string | null;
   subscription_status?: 'free' | 'active' | 'canceled' | 'past_due';
+  theme_song_item_id?: string | null;
+  theme_song_title?: string | null;
   created_at: string;
 }
 
