@@ -52,12 +52,24 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const PRESET_REACTIONS = [
-  { id: "note",  emoji: "🎵", label: "Leave a note" },
-  { id: "fire",  emoji: "🔥", label: "On fire!" },
-  { id: "clap",  emoji: "👏", label: "Bravo!" },
-  { id: "star",  emoji: "⭐", label: "Stunning" },
-  { id: "love",  emoji: "🎶", label: "Love this" },
+  { id: "fire",  emoji: "🔥" },
+  { id: "clap",  emoji: "👏" },
+  { id: "star",  emoji: "⭐" },
+  { id: "love",  emoji: "🎶" },
+  { id: "note",  emoji: "🎵" },
 ];
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7)  return `${d}d ago`;
+  return `${Math.floor(d / 7)}w ago`;
+}
 
 interface ProfileData {
   display_name: string;
@@ -71,6 +83,14 @@ interface ProfileData {
   studio_bio: string | null;
   theme_song_item_id: string | null;
   theme_song_title: string | null;
+}
+
+interface ShoutoutRow {
+  id: string;
+  author_id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
 }
 
 type CrateItem = PortfolioItemRow & { display_name?: string; avatar_url?: string | null };
@@ -92,7 +112,6 @@ export default function VisitorStudioPage() {
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<"composers" | "items" | "journey" | "music">("composers");
   const [hoveredComposer, setHoveredComposer] = useState<string | null>(null);
-  const [reactionSent, setReactionSent] = useState<string | null>(null);
   const [floatingNotes, setFloatingNotes] = useState<{ id: number; emoji: string; x: number }[]>([]);
   const [giftSheetOpen, setGiftSheetOpen] = useState(false);
   const [selectedGiftItem, setSelectedGiftItem] = useState<ShopItemRow | null>(null);
@@ -114,6 +133,21 @@ export default function VisitorStudioPage() {
   const [collectingId, setCollectingId] = useState<string | null>(null);
   const [justCollected, setJustCollected] = useState<Set<string>>(new Set());
 
+  // Follow
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  // Reactions (persistent with counts)
+  const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
+  const [myReactions, setMyReactions] = useState<Set<string>>(new Set());
+  const [togglingReaction, setTogglingReaction] = useState<string | null>(null);
+
+  // Guestbook
+  const [shoutouts, setShoutouts] = useState<ShoutoutRow[]>([]);
+  const [shoutoutText, setShoutoutText] = useState("");
+  const [postingShoutout, setPostingShoutout] = useState(false);
+
   useEffect(() => {
     if (!userId) return;
     async function load() {
@@ -121,14 +155,20 @@ export default function VisitorStudioPage() {
       try {
         const shop = ShopService.create(supabase);
         const collectibles = CollectibleService.create(supabase);
-        const [profileRes, inv, comps, piecesRes, giftsRes, allItems] = await Promise.all([
+        const [profileRes, inv, comps, piecesRes, giftsRes, allItems, followCountRes, shoutoutsRes, reactionsRes, discRes, crateRes] = await Promise.all([
           supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
           shop.getInventory(userId),
           collectibles.getCollection(userId),
           supabase.from("pieces").select("*").eq("student_id", userId).order("created_at", { ascending: false }),
           supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", userId).order("created_at", { ascending: false }).limit(20),
           shop.getAllItems(),
+          supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
+          supabase.from("studio_shoutouts").select("*").eq("studio_owner_id", userId).order("created_at", { ascending: false }).limit(20),
+          supabase.from("studio_reactions").select("reaction_type").eq("studio_owner_id", userId),
+          supabase.from("portfolio_items").select("*").eq("student_id", userId).eq("is_public", true).order("created_at", { ascending: false }),
+          supabase.from("portfolio_collections").select("portfolio_item_id, portfolio_items(*, profiles(display_name, avatar_url))").eq("collector_id", userId).order("created_at", { ascending: false }),
         ]);
+
         if (!profileRes.data) { setNotFound(true); return; }
         const profileData = profileRes.data as ProfileData;
         setProfile(profileData);
@@ -137,8 +177,29 @@ export default function VisitorStudioPage() {
         setPieces((piecesRes.data ?? []) as PieceRow[]);
         setGifts((giftsRes.data ?? []) as StudioGiftWithDetails[]);
         setShopItems(allItems);
+        setFollowerCount(followCountRes.count ?? 0);
+        setShoutouts((shoutoutsRes.data ?? []) as ShoutoutRow[]);
 
-        // Theme song: if set, fetch recording URL
+        // Aggregate reaction counts
+        const counts: Record<string, number> = {};
+        for (const r of (reactionsRes.data ?? []) as { reaction_type: string }[]) {
+          counts[r.reaction_type] = (counts[r.reaction_type] ?? 0) + 1;
+        }
+        setReactionCounts(counts);
+
+        // Discography
+        setDiscography((discRes.data ?? []) as PortfolioItemRow[]);
+        const crateItems = ((crateRes.data ?? []) as unknown as Array<{
+          portfolio_item_id: string;
+          portfolio_items: PortfolioItemRow & { profiles?: { display_name: string; avatar_url: string | null } };
+        }>).map(r => ({
+          ...r.portfolio_items,
+          display_name: r.portfolio_items?.profiles?.display_name,
+          avatar_url: r.portfolio_items?.profiles?.avatar_url ?? null,
+        }));
+        setCrate(crateItems);
+
+        // Theme song
         if (profileData.theme_song_item_id) {
           const { data: songItem } = await supabase
             .from("portfolio_items")
@@ -151,29 +212,16 @@ export default function VisitorStudioPage() {
           }
         }
 
-        // Music tab: discography + visited user's crate
-        const [discRes, crateRes] = await Promise.all([
-          supabase.from("portfolio_items").select("*").eq("student_id", userId).eq("is_public", true).order("created_at", { ascending: false }),
-          supabase.from("portfolio_collections").select("portfolio_item_id, portfolio_items(*, profiles(display_name, avatar_url))").eq("collector_id", userId).order("created_at", { ascending: false }),
-        ]);
-        setDiscography((discRes.data ?? []) as PortfolioItemRow[]);
-        const crateItems = ((crateRes.data ?? []) as unknown as Array<{
-          portfolio_item_id: string;
-          portfolio_items: PortfolioItemRow & { profiles?: { display_name: string; avatar_url: string | null } };
-        }>).map(r => ({
-          ...r.portfolio_items,
-          display_name: r.portfolio_items?.profiles?.display_name,
-          avatar_url: r.portfolio_items?.profiles?.avatar_url ?? null,
-        }));
-        setCrate(crateItems);
-
-        // My collected IDs (so we can show "In your Crate")
+        // Current user's data
         if (user?.id) {
-          const { data: myCollections } = await supabase
-            .from("portfolio_collections")
-            .select("portfolio_item_id")
-            .eq("collector_id", user.id);
-          setMyCollectedIds(new Set((myCollections ?? []).map((r: { portfolio_item_id: string }) => r.portfolio_item_id)));
+          const [followRes, myReactionsRes, myCollectionsRes] = await Promise.all([
+            supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle(),
+            supabase.from("studio_reactions").select("reaction_type").eq("studio_owner_id", userId).eq("reactor_id", user.id),
+            supabase.from("portfolio_collections").select("portfolio_item_id").eq("collector_id", user.id),
+          ]);
+          setIsFollowing(!!followRes.data);
+          setMyReactions(new Set((myReactionsRes.data ?? []).map((r: { reaction_type: string }) => r.reaction_type)));
+          setMyCollectedIds(new Set((myCollectionsRes.data ?? []).map((r: { portfolio_item_id: string }) => r.portfolio_item_id)));
         }
       } catch (e) {
         console.error(e);
@@ -185,41 +233,91 @@ export default function VisitorStudioPage() {
     load();
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Set audio volume via ref once URL is known
+  // Audio volume
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = 0.25;
-    }
+    if (audioRef.current) audioRef.current.volume = 0.25;
   }, [themeSongUrl]);
 
-  // Mute/unmute toggle
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.muted = themeMuted;
-    }
+    if (audioRef.current) audioRef.current.muted = themeMuted;
   }, [themeMuted]);
 
-  // Cleanup audio on unmount / navigation away
   useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
+    return () => { if (audioRef.current) audioRef.current.pause(); };
   }, []);
 
-  function sendReaction(reaction: typeof PRESET_REACTIONS[number]) {
-    if (reactionSent) return;
-    setReactionSent(reaction.id);
-    const count = 3 + Math.floor(Math.random() * 3);
-    const notes = Array.from({ length: count }, (_, i) => ({
-      id: Date.now() + i,
-      emoji: reaction.emoji,
-      x: 10 + Math.random() * 80,
-    }));
-    setFloatingNotes(prev => [...prev, ...notes]);
-    setTimeout(() => setFloatingNotes(prev => prev.filter(n => !notes.find(nn => nn.id === n.id))), 3000);
+  // ── Follow / Unfollow ───────────────────────────────────────────────────────
+
+  async function toggleFollow() {
+    if (!user?.id || followLoading) return;
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", userId);
+        setIsFollowing(false);
+        setFollowerCount(c => Math.max(0, c - 1));
+      } else {
+        await supabase.from("follows").insert({ follower_id: user.id, following_id: userId });
+        setIsFollowing(true);
+        setFollowerCount(c => c + 1);
+      }
+    } finally {
+      setFollowLoading(false);
+    }
   }
+
+  // ── Reactions (persistent) ──────────────────────────────────────────────────
+
+  async function toggleReaction(reactionId: string) {
+    if (!user?.id || togglingReaction) return;
+    setTogglingReaction(reactionId);
+    try {
+      if (myReactions.has(reactionId)) {
+        await supabase.from("studio_reactions").delete()
+          .eq("studio_owner_id", userId).eq("reactor_id", user.id).eq("reaction_type", reactionId);
+        setMyReactions(prev => { const n = new Set(prev); n.delete(reactionId); return n; });
+        setReactionCounts(prev => ({ ...prev, [reactionId]: Math.max(0, (prev[reactionId] ?? 0) - 1) }));
+      } else {
+        await supabase.from("studio_reactions").insert({ studio_owner_id: userId, reactor_id: user.id, reaction_type: reactionId });
+        setMyReactions(prev => new Set([...prev, reactionId]));
+        setReactionCounts(prev => ({ ...prev, [reactionId]: (prev[reactionId] ?? 0) + 1 }));
+        // Floating animation on new reaction
+        const r = PRESET_REACTIONS.find(p => p.id === reactionId);
+        if (r) {
+          const notes = Array.from({ length: 4 + Math.floor(Math.random() * 3) }, (_, i) => ({
+            id: Date.now() + i, emoji: r.emoji, x: 10 + Math.random() * 80,
+          }));
+          setFloatingNotes(prev => [...prev, ...notes]);
+          setTimeout(() => setFloatingNotes(prev => prev.filter(n => !notes.find(nn => nn.id === n.id))), 3000);
+        }
+      }
+    } finally {
+      setTogglingReaction(null);
+    }
+  }
+
+  // ── Guestbook ───────────────────────────────────────────────────────────────
+
+  async function postShoutout() {
+    if (!user?.id || !shoutoutText.trim() || postingShoutout) return;
+    setPostingShoutout(true);
+    try {
+      const { data: me } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
+      const authorName = (me as { display_name: string } | null)?.display_name ?? "Someone";
+      const { data: newShoutout } = await supabase.from("studio_shoutouts").insert({
+        studio_owner_id: userId,
+        author_id: user.id,
+        author_name: authorName,
+        content: shoutoutText.trim(),
+      }).select().single();
+      if (newShoutout) setShoutouts(prev => [newShoutout as ShoutoutRow, ...prev]);
+      setShoutoutText("");
+    } finally {
+      setPostingShoutout(false);
+    }
+  }
+
+  // ── Gift ────────────────────────────────────────────────────────────────────
 
   async function sendGift() {
     if (!user?.id || !selectedGiftItem || sendingGift) return;
@@ -229,10 +327,8 @@ export default function VisitorStudioPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          senderId: user.id,
-          recipientId: userId,
-          itemId: selectedGiftItem.id,
-          message: giftMessage.trim() || null,
+          senderId: user.id, recipientId: userId,
+          itemId: selectedGiftItem.id, message: giftMessage.trim() || null,
         }),
       });
       setGiftSent(true);
@@ -243,6 +339,8 @@ export default function VisitorStudioPage() {
       setSendingGift(false);
     }
   }
+
+  // ── Collect track ───────────────────────────────────────────────────────────
 
   async function collectItem(item: PortfolioItemRow) {
     if (!user?.id || collectingId) return;
@@ -255,7 +353,6 @@ export default function VisitorStudioPage() {
       });
       setMyCollectedIds(prev => new Set([...prev, item.id]));
       setJustCollected(prev => new Set([...prev, item.id]));
-      // Update local collection_count
       setDiscography(prev => prev.map(d => d.id === item.id ? { ...d, collection_count: (d.collection_count ?? 0) + 1 } : d));
     } catch (e) {
       console.error(e);
@@ -286,12 +383,10 @@ export default function VisitorStudioPage() {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1.5rem", position: "relative" }}>
 
-      {/* Theme song audio element */}
-      {themeSongUrl && (
-        <audio ref={audioRef} src={themeSongUrl} autoPlay loop style={{ display: "none" }} />
-      )}
+      {/* Theme song */}
+      {themeSongUrl && <audio ref={audioRef} src={themeSongUrl} autoPlay loop style={{ display: "none" }} />}
 
-      {/* Floating reaction notes */}
+      {/* Floating reaction emojis */}
       {floatingNotes.map(note => (
         <div key={note.id} style={{
           position: "fixed", bottom: "30%", left: `${note.x}%`,
@@ -303,7 +398,7 @@ export default function VisitorStudioPage() {
       ))}
       <style>{`
         @keyframes floatUp {
-          0%   { transform: translateY(0) scale(1);   opacity: 1; }
+          0%   { transform: translateY(0) scale(1);       opacity: 1; }
           100% { transform: translateY(-180px) scale(0.6); opacity: 0; }
         }
       `}</style>
@@ -332,62 +427,90 @@ export default function VisitorStudioPage() {
             onClick={() => playComposerAudio(featuredComposer.composer_avatars.youtube_id)}
             title="Play motif"
             style={{ width: 40, height: 40, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "1.125rem" }}
-          >
-            ♪
-          </button>
+          >♪</button>
         </div>
       )}
 
       {/* ── Profile card ── */}
-      <div className="card-base" style={{ padding: "1.5rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--white)", flexShrink: 0 }}>
-          {profile?.display_name?.[0]?.toUpperCase() ?? "?"}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
-            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
-              {studioTitle}
+      <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--white)", flexShrink: 0 }}>
+            {profile?.display_name?.[0]?.toUpperCase() ?? "?"}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
+                {studioTitle}
+              </div>
+              {themeSongUrl && themeSongTitle && (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.1875rem 0.625rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 100, flexShrink: 0 }}>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>♫ {themeSongTitle}</span>
+                  <button
+                    onClick={() => setThemeMuted(m => !m)}
+                    title={themeMuted ? "Unmute" : "Mute"}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "0.75rem", color: "var(--muted)" }}
+                  >
+                    {themeMuted ? "🔇" : "🔊"}
+                  </button>
+                </div>
+              )}
             </div>
-            {/* Theme song pill */}
-            {themeSongUrl && themeSongTitle && (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.1875rem 0.625rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 100, flexShrink: 0 }}>
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>♫ {themeSongTitle}</span>
-                <button
-                  onClick={() => setThemeMuted(m => !m)}
-                  title={themeMuted ? "Unmute" : "Mute"}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "0.75rem", color: "var(--muted)" }}
-                >
-                  {themeMuted ? "🔇" : "🔊"}
-                </button>
+            {profile?.studio_tagline && (
+              <div style={{ fontFamily: "Inter, sans-serif", fontStyle: "italic", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.125rem" }}>
+                {profile.studio_tagline}
               </div>
             )}
+            {profile?.studio_persona && (
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", marginTop: "0.2rem" }}>
+                ✦ {profile.studio_persona}
+              </div>
+            )}
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.3rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              {profile?.instrument && <span>{profile.instrument}</span>}
+              <span>{profile?.streak_days ?? 0} day streak</span>
+              <span>{followerCount} follower{followerCount !== 1 ? "s" : ""}</span>
+              <span>{composers.length} composer{composers.length !== 1 ? "s" : ""}</span>
+            </div>
           </div>
-          {profile?.studio_tagline && (
-            <div style={{ fontFamily: "Inter, sans-serif", fontStyle: "italic", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.125rem" }}>
-              {profile.studio_tagline}
-            </div>
-          )}
-          {profile?.studio_persona && (
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", marginTop: "0.2rem" }}>
-              ✦ {profile.studio_persona}
-            </div>
-          )}
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.25rem" }}>
-            {profile?.instrument && <span>{profile.instrument} · </span>}
-            {composers.length} composer{composers.length !== 1 ? "s" : ""} · {inventory.length} item{inventory.length !== 1 ? "s" : ""}
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0, flexWrap: "wrap" }}>
+            {!isOwnStudio && user && (
+              <button
+                onClick={toggleFollow}
+                disabled={followLoading}
+                style={{
+                  padding: "0.4375rem 1rem", borderRadius: 100,
+                  border: isFollowing ? "1.5px solid var(--charcoal)" : "1.5px solid var(--border)",
+                  background: isFollowing ? "var(--charcoal)" : "transparent",
+                  color: isFollowing ? "var(--white)" : "var(--charcoal)",
+                  fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600,
+                  cursor: followLoading ? "default" : "pointer", transition: "all 0.15s",
+                  opacity: followLoading ? 0.6 : 1,
+                }}
+              >
+                {isFollowing ? "✓ Following" : "+ Follow"}
+              </button>
+            )}
+            {!isOwnStudio && user && (
+              <button
+                onClick={() => setGiftSheetOpen(true)}
+                style={{
+                  padding: "0.4375rem 1rem", borderRadius: 100,
+                  border: "1.5px solid var(--border)", background: "transparent",
+                  color: "var(--charcoal)", fontFamily: "Inter, sans-serif",
+                  fontSize: "0.8125rem", fontWeight: 500, cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                🎁 Gift
+              </button>
+            )}
+            {isOwnStudio && (
+              <Link href="/student/studio" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textDecoration: "none", padding: "0.4375rem 0" }}>
+                ← My studio
+              </Link>
+            )}
           </div>
         </div>
-        <div style={{ display: "flex", gap: "1.25rem", flexShrink: 0 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.5rem", color: (profile?.streak_days ?? 0) > 0 ? "var(--rose)" : "var(--muted)" }}>{profile?.streak_days ?? 0}</div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Day streak</div>
-          </div>
-        </div>
-        {isOwnStudio && (
-          <Link href="/student/studio" style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", textDecoration: "none", flexShrink: 0 }}>
-            ← My studio
-          </Link>
-        )}
       </div>
 
       {/* ── AI Bio ── */}
@@ -399,7 +522,103 @@ export default function VisitorStudioPage() {
         </div>
       )}
 
-      {/* ── Gifts shelf (visible to all) ── */}
+      {/* ── Reactions ── */}
+      <div className="card-base" style={{ padding: "0.875rem 1.25rem", marginBottom: "1.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginRight: "0.25rem" }}>React</span>
+          {PRESET_REACTIONS.map(r => {
+            const count = reactionCounts[r.id] ?? 0;
+            const mine = myReactions.has(r.id);
+            const toggling = togglingReaction === r.id;
+            return (
+              <button
+                key={r.id}
+                onClick={() => !isOwnStudio && user && toggleReaction(r.id)}
+                disabled={isOwnStudio || !user || !!togglingReaction}
+                title={!user ? "Log in to react" : isOwnStudio ? "Your own studio" : mine ? "Remove reaction" : "React"}
+                style={{
+                  display: "flex", alignItems: "center", gap: "0.3rem",
+                  padding: "0.3125rem 0.625rem", borderRadius: 100,
+                  border: `1.5px solid ${mine ? "var(--charcoal)" : "var(--border)"}`,
+                  background: mine ? "var(--charcoal)" : "transparent",
+                  color: mine ? "var(--white)" : "var(--charcoal)",
+                  fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
+                  cursor: isOwnStudio || !user ? "default" : "pointer",
+                  opacity: toggling ? 0.5 : 1, transition: "all 0.15s",
+                }}
+              >
+                <span>{r.emoji}</span>
+                {count > 0 && <span style={{ fontSize: "0.6875rem", fontWeight: 600 }}>{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Guestbook ── */}
+      <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
+          Guestbook
+        </div>
+
+        {/* Write a note */}
+        {!isOwnStudio && user && (
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: shoutouts.length > 0 ? "0.875rem" : 0 }}>
+            <input
+              value={shoutoutText}
+              onChange={e => setShoutoutText(e.target.value.slice(0, 120))}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && postShoutout()}
+              placeholder="Leave a note…"
+              maxLength={120}
+              style={{
+                flex: 1, fontFamily: "Inter, sans-serif", fontSize: "0.875rem",
+                padding: "0.5rem 0.75rem", border: "1px solid var(--border)", borderRadius: 8,
+                outline: "none", background: "var(--cream)",
+              }}
+            />
+            <button
+              onClick={postShoutout}
+              disabled={!shoutoutText.trim() || postingShoutout}
+              style={{
+                padding: "0.5rem 0.875rem", borderRadius: 8, border: "none",
+                background: shoutoutText.trim() ? "var(--charcoal)" : "var(--border)",
+                color: shoutoutText.trim() ? "var(--white)" : "var(--muted)",
+                fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600,
+                cursor: shoutoutText.trim() && !postingShoutout ? "pointer" : "default",
+                flexShrink: 0,
+              }}
+            >
+              {postingShoutout ? "…" : "Post"}
+            </button>
+          </div>
+        )}
+
+        {/* Notes list */}
+        {shoutouts.length === 0 ? (
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", padding: "0.5rem 0" }}>
+            No notes yet — be the first to leave one!
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {shoutouts.map(s => (
+              <div key={s.id} style={{ display: "flex", gap: "0.625rem", padding: "0.625rem 0.75rem", background: "var(--cream)", borderRadius: 6 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "0.75rem", color: "var(--white)", flexShrink: 0 }}>
+                  {s.author_name[0]?.toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--charcoal)" }}>{s.author_name}</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{timeAgo(s.created_at)}</span>
+                  </div>
+                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", marginTop: "0.125rem", lineHeight: 1.4 }}>{s.content}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Gifts shelf ── */}
       {gifts.length > 0 && (
         <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.75rem" }}>
@@ -411,43 +630,6 @@ export default function VisitorStudioPage() {
                 <span style={{ fontSize: "1.5rem" }}>{g.shop_items?.emoji ?? "🎁"}</span>
                 <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)" }}>{g.sender?.display_name ?? "Someone"}</span>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Reactions — only for visitors ── */}
-      {!isOwnStudio && user && (
-        <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-              Leave a reaction
-            </div>
-            <button onClick={() => setGiftSheetOpen(true)} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, padding: "0.375rem 0.875rem", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 100, cursor: "pointer" }}>
-              🎁 Send a gift
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {PRESET_REACTIONS.map(r => (
-              <button
-                key={r.id}
-                onClick={() => sendReaction(r)}
-                disabled={!!reactionSent}
-                style={{
-                  display: "flex", alignItems: "center", gap: "0.375rem",
-                  padding: "0.5rem 0.875rem", borderRadius: 100,
-                  border: `1px solid ${reactionSent === r.id ? "var(--charcoal)" : "var(--border)"}`,
-                  background: reactionSent === r.id ? "var(--charcoal)" : "transparent",
-                  color: reactionSent === r.id ? "var(--white)" : "var(--charcoal)",
-                  fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
-                  cursor: reactionSent ? "default" : "pointer",
-                  opacity: reactionSent && reactionSent !== r.id ? 0.4 : 1,
-                  transition: "all 0.15s",
-                }}
-              >
-                <span>{r.emoji}</span>
-                <span>{reactionSent === r.id ? "Sent!" : r.label}</span>
-              </button>
             ))}
           </div>
         </div>
@@ -481,7 +663,7 @@ export default function VisitorStudioPage() {
         ))}
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Tab content ── */}
       {activeTab === "composers" ? (
         composers.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
@@ -500,8 +682,7 @@ export default function VisitorStudioPage() {
                   onMouseEnter={() => setHoveredComposer(c.avatar_id)}
                   onMouseLeave={() => setHoveredComposer(null)}
                   style={{
-                    border: `2px solid ${r.border}`,
-                    borderRadius: 8, padding: "1rem 0.75rem",
+                    border: `2px solid ${r.border}`, borderRadius: 8, padding: "1rem 0.75rem",
                     display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem",
                     textAlign: "center", cursor: "default", background: "var(--white)",
                     boxShadow: isHovered ? `0 0 12px ${r.glow}40` : "none",
@@ -515,9 +696,7 @@ export default function VisitorStudioPage() {
                   </div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "var(--charcoal)" }}>{c.composer_avatars.composer_name}</div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: r.border === "var(--border-strong)" ? "var(--muted)" : r.border, textTransform: "uppercase", letterSpacing: "0.05em" }}>{r.label}</div>
-                  {c.shard_count > 0 && (
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)" }}>+{c.shard_count} ✦</div>
-                  )}
+                  {c.shard_count > 0 && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", color: "var(--muted)" }}>+{c.shard_count} ✦</div>}
                   {isHovered && quote && (
                     <div style={{
                       position: "absolute", bottom: 0, left: 0, right: 0,
@@ -545,12 +724,7 @@ export default function VisitorStudioPage() {
               const item = inv.shop_items;
               const r = RARITY_COLORS[item.rarity] ?? RARITY_COLORS.common;
               return (
-                <div key={inv.id} style={{
-                  border: `2px solid ${r.border}`,
-                  borderRadius: 8, padding: "1rem 0.75rem",
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem",
-                  textAlign: "center", background: "var(--white)",
-                }}>
+                <div key={inv.id} style={{ border: `2px solid ${r.border}`, borderRadius: 8, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", textAlign: "center", background: "var(--white)" }}>
                   <div style={{ fontSize: "2.25rem", lineHeight: 1 }}>{item.emoji}</div>
                   <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.75rem", color: "var(--charcoal)" }}>{item.name}</div>
                   {item.rarity !== "common" && (
@@ -562,7 +736,6 @@ export default function VisitorStudioPage() {
           </div>
         )
       ) : activeTab === "journey" ? (
-        /* Journey tab */
         pieces.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
@@ -586,12 +759,8 @@ export default function VisitorStudioPage() {
       ) : (
         /* Music tab */
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-
-          {/* A. Discography */}
           <div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
-              Discography
-            </div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>Discography</div>
             {discography.length === 0 ? (
               <div style={{ textAlign: "center", padding: "2.5rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)" }}>
                 <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎙️</div>
@@ -603,46 +772,30 @@ export default function VisitorStudioPage() {
                   const collected = myCollectedIds.has(track.id) || justCollected.has(track.id);
                   const isOwn = track.student_id === user?.id;
                   const price = track.price_points ?? 0;
-                  const isCollecting = collectingId === track.id;
                   return (
                     <div key={track.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{track.title}</div>
-                        {track.description && (
-                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.description}</div>
-                        )}
+                        {track.description && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.description}</div>}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem", flexWrap: "wrap" }}>
-                          {track.media_type && (
-                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sky)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.125rem 0.375rem", background: "rgba(100,180,220,0.12)", borderRadius: 4 }}>{track.media_type}</span>
-                          )}
-                          {(track.collection_count ?? 0) > 0 && (
-                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{track.collection_count} collected</span>
-                          )}
-                          {price > 0 && (
-                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--butter)" }}>{price} pts</span>
-                          )}
+                          {track.media_type && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sky)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.125rem 0.375rem", background: "rgba(100,180,220,0.12)", borderRadius: 4 }}>{track.media_type}</span>}
+                          {(track.collection_count ?? 0) > 0 && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{track.collection_count} collected</span>}
+                          {price > 0 && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--butter)" }}>{price} pts</span>}
                         </div>
                       </div>
                       {!isOwn && user && (
                         <button
                           onClick={() => !collected && collectItem(track)}
-                          disabled={collected || isCollecting}
+                          disabled={collected || collectingId === track.id}
                           style={{
                             padding: "0.4375rem 0.875rem", borderRadius: 100, border: "none", flexShrink: 0,
                             background: collected ? "var(--cream)" : "var(--charcoal)",
                             color: collected ? "var(--muted)" : "var(--white)",
                             fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600,
-                            cursor: collected || isCollecting ? "default" : "pointer",
-                            transition: "all 0.15s",
+                            cursor: collected || collectingId === track.id ? "default" : "pointer", transition: "all 0.15s",
                           }}
                         >
-                          {collected
-                            ? "✓ In your Crate"
-                            : isCollecting
-                              ? "…"
-                              : price === 0
-                                ? "Collect (free)"
-                                : `Collect · ${price} pts`}
+                          {collected ? "✓ In Crate" : collectingId === track.id ? "…" : price === 0 ? "Collect" : `Collect · ${price} pts`}
                         </button>
                       )}
                     </div>
@@ -652,11 +805,8 @@ export default function VisitorStudioPage() {
             )}
           </div>
 
-          {/* B. Their Crate */}
           <div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>
-              Their Crate
-            </div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.875rem" }}>Their Crate</div>
             {crate.length === 0 ? (
               <div style={{ textAlign: "center", padding: "2.5rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream)", borderRadius: 8, border: "1px solid var(--border)" }}>
                 Their Crate is empty.
@@ -667,24 +817,15 @@ export default function VisitorStudioPage() {
                   <div key={track.id} style={{ padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>{track.title}</div>
                     {track.display_name && (
-                      <Link
-                        href={`/student/studio/${track.student_id}`}
-                        style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", textDecoration: "none" }}
-                      >
+                      <Link href={`/student/studio/${track.student_id}`} style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", textDecoration: "none" }}>
                         {track.display_name} →
                       </Link>
-                    )}
-                    {track.media_type && (
-                      <div style={{ marginTop: "0.375rem" }}>
-                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sky)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.125rem 0.375rem", background: "rgba(100,180,220,0.12)", borderRadius: 4 }}>{track.media_type}</span>
-                      </div>
                     )}
                   </div>
                 ))}
               </div>
             )}
           </div>
-
         </div>
       )}
 
@@ -698,9 +839,7 @@ export default function VisitorStudioPage() {
             </div>
             <div style={{ overflowY: "auto", padding: "1rem 1.25rem", flex: 1 }}>
               {giftSent ? (
-                <div style={{ textAlign: "center", padding: "2rem", fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)" }}>
-                  🎁 Gift sent!
-                </div>
+                <div style={{ textAlign: "center", padding: "2rem", fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.25rem", color: "var(--charcoal)" }}>🎁 Gift sent!</div>
               ) : (
                 <>
                   <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Choose an item</div>
@@ -711,7 +850,8 @@ export default function VisitorStudioPage() {
                         onClick={() => setSelectedGiftItem(item)}
                         style={{
                           display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
-                          padding: "0.75rem 0.5rem", borderRadius: 8, border: `2px solid ${selectedGiftItem?.id === item.id ? "var(--charcoal)" : "var(--border)"}`,
+                          padding: "0.75rem 0.5rem", borderRadius: 8,
+                          border: `2px solid ${selectedGiftItem?.id === item.id ? "var(--charcoal)" : "var(--border)"}`,
                           background: selectedGiftItem?.id === item.id ? "var(--cream)" : "transparent",
                           cursor: "pointer",
                         }}
@@ -721,16 +861,14 @@ export default function VisitorStudioPage() {
                       </button>
                     ))}
                   </div>
-                  <div style={{ marginBottom: "1rem" }}>
-                    <textarea
-                      value={giftMessage}
-                      onChange={e => setGiftMessage(e.target.value)}
-                      placeholder="Add a message (optional)..."
-                      maxLength={120}
-                      rows={2}
-                      style={{ width: "100%", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "0.5rem 0.75rem", border: "1px solid var(--border)", borderRadius: 6, resize: "none", outline: "none", background: "var(--cream)", boxSizing: "border-box" }}
-                    />
-                  </div>
+                  <textarea
+                    value={giftMessage}
+                    onChange={e => setGiftMessage(e.target.value)}
+                    placeholder="Add a message (optional)…"
+                    maxLength={120}
+                    rows={2}
+                    style={{ width: "100%", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "0.5rem 0.75rem", border: "1px solid var(--border)", borderRadius: 6, resize: "none", outline: "none", background: "var(--cream)", boxSizing: "border-box", marginBottom: "1rem" }}
+                  />
                   <button
                     onClick={sendGift}
                     disabled={!selectedGiftItem || sendingGift}
