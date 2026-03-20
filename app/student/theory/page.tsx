@@ -376,8 +376,8 @@ function useGameState(gameKey: string) {
     if (!userId) return;
     const logicalGame = toLogicalGame(gameKey);
     const sb = getSupabaseBrowserClient();
-    sb.from("game_leaderboard").select("score").eq("user_id", userId).eq("logical_game", logicalGame).maybeSingle().then(({ data }) => {
-      const existing = (data as { score: number } | null)?.score ?? 0;
+    sb.from("game_leaderboard").select("score").eq("user_id", userId).eq("logical_game", logicalGame).maybeSingle().then((res) => {
+      const existing = (res.data as { score: number } | null)?.score ?? 0;
       if (hiScore > existing) {
         sb.from("game_leaderboard").upsert(
           { user_id: userId, logical_game: logicalGame, score: hiScore, updated_at: new Date().toISOString() },
