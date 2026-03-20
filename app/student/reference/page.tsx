@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import RcmTechnique from "./RcmTechnique";
 import { useI18n } from "../../../lib/context/I18nContext";
 
@@ -593,6 +593,19 @@ const REFERENCE_VIDEOS = [
   { label:"Writing progressions",   id:"lY_llceEGFI" },
 ];
 
+// ── Progression builder data ──────────────────────────────────────────────────
+
+const BUILDER_QUALITIES = [
+  { id:"major",       label:"Major",  suffix:"",      intervals:[0,4,7]    },
+  { id:"minor",       label:"Minor",  suffix:"m",     intervals:[0,3,7]    },
+  { id:"dominant 7",  label:"Dom 7",  suffix:"7",     intervals:[0,4,7,10] },
+  { id:"major 7",     label:"Maj 7",  suffix:"maj7",  intervals:[0,4,7,11] },
+  { id:"minor 7",     label:"Min 7",  suffix:"m7",    intervals:[0,3,7,10] },
+  { id:"diminished",  label:"Dim",    suffix:"°",     intervals:[0,3,6]    },
+  { id:"sus4",        label:"Sus 4",  suffix:"sus4",  intervals:[0,5,7]    },
+  { id:"sus2",        label:"Sus 2",  suffix:"sus2",  intervals:[0,2,7]    },
+];
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 type MainTab = "chords" | "practice" | "theory" | "rcm";
@@ -617,6 +630,49 @@ export default function ReferencePage() {
   // Video widget state
   const [videoOpen, setVideoOpen] = useState(false);
   const [videoIdx, setVideoIdx] = useState(0);
+
+  // Progression builder state
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [builderChords, setBuilderChords] = useState<Array<{noteIdx:number; quality:string}>>([]);
+  const [builderNote, setBuilderNote] = useState(0);
+  const [builderQuality, setBuilderQuality] = useState("major");
+  const [builderBpm, setBuilderBpm] = useState(80);
+  const [playingIdx, setPlayingIdx] = useState<number|null>(null);
+  const builderTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  function addBuilderChord() {
+    setBuilderChords(prev => [...prev, { noteIdx: builderNote, quality: builderQuality }]);
+  }
+
+  function playProgression() {
+    if (builderChords.length === 0) return;
+    builderTimers.current.forEach(clearTimeout);
+    builderTimers.current = [];
+    const msPerChord = (60000 / builderBpm) * 2;
+    builderChords.forEach((ch, i) => {
+      const t = setTimeout(() => {
+        setPlayingIdx(i);
+        const qInfo = BUILDER_QUALITIES.find(q => q.id === ch.quality);
+        const suffix = qInfo?.suffix ?? "";
+        const chordName = NOTE_NAMES[ch.noteIdx] + suffix;
+        const guitarChord = (GUITAR_CHORDS[ch.quality as keyof typeof GUITAR_CHORDS] ?? []).find(c => c.name === chordName);
+        if (guitarChord) {
+          playSound(chordFreqs(guitarChord.frets, GUITAR_OPEN_FREQS), "pluck");
+        } else if (qInfo) {
+          playSound(pianoChordFreqs(ch.noteIdx, qInfo.intervals), "piano");
+        }
+      }, i * msPerChord);
+      builderTimers.current.push(t);
+    });
+    const stop = setTimeout(() => setPlayingIdx(null), builderChords.length * msPerChord + 200);
+    builderTimers.current.push(stop);
+  }
+
+  function stopProgression() {
+    builderTimers.current.forEach(clearTimeout);
+    builderTimers.current = [];
+    setPlayingIdx(null);
+  }
 
   // Guitar/Uke state
   const [gQuality, setGQuality] = useState("major");
@@ -804,6 +860,130 @@ export default function ReferencePage() {
               </div>
             );
           })()}
+
+          {/* ── Progression Builder (collapsible) ── */}
+          <div style={{ border:"1px solid var(--border)", borderRadius:10, marginBottom:"1.5rem", overflow:"hidden" }}>
+            <button onClick={()=>{ setBuilderOpen(v=>!v); if (builderOpen) stopProgression(); }}
+              style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0.875rem 1.25rem", background:"var(--cream)", border:"none", cursor:"pointer", textAlign:"left" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"0.625rem" }}>
+                <span style={{ fontSize:"0.9375rem" }}>🎸</span>
+                <span style={{ fontWeight:600, fontSize:"0.875rem", color:"var(--charcoal)", fontFamily:"Inter,sans-serif" }}>Progression Builder</span>
+                {builderChords.length > 0 && <span style={{ fontSize:"0.75rem", color:"var(--muted)", fontFamily:"Inter,sans-serif" }}>{builderChords.map(c=>NOTE_NAMES[c.noteIdx]+(BUILDER_QUALITIES.find(q=>q.id===c.quality)?.suffix??'')).join(" – ")}</span>}
+              </div>
+              <span style={{ fontSize:"0.75rem", color:"var(--muted)", fontFamily:"Inter,sans-serif" }}>{builderOpen ? "▲ hide" : "▼ show"}</span>
+            </button>
+
+            {builderOpen && (
+              <div style={{ padding:"1.25rem", background:"var(--white)" }}>
+
+                {/* Note + quality pickers */}
+                <div style={{ marginBottom:"0.875rem" }}>
+                  <div style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.4rem" }}>Root note</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
+                    {NOTE_NAMES.map((note,idx) => (
+                      <button key={idx} onClick={()=>setBuilderNote(idx)} style={{
+                        padding:"0.3125rem 0.5rem", borderRadius:4, border:"1px solid var(--border-strong)",
+                        background: builderNote===idx ? "var(--charcoal)" : "transparent",
+                        color: builderNote===idx ? "var(--white)" : "var(--charcoal)",
+                        fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", fontWeight:500, cursor:"pointer", minWidth:36,
+                      }}>{note}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom:"1rem" }}>
+                  <div style={{ fontSize:"0.6875rem", fontWeight:600, color:"var(--muted)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:"0.4rem" }}>Quality</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
+                    {BUILDER_QUALITIES.map(q => (
+                      <button key={q.id} onClick={()=>setBuilderQuality(q.id)} style={{
+                        padding:"0.3125rem 0.625rem", borderRadius:4, border:"1px solid var(--border-strong)",
+                        background: builderQuality===q.id ? "#B85C3A" : "transparent",
+                        color: builderQuality===q.id ? "#fff" : "var(--charcoal)",
+                        fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer",
+                      }}>{q.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <button onClick={addBuilderChord} style={{
+                  padding:"0.5rem 1.25rem", borderRadius:6, border:"none",
+                  background:"var(--charcoal)", color:"var(--white)",
+                  fontFamily:"Inter,sans-serif", fontSize:"0.875rem", fontWeight:500, cursor:"pointer", marginBottom:"1.25rem",
+                }}>
+                  + Add {NOTE_NAMES[builderNote]}{BUILDER_QUALITIES.find(q=>q.id===builderQuality)?.suffix ?? ""}
+                </button>
+
+                {/* Chord cards */}
+                {builderChords.length > 0 && (
+                  <>
+                    <div style={{ display:"flex", gap:"0.75rem", overflowX:"auto", paddingBottom:"0.5rem", marginBottom:"1rem" }}>
+                      {builderChords.map((ch, i) => {
+                        const qInfo = BUILDER_QUALITIES.find(q=>q.id===ch.quality)!;
+                        const chordName = NOTE_NAMES[ch.noteIdx] + qInfo.suffix;
+                        const guitarChord = (GUITAR_CHORDS[ch.quality as keyof typeof GUITAR_CHORDS] ?? []).find(c=>c.name===chordName);
+                        const isPlaying = playingIdx === i;
+                        return (
+                          <div key={i} style={{
+                            flexShrink:0, background: isPlaying ? "#B85C3A08" : "var(--cream)",
+                            border:`2px solid ${isPlaying ? "#B85C3A" : "var(--border)"}`,
+                            borderRadius:10, padding:"0.75rem 0.625rem", position:"relative", minWidth:120,
+                            transition:"border-color 0.15s, background 0.15s",
+                          }}>
+                            <button onClick={()=>setBuilderChords(prev=>prev.filter((_,ii)=>ii!==i))}
+                              style={{ position:"absolute", top:6, right:6, background:"none", border:"none", cursor:"pointer", fontSize:"0.75rem", color:"var(--muted)", lineHeight:1, padding:"2px 4px" }}>✕</button>
+                            <div style={{ textAlign:"center", marginBottom:"0.5rem" }}>
+                              <div style={{ fontFamily:"Georgia,serif", fontSize:"0.625rem", color:"var(--muted)", marginBottom:2 }}>chord {i+1}</div>
+                              <div style={{ fontWeight:700, fontSize:"1rem", color: isPlaying ? "#B85C3A" : "var(--charcoal)" }}>{chordName}</div>
+                              <div style={{ fontSize:"0.625rem", color:"var(--muted)" }}>{qInfo.label}</div>
+                            </div>
+                            {guitarChord ? (
+                              <ChordDiagram chord={guitarChord} strings={6} openFreqs={GUITAR_OPEN_FREQS}
+                                onPlay={()=>playSound(chordFreqs(guitarChord.frets, GUITAR_OPEN_FREQS), "pluck")} playLabel="♪" />
+                            ) : (
+                              <div style={{ fontSize:"0.6875rem", color:"var(--muted)", textAlign:"center", padding:"0.5rem 0" }}>No diagram</div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Playback controls */}
+                    <div style={{ display:"flex", alignItems:"center", gap:"0.75rem", flexWrap:"wrap" }}>
+                      {playingIdx !== null ? (
+                        <button onClick={stopProgression} style={{
+                          padding:"0.5625rem 1.25rem", borderRadius:6, border:"none",
+                          background:"#B85C3A", color:"#fff",
+                          fontFamily:"Inter,sans-serif", fontSize:"0.875rem", fontWeight:500, cursor:"pointer",
+                        }}>■ Stop</button>
+                      ) : (
+                        <button onClick={playProgression} style={{
+                          padding:"0.5625rem 1.25rem", borderRadius:6, border:"none",
+                          background:"var(--charcoal)", color:"var(--white)",
+                          fontFamily:"Inter,sans-serif", fontSize:"0.875rem", fontWeight:500, cursor:"pointer",
+                        }}>▶ Play</button>
+                      )}
+                      <button onClick={()=>setBuilderChords([])} style={{
+                        padding:"0.5rem 0.875rem", borderRadius:6, border:"1px solid var(--border-strong)",
+                        background:"transparent", color:"var(--muted)",
+                        fontFamily:"Inter,sans-serif", fontSize:"0.8125rem", cursor:"pointer",
+                      }}>Clear</button>
+                      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginLeft:"auto" }}>
+                        <span style={{ fontSize:"0.75rem", color:"var(--muted)", fontFamily:"Inter,sans-serif" }}>♩ {builderBpm} BPM</span>
+                        <input type="range" min={40} max={180} value={builderBpm} onChange={e=>setBuilderBpm(Number(e.target.value))}
+                          style={{ width:90, accentColor:"var(--charcoal)" }} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {builderChords.length === 0 && (
+                  <div style={{ textAlign:"center", padding:"1.5rem", color:"var(--muted)", fontSize:"0.875rem", fontFamily:"Inter,sans-serif" }}>
+                    Pick a note and quality above, then hit + Add to start building your progression.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Instrument picker */}
           <div style={{ display:"flex", gap:"0.5rem", flexWrap:"wrap", marginBottom:"1.5rem" }}>
