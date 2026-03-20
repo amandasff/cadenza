@@ -113,7 +113,7 @@ export class GoalService {
 
     // Write goal status + profile points in parallel
     const [{ error: goalError }, { error: updateError }] = await Promise.all([
-      this.supabase.from('goals').update({ status: 'completed' }).eq('id', goalId),
+      this.supabase.from('goals').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', goalId),
       this.supabase.from('profiles').update({ total_points: current.total_points + totalToAward }).eq('id', studentId),
     ]);
 

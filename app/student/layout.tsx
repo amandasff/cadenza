@@ -58,6 +58,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/studio",       label: "Studio" },
     { href: "/student/store",        label: "Shop" },
     { href: "/student/inspirations", label: t.nav.inspire },
+    { href: "/student/history",      label: "History" },
   ];
 
   const primaryMobileTabs = [
@@ -77,6 +78,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { href: "/student/studio",       label: "Studio" },
     { href: "/student/store",        label: "Shop" },
     { href: "/student/inspirations", label: t.nav.inspire },
+    { href: "/student/history",      label: "History" },
   ];
 
   // Teacher-specific nav tabs (shown when a teacher accesses student features)

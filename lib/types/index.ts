@@ -95,6 +95,7 @@ export interface GoalRow {
   teacher_feedback: string | null;
   piece_id: string | null;
   target_minutes_per_day: number | null;
+  completed_at: string | null;
   created_at: string;
 }
 
@@ -146,11 +147,30 @@ export interface PieceRow {
   title: string;
   composer: string | null;
   book: string | null;
+  book_id: string | null;
   category: PieceCategory;
   status: PieceStatus;
   sort_order: number;
   sheet_music_url: string | null;
   score_url: string | null;
+  created_at: string;
+}
+
+export interface BookRow {
+  id: string;
+  teacher_id: string;
+  studio_id: string | null;
+  title: string;
+  publisher: string | null;
+  cover_url: string | null;
+  created_at: string;
+}
+
+export interface BookPageRow {
+  id: string;
+  book_id: string;
+  page_number: number;
+  image_url: string;
   created_at: string;
 }
 

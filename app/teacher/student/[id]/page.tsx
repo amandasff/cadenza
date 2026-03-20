@@ -1204,12 +1204,13 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* Quick links to sub-pages */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.625rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.625rem" }}>
         {[
           { label: t.teacher.lessonLog, href: `/teacher/student/${id}/lesson/log`, icon: <Clipboard size={20} strokeWidth={1.5} /> },
           { label: t.teacher.rcmPrep, href: `/teacher/student/${id}/rcm`, icon: <BookOpen size={20} strokeWidth={1.5} /> },
           { label: t.teacher.reports, href: `/teacher/student/${id}/reports`, icon: <FileText size={20} strokeWidth={1.5} /> },
           { label: t.teacher.billing, href: `/teacher/billing/${id}`, icon: <CreditCard size={20} strokeWidth={1.5} /> },
+          { label: "History", href: `/teacher/student/${id}/history`, icon: <Star size={20} strokeWidth={1.5} /> },
         ].map(link => (
           <Link
             key={link.href}
