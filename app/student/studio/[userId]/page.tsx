@@ -51,13 +51,64 @@ const STATUS_COLORS: Record<string, string> = {
   completed:          "var(--butter)",
 };
 
-const PRESET_REACTIONS = [
-  { id: "fire",  emoji: "🔥" },
-  { id: "clap",  emoji: "👏" },
-  { id: "star",  emoji: "⭐" },
-  { id: "love",  emoji: "🎶" },
-  { id: "note",  emoji: "🎵" },
+const POLLS = [
+  {
+    id: "energy",
+    question: "What's their musical energy?",
+    options: [
+      { id: "intense",  label: "Pure intensity 🔥" },
+      { id: "flowing",  label: "Effortless flow 🌊" },
+      { id: "chaotic",  label: "Chaotic genius ⚡" },
+      { id: "dreamy",   label: "Midnight dreamer 🌙" },
+    ],
+  },
+  {
+    id: "venue",
+    question: "If they were a concert venue...",
+    options: [
+      { id: "stadium",  label: "Sold-out stadium 🏟️" },
+      { id: "theater",  label: "Grand concert hall 🎭" },
+      { id: "cafe",     label: "Intimate jazz bar 🍵" },
+      { id: "festival", label: "Outdoor festival 🌲" },
+    ],
+  },
+  {
+    id: "battle",
+    question: "In a music battle, they'd be...",
+    options: [
+      { id: "closer",     label: "The closer ⚔️" },
+      { id: "strategist", label: "The tactician 🧠" },
+      { id: "crowd",      label: "The crowd fave 💪" },
+      { id: "wildcard",   label: "The wildcard 🎲" },
+    ],
+  },
+  {
+    id: "superpower",
+    question: "Their musical superpower?",
+    options: [
+      { id: "rhythm",    label: "Flawless rhythm 🎯" },
+      { id: "melody",    label: "Ear for melody 👂" },
+      { id: "technique", label: "Pure technique 🖐️" },
+      { id: "presence",  label: "Stage presence ✨" },
+    ],
+  },
+  {
+    id: "collab",
+    question: "Their dream collab genre?",
+    options: [
+      { id: "classical",   label: "Classical purist 🎻" },
+      { id: "jazz",        label: "Jazz fusion 🎺" },
+      { id: "electronic",  label: "Electronic hybrid 🎛️" },
+      { id: "folk",        label: "Folk storyteller 🪕" },
+    ],
+  },
 ];
+
+function getPoll(userId: string) {
+  let hash = 0;
+  for (const ch of userId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return POLLS[hash % POLLS.length];
+}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -138,10 +189,11 @@ export default function VisitorStudioPage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
 
-  // Reactions (persistent with counts)
-  const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
-  const [myReactions, setMyReactions] = useState<Set<string>>(new Set());
-  const [togglingReaction, setTogglingReaction] = useState<string | null>(null);
+  // Poll
+  const poll = getPoll(userId);
+  const [pollVotes, setPollVotes] = useState<Record<string, number>>({});
+  const [myPollVote, setMyPollVote] = useState<string | null>(null);
+  const [submittingVote, setSubmittingVote] = useState(false);
 
   // Guestbook
   const [shoutouts, setShoutouts] = useState<ShoutoutRow[]>([]);
@@ -155,7 +207,7 @@ export default function VisitorStudioPage() {
       try {
         const shop = ShopService.create(supabase);
         const collectibles = CollectibleService.create(supabase);
-        const [profileRes, inv, comps, piecesRes, giftsRes, allItems, followCountRes, shoutoutsRes, reactionsRes, discRes, crateRes] = await Promise.all([
+        const [profileRes, inv, comps, piecesRes, giftsRes, allItems, followCountRes, shoutoutsRes, pollVotesRes, discRes, crateRes] = await Promise.all([
           supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
           shop.getInventory(userId),
           collectibles.getCollection(userId),
@@ -164,7 +216,7 @@ export default function VisitorStudioPage() {
           shop.getAllItems(),
           supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
           supabase.from("studio_shoutouts").select("*").eq("studio_owner_id", userId).order("created_at", { ascending: false }).limit(20),
-          supabase.from("studio_reactions").select("reaction_type").eq("studio_owner_id", userId),
+          supabase.from("studio_poll_votes").select("option_id").eq("studio_owner_id", userId).eq("poll_id", getPoll(userId).id),
           supabase.from("portfolio_items").select("*").eq("student_id", userId).eq("is_public", true).order("created_at", { ascending: false }),
           supabase.from("portfolio_collections").select("portfolio_item_id, portfolio_items(*, profiles(display_name, avatar_url))").eq("collector_id", userId).order("created_at", { ascending: false }),
         ]);
@@ -180,12 +232,12 @@ export default function VisitorStudioPage() {
         setFollowerCount(followCountRes.count ?? 0);
         setShoutouts((shoutoutsRes.data ?? []) as ShoutoutRow[]);
 
-        // Aggregate reaction counts
+        // Aggregate poll vote counts
         const counts: Record<string, number> = {};
-        for (const r of (reactionsRes.data ?? []) as { reaction_type: string }[]) {
-          counts[r.reaction_type] = (counts[r.reaction_type] ?? 0) + 1;
+        for (const v of (pollVotesRes.data ?? []) as { option_id: string }[]) {
+          counts[v.option_id] = (counts[v.option_id] ?? 0) + 1;
         }
-        setReactionCounts(counts);
+        setPollVotes(counts);
 
         // Discography
         setDiscography((discRes.data ?? []) as PortfolioItemRow[]);
@@ -214,13 +266,13 @@ export default function VisitorStudioPage() {
 
         // Current user's data
         if (user?.id) {
-          const [followRes, myReactionsRes, myCollectionsRes] = await Promise.all([
+          const [followRes, myVoteRes, myCollectionsRes] = await Promise.all([
             supabase.from("follows").select("id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle(),
-            supabase.from("studio_reactions").select("reaction_type").eq("studio_owner_id", userId).eq("reactor_id", user.id),
+            supabase.from("studio_poll_votes").select("option_id").eq("studio_owner_id", userId).eq("voter_id", user.id).eq("poll_id", getPoll(userId).id).maybeSingle(),
             supabase.from("portfolio_collections").select("portfolio_item_id").eq("collector_id", user.id),
           ]);
           setIsFollowing(!!followRes.data);
-          setMyReactions(new Set((myReactionsRes.data ?? []).map((r: { reaction_type: string }) => r.reaction_type)));
+          if (myVoteRes.data) setMyPollVote((myVoteRes.data as { option_id: string }).option_id);
           setMyCollectedIds(new Set((myCollectionsRes.data ?? []).map((r: { portfolio_item_id: string }) => r.portfolio_item_id)));
         }
       } catch (e) {
@@ -266,33 +318,25 @@ export default function VisitorStudioPage() {
     }
   }
 
-  // ── Reactions (persistent) ──────────────────────────────────────────────────
+  // ── Poll vote ───────────────────────────────────────────────────────────────
 
-  async function toggleReaction(reactionId: string) {
-    if (!user?.id || togglingReaction) return;
-    setTogglingReaction(reactionId);
+  async function submitPollVote(optionId: string) {
+    if (!user?.id || submittingVote || myPollVote !== null || isOwnStudio) return;
+    setSubmittingVote(true);
     try {
-      if (myReactions.has(reactionId)) {
-        await supabase.from("studio_reactions").delete()
-          .eq("studio_owner_id", userId).eq("reactor_id", user.id).eq("reaction_type", reactionId);
-        setMyReactions(prev => { const n = new Set(prev); n.delete(reactionId); return n; });
-        setReactionCounts(prev => ({ ...prev, [reactionId]: Math.max(0, (prev[reactionId] ?? 0) - 1) }));
-      } else {
-        await supabase.from("studio_reactions").insert({ studio_owner_id: userId, reactor_id: user.id, reaction_type: reactionId });
-        setMyReactions(prev => new Set([...prev, reactionId]));
-        setReactionCounts(prev => ({ ...prev, [reactionId]: (prev[reactionId] ?? 0) + 1 }));
-        // Floating animation on new reaction
-        const r = PRESET_REACTIONS.find(p => p.id === reactionId);
-        if (r) {
-          const notes = Array.from({ length: 4 + Math.floor(Math.random() * 3) }, (_, i) => ({
-            id: Date.now() + i, emoji: r.emoji, x: 10 + Math.random() * 80,
-          }));
-          setFloatingNotes(prev => [...prev, ...notes]);
-          setTimeout(() => setFloatingNotes(prev => prev.filter(n => !notes.find(nn => nn.id === n.id))), 3000);
-        }
-      }
+      await supabase.from("studio_poll_votes").insert({
+        studio_owner_id: userId, voter_id: user.id, poll_id: poll.id, option_id: optionId,
+      });
+      setMyPollVote(optionId);
+      setPollVotes(prev => ({ ...prev, [optionId]: (prev[optionId] ?? 0) + 1 }));
+      // Burst animation
+      const notes = Array.from({ length: 5 + Math.floor(Math.random() * 4) }, (_, i) => ({
+        id: Date.now() + i, emoji: poll.options.find(o => o.id === optionId)?.label.slice(-2) ?? "🎵", x: 10 + Math.random() * 80,
+      }));
+      setFloatingNotes(prev => [...prev, ...notes]);
+      setTimeout(() => setFloatingNotes(prev => prev.filter(n => !notes.find(nn => nn.id === n.id))), 3000);
     } finally {
-      setTogglingReaction(null);
+      setSubmittingVote(false);
     }
   }
 
@@ -522,36 +566,76 @@ export default function VisitorStudioPage() {
         </div>
       )}
 
-      {/* ── Reactions ── */}
-      <div className="card-base" style={{ padding: "0.875rem 1.25rem", marginBottom: "1.25rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginRight: "0.25rem" }}>React</span>
-          {PRESET_REACTIONS.map(r => {
-            const count = reactionCounts[r.id] ?? 0;
-            const mine = myReactions.has(r.id);
-            const toggling = togglingReaction === r.id;
-            return (
-              <button
-                key={r.id}
-                onClick={() => !isOwnStudio && user && toggleReaction(r.id)}
-                disabled={isOwnStudio || !user || !!togglingReaction}
-                title={!user ? "Log in to react" : isOwnStudio ? "Your own studio" : mine ? "Remove reaction" : "React"}
-                style={{
-                  display: "flex", alignItems: "center", gap: "0.3rem",
-                  padding: "0.3125rem 0.625rem", borderRadius: 100,
-                  border: `1.5px solid ${mine ? "var(--charcoal)" : "var(--border)"}`,
-                  background: mine ? "var(--charcoal)" : "transparent",
-                  color: mine ? "var(--white)" : "var(--charcoal)",
-                  fontFamily: "Inter, sans-serif", fontSize: "0.8125rem",
-                  cursor: isOwnStudio || !user ? "default" : "pointer",
-                  opacity: toggling ? 0.5 : 1, transition: "all 0.15s",
-                }}
-              >
-                <span>{r.emoji}</span>
-                {count > 0 && <span style={{ fontSize: "0.6875rem", fontWeight: 600 }}>{count}</span>}
-              </button>
-            );
-          })}
+      {/* ── Poll ── */}
+      <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.625rem" }}>
+          Vibe Check
+        </div>
+        <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.0625rem", color: "var(--charcoal)", marginBottom: "0.875rem" }}>
+          {poll.question.replace("[Name]", profile?.display_name?.split(" ")[0] ?? "They")}
+        </div>
+        {(() => {
+          const totalVotes = Object.values(pollVotes).reduce((a, b) => a + b, 0);
+          const voted = myPollVote !== null;
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {poll.options.map(opt => {
+                const count = pollVotes[opt.id] ?? 0;
+                const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                const isMyVote = myPollVote === opt.id;
+                return (
+                  <div key={opt.id}>
+                    {voted ? (
+                      /* Results view */
+                      <div style={{ position: "relative" }}>
+                        <div style={{
+                          position: "absolute", left: 0, top: 0, bottom: 0,
+                          width: `${pct}%`, borderRadius: 6,
+                          background: isMyVote ? "var(--charcoal)" : "var(--cream)",
+                          transition: "width 0.6s ease",
+                        }} />
+                        <div style={{
+                          position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "0.5rem 0.75rem", borderRadius: 6,
+                          border: `1.5px solid ${isMyVote ? "var(--charcoal)" : "var(--border)"}`,
+                        }}>
+                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", fontWeight: isMyVote ? 600 : 400, color: isMyVote ? "var(--white)" : "var(--charcoal)" }}>
+                            {opt.label}{isMyVote && " ✓"}
+                          </span>
+                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", fontWeight: 600, color: isMyVote ? "var(--white)" : "var(--muted)", flexShrink: 0 }}>
+                            {pct}%
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Voting view */
+                      <button
+                        onClick={() => submitPollVote(opt.id)}
+                        disabled={submittingVote || isOwnStudio || !user}
+                        style={{
+                          width: "100%", textAlign: "left", padding: "0.5625rem 0.875rem", borderRadius: 6,
+                          border: "1.5px solid var(--border)", background: "transparent",
+                          fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)",
+                          cursor: isOwnStudio || !user ? "default" : "pointer",
+                          transition: "border-color 0.15s, background 0.15s",
+                          opacity: submittingVote ? 0.6 : 1,
+                        }}
+                        onMouseEnter={e => { if (!isOwnStudio && user) (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--charcoal)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; }}
+                      >
+                        {opt.label}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", marginTop: "0.625rem" }}>
+          {Object.values(pollVotes).reduce((a, b) => a + b, 0)} vote{Object.values(pollVotes).reduce((a, b) => a + b, 0) !== 1 ? "s" : ""}
+          {isOwnStudio && " · your studio"}
+          {!user && " · log in to vote"}
         </div>
       </div>
 

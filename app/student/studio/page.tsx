@@ -122,6 +122,7 @@ export default function StudioPage() {
   const [draftTagline, setDraftTagline] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [personaLoading, setPersonaLoading] = useState(false);
+  const [personaError, setPersonaError] = useState<string | null>(null);
   const [bookOpen, setBookOpen] = useState(false);
   const stopTuneRef = useRef<(() => void) | null>(null);
 
@@ -242,18 +243,23 @@ export default function StudioPage() {
   async function generatePersona() {
     if (!student?.id || personaLoading) return;
     setPersonaLoading(true);
+    setPersonaError(null);
     try {
       const res = await fetch("/api/studio/persona", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: student.id }),
       });
-      const data = await res.json() as { studio_persona?: string; studio_bio?: string };
-      if (data.studio_persona) {
+      const data = await res.json() as { studio_persona?: string; studio_bio?: string; error?: string };
+      if (data.error) {
+        setPersonaError(data.error);
+      } else if (data.studio_persona) {
         setProfile(p => p ? { ...p, studio_persona: data.studio_persona ?? null, studio_bio: data.studio_bio ?? null } : p);
+      } else {
+        setPersonaError("No response — check that ANTHROPIC_API_KEY is set in Vercel.");
       }
     } catch (e) {
-      console.error(e);
+      setPersonaError(e instanceof Error ? e.message : "Failed to reach API");
     } finally {
       setPersonaLoading(false);
     }
@@ -442,6 +448,9 @@ export default function StudioPage() {
                   {personaLoading ? "Generating…" : "Generate my persona"}
                 </button>
               </>
+            )}
+            {personaError && (
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--rose)", marginTop: "0.375rem" }}>{personaError}</div>
             )}
           </div>
         </div>

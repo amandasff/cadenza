@@ -363,7 +363,16 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  if (!user || (user.role !== "student" && user.role !== "teacher")) return null;
+  if (!user || (user.role !== "student" && user.role !== "teacher")) {
+    // Keep spinner visible until the redirect effect fires — prevents blank flash
+    return (
+      <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream)" }}>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontFamily: "Inter, sans-serif", color: "var(--muted)", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>{t.common.loading}</p>
+        </div>
+      </div>
+    );
+  }
 
   const isTeacherPracticing = user.role === "teacher";
   const teacher = isTeacherPracticing ? user as unknown as import("../../lib/models/Teacher").Teacher : null;
