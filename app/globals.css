@@ -108,6 +108,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
+  color-scheme: light;
   background: var(--cream);
   color: var(--charcoal);
   -webkit-font-smoothing: antialiased;
@@ -591,6 +592,7 @@ h1, h2, h3, h4, h5, h6 {
    ═══════════════════════════════════════════════════════════════ */
 
 html[data-theme="dark"] {
+  color-scheme: dark;
   /* Dark surfaces — warm charcoal, not cold gray */
   --cream: #131110;
   --cream-deep: #0E0D0C;
