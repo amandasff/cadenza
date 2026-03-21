@@ -77,7 +77,8 @@ interface Song {
 }
 
 function midiForNote(string: number, fret: number): number {
-  return STRING_OPEN_MIDI[string - 1] + fret;
+  // STRING_OPEN_MIDI index 0 = string 6 (low E), index 5 = string 1 (high e)
+  return STRING_OPEN_MIDI[6 - string] + fret;
 }
 
 const SONGS: Song[] = [
@@ -89,23 +90,35 @@ const SONGS: Song[] = [
     timeSignature: [4, 4],
     difficulty: "beginner",
     notes: [
-      // Famous riff — power chords on strings 5+4
-      { beat: 0,   string: 5, fret: 0,  duration: 1 },
-      { beat: 0,   string: 4, fret: 0,  duration: 1 },
-      { beat: 1,   string: 5, fret: 3,  duration: 1 },
-      { beat: 1,   string: 4, fret: 3,  duration: 1 },
-      { beat: 2,   string: 5, fret: 5,  duration: 1 },
-      { beat: 2,   string: 4, fret: 5,  duration: 1 },
-      { beat: 3.5, string: 5, fret: 3,  duration: 0.5 },
-      { beat: 3.5, string: 4, fret: 3,  duration: 0.5 },
-      { beat: 4,   string: 5, fret: 0,  duration: 1 },
-      { beat: 4,   string: 4, fret: 0,  duration: 1 },
-      { beat: 5,   string: 5, fret: 3,  duration: 1 },
-      { beat: 5,   string: 4, fret: 3,  duration: 1 },
-      { beat: 6,   string: 5, fret: 5,  duration: 0.5 },
-      { beat: 6,   string: 4, fret: 5,  duration: 0.5 },
-      { beat: 6.5, string: 5, fret: 3,  duration: 1.5 },
-      { beat: 6.5, string: 4, fret: 3,  duration: 1.5 },
+      // Low E bass drone
+      { beat: 0,    string: 6, fret: 3,  duration: 4 },   // G2 bass
+      // Main power chord riff on strings 5+4
+      { beat: 0,    string: 5, fret: 0,  duration: 1 },   // A2
+      { beat: 0,    string: 4, fret: 0,  duration: 1 },   // D3
+      { beat: 1,    string: 5, fret: 3,  duration: 1 },   // C3
+      { beat: 1,    string: 4, fret: 3,  duration: 1 },   // F3
+      { beat: 2,    string: 5, fret: 5,  duration: 1 },   // D3
+      { beat: 2,    string: 4, fret: 5,  duration: 1 },   // G3
+      { beat: 3,    string: 5, fret: 3,  duration: 0.5 }, // C3
+      { beat: 3,    string: 4, fret: 3,  duration: 0.5 }, // F3
+      // High response melody on strings 1-3
+      { beat: 4,    string: 3, fret: 5,  duration: 0.5 }, // C4
+      { beat: 4.5,  string: 3, fret: 3,  duration: 0.5 }, // A#3
+      { beat: 5,    string: 1, fret: 3,  duration: 0.5 }, // G4
+      { beat: 5.5,  string: 1, fret: 1,  duration: 0.5 }, // F4
+      { beat: 6,    string: 2, fret: 1,  duration: 0.5 }, // C4
+      { beat: 6.5,  string: 3, fret: 0,  duration: 0.5 }, // G3
+      { beat: 7,    string: 2, fret: 0,  duration: 1 },   // B3
+      // Repeat riff
+      { beat: 8,    string: 6, fret: 3,  duration: 4 },   // G2 bass
+      { beat: 8,    string: 5, fret: 0,  duration: 1 },
+      { beat: 8,    string: 4, fret: 0,  duration: 1 },
+      { beat: 9,    string: 5, fret: 3,  duration: 1 },
+      { beat: 9,    string: 4, fret: 3,  duration: 1 },
+      { beat: 10,   string: 5, fret: 5,  duration: 1 },
+      { beat: 10,   string: 4, fret: 5,  duration: 1 },
+      { beat: 11,   string: 5, fret: 3,  duration: 0.5 },
+      { beat: 11,   string: 4, fret: 3,  duration: 0.5 },
     ],
   },
   {
@@ -116,19 +129,38 @@ const SONGS: Song[] = [
     timeSignature: [4, 4],
     difficulty: "beginner",
     notes: [
-      { beat: 0, string: 2, fret: 0, duration: 1 },
-      { beat: 1, string: 2, fret: 0, duration: 1 },
-      { beat: 2, string: 2, fret: 1, duration: 1 },
-      { beat: 3, string: 2, fret: 3, duration: 1 },
-      { beat: 4, string: 2, fret: 3, duration: 1 },
-      { beat: 5, string: 2, fret: 1, duration: 1 },
-      { beat: 6, string: 2, fret: 0, duration: 1 },
-      { beat: 7, string: 3, fret: 2, duration: 1 },
-      { beat: 8, string: 3, fret: 2, duration: 1 },
-      { beat: 9, string: 2, fret: 0, duration: 1 },
-      { beat: 10, string: 2, fret: 0, duration: 1.5 },
-      { beat: 11.5, string: 3, fret: 2, duration: 0.5 },
-      { beat: 12, string: 3, fret: 2, duration: 2 },
+      // Upper octave — strings 1-2 (E4–D4)
+      { beat: 0,    string: 1, fret: 0,  duration: 1 },   // E4
+      { beat: 1,    string: 1, fret: 0,  duration: 1 },   // E4
+      { beat: 2,    string: 1, fret: 1,  duration: 1 },   // F4
+      { beat: 3,    string: 1, fret: 3,  duration: 1 },   // G4
+      { beat: 4,    string: 1, fret: 3,  duration: 1 },   // G4
+      { beat: 5,    string: 1, fret: 1,  duration: 1 },   // F4
+      { beat: 6,    string: 1, fret: 0,  duration: 1 },   // E4
+      { beat: 7,    string: 2, fret: 3,  duration: 1 },   // D4
+      { beat: 8,    string: 2, fret: 1,  duration: 1 },   // C4
+      { beat: 9,    string: 2, fret: 1,  duration: 1 },   // C4
+      { beat: 10,   string: 2, fret: 3,  duration: 1 },   // D4
+      { beat: 11,   string: 1, fret: 0,  duration: 1.5 }, // E4
+      { beat: 12.5, string: 2, fret: 3,  duration: 0.5 }, // D4
+      { beat: 13,   string: 2, fret: 3,  duration: 2 },   // D4
+      // Middle register — strings 2-4 (B3–D3)
+      { beat: 15,   string: 2, fret: 0,  duration: 1 },   // B3
+      { beat: 16,   string: 3, fret: 2,  duration: 1 },   // A3
+      { beat: 17,   string: 3, fret: 0,  duration: 1 },   // G3
+      { beat: 18,   string: 3, fret: 0,  duration: 1 },   // G3
+      { beat: 19,   string: 3, fret: 2,  duration: 1 },   // A3
+      { beat: 20,   string: 2, fret: 0,  duration: 1 },   // B3
+      { beat: 21,   string: 4, fret: 2,  duration: 1 },   // E3
+      { beat: 22,   string: 4, fret: 0,  duration: 2 },   // D3
+      // Low register — strings 5-6 (B2–E2)
+      { beat: 24,   string: 5, fret: 2,  duration: 1 },   // B2
+      { beat: 25,   string: 5, fret: 0,  duration: 1 },   // A2
+      { beat: 26,   string: 6, fret: 3,  duration: 1 },   // G2
+      { beat: 27,   string: 6, fret: 3,  duration: 1 },   // G2
+      { beat: 28,   string: 5, fret: 0,  duration: 1 },   // A2
+      { beat: 29,   string: 5, fret: 2,  duration: 1 },   // B2
+      { beat: 30,   string: 6, fret: 0,  duration: 2 },   // E2
     ],
   },
   {
@@ -139,33 +171,84 @@ const SONGS: Song[] = [
     timeSignature: [4, 4],
     difficulty: "beginner",
     notes: [
-      { beat: 0,   string: 5, fret: 7,  duration: 1.5 },
-      { beat: 1.5, string: 5, fret: 7,  duration: 0.5 },
-      { beat: 2,   string: 5, fret: 10, duration: 0.5 },
-      { beat: 2.5, string: 5, fret: 7,  duration: 0.5 },
-      { beat: 3,   string: 5, fret: 5,  duration: 1 },
-      { beat: 4,   string: 5, fret: 3,  duration: 2 },
-      { beat: 6,   string: 5, fret: 2,  duration: 2 },
+      // Famous bass riff on string 6 (low E)
+      { beat: 0,    string: 6, fret: 7,  duration: 1 },   // B2
+      { beat: 1,    string: 6, fret: 7,  duration: 0.5 }, // B2
+      { beat: 1.5,  string: 6, fret: 10, duration: 0.5 }, // D3
+      { beat: 2,    string: 6, fret: 7,  duration: 0.75 },// B2
+      { beat: 2.75, string: 6, fret: 5,  duration: 0.25 },// A2
+      { beat: 3,    string: 6, fret: 3,  duration: 0.5 }, // G2
+      { beat: 3.5,  string: 6, fret: 2,  duration: 1.5 }, // F#2
+      // String 5 echo
+      { beat: 5,    string: 5, fret: 7,  duration: 1 },   // E3
+      { beat: 6,    string: 5, fret: 5,  duration: 0.5 }, // D3
+      { beat: 6.5,  string: 5, fret: 3,  duration: 0.5 }, // C3
+      { beat: 7,    string: 5, fret: 2,  duration: 1 },   // B2
+      // Mid strings 4-3
+      { beat: 8,    string: 4, fret: 5,  duration: 1 },   // G3
+      { beat: 9,    string: 4, fret: 5,  duration: 0.5 }, // G3
+      { beat: 9.5,  string: 4, fret: 7,  duration: 0.5 }, // A3
+      { beat: 10,   string: 3, fret: 4,  duration: 1 },   // B3
+      { beat: 11,   string: 3, fret: 2,  duration: 1 },   // A3
+      // High strings 2-1
+      { beat: 12,   string: 2, fret: 4,  duration: 1 },   // E4 (via B string)
+      { beat: 13,   string: 1, fret: 2,  duration: 0.5 }, // F#4
+      { beat: 13.5, string: 1, fret: 0,  duration: 0.5 }, // E4
+      { beat: 14,   string: 2, fret: 0,  duration: 0.5 }, // B3
+      { beat: 14.5, string: 1, fret: 0,  duration: 1 },   // E4
+      // Back to bass riff
+      { beat: 16,   string: 6, fret: 7,  duration: 1 },
+      { beat: 17,   string: 6, fret: 7,  duration: 0.5 },
+      { beat: 17.5, string: 6, fret: 10, duration: 0.5 },
+      { beat: 18,   string: 6, fret: 7,  duration: 0.75 },
+      { beat: 18.75,string: 6, fret: 5,  duration: 0.25 },
+      { beat: 19,   string: 6, fret: 3,  duration: 0.5 },
+      { beat: 19.5, string: 6, fret: 2,  duration: 1.5 },
     ],
   },
   {
     id: "stairway",
     title: "Stairway to Heaven (Intro)",
     artist: "Led Zeppelin",
-    bpm: 72,
-    timeSignature: [4, 4],
+    bpm: 70,
+    timeSignature: [3, 4],
     difficulty: "intermediate",
     notes: [
-      { beat: 0,   string: 1, fret: 5,  duration: 1 },
-      { beat: 1,   string: 2, fret: 5,  duration: 1 },
-      { beat: 2,   string: 1, fret: 5,  duration: 0.5 },
-      { beat: 2.5, string: 3, fret: 6,  duration: 0.5 },
-      { beat: 3,   string: 1, fret: 4,  duration: 1 },
-      { beat: 4,   string: 2, fret: 5,  duration: 1 },
-      { beat: 5,   string: 1, fret: 4,  duration: 0.5 },
-      { beat: 5.5, string: 1, fret: 3,  duration: 0.5 },
-      { beat: 6,   string: 2, fret: 3,  duration: 1 },
-      { beat: 7,   string: 3, fret: 5,  duration: 1 },
+      // Am — arpeggio strings 5→1
+      { beat: 0,    string: 5, fret: 0,  duration: 0.5 }, // A2 (bass)
+      { beat: 0.5,  string: 4, fret: 2,  duration: 0.5 }, // E3
+      { beat: 1,    string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 1.5,  string: 2, fret: 1,  duration: 0.5 }, // C4
+      { beat: 2,    string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 2.5,  string: 1, fret: 0,  duration: 0.5 }, // E4 (high)
+      // Am/G# — bass on string 6
+      { beat: 3,    string: 6, fret: 4,  duration: 0.5 }, // G#2 (low bass!)
+      { beat: 3.5,  string: 4, fret: 2,  duration: 0.5 }, // E3
+      { beat: 4,    string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 4.5,  string: 2, fret: 1,  duration: 0.5 }, // C4
+      { beat: 5,    string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 5.5,  string: 1, fret: 0,  duration: 0.5 }, // E4
+      // Am/G — bass G on string 6
+      { beat: 6,    string: 6, fret: 3,  duration: 0.5 }, // G2
+      { beat: 6.5,  string: 4, fret: 2,  duration: 0.5 }, // E3
+      { beat: 7,    string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 7.5,  string: 2, fret: 1,  duration: 0.5 }, // C4
+      { beat: 8,    string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 8.5,  string: 1, fret: 0,  duration: 0.5 }, // E4
+      // Fmaj7/E — low E bass, then arpeggio up
+      { beat: 9,    string: 6, fret: 0,  duration: 0.5 }, // E2 (lowest note!)
+      { beat: 9.5,  string: 4, fret: 3,  duration: 0.5 }, // F3
+      { beat: 10,   string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 10.5, string: 2, fret: 1,  duration: 0.5 }, // C4
+      { beat: 11,   string: 3, fret: 2,  duration: 0.5 }, // A3
+      { beat: 11.5, string: 1, fret: 1,  duration: 0.5 }, // F4
+      // G chord — all strings descending
+      { beat: 12,   string: 6, fret: 3,  duration: 0.5 }, // G2
+      { beat: 12.5, string: 5, fret: 2,  duration: 0.5 }, // B2
+      { beat: 13,   string: 4, fret: 0,  duration: 0.5 }, // D3
+      { beat: 13.5, string: 3, fret: 0,  duration: 0.5 }, // G3
+      { beat: 14,   string: 2, fret: 0,  duration: 0.5 }, // B3
+      { beat: 14.5, string: 1, fret: 3,  duration: 0.5 }, // G4
     ],
   },
 ];
