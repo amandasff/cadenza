@@ -43,6 +43,7 @@ export default function TeacherAnnotate({
   const [pageIndex, setPageIndex] = useState(0);
   const pageIndexRef = useRef(0);
   const [scale] = useState(1.0);
+  const [pdfLoaded, setPdfLoaded] = useState(0);
   const pdfDocRef = useRef<{ getPage: (n: number) => Promise<unknown> } | null>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
@@ -177,6 +178,7 @@ export default function TeacherAnnotate({
       pdfDocRef.current = doc as unknown as { getPage: (n: number) => Promise<unknown> };
       setNumPages(doc.numPages);
       setPageIndex(0);
+      setPdfLoaded(n => n + 1);
     })();
   }, [piece?.sheet_music_url]);
 
@@ -234,7 +236,7 @@ export default function TeacherAnnotate({
     redrawAnnotations();
     refreshTextBoxes();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageIndex, scale]);
+  }, [pageIndex, scale, pdfLoaded]);
 
   useEffect(() => { renderPage(); }, [renderPage]);
 
