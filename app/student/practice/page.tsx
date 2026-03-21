@@ -13,7 +13,7 @@ import { usePractice } from "../../../lib/context/PracticeContext";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 import Metronome from "../../../components/Metronome";
 import { useI18n } from "../../../lib/context/I18nContext";
-import { Frown, Smile, PartyPopper, FileText, Circle, Square, Pause, Music, Play, Star, X, Lock, Scissors } from "lucide-react";
+import { Frown, Smile, PartyPopper, FileText, Circle, Square, Pause, Music, Play, Star, X, Lock } from "lucide-react";
 import { loadDraft, clearDraft, type PracticeDraft } from "../../../lib/practiceDb";
 import type { ClipResult } from "../../../lib/context/PracticeContext";
 
@@ -468,8 +468,8 @@ function PracticeInner() {
 
           {/* Controls */}
           {!hasStarted ? (
-            /* ── Not started: big "Just me" lock button ── */
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.625rem" }}>
+            /* ── Not started ── */
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
               <button
                 onClick={handleStartRecording}
                 style={{
@@ -482,84 +482,83 @@ function PracticeInner() {
                 <Lock size={28} strokeWidth={1.5} />
               </button>
               <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 500 }}>
-                Just me · private
+                Start session · private
               </div>
             </div>
           ) : (
             /* ── Session running ── */
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem", width: "100%" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", width: "100%" }}>
 
-              {/* Clip status */}
+              {/* Pause / resume row */}
+              <div style={{ display: "flex", justifyContent: "center", gap: "1rem", alignItems: "center" }}>
+                {recording ? (
+                  <button onClick={handlePause} style={{ width: 48, height: 48, borderRadius: "50%", border: "1px solid var(--border-strong)", background: "var(--white)", cursor: "pointer", color: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Pause size={18} strokeWidth={1.5} />
+                  </button>
+                ) : (
+                  <button onClick={handleResume} style={{ width: 48, height: 48, borderRadius: "50%", border: "none", background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Circle size={20} fill="currentColor" strokeWidth={0} />
+                  </button>
+                )}
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                  {recording ? "Recording" : "Paused"} · private
+                  {clipCount > 0 && <span style={{ marginLeft: "0.5rem", color: "var(--sage)", fontWeight: 600 }}>{clipCount} clip{clipCount !== 1 ? "s" : ""} ready</span>}
+                </div>
+              </div>
+
+              {/* Send to teacher button — the main clip action */}
+              {!clipping ? (
+                <button
+                  onClick={handleStartClip}
+                  disabled={!recording}
+                  style={{
+                    width: "100%", maxWidth: 320,
+                    padding: "0.875rem 1.25rem",
+                    borderRadius: 8, border: "none",
+                    background: recording ? "var(--sage)" : "var(--border)",
+                    color: "var(--white)",
+                    fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem",
+                    cursor: recording ? "pointer" : "default",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+                    boxShadow: recording ? "var(--shadow-sage)" : "none",
+                    transition: "background 0.15s",
+                    opacity: recording ? 1 : 0.4,
+                  }}
+                >
+                  <Circle size={10} fill="currentColor" strokeWidth={0} />
+                  Record for teacher
+                </button>
+              ) : (
+                <button
+                  onClick={handleStopClip}
+                  style={{
+                    width: "100%", maxWidth: 320,
+                    padding: "0.875rem 1.25rem",
+                    borderRadius: 8, border: "none",
+                    background: "var(--error)", color: "var(--white)",
+                    fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem",
+                    cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+                    boxShadow: "0 0 0 4px rgba(138,42,56,0.12)",
+                  }}
+                >
+                  <Square size={14} strokeWidth={0} fill="currentColor" />
+                  Done · {fmt(clipElapsed)}
+                </button>
+              )}
               {clipping && (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(138,42,56,0.08)", border: "1px solid rgba(138,42,56,0.15)", borderRadius: 100, padding: "0.375rem 0.875rem" }}>
-                  <Circle size={7} fill="#8A2A38" strokeWidth={0} />
-                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "#8A2A38", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                    Clip recording · {fmt(clipElapsed)}
-                  </span>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", textAlign: "center" }}>
+                  Recording a clip for your teacher — tap Done when finished
                 </div>
               )}
 
-              {/* Button row */}
-              <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", alignItems: "center" }}>
-                {/* Pause (only while recording, not clipping) */}
-                {recording && !clipping && (
-                  <button onClick={handlePause} style={{ width: 52, height: 52, borderRadius: "50%", border: "1px solid var(--border-strong)", background: "var(--white)", cursor: "pointer", color: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Pause size={20} strokeWidth={1.5} />
-                  </button>
-                )}
-
-                {/* Clip button — record a segment for teacher */}
-                {!clipping ? (
-                  <button
-                    onClick={handleStartClip}
-                    disabled={!recording}
-                    style={{
-                      width: 72, height: 72, borderRadius: "50%",
-                      background: recording ? "var(--sage)" : "var(--border)",
-                      border: "none", cursor: recording ? "pointer" : "default",
-                      color: "var(--white)", display: "flex", flexDirection: "column",
-                      alignItems: "center", justifyContent: "center", gap: "0.2rem",
-                      boxShadow: recording ? "var(--shadow-sage)" : "none",
-                      transition: "background 0.2s",
-                    }}
-                  >
-                    <Scissors size={20} strokeWidth={1.5} />
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                      {clipCount > 0 ? `${clipCount} clip${clipCount !== 1 ? "s" : ""}` : "Clip"}
-                    </span>
-                  </button>
-                ) : (
-                  /* Stop clip button */
-                  <button
-                    onClick={handleStopClip}
-                    style={{
-                      width: 72, height: 72, borderRadius: "50%",
-                      background: "var(--error)", border: "none", cursor: "pointer",
-                      color: "var(--white)", display: "flex", flexDirection: "column",
-                      alignItems: "center", justifyContent: "center", gap: "0.2rem",
-                      boxShadow: "0 0 0 6px rgba(138,42,56,0.12)",
-                    }}
-                  >
-                    <Square size={20} strokeWidth={1.5} />
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Stop</span>
-                  </button>
-                )}
-
-                {/* Resume (only when paused) */}
-                {!recording && !clipping && (
-                  <button onClick={handleResume} style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Circle size={22} fill="currentColor" strokeWidth={0} />
-                  </button>
-                )}
-              </div>
-
-              {/* End session link */}
+              {/* End session */}
               <button
                 onClick={clipping ? undefined : handleStopPractice}
                 disabled={clipping}
-                style={{ background: "none", border: "none", cursor: clipping ? "default" : "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: clipping ? "var(--border-strong)" : "var(--muted)", letterSpacing: "0.04em", padding: "0.25rem 0.5rem" }}
+                style={{ background: "none", border: "none", cursor: clipping ? "default" : "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: clipping ? "var(--border)" : "var(--muted)", padding: "0.25rem 0.5rem", marginTop: "0.25rem" }}
               >
-                {clipping ? "Finish clip first to end session" : "End session"}
+                End session
               </button>
             </div>
           )}

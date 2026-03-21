@@ -348,12 +348,26 @@ export default function TeacherChat() {
               if (msg.message_type === "system") {
                 const lines = msg.content.split("\n");
                 const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
-                const text = lines.filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:")).join("\n");
+                const clipUrls = lines
+                  .filter(l => /^CLIP_\d+:/.test(l))
+                  .map((l, i) => ({ label: `Clip ${i + 1}`, url: l.replace(/^CLIP_\d+:/, "") }));
+                const text = lines.filter(l =>
+                  !l.startsWith("AUDIO:") &&
+                  !l.startsWith("SESSION:") &&
+                  !l.startsWith("LESSON_ROOM:") &&
+                  !/^CLIP_\d+:/.test(l)
+                ).join("\n");
                 return (
                   <div key={msg.id} style={{ display: "flex", justifyContent: "center", padding: "0.5rem 0" }}>
-                    <div style={{ padding: "0.5rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "80%", lineHeight: 1.6, overflowWrap: "break-word", wordBreak: "break-word" }}>
-                      <div style={{ whiteSpace: "pre-line" }}>{text}</div>
-                      {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", marginTop: "0.5rem", height: 32 }} />}
+                    <div style={{ padding: "0.75rem 0.875rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem", color: "var(--muted)", maxWidth: "85%", lineHeight: 1.6, overflowWrap: "break-word", wordBreak: "break-word" }}>
+                      {text && <div style={{ whiteSpace: "pre-line", marginBottom: clipUrls.length || audioUrl ? "0.625rem" : 0 }}>{text}</div>}
+                      {audioUrl && <audio controls src={audioUrl} style={{ width: "100%", height: 32 }} />}
+                      {clipUrls.map(({ label, url }) => (
+                        <div key={url} style={{ marginTop: "0.5rem" }}>
+                          <div style={{ fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--sage)", marginBottom: "0.25rem" }}>{label}</div>
+                          <audio controls src={url} style={{ width: "100%", height: 32 }} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );

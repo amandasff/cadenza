@@ -308,8 +308,16 @@ export default function StudentChat() {
               const audioUrl = lines.find(l => l.startsWith("AUDIO:"))?.slice(6);
               const sessionId = lines.find(l => l.startsWith("SESSION:"))?.slice(8);
               const lessonRoom = lines.find(l => l.startsWith("LESSON_ROOM:"))?.slice(12);
+              const clipUrls = lines
+                .filter(l => /^CLIP_\d+:/.test(l))
+                .map((l, i) => ({ label: `Clip ${i + 1}`, url: l.replace(/^CLIP_\d+:/, "") }));
               const text = lines
-                .filter(l => !l.startsWith("AUDIO:") && !l.startsWith("SESSION:") && !l.startsWith("LESSON_ROOM:"))
+                .filter(l =>
+                  !l.startsWith("AUDIO:") &&
+                  !l.startsWith("SESSION:") &&
+                  !l.startsWith("LESSON_ROOM:") &&
+                  !/^CLIP_\d+:/.test(l)
+                )
                 .join("\n");
               const aiFeedback = sessionId ? sessionFeedbacks[sessionId] : undefined;
               return (
@@ -338,6 +346,12 @@ export default function StudentChat() {
                       </a>
                     )}
                     {audioUrl && <AudioPlayer src={audioUrl} />}
+                    {clipUrls.map(({ label, url }) => (
+                      <div key={url} style={{ marginTop: "0.625rem" }}>
+                        <div style={{ fontSize: "0.625rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--sage)", marginBottom: "0.25rem" }}>{label}</div>
+                        <AudioPlayer src={url} />
+                      </div>
+                    ))}
                     {aiFeedback && (
                       <div style={{ marginTop: "0.875rem", paddingTop: "0.875rem", borderTop: "1px solid var(--border)" }}>
                         <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>
