@@ -15,6 +15,7 @@ import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
 import { Flame, Camera, Palette, X } from "lucide-react";
+import LinkedAccountSwitcher from "../../components/LinkedAccountSwitcher";
 
 
 interface SiblingProfile {
@@ -532,6 +533,9 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             </div>
           </div>
         </div>
+
+        {/* Account switcher */}
+        <LinkedAccountSwitcher />
 
         {/* Nav links */}
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
