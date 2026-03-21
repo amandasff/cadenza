@@ -76,6 +76,7 @@ interface ProfileData {
   studio_bio: string | null;
   theme_song_item_id: string | null;
   theme_song_title: string | null;
+  username: string | null;
 }
 
 interface PublicTrack {
@@ -139,6 +140,8 @@ export default function StudioPage() {
   const [draftTrackTitle, setDraftTrackTitle] = useState("");
   const [draftTrackPrice, setDraftTrackPrice] = useState(0);
   const [savingTrack, setSavingTrack] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+  const [copiedTrackId, setCopiedTrackId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!student?.id) return;
@@ -149,7 +152,7 @@ export default function StudioPage() {
       const [inv, comps, profileRes, piecesRes, giftsRes] = await Promise.all([
         shop.getInventory(student.id),
         collectibles.getCollection(student.id),
-        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title,artist_name").eq("id", student.id).single(),
+        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title,artist_name,username").eq("id", student.id).single(),
         supabase.from("pieces").select("*").eq("student_id", student.id).order("created_at", { ascending: false }),
         supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", student.id).order("created_at", { ascending: false }).limit(20),
       ]);
@@ -158,6 +161,7 @@ export default function StudioPage() {
       const p = profileRes.data as ProfileData | null;
       if (p) {
         setProfile(p);
+        setUsername(p.username ?? null);
         setDraftName(p.studio_name ?? "");
         setDraftTagline(p.studio_tagline ?? "");
         // Fetch theme song recording URL if set
@@ -666,6 +670,25 @@ export default function StudioPage() {
                           )}
                           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)", marginTop: "0.25rem" }}>{track.collection_count} collected</div>
                         </div>
+                        {username && (
+                          <button
+                            onClick={() => {
+                              const url = `https://cadenza.social/p/${username}`;
+                              if (navigator.share) {
+                                navigator.share({ title: track.title, url }).catch(() => {});
+                              } else {
+                                navigator.clipboard.writeText(url).then(() => {
+                                  setCopiedTrackId(track.id);
+                                  setTimeout(() => setCopiedTrackId(null), 2000);
+                                });
+                              }
+                            }}
+                            title="Share"
+                            style={{ flexShrink: 0, background: "none", border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer", color: copiedTrackId === track.id ? "var(--charcoal)" : "var(--muted)", fontSize: "0.6875rem", fontWeight: 600, padding: "0.25rem 0.5rem", fontFamily: "Inter, sans-serif" }}
+                          >
+                            {copiedTrackId === track.id ? "Copied!" : "Share"}
+                          </button>
+                        )}
                         <button
                           onClick={() => startEditTrack(track)}
                           title="Edit"
