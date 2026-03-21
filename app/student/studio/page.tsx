@@ -77,6 +77,7 @@ interface ProfileData {
   theme_song_item_id: string | null;
   theme_song_title: string | null;
   username: string | null;
+  avatar_url: string | null;
 }
 
 interface PublicTrack {
@@ -156,7 +157,7 @@ export default function StudioPage() {
     try {
       // Phase 1: profile + pieces — render immediately
       const [profileRes, piecesRes] = await Promise.all([
-        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title,artist_name,username").eq("id", student.id).single(),
+        supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title,artist_name,username,avatar_url").eq("id", student.id).single(),
         supabase.from("pieces").select("*").eq("student_id", student.id).order("created_at", { ascending: false }),
       ]);
       const p = profileRes.data as ProfileData | null;
@@ -431,8 +432,10 @@ export default function StudioPage() {
 
       {/* ── Profile card ── */}
       <div className="card-base" style={{ padding: "1.5rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: "1.25rem", flexWrap: "wrap" }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--white)", flexShrink: 0 }}>
-          {profile?.display_name?.[0]?.toUpperCase() ?? "?"}
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "var(--white)", flexShrink: 0, overflow: "hidden" }}>
+          {profile?.avatar_url
+            ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : profile?.display_name?.[0]?.toUpperCase() ?? "?"}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {editingName ? (
