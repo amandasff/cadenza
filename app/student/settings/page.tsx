@@ -28,18 +28,28 @@ export default function StudentSettings() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Username / public profile link
+  const [username, setUsername] = useState("");
+  const [usernameDraft, setUsernameDraft] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [usernameSaved, setUsernameSaved] = useState(false);
+  const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!student?.id) return;
     supabase
       .from("profiles")
-      .select("display_name, instrument, avatar_url")
+      .select("display_name, instrument, avatar_url, username")
       .eq("id", student.id)
       .single()
-      .then(({ data }: { data: { display_name: string | null; instrument: string | null; avatar_url: string | null } | null }) => {
+      .then(({ data }: { data: { display_name: string | null; instrument: string | null; avatar_url: string | null; username: string | null } | null }) => {
         if (data) {
           setDisplayName(data.display_name ?? "");
           setInstrument(data.instrument ?? "");
           setAvatarUrl(data.avatar_url ?? null);
+          setUsername(data.username ?? "");
+          setUsernameDraft(data.username ?? "");
         }
       });
   }, [student?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -69,6 +79,33 @@ export default function StudentSettings() {
     await supabase.from("profiles").update({ avatar_url: url }).eq("id", student.id);
     setAvatarUrl(url);
     setUploading(false);
+  }
+
+  function handleUsernameDraftChange(val: string) {
+    const cleaned = val.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    setUsernameDraft(cleaned);
+    setUsernameStatus("idle");
+    if (usernameTimer.current) clearTimeout(usernameTimer.current);
+    if (!cleaned || cleaned === username) { setUsernameStatus("idle"); return; }
+    const valid = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(cleaned);
+    if (!valid) { setUsernameStatus("invalid"); return; }
+    setUsernameStatus("checking");
+    usernameTimer.current = setTimeout(async () => {
+      const { data } = await supabase.from("profiles").select("id").eq("username", cleaned).maybeSingle();
+      setUsernameStatus(data ? "taken" : "available");
+    }, 500);
+  }
+
+  async function handleSaveUsername() {
+    if (!student?.id || usernameStatus !== "available") return;
+    setSavingUsername(true);
+    const { error: err } = await supabase.from("profiles").update({ username: usernameDraft }).eq("id", student.id);
+    setSavingUsername(false);
+    if (err) { setError(err.message); return; }
+    setUsername(usernameDraft);
+    setUsernameStatus("idle");
+    setUsernameSaved(true);
+    setTimeout(() => setUsernameSaved(false), 2000);
   }
 
   async function handleBillingPortal() {
@@ -146,6 +183,54 @@ export default function StudentSettings() {
 
           <button onClick={handleSaveProfile} disabled={saving} style={{ ...btnPrimary, marginTop: "0.25rem" }}>
             {saved ? t.settings.savedSuccess : saving ? t.common.saving : t.settings.saveChanges}
+          </button>
+        </Section>
+
+        {/* ── Public link ── */}
+        <Section title="Your public link">
+          <div style={{ fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "1rem", lineHeight: 1.6 }}>
+            Choose a username so people can visit your profile at <strong>cadenza.social/</strong>your-name. Share it anywhere.
+          </div>
+          {username && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 8, padding: "0.625rem 0.875rem", marginBottom: "0.875rem" }}>
+              <span style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>cadenza.social/</span>
+              <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--charcoal)" }}>{username}</span>
+              <button
+                onClick={() => { navigator.clipboard.writeText(`https://cadenza.social/${username}`); }}
+                style={{ marginLeft: "auto", background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0.25rem 0.625rem", cursor: "pointer", fontSize: "0.6875rem", color: "var(--muted)", fontWeight: 500 }}
+              >
+                Copy
+              </button>
+            </div>
+          )}
+          <Field label={username ? "Change username" : "Pick a username"}>
+            <div style={{ position: "relative" }}>
+              <div style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.875rem", color: "var(--muted)", pointerEvents: "none" }}>
+                cadenza.social/
+              </div>
+              <input
+                value={usernameDraft}
+                onChange={e => handleUsernameDraftChange(e.target.value)}
+                placeholder="your-name"
+                maxLength={30}
+                style={{ ...inputStyle, paddingLeft: "8.5rem", borderColor: usernameStatus === "available" ? "var(--sage)" : usernameStatus === "taken" || usernameStatus === "invalid" ? "var(--error)" : "var(--border-strong)" }}
+              />
+              {usernameStatus !== "idle" && (
+                <div style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", fontWeight: 500, color: usernameStatus === "available" ? "var(--sage)" : usernameStatus === "checking" ? "var(--muted)" : "var(--error)" }}>
+                  {usernameStatus === "checking" ? "checking…" : usernameStatus === "available" ? "✓ available" : usernameStatus === "taken" ? "taken" : "invalid"}
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.375rem" }}>
+              Lowercase letters, numbers, and hyphens only.
+            </div>
+          </Field>
+          <button
+            onClick={handleSaveUsername}
+            disabled={savingUsername || usernameStatus !== "available"}
+            style={{ ...btnPrimary, opacity: usernameStatus === "available" ? 1 : 0.4, cursor: usernameStatus === "available" ? "pointer" : "default" }}
+          >
+            {usernameSaved ? "Saved!" : savingUsername ? "Saving…" : "Save username"}
           </button>
         </Section>
 

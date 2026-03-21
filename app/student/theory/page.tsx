@@ -317,6 +317,7 @@ function useGameState(gameKey: string) {
   const [selected, setSelected] = useState<string | null>(null);
   const advRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const answersRef = useRef<{ correct: boolean; ms: number }[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -341,6 +342,7 @@ function useGameState(gameKey: string) {
     setCd(3); setGs("countdown");
     setScore(0); setStreak(0); setTop(0); setC(0); setT(0);
     setNR(false); setPops([]); setSelected(null);
+    answersRef.current = [];
     let cd = 3;
     const iv = setInterval(() => {
       cd -= 1; setCd(cd);
