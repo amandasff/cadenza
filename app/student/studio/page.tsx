@@ -78,6 +78,7 @@ interface ProfileData {
   theme_song_title: string | null;
   username: string | null;
   avatar_url: string | null;
+  artist_name: string | null;
 }
 
 interface PublicTrack {
