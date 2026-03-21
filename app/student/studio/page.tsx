@@ -154,38 +154,43 @@ export default function StudioPage() {
     if (!student?.id) return;
     setLoading(true);
     try {
-      const shop = ShopService.create(supabase);
-      const collectibles = CollectibleService.create(supabase);
-      const [inv, comps, profileRes, piecesRes, giftsRes] = await Promise.all([
-        shop.getInventory(student.id),
-        collectibles.getCollection(student.id),
+      // Phase 1: profile + pieces — render immediately
+      const [profileRes, piecesRes] = await Promise.all([
         supabase.from("profiles").select("total_points,streak_days,display_name,instrument,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title,artist_name,username").eq("id", student.id).single(),
         supabase.from("pieces").select("*").eq("student_id", student.id).order("created_at", { ascending: false }),
-        supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", student.id).order("created_at", { ascending: false }).limit(20),
       ]);
-      setInventory(inv);
-      setComposers(comps);
       const p = profileRes.data as ProfileData | null;
       if (p) {
         setProfile(p);
         setUsername(p.username ?? null);
         setDraftName(p.studio_name ?? "");
         setDraftTagline(p.studio_tagline ?? "");
-        // Fetch theme song recording URL if set
-        if (p.theme_song_item_id) {
-          const { data: songData } = await supabase
-            .from("portfolio_items")
-            .select("recording_url")
-            .eq("id", p.theme_song_item_id)
-            .single();
-          setThemeSongUrl(songData?.recording_url ?? null);
-        }
       }
       setPieces((piecesRes.data ?? []) as PieceRow[]);
+      setLoading(false);
+
+      // Phase 2: inventory, composers, gifts, theme song — load in background
+      const shop = ShopService.create(supabase);
+      const collectibles = CollectibleService.create(supabase);
+      const [inv, comps, giftsRes] = await Promise.all([
+        shop.getInventory(student.id),
+        collectibles.getCollection(student.id),
+        supabase.from("studio_gifts").select("*, shop_items(*), sender:profiles!sender_id(display_name)").eq("recipient_id", student.id).order("created_at", { ascending: false }).limit(20),
+      ]);
+      setInventory(inv);
+      setComposers(comps);
       setGifts((giftsRes.data ?? []) as StudioGiftWithDetails[]);
+
+      if (p?.theme_song_item_id) {
+        const { data: songData } = await supabase
+          .from("portfolio_items")
+          .select("recording_url")
+          .eq("id", p.theme_song_item_id)
+          .single();
+        setThemeSongUrl(songData?.recording_url ?? null);
+      }
     } catch (e) {
       console.error(e);
-    } finally {
       setLoading(false);
     }
   }, [student?.id]); // eslint-disable-line react-hooks/exhaustive-deps
