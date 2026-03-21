@@ -8,6 +8,7 @@ import { CollectibleService } from "../../../lib/services/CollectibleService";
 import { Student } from "../../../lib/models/Student";
 import type { InventoryItemWithDetails, StudentCollectibleWithAvatar, PieceRow, StudioGiftWithDetails } from "../../../lib/types";
 import { playComposerAudio } from "../../../lib/composerTunes";
+import ContributionsGraph from "../../../components/ContributionsGraph";
 
 // ── Era background tints ───────────────────────────────────────────────────
 
@@ -725,26 +726,42 @@ export default function StudioPage() {
         </div>
       ) : (
         /* Journey tab */
-        pieces.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎵</div>
-            No pieces yet — your teacher will assign pieces to you.
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {/* Contributions graph */}
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+              Practice History
+            </div>
+            <ContributionsGraph studentId={student.id} />
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {pieces.map(piece => (
-              <div key={piece.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{piece.title}</div>
-                  {piece.composer && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>{piece.composer}</div>}
-                </div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: STATUS_COLORS[piece.status] ?? "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
-                  {STATUS_LABELS[piece.status] ?? piece.status}
-                </div>
+
+          {/* Pieces */}
+          <div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+              Repertoire
+            </div>
+            {pieces.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "2rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
+                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎵</div>
+                No pieces yet — your teacher will assign pieces to you.
               </div>
-            ))}
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {pieces.map(piece => (
+                  <div key={piece.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{piece.title}</div>
+                      {piece.composer && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>{piece.composer}</div>}
+                    </div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: STATUS_COLORS[piece.status] ?? "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
+                      {STATUS_LABELS[piece.status] ?? piece.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )
+        </div>
       )}
 
       {/* ── Repertoire Book modal ── */}

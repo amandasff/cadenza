@@ -11,6 +11,7 @@ interface LogSessionBody {
   notes?: string;
   segments?: PracticeSegment[];
   recordingUrl?: string;
+  isPrivate?: boolean;
 }
 
 export async function POST(request: Request) {
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
       notes: body.notes ?? null,
       segments_json: body.segments ?? null,
       recording_url: body.recordingUrl ?? null,
+      is_private: body.isPrivate ?? false,
     })
     .select()
     .single();

@@ -13,8 +13,9 @@ import { usePractice } from "../../../lib/context/PracticeContext";
 import type { PieceWithGoals } from "../../../lib/services/PieceService";
 import Metronome from "../../../components/Metronome";
 import { useI18n } from "../../../lib/context/I18nContext";
-import { Frown, Smile, PartyPopper, FileText, Circle, Square, Pause, Music, Play, Star, X } from "lucide-react";
+import { Frown, Smile, PartyPopper, FileText, Circle, Square, Pause, Music, Play, Star, X, Lock, Scissors } from "lucide-react";
 import { loadDraft, clearDraft, type PracticeDraft } from "../../../lib/practiceDb";
+import type { ClipResult } from "../../../lib/context/PracticeContext";
 
 type PracticeStep = "practice" | "reflect";
 type SegmentWithId = PracticeSegment & { id: string };
@@ -31,7 +32,7 @@ function PracticeInner() {
   const student = user as Student;
   const practice = usePractice();
   const { t } = useI18n();
-  const { isActive, recording, elapsed, analyserNode } = practice;
+  const { isActive, recording, elapsed, analyserNode, clipping, clipCount, clipElapsed } = practice;
   const hasStarted = isActive;
 
   const AREAS: Record<string, { label: string }> = {
@@ -78,6 +79,7 @@ function PracticeInner() {
 
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
   const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+  const [clipBlobs, setClipBlobs] = useState<ClipResult[]>([]);
   const [finalElapsed, setFinalElapsed] = useState(0);
   const [portfolioSave, setPortfolioSave] = useState(false);
   const [portfolioTitle, setPortfolioTitle] = useState("");
@@ -208,6 +210,15 @@ function PracticeInner() {
     practice.resumePractice();
   }
 
+  function handleStartClip() {
+    practice.startClip();
+  }
+
+  async function handleStopClip() {
+    const clip = await practice.stopClip();
+    if (clip) setClipBlobs(prev => [...prev, clip]);
+  }
+
   async function handleStopPractice() {
     cancelAnimationFrame(animFrameRef.current);
     const { blob, elapsed: finalElapsed } = await practice.finishPractice();
@@ -255,6 +266,7 @@ function PracticeInner() {
       const supabase = getSupabaseBrowserClient();
       const sessionSegments: PracticeSegment[] = segments.map(({ id: _id, ...s }) => s);
 
+      // Upload private session blob
       let recordingUrl: string | undefined;
       if (recordingBlob) {
         const ext = recordingBlob.type.includes("ogg") ? "ogg" : recordingBlob.type.includes("mp4") ? "mp4" : "webm";
@@ -267,6 +279,20 @@ function PracticeInner() {
           recordingUrl = urlData.publicUrl;
         } else {
           console.error("upload error:", uploadError.message);
+        }
+      }
+
+      // Upload teacher clips
+      const clipUrls: string[] = [];
+      for (const clip of clipBlobs) {
+        const ext = clip.blob.type.includes("ogg") ? "ogg" : clip.blob.type.includes("mp4") ? "mp4" : "webm";
+        const path = `${student.id}/clip_${Date.now()}_${clip.index}.${ext}`;
+        const { error } = await supabase.storage
+          .from("practice-recordings")
+          .upload(path, clip.blob, { contentType: clip.blob.type || "audio/webm", upsert: false });
+        if (!error) {
+          const { data: urlData } = supabase.storage.from("practice-recordings").getPublicUrl(path);
+          clipUrls.push(urlData.publicUrl);
         }
       }
 
@@ -287,16 +313,29 @@ function PracticeInner() {
           notes: notesStr,
           segments: sessionSegments.length > 0 ? sessionSegments : undefined,
           recordingUrl,
+          isPrivate: true,
         }),
       });
       if (!logRes.ok) throw new Error("Failed to save session");
       const { session: sessionData } = await logRes.json() as { session: { id: string } };
 
+      // Save clips to practice_clips table
+      if (clipUrls.length > 0 && sessionData?.id) {
+        const clipRows = clipUrls.map((url, i) => ({
+          session_id: sessionData.id,
+          student_id: student.id,
+          recording_url: url,
+          duration_seconds: Math.round((clipBlobs[i].endElapsed - clipBlobs[i].startElapsed)),
+          clip_index: i,
+        }));
+        await supabase.from("practice_clips").insert(clipRows);
+      }
+
       // Refresh auth context so streak/points update immediately on home screen
       await refresh();
 
-      // Fire AI analysis in background — only if recording was captured
-      if (recordingUrl && sessionData?.id) {
+      // Fire AI analysis in background — only if clips were sent to teacher
+      if (clipUrls.length > 0 && sessionData?.id) {
         fetch("/api/practice/analyze-recording", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -328,7 +367,7 @@ function PracticeInner() {
         sessionSegments.forEach(s =>
           lines.push(`${AREAS[s.practice_area]?.label ?? "Practice"}: ${s.title} · ${fmt(s.start_seconds)}`)
         );
-        if (recordingUrl) lines.push(`AUDIO:${recordingUrl}`);
+        clipUrls.forEach((url, i) => lines.push(`CLIP_${i + 1}:${url}`));
         if (sessionData?.id) lines.push(`SESSION:${sessionData.id}`);
 
         try {
@@ -428,44 +467,102 @@ function PracticeInner() {
           </div>
 
           {/* Controls */}
-          <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", alignItems: "center" }}>
-            {/* Pause (only while recording) */}
-            {recording && (
-              <button onClick={handlePause} style={{ width: 52, height: 52, borderRadius: "50%", border: "1px solid var(--border-strong)", background: "var(--white)", cursor: "pointer", color: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Pause size={20} strokeWidth={1.5} />
-              </button>
-            )}
-
-            {/* Main record / resume button */}
-            <button
-              onClick={() => {
-                if (recording) handleStopPractice();
-                else if (!hasStarted) handleStartRecording();
-                else handleResume();
-              }}
-              style={{
-                width: 80, height: 80, borderRadius: "50%",
-                background: recording ? "var(--error)" : "var(--charcoal)",
-                border: "none", cursor: "pointer",
-                transition: "background 0.2s",
-                color: "var(--white)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: recording ? "0 0 0 6px rgba(138,48,48,0.15)" : "var(--shadow-md)",
-              }}
-            >
-              {recording ? <Square size={24} strokeWidth={1.5} /> : <Circle size={24} fill="currentColor" strokeWidth={0} />}
-            </button>
-
-            {/* End session (only when paused after starting) */}
-            {hasStarted && !recording && (
+          {!hasStarted ? (
+            /* ── Not started: big "Just me" lock button ── */
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.625rem" }}>
               <button
-                onClick={handleStopPractice}
-                style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", letterSpacing: "0.04em", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center" }}
+                onClick={handleStartRecording}
+                style={{
+                  width: 88, height: 88, borderRadius: "50%",
+                  background: "var(--charcoal)", border: "none", cursor: "pointer",
+                  color: "var(--white)", display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "var(--shadow-md)",
+                }}
               >
-                {t.common.done}
+                <Lock size={28} strokeWidth={1.5} />
               </button>
-            )}
-          </div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 500 }}>
+                Just me · private
+              </div>
+            </div>
+          ) : (
+            /* ── Session running ── */
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem", width: "100%" }}>
+
+              {/* Clip status */}
+              {clipping && (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(138,42,56,0.08)", border: "1px solid rgba(138,42,56,0.15)", borderRadius: 100, padding: "0.375rem 0.875rem" }}>
+                  <Circle size={7} fill="#8A2A38" strokeWidth={0} />
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "#8A2A38", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    Clip recording · {fmt(clipElapsed)}
+                  </span>
+                </div>
+              )}
+
+              {/* Button row */}
+              <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", alignItems: "center" }}>
+                {/* Pause (only while recording, not clipping) */}
+                {recording && !clipping && (
+                  <button onClick={handlePause} style={{ width: 52, height: 52, borderRadius: "50%", border: "1px solid var(--border-strong)", background: "var(--white)", cursor: "pointer", color: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Pause size={20} strokeWidth={1.5} />
+                  </button>
+                )}
+
+                {/* Clip button — record a segment for teacher */}
+                {!clipping ? (
+                  <button
+                    onClick={handleStartClip}
+                    disabled={!recording}
+                    style={{
+                      width: 72, height: 72, borderRadius: "50%",
+                      background: recording ? "var(--sage)" : "var(--border)",
+                      border: "none", cursor: recording ? "pointer" : "default",
+                      color: "var(--white)", display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center", gap: "0.2rem",
+                      boxShadow: recording ? "var(--shadow-sage)" : "none",
+                      transition: "background 0.2s",
+                    }}
+                  >
+                    <Scissors size={20} strokeWidth={1.5} />
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      {clipCount > 0 ? `${clipCount} clip${clipCount !== 1 ? "s" : ""}` : "Clip"}
+                    </span>
+                  </button>
+                ) : (
+                  /* Stop clip button */
+                  <button
+                    onClick={handleStopClip}
+                    style={{
+                      width: 72, height: 72, borderRadius: "50%",
+                      background: "var(--error)", border: "none", cursor: "pointer",
+                      color: "var(--white)", display: "flex", flexDirection: "column",
+                      alignItems: "center", justifyContent: "center", gap: "0.2rem",
+                      boxShadow: "0 0 0 6px rgba(138,42,56,0.12)",
+                    }}
+                  >
+                    <Square size={20} strokeWidth={1.5} />
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>Stop</span>
+                  </button>
+                )}
+
+                {/* Resume (only when paused) */}
+                {!recording && !clipping && (
+                  <button onClick={handleResume} style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "var(--charcoal)", color: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Circle size={22} fill="currentColor" strokeWidth={0} />
+                  </button>
+                )}
+              </div>
+
+              {/* End session link */}
+              <button
+                onClick={clipping ? undefined : handleStopPractice}
+                disabled={clipping}
+                style={{ background: "none", border: "none", cursor: clipping ? "default" : "pointer", fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: clipping ? "var(--border-strong)" : "var(--muted)", letterSpacing: "0.04em", padding: "0.25rem 0.5rem" }}
+              >
+                {clipping ? "Finish clip first to end session" : "End session"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* "What I'm working on" tap strip */}
