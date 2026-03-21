@@ -9,6 +9,7 @@ import { CollectibleService } from "../../../../lib/services/CollectibleService"
 import type { InventoryItemWithDetails, StudentCollectibleWithAvatar, PieceRow, ShopItemRow, StudioGiftWithDetails } from "../../../../lib/types";
 import { playComposerAudio } from "../../../../lib/composerTunes";
 import type { PortfolioItemRow } from "../../../../lib/services/PortfolioService";
+import AudioPlayer from "../../../../components/AudioPlayer";
 
 const ERA_TINTS: Record<string, string> = {
   baroque:      "rgba(180, 140, 60, 0.08)",
@@ -66,6 +67,7 @@ function timeAgo(dateStr: string): string {
 
 interface ProfileData {
   display_name: string;
+  avatar_url: string | null;
   instrument: string | null;
   streak_days: number;
   total_points: number;
@@ -147,7 +149,7 @@ export default function VisitorStudioPage() {
 
         // ── Phase 1: above-fold content (profile + composers) ──
         const [profileRes, comps] = await Promise.all([
-          supabase.from("profiles").select("display_name,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
+          supabase.from("profiles").select("display_name,avatar_url,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
           collectibles.getCollection(userId),
         ]);
 
@@ -375,8 +377,10 @@ export default function VisitorStudioPage() {
       {/* ── Profile card ── */}
       <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--white)", flexShrink: 0 }}>
-            {profile?.display_name?.[0]?.toUpperCase() ?? "?"}
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--charcoal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: "1.125rem", color: "var(--white)", flexShrink: 0, overflow: "hidden" }}>
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : (profile?.display_name?.[0]?.toUpperCase() ?? "?")}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
@@ -686,17 +690,18 @@ export default function VisitorStudioPage() {
                   const isOwn = track.student_id === user?.id;
                   const price = track.price_points ?? 0;
                   return (
-                    <div key={track.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{track.title}</div>
-                        {track.description && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.description}</div>}
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem", flexWrap: "wrap" }}>
-                          {track.media_type && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sky)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.125rem 0.375rem", background: "rgba(100,180,220,0.12)", borderRadius: 4 }}>{track.media_type}</span>}
-                          {(track.collection_count ?? 0) > 0 && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{track.collection_count} collected</span>}
-                          {price > 0 && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--butter)" }}>{price} pts</span>}
+                    <div key={track.id} style={{ padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{track.title}</div>
+                          {track.description && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.description}</div>}
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem", flexWrap: "wrap" }}>
+                            {track.media_type && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--sky)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.125rem 0.375rem", background: "rgba(100,180,220,0.12)", borderRadius: 4 }}>{track.media_type}</span>}
+                            {(track.collection_count ?? 0) > 0 && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{track.collection_count} collected</span>}
+                            {price > 0 && <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--butter)" }}>{price} pts</span>}
+                          </div>
                         </div>
-                      </div>
-                      {!isOwn && user && (
+                        {!isOwn && user && (
                         <button
                           onClick={() => !collected && collectItem(track)}
                           disabled={collected || collectingId === track.id}
@@ -710,6 +715,12 @@ export default function VisitorStudioPage() {
                         >
                           {collected ? "✓ In Crate" : collectingId === track.id ? "…" : price === 0 ? "Collect" : `Collect · ${price} pts`}
                         </button>
+                      )}
+                      </div>
+                      {track.recording_url && (
+                        <div style={{ marginTop: "0.625rem" }}>
+                          <AudioPlayer src={track.recording_url} />
+                        </div>
                       )}
                     </div>
                   );

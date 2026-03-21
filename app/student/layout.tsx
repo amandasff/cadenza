@@ -522,12 +522,13 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "2rem" }}>
           {avatarCircle(36, "0.75rem")}
           <div style={{ minWidth: 0 }}>
-            <div style={{
+            <Link href="/student/studio" style={{
               fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem",
               color: "var(--charcoal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              textDecoration: "none", display: "block",
             }}>
               {student.displayName}
-            </div>
+            </Link>
             <div style={{ marginTop: "0.3rem" }}>
               <span className="streak-pill" style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}><Flame size={13} fill="#E6A817" color="#E6A817" strokeWidth={0} /> {student.streakDays} day{student.streakDays !== 1 ? "s" : ""}</span>
             </div>
