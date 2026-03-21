@@ -97,16 +97,18 @@ function PracticeInner() {
 
   // ── Load pieces + teacher id ──
   const load = useCallback(async () => {
-    if (!student?.id || !student?.studioId) return;
+    if (!student?.id) return;
     setLoadingPieces(true);
     try {
       const supabase = getSupabaseBrowserClient();
       const [data, studioRes] = await Promise.all([
         PieceService.create(supabase).getStudentPieces(student.id),
-        supabase.from("studios").select("owner_id").eq("id", student.studioId).single(),
+        student.studioId
+          ? supabase.from("studios").select("owner_id").eq("id", student.studioId).single()
+          : Promise.resolve({ data: null }),
       ]);
       setPieces(data);
-      setTeacherId(studioRes.data?.owner_id ?? null);
+      setTeacherId((studioRes.data as { owner_id?: string } | null)?.owner_id ?? null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -245,10 +247,6 @@ function PracticeInner() {
 
   // ── Submit ──
   async function handleSubmit() {
-    if (!student?.studioId) {
-      setSaveError("You're not connected to a studio. Please sign out and rejoin.");
-      return;
-    }
     setSaving(true);
     setSaveError(null);
     try {

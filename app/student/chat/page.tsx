@@ -57,7 +57,8 @@ export default function StudentChat() {
   }, []);
 
   useEffect(() => {
-    if (!student?.studioId || !student?.id) return;
+    if (!student?.id || (!student?.studioId && student?.isSolo)) { setLoading(false); return; }
+    if (!student?.studioId) return;
     const supabase = getSupabaseBrowserClient();
     const chatService = ChatService.create(supabase);
 
@@ -296,6 +297,11 @@ export default function StudentChat() {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", paddingTop: "1rem" }}>
             {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 40, borderRadius: 3, width: i % 2 === 0 ? "58%" : "44%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />)}
           </div>
+        ) : student?.isSolo && !student?.studioId ? (
+          <div className="empty-state" style={{ flex: 1, justifyContent: "center" }}>
+            <p className="empty-state-title">No teacher yet</p>
+            <p className="empty-state-desc">Your practice logs and recordings will appear here once you join a studio. For now, keep practicing — everything is saved to your profile.</p>
+          </div>
         ) : activeMessages.length === 0 ? (
           <div className="empty-state" style={{ flex: 1, justifyContent: "center" }}>
             <p className="empty-state-title">{tab === "announcements" ? tr.student.chatNoAnnouncements : tr.student.chatNoMessages}</p>
@@ -496,7 +502,7 @@ export default function StudentChat() {
       )}
       {tab === "private" && (
         <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "flex-end", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={teacherId ? tr.student.chatMessageTeacher : tr.common.loading} disabled={sending || !teacherId || isRecording || uploadingAudio} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
+          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={student?.isSolo && !student?.studioId ? "Join a studio to message your teacher" : teacherId ? tr.student.chatMessageTeacher : tr.common.loading} disabled={sending || !teacherId || isRecording || uploadingAudio || (student?.isSolo && !student?.studioId)} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
           {/* Mic button — audio-only voice note */}
           <button
             onClick={isRecording ? stopRecording : handleStartRecording}

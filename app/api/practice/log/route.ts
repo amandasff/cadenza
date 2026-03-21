@@ -4,7 +4,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import type { PracticeSegment } from '@/lib/types';
 
 interface LogSessionBody {
-  studioId: string;
+  studioId?: string | null;
   goalId?: string;
   pieceId?: string;
   durationSeconds: number;
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     .from('practice_sessions')
     .insert({
       student_id: user.id,
-      studio_id: body.studioId,
+      studio_id: body.studioId ?? null,
       goal_id: body.goalId ?? null,
       piece_id: body.pieceId ?? null,
       duration_seconds: body.durationSeconds,
