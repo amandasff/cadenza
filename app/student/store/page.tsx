@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { ShopService } from "../../../lib/services/ShopService";
@@ -69,8 +70,11 @@ export default function StorePage() {
       setOwnedIds(prev => new Set([...prev, item.id]));
       setJustBought(item.id);
       setTimeout(() => setJustBought(null), 2000);
+      toast.success(`${item.name} purchased!`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Purchase failed");
+      const msg = e instanceof Error ? e.message : "Purchase failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBuying(null);
     }

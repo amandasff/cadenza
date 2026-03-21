@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useAuth } from "../../lib/context/AuthContext";
 import { useTheme } from "../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../lib/supabase/client";
@@ -10,7 +11,7 @@ import { RecordingProvider } from "../../lib/context/RecordingContext";
 import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
-import { Camera, Palette, X } from "lucide-react";
+import { Camera, Palette } from "lucide-react";
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
@@ -43,7 +44,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [hasUnread, setHasUnread] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -155,7 +155,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     const teacher = user as Teacher | null;
     if (!file || !teacher?.id) return;
     setUploading(true);
-    setUploadError(null);
     try {
       const supabase = getSupabaseBrowserClient();
       const ext = file.name.split(".").pop() ?? "jpg";
@@ -171,7 +170,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       setAvatarUrl(url);
     } catch (err) {
       const msg = (err as { message?: string })?.message ?? "Upload failed";
-      setUploadError(msg);
+      toast.error(`${t.teacher.uploadFailed}: ${msg}`);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -338,7 +337,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             const active = tab.href === "/teacher" ? path === "/teacher" : path.startsWith(tab.href);
             const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
             return (
-              <Link key={tab.href} href={tab.href} style={{
+              <Link key={tab.href} href={tab.href} className="sidebar-nav-item" style={{
                 display: "flex", alignItems: "center",
                 padding: "0.5rem 0.75rem",
                 borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
@@ -363,7 +362,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           {practiceTabs.map(tab => {
             const active = path.startsWith(tab.href);
             return (
-              <button key={tab.href} onClick={() => { window.location.href = tab.href; }} style={{
+              <button key={tab.href} onClick={() => { window.location.href = tab.href; }} className="sidebar-nav-item" style={{
                 display: "flex", alignItems: "center", width: "100%",
                 padding: "0.5rem 0.75rem", border: "none", cursor: "pointer",
                 borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
@@ -532,19 +531,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* Upload error toast */}
-      {uploadError && (
-        <div style={{
-          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
-          background: "#c0392b", color: "#fff", padding: "0.625rem 1.125rem",
-          borderRadius: 3, fontSize: "0.8125rem", fontFamily: "Inter, sans-serif",
-          zIndex: 9999, maxWidth: 340, textAlign: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-        }}>
-          {t.teacher.uploadFailed}: {uploadError}
-          <button onClick={() => setUploadError(null)} style={{ marginLeft: "0.75rem", background: "none", border: "none", color: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center" }}><X size={14} strokeWidth={1.5} /></button>
         </div>
       )}
 

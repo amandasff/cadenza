@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PieceService } from "../../../lib/services/PieceService";
@@ -153,6 +154,7 @@ export default function MyPieces() {
     } catch (err) {
       console.error("upload error:", err);
       setUploadError("Upload failed — please try again.");
+      toast.error("Upload failed — please try again.");
     } finally {
       setUploadingFor(null);
     }
@@ -294,8 +296,11 @@ export default function MyPieces() {
       setPieces(prev => [...prev, { ...newPiece, goals: [], recordings: [] }]);
       setPieceForm({ title: "", composer: "", category: "repertoire" });
       setShowAddPiece(false);
+      toast.success("Piece added");
     } catch (err) {
-      setUploadError((err as { message?: string })?.message ?? "Could not add piece.");
+      const msg = (err as { message?: string })?.message ?? "Could not add piece.";
+      setUploadError(msg);
+      toast.error(msg);
     } finally {
       setAddingPiece(false);
     }

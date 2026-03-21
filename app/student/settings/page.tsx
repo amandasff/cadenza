@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { useTheme } from "../../../lib/context/ThemeContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
@@ -63,9 +64,10 @@ export default function StudentSettings() {
       .update({ display_name: displayName.trim(), instrument: instrument || null })
       .eq("id", student.id);
     setSaving(false);
-    if (err) { setError(err.message); return; }
+    if (err) { setError(err.message); toast.error(err.message); return; }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+    toast.success("Profile saved");
   }
 
   async function handleAvatarUpload(file: File) {
@@ -101,11 +103,12 @@ export default function StudentSettings() {
     setSavingUsername(true);
     const { error: err } = await supabase.from("profiles").update({ username: usernameDraft }).eq("id", student.id);
     setSavingUsername(false);
-    if (err) { setError(err.message); return; }
+    if (err) { setError(err.message); toast.error(err.message); return; }
     setUsername(usernameDraft);
     setUsernameStatus("idle");
     setUsernameSaved(true);
     setTimeout(() => setUsernameSaved(false), 2000);
+    toast.success("Username saved");
   }
 
   async function handleBillingPortal() {

@@ -551,7 +551,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 const active = tab.exact ? path === tab.href : path.startsWith(tab.href);
                 const showDot = tab.href === "/teacher/chat" && hasUnread && !active;
                 return (
-                  <button key={tab.href} onClick={() => { window.location.href = tab.href; }} style={{
+                  <button key={tab.href} onClick={() => { window.location.href = tab.href; }} className="sidebar-nav-item" style={{
                     display: "flex", alignItems: "center", width: "100%",
                     padding: "0.5rem 0.75rem", border: "none", cursor: "pointer",
                     borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
@@ -572,7 +572,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               {teacherSidebarPracticeTabs.map(tab => {
                 const active = path.startsWith(tab.href);
                 return (
-                  <Link key={tab.href} href={tab.href} style={{
+                  <Link key={tab.href} href={tab.href} className="sidebar-nav-item" style={{
                     display: "flex", alignItems: "center",
                     padding: "0.5rem 0.75rem",
                     borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
@@ -592,7 +592,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               const active = t.href === "/student" ? path === "/student" : path.startsWith(t.href);
               const showDot = t.href === "/student/chat" && hasUnread && !active;
               return (
-                <Link key={t.href} href={t.href} style={{
+                <Link key={t.href} href={t.href} className="sidebar-nav-item" style={{
                   display: "flex", alignItems: "center",
                   padding: "0.5rem 0.75rem",
                   borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",

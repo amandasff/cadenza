@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PieceService } from "../../../lib/services/PieceService";
@@ -347,6 +348,7 @@ function PracticeInner() {
         : (err as { message?: string })?.message ?? JSON.stringify(err);
       console.error("handleSubmit error:", err);
       setSaveError(msg);
+      toast.error(`Could not save session: ${msg}`);
       setSaving(false);
     }
   }

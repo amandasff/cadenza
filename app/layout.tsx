@@ -7,6 +7,7 @@ import LessonProviderClient from "@/components/LessonProviderClient";
 import HelpWidget from "@/components/HelpWidget";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Toaster } from "sonner";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -73,6 +74,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              fontFamily: "Inter, sans-serif",
+              fontSize: "0.875rem",
+              borderRadius: "4px",
+              border: "1px solid var(--border)",
+              background: "var(--white)",
+              color: "var(--charcoal)",
+            },
+          }}
+        />
       </body>
     </html>
   );

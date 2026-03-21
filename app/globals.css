@@ -882,3 +882,62 @@ html[data-theme="fun"] .student-shell {
     display: flex !important;
   }
 }
+
+/* ── Global input base styles ── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--charcoal);
+  font-family: Inter, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+textarea:focus,
+select:focus {
+  border-color: var(--charcoal);
+  box-shadow: 0 0 0 2px rgba(44, 40, 36, 0.08);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Sidebar nav item hover ── */
+.sidebar-nav-item {
+  transition: background 0.12s, color 0.12s;
+}
+.sidebar-nav-item:hover {
+  background: var(--cream-deep) !important;
+}
+
+/* ── Interactive item (card hover lift) ── */
+.interactive-item {
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.interactive-item:hover {
+  box-shadow: 0 4px 12px rgba(44, 40, 36, 0.10);
+  transform: translateY(-1px);
+}
+
+/* ── Text truncation utilities ── */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}

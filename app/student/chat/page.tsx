@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { ChatService } from "../../../lib/services/ChatService";
@@ -176,6 +177,7 @@ export default function StudentChat() {
       setTab("private");
     } catch {
       setInput(text);
+      toast.error("Failed to send — please try again.");
     } finally {
       setSending(false);
       inputRef.current?.focus();
@@ -238,6 +240,7 @@ export default function StudentChat() {
     } catch (err) {
       console.error('Image upload failed:', err);
       setImageError('Failed to send image — please try again.');
+      toast.error('Failed to send image — please try again.');
     }
     finally { setSendingImage(false); }
   }
