@@ -331,6 +331,7 @@ function PracticeInner() {
         if (sessionData?.id) lines.push(`SESSION:${sessionData.id}`);
 
         try {
+          if (!student.studioId) throw new Error("no studioId");
           await ChatService.create(supabase).postSystemMessage(
             student.studioId, student.id, teacherId, lines.join("\n")
           );
