@@ -143,6 +143,13 @@ export default function StudioPage() {
   const [username, setUsername] = useState<string | null>(null);
   const [copiedTrackId, setCopiedTrackId] = useState<string | null>(null);
 
+  // Self-assigned pieces + sheet music
+  const [showAddPiece, setShowAddPiece] = useState(false);
+  const [newPieceTitle, setNewPieceTitle] = useState("");
+  const [newPieceComposer, setNewPieceComposer] = useState("");
+  const [savingPiece, setSavingPiece] = useState(false);
+  const [uploadingSheetFor, setUploadingSheetFor] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     if (!student?.id) return;
     setLoading(true);
@@ -290,6 +297,61 @@ export default function StudioPage() {
     }
     setSavingTrack(false);
     setEditingTrackId(null);
+  }
+
+  async function handleAddPiece() {
+    if (!newPieceTitle.trim() || !student?.id) return;
+    setSavingPiece(true);
+    try {
+      const { data, error } = await supabase
+        .from("pieces")
+        .insert({
+          student_id: student.id,
+          teacher_id: null,
+          studio_id: student.studioId ?? null,
+          title: newPieceTitle.trim(),
+          composer: newPieceComposer.trim() || null,
+          category: "repertoire",
+          status: "learning",
+          sort_order: pieces.length,
+          is_self_assigned: true,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setPieces(prev => [...prev, data as PieceRow]);
+      setNewPieceTitle("");
+      setNewPieceComposer("");
+      setShowAddPiece(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingPiece(false);
+    }
+  }
+
+  async function handleUploadSheetMusic(pieceId: string, file: File) {
+    setUploadingSheetFor(pieceId);
+    try {
+      const ext = file.name.split(".").pop() ?? "pdf";
+      const path = `${pieceId}.${ext}`;
+      const contentType = file.type || (ext === "pdf" ? "application/pdf" : "image/jpeg");
+      const { error: uploadErr } = await supabase.storage
+        .from("sheet-music")
+        .upload(path, file, { upsert: true, contentType });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("sheet-music").getPublicUrl(path);
+      const { error: updateErr } = await supabase
+        .from("pieces")
+        .update({ sheet_music_url: urlData.publicUrl })
+        .eq("id", pieceId);
+      if (updateErr) throw updateErr;
+      setPieces(prev => prev.map(p => p.id === pieceId ? { ...p, sheet_music_url: urlData.publicUrl } : p));
+    } catch (e) {
+      console.error("Sheet music upload failed:", e);
+    } finally {
+      setUploadingSheetFor(null);
+    }
   }
 
   const weather = practiceWeather(profile?.streak_days ?? 0);
@@ -760,25 +822,92 @@ export default function StudioPage() {
 
           {/* Pieces */}
           <div>
-            <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
-              Repertoire
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Repertoire
+              </div>
+              <button
+                onClick={() => setShowAddPiece(v => !v)}
+                style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--charcoal)", background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "0.2rem 0.6rem", cursor: "pointer" }}
+              >
+                + Add piece
+              </button>
             </div>
-            {pieces.length === 0 ? (
+
+            {showAddPiece && (
+              <div style={{ background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 8, padding: "0.875rem 1rem", marginBottom: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <input
+                  placeholder="Title *"
+                  value={newPieceTitle}
+                  onChange={e => setNewPieceTitle(e.target.value)}
+                  style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "0.4rem 0.6rem", border: "1px solid var(--border)", borderRadius: 6, outline: "none", background: "var(--white)", color: "var(--charcoal)" }}
+                />
+                <input
+                  placeholder="Composer (optional)"
+                  value={newPieceComposer}
+                  onChange={e => setNewPieceComposer(e.target.value)}
+                  style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", padding: "0.4rem 0.6rem", border: "1px solid var(--border)", borderRadius: 6, outline: "none", background: "var(--white)", color: "var(--charcoal)" }}
+                />
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    onClick={handleAddPiece}
+                    disabled={savingPiece || !newPieceTitle.trim()}
+                    style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, padding: "0.35rem 0.875rem", background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 6, cursor: "pointer", opacity: savingPiece || !newPieceTitle.trim() ? 0.5 : 1 }}
+                  >
+                    {savingPiece ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddPiece(false); setNewPieceTitle(""); setNewPieceComposer(""); }}
+                    style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {pieces.length === 0 && !showAddPiece ? (
               <div style={{ textAlign: "center", padding: "2rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.875rem" }}>
                 <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🎵</div>
-                No pieces yet — your teacher will assign pieces to you.
+                No pieces yet — your teacher will assign pieces, or add your own above.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {pieces.map(piece => (
-                  <div key={piece.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{piece.title}</div>
-                      {piece.composer && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>{piece.composer}</div>}
+                  <div key={piece.id} style={{ padding: "0.875rem 1rem", background: "var(--white)", border: "1px solid var(--border)", borderRadius: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                          <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)" }}>{piece.title}</span>
+                          {piece.is_self_assigned && (
+                            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600, color: "var(--muted)", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 3, padding: "0.1rem 0.35rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>self assigned</span>
+                          )}
+                        </div>
+                        {piece.composer && <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.125rem" }}>{piece.composer}</div>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                        {/* Sheet music upload */}
+                        <label style={{ cursor: "pointer" }} title={piece.sheet_music_url ? "Replace sheet music" : "Upload sheet music"}>
+                          <input
+                            type="file"
+                            accept=".pdf,image/*"
+                            style={{ display: "none" }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadSheetMusic(piece.id, f); e.target.value = ""; }}
+                          />
+                          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: uploadingSheetFor === piece.id ? "var(--muted)" : piece.sheet_music_url ? "var(--sky)" : "var(--muted)", border: "1px solid var(--border)", borderRadius: 6, padding: "0.2rem 0.5rem", background: "var(--cream)" }}>
+                            {uploadingSheetFor === piece.id ? "…" : piece.sheet_music_url ? "Sheet ✓" : "Sheet"}
+                          </span>
+                        </label>
+                        <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: STATUS_COLORS[piece.status] ?? "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          {STATUS_LABELS[piece.status] ?? piece.status}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", fontWeight: 600, color: STATUS_COLORS[piece.status] ?? "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}>
-                      {STATUS_LABELS[piece.status] ?? piece.status}
-                    </div>
+                    {piece.sheet_music_url && (
+                      <a href={piece.sheet_music_url} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: "0.5rem", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--sky)", textDecoration: "none" }}>
+                        View sheet music ↗
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>

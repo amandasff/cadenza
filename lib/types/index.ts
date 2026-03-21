@@ -155,6 +155,7 @@ export interface PieceRow {
   sort_order: number;
   sheet_music_url: string | null;
   score_url: string | null;
+  is_self_assigned: boolean;
   created_at: string;
 }
 
