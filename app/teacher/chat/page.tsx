@@ -100,11 +100,14 @@ export default function TeacherChat() {
         .catch(() => setLoadingMessages(false));
       unsub = service.subscribeToPrivateThread(teacher.studioId, teacher.id, selectedStudent.id, onInsert, onUpdate, onDelete);
     }
+    let mounted = true;
     const pollInterval = setInterval(async () => {
+      if (!mounted) return;
       try {
         const fresh = selectedStudent === null
           ? await service.getAnnouncements(teacher.studioId!)
           : await service.getPrivateThread(teacher.studioId!, teacher.id, selectedStudent.id);
+        if (!mounted) return;
         setMessages(prev => {
           const ids = new Set(prev.map(m => m.id));
           const added = (fresh as MessageRow[]).filter(m => !ids.has(m.id));
@@ -113,7 +116,7 @@ export default function TeacherChat() {
       } catch { /* ignore */ }
     }, 3000);
 
-    return () => { unsub(); clearInterval(pollInterval); };
+    return () => { mounted = false; unsub(); clearInterval(pollInterval); };
   }, [teacher?.studioId, teacher?.id, selectedStudent]);
 
   useEffect(() => {

@@ -69,6 +69,18 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
   const clipStartElapsedRef = useRef(0);
   const clipCountRef = useRef(0);
 
+  // Free hardware resources if the provider unmounts mid-session
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.onstop = () => {};
+        mediaRecorderRef.current.stop();
+      }
+      micStreamRef.current?.getTracks().forEach(t => t.stop());
+      audioCtxRef.current?.close().catch(() => {});
+    };
+  }, []);
+
   // Main session timer — increments only while recording
   useEffect(() => {
     if (!recording) return;
@@ -278,19 +290,19 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
           const url = URL.createObjectURL(blob);
           const audio = document.createElement("audio");
           audio.src = url;
+          const finish = (b: Blob) => { URL.revokeObjectURL(url); resolve({ blob: b, elapsed: currentElapsed }); };
+          audio.addEventListener("error", () => finish(blob), { once: true });
           audio.addEventListener("loadedmetadata", () => {
             if (audio.duration === Infinity) {
               audio.currentTime = 1e101;
               audio.addEventListener("timeupdate", () => {
                 audio.currentTime = 0;
-                URL.revokeObjectURL(url);
-                resolve({ blob, elapsed: currentElapsed });
+                finish(blob);
               }, { once: true });
             } else {
-              URL.revokeObjectURL(url);
-              resolve({ blob, elapsed: currentElapsed });
+              finish(blob);
             }
-          });
+          }, { once: true });
         };
         recorder.stop();
       } else {

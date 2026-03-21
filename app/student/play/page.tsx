@@ -349,6 +349,9 @@ export default function PlayPage() {
   const practiceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const practiceNotesRef = useRef<OMRNote[]>([]);
   const practiceCanvasRef = useRef<HTMLCanvasElement>(null);
+  const practiceFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hitFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -459,7 +462,8 @@ export default function PlayPage() {
         practiceResultsRef.current = [...practiceResultsRef.current, "hit"];
         setPracticeResults([...practiceResultsRef.current]);
         setPracticeFlash("hit");
-        setTimeout(() => setPracticeFlash(null), 300);
+        if (practiceFlashTimerRef.current) clearTimeout(practiceFlashTimerRef.current);
+        practiceFlashTimerRef.current = setTimeout(() => setPracticeFlash(null), 300);
         wrongAttemptsRef.current = 0;
         setWrongAttempts(0);
         const next = idx + 1;
@@ -471,7 +475,8 @@ export default function PlayPage() {
         wrongAttemptsRef.current = attempts;
         setWrongAttempts(attempts);
         setPracticeFlash("miss");
-        setTimeout(() => setPracticeFlash(null), 200);
+        if (practiceFlashTimerRef.current) clearTimeout(practiceFlashTimerRef.current);
+        practiceFlashTimerRef.current = setTimeout(() => setPracticeFlash(null), 200);
         if (attempts >= 3) {
           // Auto-advance after 3 misses
           practiceResultsRef.current = [...practiceResultsRef.current, "miss"];
@@ -742,11 +747,11 @@ export default function PlayPage() {
     setCountdown(3);
 
     let c = 3;
-    const cdInterval = setInterval(() => {
+    countdownIntervalRef.current = setInterval(() => {
       c--;
       setCountdown(c);
       if (c <= 0) {
-        clearInterval(cdInterval);
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
         startTimeRef.current = performance.now();
         setGameState("playing");
         runGameLoop(song);
@@ -802,7 +807,8 @@ export default function PlayPage() {
             setCombo(comboRef.current);
             setMaxCombo(maxComboRef.current);
             setHitFlash(note.id);
-            setTimeout(() => setHitFlash(null), 200);
+            if (hitFlashTimerRef.current) clearTimeout(hitFlashTimerRef.current);
+            hitFlashTimerRef.current = setTimeout(() => setHitFlash(null), 200);
           }
         } else if (note.xPos < HIT_ZONE_X - HIT_WINDOW_PX) {
           // Passed the hit zone without being hit
@@ -975,6 +981,9 @@ export default function PlayPage() {
     return () => {
       cancelAnimationFrame(animFrameRef.current);
       if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      if (practiceFlashTimerRef.current) clearTimeout(practiceFlashTimerRef.current);
+      if (hitFlashTimerRef.current) clearTimeout(hitFlashTimerRef.current);
       streamRef.current?.getTracks().forEach(t => t.stop());
       audioCtxRef.current?.close();
     };

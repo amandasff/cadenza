@@ -19,6 +19,12 @@ export default function SupportChatWidget() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasGreeted = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort in-flight stream on unmount
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   // Auto-scroll on new content
   useEffect(() => {
@@ -28,7 +34,7 @@ export default function SupportChatWidget() {
   // Focus input and show greeting when opened
   useEffect(() => {
     if (!open) return;
-    setTimeout(() => inputRef.current?.focus(), 60);
+    const id = setTimeout(() => inputRef.current?.focus(), 60);
     if (!hasGreeted.current) {
       hasGreeted.current = true;
       setMessages([{
@@ -36,6 +42,7 @@ export default function SupportChatWidget() {
         content: t.common.supportGreeting,
       }]);
     }
+    return () => clearTimeout(id);
   }, [open]);
 
   async function send() {
@@ -50,6 +57,9 @@ export default function SupportChatWidget() {
     // Add empty assistant message to stream into
     setMessages(prev => [...prev, { role: "assistant", content: "" }]);
 
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const res = await fetch("/api/support-chat", {
         method: "POST",
@@ -57,6 +67,7 @@ export default function SupportChatWidget() {
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
         }),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) throw new Error("Failed");
@@ -88,7 +99,8 @@ export default function SupportChatWidget() {
           } catch { /* skip malformed */ }
         }
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {

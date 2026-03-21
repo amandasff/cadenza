@@ -36,6 +36,17 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const targetRef = useRef<RecordingTarget | null>(null);
 
+  // Stop any in-progress recording and clear the timer if the provider unmounts
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.onstop = () => {};
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
   const stopRecording = useCallback(() => {
     mediaRecorderRef.current?.stop();
   }, []);

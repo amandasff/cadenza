@@ -24,6 +24,12 @@ export default function FeedbackWidget() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const popoverRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear pending timers on unmount
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -39,7 +45,9 @@ export default function FeedbackWidget() {
 
   // Focus textarea when opened
   useEffect(() => {
-    if (open) setTimeout(() => textareaRef.current?.focus(), 50);
+    if (!open) return;
+    const id = setTimeout(() => textareaRef.current?.focus(), 50);
+    return () => clearTimeout(id);
   }, [open]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -63,10 +71,10 @@ export default function FeedbackWidget() {
 
     if (error) {
       setStatus("error");
-      setTimeout(() => setStatus("idle"), 3000);
+      timerRef.current = setTimeout(() => setStatus("idle"), 3000);
     } else {
       setStatus("sent");
-      setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         setOpen(false);
         setMessage("");
         setType("general");

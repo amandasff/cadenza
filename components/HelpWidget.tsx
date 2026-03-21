@@ -35,12 +35,22 @@ export default function HelpWidget() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasGreeted = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Feedback state
   const [fbType, setFbType] = useState<FeedbackType>("general");
   const [fbMessage, setFbMessage] = useState("");
   const [fbStatus, setFbStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Abort in-flight stream and clear pending timers on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (fbTimerRef.current) clearTimeout(fbTimerRef.current);
+    };
+  }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -57,16 +67,17 @@ export default function HelpWidget() {
   // On open: greet + focus
   useEffect(() => {
     if (!open) return;
+    let id: ReturnType<typeof setTimeout>;
     if (tab === "chat") {
-      setTimeout(() => inputRef.current?.focus(), 60);
+      id = setTimeout(() => inputRef.current?.focus(), 60);
       if (!hasGreeted.current) {
         hasGreeted.current = true;
         setMessages([{ role: "assistant", content: t.common.supportGreeting }]);
       }
+    } else {
+      id = setTimeout(() => textareaRef.current?.focus(), 60);
     }
-    if (tab === "feedback") {
-      setTimeout(() => textareaRef.current?.focus(), 60);
-    }
+    return () => clearTimeout(id);
   }, [open, tab]);
 
   // Auto-scroll chat
@@ -82,11 +93,15 @@ export default function HelpWidget() {
     setMessages(newMessages);
     setStreaming(true);
     setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const res = await fetch("/api/support-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
+        signal: controller.signal,
       });
       if (!res.ok || !res.body) throw new Error("Failed");
       const reader = res.body.getReader();
@@ -112,7 +127,8 @@ export default function HelpWidget() {
           } catch { /* skip malformed */ }
         }
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { ...updated[updated.length - 1], content: "Sorry, something went wrong. Please try again." };
@@ -138,10 +154,10 @@ export default function HelpWidget() {
     });
     if (error) {
       setFbStatus("error");
-      setTimeout(() => setFbStatus("idle"), 3000);
+      fbTimerRef.current = setTimeout(() => setFbStatus("idle"), 3000);
     } else {
       setFbStatus("sent");
-      setTimeout(() => { setOpen(false); setFbMessage(""); setFbType("general"); setFbStatus("idle"); }, 2000);
+      fbTimerRef.current = setTimeout(() => { setOpen(false); setFbMessage(""); setFbType("general"); setFbStatus("idle"); }, 2000);
     }
   }
 

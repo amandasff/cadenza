@@ -88,9 +88,12 @@ export default function StudentChat() {
       msg => setAnnouncements(p => p.map(m => m.id === msg.id ? msg : m)),
       id  => setAnnouncements(p => p.filter(m => m.id !== id))
     );
+    let mounted = true;
     const pollAnn = setInterval(async () => {
+      if (!mounted) return;
       try {
         const fresh = await chatService.getAnnouncements(student.studioId!);
+        if (!mounted) return;
         setAnnouncements(prev => {
           const ids = new Set(prev.map(m => m.id));
           const added = fresh.filter((m: MessageRow) => !ids.has(m.id));
@@ -98,7 +101,7 @@ export default function StudentChat() {
         });
       } catch { /* ignore */ }
     }, 3000);
-    return () => { unsubAnn(); clearInterval(pollAnn); };
+    return () => { mounted = false; unsubAnn(); clearInterval(pollAnn); };
   }, [student?.studioId, student?.id]);
 
   useEffect(() => {
@@ -111,9 +114,12 @@ export default function StudentChat() {
       msg => setPrivateMessages(p => p.map(m => m.id === msg.id ? msg : m)),
       id  => setPrivateMessages(p => p.filter(m => m.id !== id))
     );
+    let mounted = true;
     const pollPriv = setInterval(async () => {
+      if (!mounted) return;
       try {
         const fresh = await chatService.getPrivateThread(student.studioId!, student.id, teacherId);
+        if (!mounted) return;
         setPrivateMessages(prev => {
           const ids = new Set(prev.map(m => m.id));
           const added = fresh.filter((m: MessageRow) => !ids.has(m.id));
@@ -121,7 +127,7 @@ export default function StudentChat() {
         });
       } catch { /* ignore */ }
     }, 3000);
-    return () => { unsubPriv(); clearInterval(pollPriv); };
+    return () => { mounted = false; unsubPriv(); clearInterval(pollPriv); };
   }, [student?.studioId, student?.id, teacherId]);
 
   // Fetch AI feedback for any session system messages
