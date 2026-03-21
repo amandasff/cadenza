@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { X, PhoneOff } from "lucide-react";
+import { X, PhoneOff, Minimize2, Maximize2 } from "lucide-react";
 
 type Mode = "preview" | "recording" | "review";
 
@@ -23,6 +23,8 @@ export default function VideoRecorderModal({ uploadPath, onSend, onClose }: Prop
   const [seconds, setSeconds] = useState(0);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [minimized, setMinimized] = useState(false);
+  const pipVideoRef = useRef<HTMLVideoElement>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -63,6 +65,13 @@ export default function VideoRecorderModal({ uploadPath, onSend, onClose }: Prop
       liveVideoRef.current.srcObject = streamRef.current;
     }
   }, [mode]);
+
+  // Sync pip video with stream
+  useEffect(() => {
+    if (minimized && pipVideoRef.current && streamRef.current) {
+      pipVideoRef.current.srcObject = streamRef.current;
+    }
+  }, [minimized]);
 
   function cleanup() {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -139,6 +148,45 @@ export default function VideoRecorderModal({ uploadPath, onSend, onClose }: Prop
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
+  // Minimized pip — shown while recording, lets user browse the page
+  if (minimized && mode === "recording") {
+    return (
+      <div style={{
+        position: "fixed", bottom: 88, right: 16, zIndex: 9500,
+        width: 160, borderRadius: 14,
+        background: "#111", boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+        overflow: "hidden", fontFamily: "Inter, sans-serif",
+      }}>
+        {/* Camera thumbnail */}
+        <div style={{ position: "relative", aspectRatio: "4/3", background: "#000" }}>
+          <video ref={pipVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scaleX(-1)", display: "block" }} />
+          {/* REC indicator */}
+          <div style={{ position: "absolute", top: 6, left: 6, display: "flex", alignItems: "center", gap: 4, background: "rgba(0,0,0,0.6)", borderRadius: 10, padding: "2px 7px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#e74c3c", animation: "rec-pulse 1.2s infinite", display: "inline-block" }} />
+            <span style={{ color: "#fff", fontSize: "0.625rem", fontWeight: 700 }}>{fmt(seconds)}</span>
+          </div>
+        </div>
+        {/* Controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px" }}>
+          <button
+            onClick={stopRecording}
+            style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: "none", background: "#e74c3c", color: "#fff", fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, cursor: "pointer" }}
+          >
+            Stop
+          </button>
+          <button
+            onClick={() => setMinimized(false)}
+            title="Expand"
+            style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <Maximize2 size={12} strokeWidth={1.5} />
+          </button>
+        </div>
+        <style>{`@keyframes rec-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)",
@@ -146,19 +194,32 @@ export default function VideoRecorderModal({ uploadPath, onSend, onClose }: Prop
       alignItems: "center", justifyContent: "center",
       fontFamily: "Inter, sans-serif",
     }}>
-      {/* Close button */}
-      <button
-        onClick={handleClose}
-        style={{
-          position: "absolute", top: "1.25rem", right: "1.25rem",
-          background: "rgba(255,255,255,0.15)", border: "none", color: "#fff",
-          borderRadius: "50%", width: 36, height: 36, cursor: "pointer",
-          fontSize: "1.125rem", display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 1,
-        }}
-      >
-        <X size={18} strokeWidth={1.5} />
-      </button>
+      {/* Top bar: close + minimize */}
+      <div style={{ position: "absolute", top: "1.25rem", left: 0, right: 0, display: "flex", justifyContent: "space-between", padding: "0 1.25rem", zIndex: 1 }}>
+        <button
+          onClick={handleClose}
+          style={{
+            background: "rgba(255,255,255,0.15)", border: "none", color: "#fff",
+            borderRadius: "50%", width: 36, height: 36, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <X size={18} strokeWidth={1.5} />
+        </button>
+        {mode === "recording" && (
+          <button
+            onClick={() => setMinimized(true)}
+            title="Minimize — keep recording while browsing"
+            style={{
+              background: "rgba(255,255,255,0.15)", border: "none", color: "#fff",
+              borderRadius: "50%", width: 36, height: 36, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Minimize2 size={18} strokeWidth={1.5} />
+          </button>
+        )}
+      </div>
 
       {error ? (
         <div style={{ color: "#fff", textAlign: "center", padding: "2rem", maxWidth: 320 }}>
