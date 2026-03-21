@@ -12,35 +12,32 @@ const TeacherHomeDemo = dynamic(() => import("../components/demo/TeacherHomeDemo
 const StudentHomeDemo = dynamic(() => import("../components/demo/StudentHomeDemo"), { ssr: false });
 
 const STUDENT_BULLETS = [
-  "Play music games, earn streaks, climb leaderboards, and collect avatars",
-  "Learn anything from an AI tutor",
-  "Share your practice with teachers, receive feedback between lessons",
-  "Find and listen to music you like",
-  "Upload pieces for easy access, and goal setting",
-  "Track your practice journey, share it, and discover others",
-  "Tuner, metronome, and full chords directory",
+  "Earn streaks, play music games, and collect composer avatars",
+  "Get AI feedback on your recordings between lessons",
+  "Share your music with your teacher and the world",
+  "Sheet music, chords, tuner, and metronome — all in one place",
+  "Track your practice journey and celebrate your progress",
+  "Discover music you love and find your own sound",
 ];
 
 const TEACHER_BULLETS = [
-  "Hear your students' practice and leave feedback between lessons",
+  "Hear your students practice and leave feedback between lessons",
+  "Students stay motivated with streaks, games, and collectibles",
   "Easy studio management, lesson tracking, and billing",
-  "Play music games, earn streaks, climb leaderboards, and collect avatars",
-  "Upload pieces for easy access, and goal setting",
-  "Learn anything from an AI tutor",
-  "Track your practice journey, share it, and discover others",
-  "Find and listen to music you like",
-  "Tuner, metronome, and full chords directory",
+  "Upload and annotate sheet music for every student",
+  "Track each student's practice history at a glance",
+  "Everything in one place — no more scattered apps",
 ];
 
 const COPY: Record<string, { headline: string; subline: string; bullets: string[] }> = {
   student: {
     headline: "Practice every day.\nActually enjoy it.",
-    subline: "Learn faster, level up, and keep everything in one place.",
+    subline: "The music practice app that students love.",
     bullets: STUDENT_BULLETS,
   },
   teacher: {
     headline: "Your students\nwill actually practice.",
-    subline: "And you'll know exactly how it went.",
+    subline: "The music practice app that students love.",
     bullets: TEACHER_BULLETS,
   },
 };
@@ -153,7 +150,7 @@ export default function Home() {
       {/* ── Layer 2: dark overlay ── */}
       <div style={{
         position: "absolute", inset: 0, zIndex: 1,
-        background: "rgba(20,17,14,0.48)",
+        background: "rgba(20,17,14,0.38)",
         opacity: unblurring ? 0 : 1,
         transition: "opacity 1.8s ease-out",
         pointerEvents: "none",
@@ -221,7 +218,7 @@ export default function Home() {
               {(COPY[role] ?? COPY.student).headline}
             </h1>
 
-            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9rem", color: "#6B6560", lineHeight: 1.5, margin: "0 0 1.5rem" }}>
+            <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.9375rem", color: "#5B9E79", fontWeight: 600, lineHeight: 1.5, margin: "0 0 1.5rem" }}>
               {(COPY[role] ?? COPY.student).subline}
             </p>
 
