@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mic, MicOff, Play, Square, RotateCcw } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, Play, Square, RotateCcw, Music, Zap } from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // ── Pitch detection (YIN algorithm) ─────────────────────────────────────────
 function detectPitch(buf: Float32Array, sampleRate: number): number | null {
@@ -52,6 +53,46 @@ function freqToMidi(freq: number): number {
 function midiToNoteName(midi: number): string {
   const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   return NOTES[midi % 12] + Math.floor(midi / 12 - 1);
+}
+
+// ── Practice mode types + utilities ─────────────────────────────────────────
+interface OMRNote {
+  note: string;    // e.g. "C", "C#", "Bb"
+  octave: number;  // 4 = middle C
+  duration: number;
+  beat: number;
+}
+
+interface PieceWithGame {
+  id: string;
+  title: string;
+  composer: string | null;
+  sheet_music_url: string | null;
+  game: {
+    notes_json: OMRNote[];
+    key_signature: string | null;
+    time_signature: string | null;
+    bpm_suggestion: number;
+    omr_confidence: number;
+  } | null;
+}
+
+const NOTE_SEMITONES: Record<string, number> = {
+  C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3,
+  E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8,
+  A: 9, "A#": 10, Bb: 10, B: 11,
+};
+
+function omrNoteToMidi(n: OMRNote): number {
+  return (n.octave + 1) * 12 + (NOTE_SEMITONES[n.note] ?? 0);
+}
+
+function pitchLaneColor(noteName: string): string {
+  const colors: Record<string, string> = {
+    C: "#e74c3c", D: "#e67e22", E: "#f1c40f",
+    F: "#2ecc71", G: "#1abc9c", A: "#3498db", B: "#9b59b6",
+  };
+  return colors[noteName.charAt(0)] ?? "#888";
 }
 
 // ── Built-in songs (Guitar Pro-style note data) ──────────────────────────────
@@ -287,6 +328,28 @@ export default function PlayPage() {
   const [elapsed, setElapsed] = useState(0); // seconds since song start
   const [hitFlash, setHitFlash] = useState<number | null>(null); // note id of last hit
 
+  // ── Practice mode state ───────────────────────────────────────────────────
+  const [tab, setTab] = useState<"guitar" | "practice">("guitar");
+  const [studentPieces, setStudentPieces] = useState<PieceWithGame[]>([]);
+  const [piecesLoading, setPiecesLoading] = useState(false);
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [practiceGameState, setPracticeGameState] = useState<"idle" | "playing" | "finished">("idle");
+  const [activePiece, setActivePiece] = useState<PieceWithGame | null>(null);
+  const [practiceNotes, setPracticeNotes] = useState<OMRNote[]>([]);
+  const [currentNoteIdx, setCurrentNoteIdx] = useState(0);
+  const currentNoteIdxRef = useRef(0);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
+  const wrongAttemptsRef = useRef(0);
+  const [practiceResults, setPracticeResults] = useState<NoteResult[]>([]);
+  const practiceResultsRef = useRef<NoteResult[]>([]);
+  const [practiceFlash, setPracticeFlash] = useState<"hit" | "miss" | null>(null);
+  const [practiceFeedback, setPracticeFeedback] = useState<string | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const practiceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const practiceNotesRef = useRef<OMRNote[]>([]);
+  const practiceCanvasRef = useRef<HTMLCanvasElement>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -317,6 +380,321 @@ export default function PlayPage() {
       setMicError("Microphone access denied. Please allow microphone access to play.");
     }
   }, []);
+
+  // ── Load student pieces ────────────────────────────────────────────────────
+  const loadPieces = useCallback(async () => {
+    setPiecesLoading(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setPiecesLoading(false); return; }
+
+    const [{ data: pieces }, { data: games }] = await Promise.all([
+      supabase.from("pieces").select("id, title, composer, sheet_music_url")
+        .eq("student_id", user.id).not("sheet_music_url", "is", null).order("created_at", { ascending: false }),
+      supabase.from("piece_games").select("piece_id, notes_json, key_signature, time_signature, bpm_suggestion, omr_confidence")
+        .eq("student_id", user.id),
+    ]);
+
+    type RawPiece = { id: string; title: string; composer: string | null; sheet_music_url: string | null };
+    type RawGame = { piece_id: string; notes_json: OMRNote[]; key_signature: string | null; time_signature: string | null; bpm_suggestion: number; omr_confidence: number };
+    const merged: PieceWithGame[] = (pieces ?? []).map((p: RawPiece) => ({
+      ...p,
+      game: (games ?? []).find((g: RawGame) => g.piece_id === p.id) ?? null,
+    }));
+    setStudentPieces(merged);
+    setPiecesLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (tab === "practice") loadPieces();
+  }, [tab, loadPieces]);
+
+  // ── Generate game from sheet music ────────────────────────────────────────
+  async function generateGame(piece: PieceWithGame) {
+    setGeneratingFor(piece.id);
+    setGenerateError(null);
+    try {
+      const res = await fetch(`/api/pieces/${piece.id}/generate-game`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed");
+      await loadPieces(); // refresh list with new game data
+    } catch (e) {
+      setGenerateError((e as Error).message);
+    } finally {
+      setGeneratingFor(null);
+    }
+  }
+
+  // ── Start practice game ────────────────────────────────────────────────────
+  async function startPractice(piece: PieceWithGame) {
+    if (!piece.game) return;
+    if (!micGranted) await setupMic();
+    const notes = piece.game.notes_json;
+    setPracticeNotes(notes);
+    practiceNotesRef.current = notes;
+    setActivePiece(piece);
+    setCurrentNoteIdx(0);
+    currentNoteIdxRef.current = 0;
+    setWrongAttempts(0);
+    wrongAttemptsRef.current = 0;
+    setPracticeResults([]);
+    practiceResultsRef.current = [];
+    setPracticeFlash(null);
+    setPracticeFeedback(null);
+    setPracticeGameState("playing");
+
+    // Polling loop — check pitch at 10fps
+    practiceIntervalRef.current = setInterval(() => {
+      const notes = practiceNotesRef.current;
+      const idx = currentNoteIdxRef.current;
+      if (idx >= notes.length) return;
+
+      const freq = getPitch();
+      if (!freq) return;
+      const detectedMidi = freqToMidi(freq);
+      const expectedMidi = omrNoteToMidi(notes[idx]);
+      const isHit = Math.abs(detectedMidi - expectedMidi) <= 1; // ±1 semitone
+
+      if (isHit) {
+        practiceResultsRef.current = [...practiceResultsRef.current, "hit"];
+        setPracticeResults([...practiceResultsRef.current]);
+        setPracticeFlash("hit");
+        setTimeout(() => setPracticeFlash(null), 300);
+        wrongAttemptsRef.current = 0;
+        setWrongAttempts(0);
+        const next = idx + 1;
+        currentNoteIdxRef.current = next;
+        setCurrentNoteIdx(next);
+        if (next >= notes.length) finishPractice();
+      } else {
+        const attempts = wrongAttemptsRef.current + 1;
+        wrongAttemptsRef.current = attempts;
+        setWrongAttempts(attempts);
+        setPracticeFlash("miss");
+        setTimeout(() => setPracticeFlash(null), 200);
+        if (attempts >= 3) {
+          // Auto-advance after 3 misses
+          practiceResultsRef.current = [...practiceResultsRef.current, "miss"];
+          setPracticeResults([...practiceResultsRef.current]);
+          wrongAttemptsRef.current = 0;
+          setWrongAttempts(0);
+          const next = idx + 1;
+          currentNoteIdxRef.current = next;
+          setCurrentNoteIdx(next);
+          if (next >= notes.length) finishPractice();
+        }
+      }
+    }, 100); // 10fps
+  }
+
+  function finishPractice() {
+    if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
+    setPracticeGameState("finished");
+    fetchPracticeFeedback();
+  }
+
+  function stopPractice() {
+    if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
+    setPracticeGameState("idle");
+    setActivePiece(null);
+  }
+
+  async function fetchPracticeFeedback() {
+    if (!activePiece?.game) return;
+    setFeedbackLoading(true);
+    const results = practiceResultsRef.current;
+    const hits = results.filter(r => r === "hit").length;
+    const notes = practiceNotesRef.current;
+    // Collect missed note names
+    const missedNoteNames = results
+      .map((r, i) => r === "miss" ? `${notes[i]?.note}${notes[i]?.octave}` : null)
+      .filter(Boolean) as string[];
+    // Deduplicate and count
+    const missFreq: Record<string, number> = {};
+    missedNoteNames.forEach(n => { missFreq[n] = (missFreq[n] ?? 0) + 1; });
+    const topMissed = Object.entries(missFreq).sort((a, b) => b[1] - a[1]).map(([n]) => n);
+    try {
+      const res = await fetch("/api/play/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pieceTitle: activePiece.title,
+          keySignature: activePiece.game.key_signature,
+          totalNotes: results.length,
+          hitCount: hits,
+          missedNoteNames: topMissed,
+        }),
+      });
+      const data = await res.json();
+      setPracticeFeedback(data.feedback ?? null);
+    } catch { /* feedback is optional */ }
+    setFeedbackLoading(false);
+  }
+
+  // ── Practice canvas draw ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (practiceGameState !== "playing") return;
+    const canvas = practiceCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const notes = practiceNotesRef.current;
+    const idx = currentNoteIdxRef.current;
+    if (notes.length === 0) return;
+
+    // Compute unique pitches sorted high → low
+    const midiSet = new Set(notes.map(omrNoteToMidi));
+    const sortedMidis = [...midiSet].sort((a, b) => b - a);
+    const numLanes = sortedMidis.length;
+    const LANE_H = Math.max(38, Math.min(60, Math.floor(300 / numLanes)));
+    const canvasH = numLanes * LANE_H;
+    const W = canvas.offsetWidth;
+    canvas.width = W * window.devicePixelRatio;
+    canvas.height = canvasH * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    // Background
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(0, 0, W, canvasH);
+
+    // Lane lines + labels
+    const LABEL_W = 52;
+    const HIT_X = LABEL_W + 140;
+    const NOTE_SPACING_FWD = 100; // px between future notes
+    const NOTE_SPACING_BACK = 64;
+
+    for (let li = 0; li < numLanes; li++) {
+      const midi = sortedMidis[li];
+      const y = li * LANE_H + LANE_H / 2;
+      const noteLetter = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"][midi % 12];
+      const noteOct = Math.floor(midi / 12) - 1;
+      const color = pitchLaneColor(noteLetter);
+
+      // Lane bg
+      ctx.fillStyle = li % 2 === 0 ? "rgba(255,255,255,0.025)" : "rgba(0,0,0,0)";
+      ctx.fillRect(LABEL_W, li * LANE_H, W - LABEL_W, LANE_H);
+
+      // Lane line
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(LABEL_W, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = color;
+      ctx.font = "bold 11px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${noteLetter}${noteOct}`, LABEL_W / 2, y + 4);
+    }
+
+    // Hit zone line
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(HIT_X, 0);
+    ctx.lineTo(HIT_X, canvasH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw notes (past, current, future)
+    for (let ni = Math.max(0, idx - 5); ni < Math.min(notes.length, idx + 8); ni++) {
+      const note = notes[ni];
+      const midi = omrNoteToMidi(note);
+      const laneIdx = sortedMidis.indexOf(midi);
+      if (laneIdx === -1) continue;
+      const y = laneIdx * LANE_H + LANE_H / 2;
+      const color = pitchLaneColor(note.note);
+
+      let x: number;
+      let alpha = 1;
+      let isCurrentNote = false;
+      if (ni === idx) {
+        // Current note — stop at hit zone
+        x = HIT_X;
+        isCurrentNote = true;
+        if (practiceFlash === "hit") ctx.shadowColor = "#2ecc71";
+        else if (practiceFlash === "miss") ctx.shadowColor = "#e74c3c";
+        else ctx.shadowColor = color;
+        ctx.shadowBlur = 18;
+      } else if (ni < idx) {
+        x = HIT_X - (idx - ni) * NOTE_SPACING_BACK;
+        alpha = 0.3;
+      } else {
+        x = HIT_X + (ni - idx) * NOTE_SPACING_FWD;
+        alpha = 0.55;
+      }
+
+      const pillW = isCurrentNote ? 70 : 52;
+      const pillH = isCurrentNote ? LANE_H * 0.72 : LANE_H * 0.52;
+      const r = pillH / 2;
+      const rx = x - pillW / 2;
+
+      // Result color override
+      const result = practiceResultsRef.current[ni];
+      const fillColor = result === "hit"
+        ? "#2ecc71"
+        : result === "miss"
+        ? "#c0392b"
+        : isCurrentNote && practiceFlash === "hit"
+        ? "#2ecc71"
+        : isCurrentNote && practiceFlash === "miss"
+        ? "#e74c3c"
+        : color;
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = fillColor;
+      ctx.beginPath();
+      ctx.moveTo(rx + r, y - pillH / 2);
+      ctx.lineTo(rx + pillW - r, y - pillH / 2);
+      ctx.arcTo(rx + pillW, y - pillH / 2, rx + pillW, y + pillH / 2, r);
+      ctx.lineTo(rx + pillW, y + pillH / 2);
+      ctx.arcTo(rx + pillW, y + pillH / 2, rx + pillW - r, y + pillH / 2, r);
+      ctx.lineTo(rx + r, y + pillH / 2);
+      ctx.arcTo(rx, y + pillH / 2, rx, y - pillH / 2, r);
+      ctx.arcTo(rx, y - pillH / 2, rx + r, y - pillH / 2, r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+
+      // Note label
+      if (result !== "miss" && alpha > 0.4) {
+        ctx.fillStyle = result === "hit" ? "#fff" : isCurrentNote ? "#fff" : "rgba(255,255,255,0.85)";
+        ctx.font = `${isCurrentNote ? "bold 13px" : "11px"} Inter, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(note.note, x, y + 4);
+      }
+      if (result === "hit") {
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 13px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("✓", x, y + 4);
+      }
+    }
+
+    // Attempt dots below hit zone
+    if (practiceGameState === "playing" && idx < notes.length) {
+      const dotY = (sortedMidis.indexOf(omrNoteToMidi(notes[idx])) + 1) * LANE_H - 5;
+      const remaining = 3 - wrongAttempts;
+      for (let d = 0; d < 3; d++) {
+        ctx.beginPath();
+        ctx.arc(HIT_X - 10 + d * 12, Math.min(dotY, canvasH - 8), 4, 0, Math.PI * 2);
+        ctx.fillStyle = d < remaining ? "#5B9E79" : "rgba(255,255,255,0.2)";
+        ctx.fill();
+      }
+    }
+
+    // Progress bar
+    const prog = notes.length > 0 ? idx / notes.length : 0;
+    ctx.fillStyle = "rgba(255,255,255,0.07)";
+    ctx.fillRect(LABEL_W, canvasH - 3, W - LABEL_W, 3);
+    ctx.fillStyle = "#5B9E79";
+    ctx.fillRect(LABEL_W, canvasH - 3, (W - LABEL_W) * prog, 3);
+  }, [practiceGameState, currentNoteIdx, practiceFlash, wrongAttempts]);
 
   // ── Pitch polling ──────────────────────────────────────────────────────────
   const getPitch = useCallback((): number | null => {
@@ -596,6 +974,7 @@ export default function PlayPage() {
   useEffect(() => {
     return () => {
       cancelAnimationFrame(animFrameRef.current);
+      if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
       streamRef.current?.getTracks().forEach(t => t.stop());
       audioCtxRef.current?.close();
     };
@@ -666,8 +1045,198 @@ export default function PlayPage() {
         </div>
       )}
 
+      {/* Tab switcher */}
+      {gameState === "idle" && practiceGameState === "idle" && (
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.25rem" }}>
+          <button
+            onClick={() => setTab("guitar")}
+            style={{
+              flex: 1, padding: "0.5rem", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+              background: tab === "guitar" ? "var(--white)" : "transparent",
+              color: tab === "guitar" ? "var(--charcoal)" : "var(--muted)",
+              boxShadow: tab === "guitar" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+            }}
+          >
+            <Zap size={14} /> Guitar Game
+          </button>
+          <button
+            onClick={() => setTab("practice")}
+            style={{
+              flex: 1, padding: "0.5rem", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+              background: tab === "practice" ? "var(--white)" : "transparent",
+              color: tab === "practice" ? "var(--charcoal)" : "var(--muted)",
+              boxShadow: tab === "practice" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+            }}
+          >
+            <Music size={14} /> Practice My Pieces
+          </button>
+        </div>
+      )}
+
+      {/* ── PRACTICE TAB ───────────────────────────────────────────────────── */}
+      {tab === "practice" && practiceGameState === "idle" && (
+        <div>
+          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem" }}>Your Sheet Music</h2>
+          <p style={{ fontSize: "0.8125rem", color: "var(--muted)", marginBottom: "1rem" }}>
+            Upload sheet music on any piece, then generate a note-by-note practice game. Works for any instrument.
+          </p>
+
+          {generateError && (
+            <div style={{ background: "#fff0f0", border: "1px solid #f5c6c6", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontSize: "0.875rem", color: "#c0392b" }}>
+              {generateError}
+            </div>
+          )}
+
+          {piecesLoading ? (
+            <div style={{ color: "var(--muted)", fontSize: "0.875rem" }}>Loading your pieces...</div>
+          ) : studentPieces.length === 0 ? (
+            <div className="card-base" style={{ padding: "1.5rem", textAlign: "center" }}>
+              <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "0.5rem" }}>No pieces with sheet music yet</div>
+              <div style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>Go to <strong>My Music</strong> and upload a sheet music image for any piece.</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {studentPieces.map(piece => (
+                <div key={piece.id} className="card-base" style={{ padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>{piece.title}</div>
+                    {piece.composer && <div style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>{piece.composer}</div>}
+                    {piece.game && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem", display: "flex", gap: "0.75rem" }}>
+                        <span>{piece.game.notes_json.length} notes</span>
+                        {piece.game.key_signature && <span>{piece.game.key_signature}</span>}
+                        {piece.game.omr_confidence < 0.65 && (
+                          <span style={{ color: "#e67e22" }}>⚠ Low confidence — notes may not be perfect</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {piece.game ? (
+                      <>
+                        <button
+                          onClick={() => startPractice(piece)}
+                          style={{ padding: "0.5rem 1.25rem", background: "var(--sage)", border: "none", color: "white", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.375rem" }}
+                        >
+                          <Play size={14} /> Play
+                        </button>
+                        <button
+                          onClick={() => generateGame(piece)}
+                          disabled={generatingFor === piece.id}
+                          style={{ padding: "0.5rem 0.75rem", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, cursor: "pointer", fontSize: "0.8125rem" }}
+                          title="Regenerate from sheet music"
+                        >
+                          {generatingFor === piece.id ? "..." : "Regenerate"}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => generateGame(piece)}
+                        disabled={generatingFor === piece.id}
+                        style={{ padding: "0.5rem 1.25rem", background: "var(--charcoal)", border: "none", color: "white", borderRadius: 8, cursor: generatingFor === piece.id ? "default" : "pointer", fontWeight: 600, fontSize: "0.875rem", opacity: generatingFor === piece.id ? 0.7 : 1 }}
+                      >
+                        {generatingFor === piece.id ? "Reading music..." : "Generate Game"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PRACTICE GAME ─────────────────────────────────────────────────── */}
+      {tab === "practice" && practiceGameState === "playing" && activePiece && (
+        <div>
+          {/* Practice HUD */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>{activePiece.title}</div>
+              <div style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
+                Note {currentNoteIdx + 1} of {practiceNotes.length}
+                {practiceNotes[currentNoteIdx] && (
+                  <span style={{ marginLeft: "0.75rem", fontWeight: 600, color: "var(--sage)" }}>
+                    Play: {practiceNotes[currentNoteIdx].note}{practiceNotes[currentNoteIdx].octave}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              {detectedNote && (
+                <div style={{ padding: "0.25rem 0.75rem", background: "#eafaf1", border: "1px solid #a9dfbf", borderRadius: 20, fontSize: "0.8125rem", fontWeight: 600, color: "#1e8449" }}>
+                  {detectedNote}
+                </div>
+              )}
+              <button onClick={stopPractice} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Square size={16} strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+
+          {/* Practice canvas */}
+          <canvas
+            ref={practiceCanvasRef}
+            style={{ width: "100%", borderRadius: 10, display: "block" }}
+          />
+
+          <div style={{ marginTop: "0.75rem", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center" }}>
+            Play the highlighted note. It will advance automatically when you hit it.
+            {wrongAttempts > 0 && <span style={{ color: "#e67e22", marginLeft: "0.5rem" }}>{3 - wrongAttempts} attempt{3 - wrongAttempts !== 1 ? "s" : ""} left before skip</span>}
+          </div>
+        </div>
+      )}
+
+      {/* ── PRACTICE RESULTS ──────────────────────────────────────────────── */}
+      {tab === "practice" && practiceGameState === "finished" && activePiece && (
+        <div className="card-base" style={{ padding: "1.5rem", textAlign: "center" }}>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 600, marginBottom: "0.5rem", color: "var(--charcoal)" }}>
+            {activePiece.title}
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", gap: "2.5rem", margin: "1.25rem 0" }}>
+            <div>
+              <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 2 }}>Accuracy</div>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: practiceResults.filter(r => r === "hit").length / practiceResults.length >= 0.7 ? "#2ecc71" : "#e74c3c" }}>
+                {practiceResults.length > 0 ? Math.round(practiceResults.filter(r => r === "hit").length / practiceResults.length * 100) : 0}%
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 2 }}>Notes Hit</div>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: "var(--charcoal)" }}>
+                {practiceResults.filter(r => r === "hit").length}/{practiceResults.length}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Feedback */}
+          {feedbackLoading && (
+            <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "1rem", fontStyle: "italic" }}>Getting feedback...</div>
+          )}
+          {practiceFeedback && (
+            <div style={{ background: "var(--bg)", borderRadius: 10, padding: "1rem 1.25rem", marginBottom: "1.25rem", fontSize: "0.9375rem", color: "var(--charcoal)", lineHeight: 1.65, textAlign: "left", borderLeft: "3px solid var(--sage)" }}>
+              {practiceFeedback}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+            <button
+              onClick={() => activePiece && startPractice(activePiece)}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.5rem", background: "var(--charcoal)", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.875rem" }}
+            >
+              <RotateCcw size={15} strokeWidth={2} /> Try Again
+            </button>
+            <button
+              onClick={() => { setPracticeGameState("idle"); setActivePiece(null); }}
+              style={{ padding: "0.625rem 1.5rem", background: "transparent", color: "var(--charcoal)", border: "1px solid var(--border)", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem" }}
+            >
+              Back to Pieces
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Song picker */}
-      {gameState === "idle" && (
+      {tab === "guitar" && gameState === "idle" && (
         <div>
           <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem" }}>Choose a song</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "0.75rem" }}>
@@ -834,8 +1403,8 @@ export default function PlayPage() {
         </div>
       )}
 
-      {/* How to play */}
-      {gameState === "idle" && (
+      {/* How to play — guitar game */}
+      {tab === "guitar" && gameState === "idle" && (
         <div className="card-base" style={{ padding: "1rem 1.25rem", marginTop: "1.5rem" }}>
           <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>How to play</div>
           <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.8 }}>
@@ -844,6 +1413,19 @@ export default function PlayPage() {
             <li>Play the note on your guitar as it reaches the dashed line.</li>
             <li>Hit notes in a row to build your combo multiplier (up to 4×).</li>
             <li>Works best with acoustic guitar or electric guitar plugged directly into your device.</li>
+          </ul>
+        </div>
+      )}
+      {/* How to play — practice mode */}
+      {tab === "practice" && practiceGameState === "idle" && (
+        <div className="card-base" style={{ padding: "1rem 1.25rem", marginTop: "1.5rem" }}>
+          <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>How Practice Mode works</div>
+          <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.8 }}>
+            <li>Upload a <strong>JPG or PNG photo</strong> of your sheet music on any piece (in My Music).</li>
+            <li>Click <strong>Generate Game</strong> — Claude reads the notes from the image.</li>
+            <li>Each note waits at the hit zone until you play it. No time pressure.</li>
+            <li>After 3 wrong attempts, it skips to the next note.</li>
+            <li>Works for <strong>any instrument</strong> — violin, piano, flute, guitar, voice.</li>
           </ul>
         </div>
       )}
