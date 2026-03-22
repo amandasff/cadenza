@@ -79,8 +79,8 @@ interface PieceWithGame {
 
 const NOTE_SEMITONES: Record<string, number> = {
   C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3,
-  E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8,
-  A: 9, "A#": 10, Bb: 10, B: 11,
+  E: 4, "E#": 5, F: 5, Fb: 4, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8,
+  A: 9, "A#": 10, Bb: 10, B: 11, "B#": 0, Cb: 11,
 };
 
 function omrNoteToMidi(n: OMRNote): number {
@@ -94,27 +94,27 @@ function omrPieceToSong(piece: PieceWithGame): Song {
   const tsParts = (game.time_signature ?? "4/4").split("/").map(Number);
   const timeSignature: [number, number] = [tsParts[0] ?? 4, tsParts[1] ?? 4];
 
+  // Map the piece's pitch range evenly across all 6 strings so every lane is
+  // used and the game looks visually full, not clustered on 2 strings.
+  // Key insight: midiForNote(string, fret) determines expected MIDI for hit
+  // detection, so any string/fret combo that produces the same MIDI value is
+  // equivalent for gameplay — we just need to spread them visually.
+  const midiValues = game.notes_json
+    .map(n => (n.octave + 1) * 12 + (NOTE_SEMITONES[n.note] ?? (NOTE_SEMITONES[n.note.charAt(0)] ?? 0)))
+    .filter(m => m > 0);
+  const minMidi = midiValues.length ? Math.min(...midiValues) : 60;
+  const maxMidi = midiValues.length ? Math.max(...midiValues) : 72;
+  const midiSpan = Math.max(1, maxMidi - minMidi);
+
   const notes: TabNote[] = game.notes_json.map(n => {
     const targetMidi = omrNoteToMidi(n);
-    // Pick the string+fret with the lowest fret number (easiest position, spreads range naturally)
-    let bestString = 1, bestFret = 0, lowestFret = 99;
-    for (let s = 1; s <= 6; s++) {
-      const openMidi = STRING_OPEN_MIDI[6 - s];
-      const fret = targetMidi - openMidi;
-      if (fret >= 0 && fret <= 22 && fret < lowestFret) {
-        lowestFret = fret;
-        bestFret = fret;
-        bestString = s;
-      }
-    }
-    // If note is out of guitar range, clamp to nearest string open note
-    if (lowestFret === 99) {
-      const distToHigh = Math.abs(targetMidi - STRING_OPEN_MIDI[5]); // string 1 open
-      const distToLow  = Math.abs(targetMidi - STRING_OPEN_MIDI[0]); // string 6 open
-      bestString = distToHigh <= distToLow ? 1 : 6;
-      bestFret = Math.max(0, Math.min(22, targetMidi - STRING_OPEN_MIDI[6 - bestString]));
-    }
-    return { beat: n.beat, string: bestString, fret: bestFret, duration: n.duration };
+    // Assign string by mapping pitch position in the piece's range to strings 1-6
+    // (highest pitch → string 1, lowest → string 6). Then fret = targetMidi - openMidi.
+    const normalized = (targetMidi - minMidi) / midiSpan; // 0.0 (low) … 1.0 (high)
+    const stringAssign = Math.min(6, Math.max(1, Math.round(6 - normalized * 5)));
+    const openMidi = STRING_OPEN_MIDI[6 - stringAssign];
+    const fret = Math.max(0, Math.min(22, targetMidi - openMidi));
+    return { beat: n.beat, string: stringAssign, fret, duration: n.duration };
   });
 
   return {
@@ -900,14 +900,23 @@ export default function PlayPage() {
       }));
 
       // Check hits and misses
-      const PITCH_TOLERANCE = 2; // semitones
+      const PITCH_TOLERANCE = 2; // semitones (exact match)
       for (const note of updated) {
         if (note.result !== "pending") continue;
         const distFromHitZone = Math.abs(note.xPos - HIT_ZONE_X);
         const expectedMidi = midiForNote(note.string, note.fret);
 
         if (distFromHitZone < HIT_WINDOW_PX && detectedMidi !== null) {
-          if (Math.abs(detectedMidi - expectedMidi) <= PITCH_TOLERANCE) {
+          // Primary: exact semitone match (±2). Fallback: pitch-class match (same
+          // note name, any octave) — OMR commonly misreads octave by ±1, and the
+          // player is playing the correct note even if Claude got the octave wrong.
+          const exactMatch = Math.abs(detectedMidi - expectedMidi) <= PITCH_TOLERANCE;
+          const pitchClassDiff = Math.min(
+            Math.abs((detectedMidi % 12) - (expectedMidi % 12)),
+            12 - Math.abs((detectedMidi % 12) - (expectedMidi % 12))
+          );
+          const pitchClassMatch = pitchClassDiff <= 1;
+          if (exactMatch || pitchClassMatch) {
             note.result = "hit";
             hitZoneFlashRef.current = { row: note.string - 1, type: "hit", until: performance.now() + 160 };
             comboRef.current += 1;
