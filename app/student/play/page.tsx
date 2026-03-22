@@ -299,7 +299,6 @@ const STRING_COLORS = ["#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#3498db", "#
 const STRING_LABELS = ["e", "B", "G", "D", "A", "E"];
 const NUM_STRINGS = 6;
 
-const LANE_HEIGHT = 72;
 const NOTE_WIDTH = 80;
 const HIT_ZONE_X = 200; // pixels from left where note must be played
 const SCROLL_SPEED_BASE = 200; // px per second at 100bpm
@@ -320,6 +319,12 @@ interface NoteState extends TabNote {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PlayPage() {
+  // Fit 6 strings into available screen height (full-screen overlay minus ~52px HUD).
+  // Clamp between 48px (dense) and 80px (roomy). Falls back to 72 during SSR.
+  const LANE_HEIGHT = typeof window !== "undefined"
+    ? Math.max(48, Math.min(80, Math.floor((window.innerHeight - 52) / NUM_STRINGS)))
+    : 72;
+
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [gameState, setGameState] = useState<"idle" | "countdown" | "playing" | "finished">("idle");
   const [micGranted, setMicGranted] = useState(false);
@@ -357,6 +362,8 @@ export default function PlayPage() {
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // { row: 0-5, type: "hit"|"miss", until: performance.now() ms }
+  const hitZoneFlashRef = useRef<{ row: number; type: "hit" | "miss"; until: number } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -463,8 +470,12 @@ export default function PlayPage() {
       if (idx >= notes.length) return;
 
       const freq = getPitch();
-      if (!freq) return;
+      if (!freq) {
+        setDetectedNote(null);
+        return;
+      }
       const detectedMidi = freqToMidi(freq);
+      setDetectedNote(midiToNoteName(detectedMidi));
       const expectedMidi = omrNoteToMidi(notes[idx]);
       const isHit = Math.abs(detectedMidi - expectedMidi) <= 1; // ±1 semitone
 
@@ -510,6 +521,7 @@ export default function PlayPage() {
 
   function stopPractice() {
     if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
+    setDetectedNote(null);
     setPracticeGameState("idle");
     setActivePiece(null);
   }
@@ -565,9 +577,13 @@ export default function PlayPage() {
     const LANE_H = Math.max(38, Math.min(60, Math.floor(300 / numLanes)));
     const canvasH = numLanes * LANE_H;
     const W = canvas.offsetWidth;
-    canvas.width = W * window.devicePixelRatio;
-    canvas.height = canvasH * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = canvasH * dpr;
+    // Must set CSS height explicitly — without it the canvas renders at
+    // canvas.height CSS pixels (2× too tall on retina displays).
+    canvas.style.height = canvasH + "px";
+    ctx.scale(dpr, dpr);
 
     // Background
     ctx.fillStyle = "#1a1a2e";
@@ -712,16 +728,33 @@ export default function PlayPage() {
   }, [practiceGameState, currentNoteIdx, practiceFlash, wrongAttempts]);
 
   // ── Pitch polling ──────────────────────────────────────────────────────────
+  // Pre-allocate audio buffer once — avoids 16KB allocation every frame.
+  const pitchBufRef = useRef<Float32Array<ArrayBuffer> | null>(null);
+  // Throttle YIN to ~20fps (every 3rd frame at 60fps) — it's O(n²), expensive on mobile.
+  const pitchFrameCountRef = useRef(0);
+  const lastPitchRef = useRef<number | null>(null);
+
   const getPitch = useCallback((): number | null => {
     const analyser = analyserRef.current;
     const ctx = audioCtxRef.current;
     if (!analyser || !ctx) return null;
-    const buf = new Float32Array(analyser.fftSize);
-    analyser.getFloatTimeDomainData(buf);
+    // Re-suspend can happen on tab switch or iOS focus loss — kick it back awake
+    if (ctx.state !== "running") { ctx.resume(); return lastPitchRef.current; }
+
+    // Only run YIN every 3rd call (~20fps); return cached result on skipped frames
+    pitchFrameCountRef.current += 1;
+    if (pitchFrameCountRef.current % 3 !== 0) return lastPitchRef.current;
+
+    if (!pitchBufRef.current || pitchBufRef.current.length !== analyser.fftSize) {
+      pitchBufRef.current = new Float32Array(analyser.fftSize);
+    }
+    analyser.getFloatTimeDomainData(pitchBufRef.current);
     // Check RMS — ignore silence
-    const rms = Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length);
-    if (rms < 0.01) return null;
-    return detectPitch(buf, ctx.sampleRate);
+    const rms = Math.sqrt(pitchBufRef.current.reduce((s, v) => s + v * v, 0) / pitchBufRef.current.length);
+    if (rms < 0.01) { lastPitchRef.current = null; return null; }
+    const pitch = detectPitch(pitchBufRef.current as Float32Array, ctx.sampleRate);
+    lastPitchRef.current = pitch;
+    return pitch;
   }, []);
 
   // ── Initialize notes for selected song ────────────────────────────────────
@@ -772,6 +805,10 @@ export default function PlayPage() {
 
   // ── Game loop ──────────────────────────────────────────────────────────────
   function runGameLoop(song: Song) {
+    // Browser may auto-suspend AudioContext after inactivity / tab switch.
+    // Resume non-blocking — pitch detection will return null for one frame at most.
+    audioCtxRef.current?.resume();
+
     const scrollSpeed = SCROLL_SPEED_BASE * (song.bpm / 100);
     const beatsPerSec = song.bpm / 60;
     const HIT_WINDOW_PX = 50; // px tolerance for a hit
@@ -813,6 +850,7 @@ export default function PlayPage() {
         if (distFromHitZone < HIT_WINDOW_PX && detectedMidi !== null) {
           if (Math.abs(detectedMidi - expectedMidi) <= PITCH_TOLERANCE) {
             note.result = "hit";
+            hitZoneFlashRef.current = { row: note.string - 1, type: "hit", until: performance.now() + 160 };
             comboRef.current += 1;
             if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
             const mult = comboRef.current >= 10 ? 4 : comboRef.current >= 5 ? 2 : comboRef.current >= 3 ? 1.5 : 1;
@@ -824,6 +862,7 @@ export default function PlayPage() {
         } else if (note.xPos < HIT_ZONE_X - HIT_WINDOW_PX) {
           // Passed the hit zone without being hit
           note.result = "miss";
+          hitZoneFlashRef.current = { row: note.string - 1, type: "miss", until: performance.now() + 200 };
           comboRef.current = 0;
           setCombo(0);
         }
@@ -938,15 +977,25 @@ export default function PlayPage() {
     ctx.beginPath(); ctx.moveTo(HIT_ZONE_X, 0); ctx.lineTo(HIT_ZONE_X, H); ctx.stroke();
     ctx.setLineDash([]);
 
+    const flash = hitZoneFlashRef.current;
+    const flashActive = flash && performance.now() < flash.until;
     for (let s = 0; s < NUM_STRINGS; s++) {
       const y = s * LANE_HEIGHT + LANE_HEIGHT / 2;
       const color = STRING_COLORS[s];
       const r = LANE_HEIGHT * 0.26;
-      const grd = ctx.createRadialGradient(HIT_ZONE_X, y, 0, HIT_ZONE_X, y, r * 2.2);
-      grd.addColorStop(0, color + "18"); grd.addColorStop(1, "transparent");
+      const isFlashRow = flashActive && flash!.row === s;
+      const flashColor = flash?.type === "hit" ? "#2ecc71" : "#e74c3c";
+      const glowColor = isFlashRow ? flashColor : color;
+      const glowAlpha = isFlashRow ? "40" : "18";
+      const ringAlpha = isFlashRow ? "cc" : "45";
+      const glowRadius = isFlashRow ? r * 3.5 : r * 2.2;
+
+      const grd = ctx.createRadialGradient(HIT_ZONE_X, y, 0, HIT_ZONE_X, y, glowRadius);
+      grd.addColorStop(0, glowColor + glowAlpha); grd.addColorStop(1, "transparent");
       ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(HIT_ZONE_X, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = color + "45"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(HIT_ZONE_X, y, glowRadius, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = glowColor + ringAlpha;
+      ctx.lineWidth = isFlashRow ? 2.5 : 1.5;
       ctx.beginPath(); ctx.arc(HIT_ZONE_X, y, r, 0, Math.PI * 2); ctx.stroke();
     }
 
@@ -1001,15 +1050,15 @@ export default function PlayPage() {
           ctx.fillText("✓", note.xPos, y + 5);
         } else {
           const noteName = noteNameForStringFret(note.string, note.fret);
-          // Note name (small, above centre)
+          // Note name (small) — baseline at y-8, keeps ~4px gap above fret digits
           ctx.fillStyle = "rgba(255,255,255,0.75)";
           ctx.font = "10px Inter, sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText(noteName, note.xPos, y - 3);
-          // Fret number (large, below)
+          ctx.fillText(noteName, note.xPos, y - 8);
+          // Fret number (large) — baseline at y+12, cap tops at y-2 → clear of note name
           ctx.fillStyle = "#fff";
-          ctx.font = `bold ${Math.round(pillH * 0.52)}px Inter, sans-serif`;
-          ctx.fillText(String(note.fret), note.xPos, y + 11);
+          ctx.font = `bold ${Math.round(pillH * 0.46)}px Inter, sans-serif`;
+          ctx.fillText(String(note.fret), note.xPos, y + 12);
         }
       }
     }
@@ -1255,7 +1304,7 @@ export default function PlayPage() {
 
           <div style={{ marginTop: "0.75rem", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center" }}>
             Play the highlighted note. It will advance automatically when you hit it.
-            {wrongAttempts > 0 && <span style={{ color: "#e67e22", marginLeft: "0.5rem" }}>{3 - wrongAttempts} attempt{3 - wrongAttempts !== 1 ? "s" : ""} left before skip</span>}
+            {wrongAttempts > 0 && wrongAttempts < 3 && <span style={{ color: "#e67e22", marginLeft: "0.5rem" }}>{3 - wrongAttempts} attempt{3 - wrongAttempts !== 1 ? "s" : ""} left before skip</span>}
           </div>
         </div>
       )}
@@ -1478,7 +1527,7 @@ export default function PlayPage() {
           <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>How to play</div>
           <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.8 }}>
             <li>Pick a song above. Allow mic access when prompted.</li>
-            <li>Circles scroll left — each shows the <strong>note name</strong> (e.g. G) and <strong>fret number</strong> (e.g. 3). Play that fret on the colored string.</li>
+            <li>Notes scroll left — each pill shows the <strong>note name</strong> (e.g. G) and <strong>fret number</strong> (e.g. 3). Play that fret on the colored string.</li>
             <li>Play the note on your guitar as it reaches the dashed line.</li>
             <li>Hit notes in a row to build your combo multiplier (up to 4×).</li>
             <li>Works best with acoustic guitar or electric guitar plugged directly into your device.</li>
