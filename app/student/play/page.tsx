@@ -299,10 +299,15 @@ const STRING_COLORS = ["#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#3498db", "#
 const STRING_LABELS = ["e", "B", "G", "D", "A", "E"];
 const NUM_STRINGS = 6;
 
-const LANE_HEIGHT = 52;
+const LANE_HEIGHT = 72;
 const NOTE_WIDTH = 80;
-const HIT_ZONE_X = 160; // pixels from left where note must be played
+const HIT_ZONE_X = 200; // pixels from left where note must be played
 const SCROLL_SPEED_BASE = 200; // px per second at 100bpm
+
+function noteNameForStringFret(string: number, fret: number): string {
+  const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  return NOTES[midiForNote(string, fret) % 12];
+}
 
 // ── Result types ─────────────────────────────────────────────────────────────
 type NoteResult = "hit" | "miss" | "pending";
@@ -844,105 +849,127 @@ export default function PlayPage() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const W = canvas.width;
-    const H = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.width / dpr;   // logical CSS pixels
+    const H = NUM_STRINGS * LANE_HEIGHT;
+    const LABEL_W = 52;
+    const STRING_LINE_WIDTHS = [0.8, 1.1, 1.4, 1.8, 2.2, 2.8]; // string 1 (thin e) → 6 (thick E)
 
-    // Background
-    ctx.fillStyle = "#1a1a2e";
+    // Gradient background
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0c0c1a");
+    bg.addColorStop(1, "#090912");
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // String lanes
+    // String lanes + labels
     for (let s = 0; s < NUM_STRINGS; s++) {
       const y = s * LANE_HEIGHT + LANE_HEIGHT / 2;
-      // Lane bg (alternating)
-      ctx.fillStyle = s % 2 === 0 ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0)";
-      ctx.fillRect(0, s * LANE_HEIGHT, W, LANE_HEIGHT);
-      // String line
-      ctx.strokeStyle = "rgba(255,255,255,0.12)";
-      ctx.lineWidth = 1;
+      const color = STRING_COLORS[s];
+
+      // Alternating lane bg
+      if (s % 2 === 0) {
+        ctx.fillStyle = "rgba(255,255,255,0.018)";
+        ctx.fillRect(LABEL_W, s * LANE_HEIGHT, W - LABEL_W, LANE_HEIGHT);
+      }
+
+      // Label area bg
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(0, s * LANE_HEIGHT, LABEL_W, LANE_HEIGHT);
+
+      // String name label
+      ctx.fillStyle = color;
+      ctx.font = "bold 13px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(STRING_LABELS[s], LABEL_W / 2, y + 5);
+
+      // String line (varying thickness by string gauge)
+      ctx.strokeStyle = color + "55";
+      ctx.lineWidth = STRING_LINE_WIDTHS[s];
       ctx.beginPath();
-      ctx.moveTo(0, y);
+      ctx.moveTo(LABEL_W, y);
       ctx.lineTo(W, y);
       ctx.stroke();
-      // String label on left
-      ctx.fillStyle = STRING_COLORS[s];
-      ctx.font = "bold 11px Inter, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(STRING_LABELS[s], 24, y + 4);
     }
 
-    // Hit zone line
-    ctx.strokeStyle = "rgba(255,255,255,0.4)";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
+    // Label / play area separator
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(LABEL_W, 0);
+    ctx.lineTo(LABEL_W, H);
+    ctx.stroke();
+
+    // Hit zone dashed vertical line
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
     ctx.beginPath();
     ctx.moveTo(HIT_ZONE_X, 0);
     ctx.lineTo(HIT_ZONE_X, H);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Hit zone glow circle
+    // Hit zone circles — one per string, glowing ring
     for (let s = 0; s < NUM_STRINGS; s++) {
       const y = s * LANE_HEIGHT + LANE_HEIGHT / 2;
-      const grad = ctx.createRadialGradient(HIT_ZONE_X, y, 2, HIT_ZONE_X, y, 22);
-      grad.addColorStop(0, "rgba(255,255,255,0.25)");
-      grad.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = grad;
+      const color = STRING_COLORS[s];
+      const r = LANE_HEIGHT * 0.28;
+
+      const grd = ctx.createRadialGradient(HIT_ZONE_X, y, 0, HIT_ZONE_X, y, r * 2.5);
+      grd.addColorStop(0, color + "20");
+      grd.addColorStop(1, "transparent");
+      ctx.fillStyle = grd;
       ctx.beginPath();
-      ctx.arc(HIT_ZONE_X, y, 22, 0, Math.PI * 2);
+      ctx.arc(HIT_ZONE_X, y, r * 2.5, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.strokeStyle = color + "50";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(HIT_ZONE_X, y, r, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     // Notes
     for (const note of noteList) {
-      if (note.xPos < -NOTE_WIDTH - 20 || note.xPos > W + NOTE_WIDTH) continue;
+      if (note.xPos < LABEL_W - 50 || note.xPos > W + 80) continue;
       const row = note.string - 1; // string 1 = row 0 (top)
       const y = row * LANE_HEIGHT + LANE_HEIGHT / 2;
       const color = STRING_COLORS[row];
       const isHit = note.result === "hit";
       const isMiss = note.result === "miss";
+      const r = LANE_HEIGHT * 0.36;
 
-      const noteH = 28;
-      const noteW = Math.max(NOTE_WIDTH * note.duration, 44);
-      const rx = note.xPos - noteW / 2;
+      ctx.globalAlpha = isMiss ? 0.2 : 1;
+      ctx.shadowColor = isHit ? "#2ecc71" : isMiss ? "transparent" : color;
+      ctx.shadowBlur = isHit ? 24 : 14;
 
-      // Shadow
-      ctx.shadowColor = isHit ? "#2ecc71" : isMiss ? "#e74c3c" : color;
-      ctx.shadowBlur = isHit ? 20 : 10;
-
-      // Pill background
-      ctx.fillStyle = isHit ? "#2ecc71" : isMiss ? "#c0392b" : color;
-      ctx.globalAlpha = isMiss ? 0.35 : 1;
-      const radius = noteH / 2;
+      // Circle note
+      ctx.fillStyle = isHit ? "#2ecc71" : isMiss ? "#333" : color;
       ctx.beginPath();
-      ctx.moveTo(rx + radius, y - noteH / 2);
-      ctx.lineTo(rx + noteW - radius, y - noteH / 2);
-      ctx.arcTo(rx + noteW, y - noteH / 2, rx + noteW, y + noteH / 2, radius);
-      ctx.lineTo(rx + noteW, y + noteH / 2);
-      ctx.arcTo(rx + noteW, y + noteH / 2, rx + noteW - radius, y + noteH / 2, radius);
-      ctx.lineTo(rx + radius, y + noteH / 2);
-      ctx.arcTo(rx, y + noteH / 2, rx, y - noteH / 2, radius);
-      ctx.arcTo(rx, y - noteH / 2, rx + radius, y - noteH / 2, radius);
-      ctx.closePath();
+      ctx.arc(note.xPos, y, r, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
 
-      // Fret number
       if (!isMiss) {
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 13px Inter, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(String(note.fret), note.xPos, y + 5);
-      }
-
-      // Hit checkmark
-      if (isHit) {
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 14px Inter, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("✓", note.xPos, y + 5);
+        if (isHit) {
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 16px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("✓", note.xPos, y + 6);
+        } else {
+          // Note name above centre, fret number below — player sees both
+          const noteName = noteNameForStringFret(note.string, note.fret);
+          ctx.fillStyle = "rgba(255,255,255,0.95)";
+          ctx.font = "bold 11px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(noteName, note.xPos, y - 4);
+          ctx.font = "bold 14px Inter, sans-serif";
+          ctx.fillText(String(note.fret), note.xPos, y + 13);
+        }
       }
     }
 
@@ -950,10 +977,10 @@ export default function PlayPage() {
     const beatsPerSec = song.bpm / 60;
     const lastBeat = Math.max(...song.notes.map(n => n.beat + n.duration));
     const progress = Math.min(1, (elapsedRef.current * beatsPerSec) / lastBeat);
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    ctx.fillRect(0, H - 4, W, 4);
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(LABEL_W, H - 3, W - LABEL_W, 3);
     ctx.fillStyle = "#5B9E79";
-    ctx.fillRect(0, H - 4, W * progress, 4);
+    ctx.fillRect(LABEL_W, H - 3, (W - LABEL_W) * progress, 3);
   }
 
   // Need elapsed in draw without re-render dependency
@@ -994,10 +1021,12 @@ export default function PlayPage() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const resize = () => {
-      canvas.width = canvas.offsetWidth * window.devicePixelRatio;
-      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+      const dpr = window.devicePixelRatio || 1;
+      // Use explicit height from constants — never read offsetHeight (unreliable before paint)
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = NUM_STRINGS * LANE_HEIGHT * dpr;
       const ctx = canvas.getContext("2d");
-      if (ctx) ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.scale(dpr, dpr); }
     };
     resize();
     window.addEventListener("resize", resize);
@@ -1286,126 +1315,122 @@ export default function PlayPage() {
         </div>
       )}
 
-      {/* Countdown */}
-      {gameState === "countdown" && (
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          height: 300, gap: "1rem",
-        }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "6rem", fontWeight: 700, color: "var(--charcoal)", lineHeight: 1 }}>
-            {countdown > 0 ? countdown : "Go!"}
-          </div>
-          <div style={{ fontSize: "0.875rem", color: "var(--muted)" }}>{selectedSong?.title} · {selectedSong?.bpm} BPM</div>
-        </div>
-      )}
+      {/* Countdown — now inside full-screen overlay below */}
 
-      {/* Game canvas */}
-      {(gameState === "playing" || gameState === "finished") && (
-        <div>
-          {/* HUD */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-            <div style={{ display: "flex", gap: "1.5rem" }}>
+      {/* ── Full-screen game overlay (countdown / playing / finished) ────────── */}
+      {(gameState === "countdown" || gameState === "playing" || gameState === "finished") && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9000,
+          background: "#0a0a14", display: "flex", flexDirection: "column",
+          fontFamily: "Inter, sans-serif",
+        }}>
+          {/* HUD bar */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "0.625rem 1.25rem",
+            background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.07)",
+            flexShrink: 0,
+          }}>
+            <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)" }}>Score</div>
-                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 700, color: "var(--charcoal)" }}>{score.toLocaleString()}</div>
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Score</div>
+                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.5rem", fontWeight: 700, color: "#fff", lineHeight: 1 }}>{score.toLocaleString()}</div>
               </div>
               <div>
-                <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)" }}>Combo</div>
-                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 700, color: combo >= 5 ? "#e67e22" : "var(--charcoal)" }}>{combo > 0 ? `${combo}×` : "—"}</div>
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Combo</div>
+                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.5rem", fontWeight: 700, color: combo >= 5 ? "#f39c12" : "#fff", lineHeight: 1 }}>{combo > 0 ? `${combo}×` : "—"}</div>
               </div>
               <div>
-                <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)" }}>Accuracy</div>
-                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 700, color: accuracy >= 80 ? "#2ecc71" : accuracy >= 50 ? "#e67e22" : "#e74c3c" }}>{total > 0 ? `${accuracy}%` : "—"}</div>
+                <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Accuracy</div>
+                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.5rem", fontWeight: 700, color: accuracy >= 80 ? "#2ecc71" : accuracy >= 50 ? "#f39c12" : "#e74c3c", lineHeight: 1 }}>{total > 0 ? `${accuracy}%` : "—"}</div>
               </div>
+              {selectedSong && (
+                <div style={{ borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: "1.5rem" }}>
+                  <div style={{ fontSize: "0.5rem", color: "rgba(255,255,255,0.4)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Now Playing</div>
+                  <div style={{ fontSize: "0.875rem", color: "#fff", fontWeight: 500 }}>{selectedSong.title}</div>
+                </div>
+              )}
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
               {detectedNote && (
-                <div style={{ padding: "0.25rem 0.75rem", background: "#eafaf1", border: "1px solid #a9dfbf", borderRadius: 20, fontSize: "0.8125rem", fontWeight: 600, color: "#1e8449" }}>
+                <div style={{ padding: "0.25rem 0.875rem", background: "rgba(46,204,113,0.15)", border: "1px solid rgba(46,204,113,0.4)", borderRadius: 20, fontSize: "0.8125rem", fontWeight: 700, color: "#2ecc71" }}>
                   🎵 {detectedNote}
                 </div>
               )}
-              <button
-                onClick={resetGame}
-                style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                title="Restart"
-              >
-                <RotateCcw size={16} strokeWidth={1.5} />
+              <button onClick={resetGame} style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }} title="Restart">
+                <RotateCcw size={15} strokeWidth={1.5} />
               </button>
-              <button
-                onClick={stopGame}
-                style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                title="Stop"
-              >
-                <Square size={16} strokeWidth={1.5} />
+              <button onClick={stopGame} style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }} title="Exit">
+                <Square size={15} strokeWidth={1.5} />
               </button>
             </div>
           </div>
 
-          {/* String labels sidebar */}
-          <div style={{ display: "flex", gap: 0 }}>
-            <div style={{ width: 48, flexShrink: 0, background: "#111827", borderRadius: "10px 0 0 10px", display: "flex", flexDirection: "column" }}>
-              {STRING_LABELS.map((lbl, i) => (
-                <div key={i} style={{ height: LANE_HEIGHT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.75rem", color: STRING_COLORS[i] }}>{lbl}</span>
-                </div>
-              ))}
+          {/* Countdown */}
+          {gameState === "countdown" && (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1.25rem" }}>
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "9rem", fontWeight: 700, color: "#fff", lineHeight: 1, textShadow: "0 0 60px rgba(255,255,255,0.25)" }}>
+                {countdown > 0 ? countdown : "Go!"}
+              </div>
+              <div style={{ fontSize: "1rem", color: "rgba(255,255,255,0.45)", letterSpacing: "0.05em" }}>{selectedSong?.title} · {selectedSong?.bpm} BPM</div>
             </div>
-            <canvas
-              ref={canvasRef}
-              style={{
-                flex: 1,
-                height: canvasHeight,
-                borderRadius: "0 10px 10px 0",
-                display: "block",
-                background: "#1a1a2e",
-              }}
-            />
-          </div>
+          )}
 
-          {/* Song finished overlay */}
+          {/* Canvas */}
+          {(gameState === "playing" || gameState === "finished") && (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <canvas
+                ref={canvasRef}
+                style={{ width: "100%", height: canvasHeight, display: "block" }}
+              />
+            </div>
+          )}
+
+          {/* Finished results overlay */}
           {gameState === "finished" && (
             <div style={{
-              marginTop: "1.5rem",
-              background: "var(--white)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              padding: "1.5rem",
-              textAlign: "center",
+              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(9,9,18,0.88)", zIndex: 10,
             }}>
-              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.75rem", fontWeight: 600, marginBottom: "1rem", color: "var(--charcoal)" }}>
-                {accuracy >= 90 ? "🎸 Flawless!" : accuracy >= 70 ? "🎵 Nice playing!" : accuracy >= 50 ? "Keep practicing!" : "Good effort — try again!"}
-              </div>
-              <div style={{ display: "flex", justifyContent: "center", gap: "2.5rem", marginBottom: "1.25rem" }}>
-                <div>
-                  <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 2 }}>Final Score</div>
-                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: "var(--charcoal)" }}>{score.toLocaleString()}</div>
+              <div style={{
+                background: "#13131f", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16,
+                padding: "2rem 2.5rem", textAlign: "center", maxWidth: 420, width: "90%",
+              }}>
+                <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 600, color: "#fff", marginBottom: "1.5rem" }}>
+                  {accuracy >= 90 ? "🎸 Flawless!" : accuracy >= 70 ? "🎵 Nice playing!" : accuracy >= 50 ? "Keep practicing!" : "Good effort — try again!"}
                 </div>
-                <div>
-                  <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 2 }}>Accuracy</div>
-                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: accuracy >= 70 ? "#2ecc71" : "#e74c3c" }}>{accuracy}%</div>
+                <div style={{ display: "flex", justifyContent: "center", gap: "2.5rem", marginBottom: "1.75rem" }}>
+                  <div>
+                    <div style={{ fontSize: "0.5rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Score</div>
+                    <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: "#fff" }}>{score.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.5rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Accuracy</div>
+                    <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: accuracy >= 70 ? "#2ecc71" : "#e74c3c" }}>{accuracy}%</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.5rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Best Combo</div>
+                    <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: "#fff" }}>{maxCombo}×</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.5rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>Notes Hit</div>
+                    <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: "#fff" }}>{hits}/{total}</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 2 }}>Best Combo</div>
-                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: "var(--charcoal)" }}>{maxCombo}×</div>
+                <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+                  <button
+                    onClick={() => selectedSong && startGame(selectedSong)}
+                    style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.5rem", background: "#fff", color: "#0a0a14", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.875rem" }}
+                  >
+                    <RotateCcw size={15} strokeWidth={2} /> Try Again
+                  </button>
+                  <button
+                    onClick={resetGame}
+                    style={{ padding: "0.625rem 1.5rem", background: "transparent", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem" }}
+                  >
+                    Choose Song
+                  </button>
                 </div>
-                <div>
-                  <div style={{ fontSize: "0.625rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--muted)", marginBottom: 2 }}>Notes Hit</div>
-                  <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "2rem", fontWeight: 700, color: "var(--charcoal)" }}>{hits}/{total}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
-                <button
-                  onClick={() => selectedSong && startGame(selectedSong)}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.5rem", background: "var(--charcoal)", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.875rem" }}
-                >
-                  <RotateCcw size={15} strokeWidth={2} /> Try Again
-                </button>
-                <button
-                  onClick={resetGame}
-                  style={{ padding: "0.625rem 1.5rem", background: "transparent", color: "var(--charcoal)", border: "1px solid var(--border)", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontSize: "0.875rem" }}
-                >
-                  Pick Another Song
-                </button>
               </div>
             </div>
           )}
@@ -1418,7 +1443,7 @@ export default function PlayPage() {
           <div style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--charcoal)", marginBottom: "0.5rem" }}>How to play</div>
           <ul style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.8125rem", color: "var(--muted)", lineHeight: 1.8 }}>
             <li>Pick a song above. Allow mic access when prompted.</li>
-            <li>Colored pills scroll left — each shows the <strong>string</strong> (by color) and <strong>fret number</strong>.</li>
+            <li>Circles scroll left — each shows the <strong>note name</strong> (e.g. G) and <strong>fret number</strong> (e.g. 3). Play that fret on the colored string.</li>
             <li>Play the note on your guitar as it reaches the dashed line.</li>
             <li>Hit notes in a row to build your combo multiplier (up to 4×).</li>
             <li>Works best with acoustic guitar or electric guitar plugged directly into your device.</li>
