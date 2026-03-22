@@ -15,15 +15,28 @@ async function getProfile(username: string) {
     .single();
   if (!profile) return null;
 
-  const { data: tracks } = await admin
-    .from("portfolio_items")
-    .select("id, title, description, recording_url, created_at, collection_count")
-    .eq("student_id", profile.id)
-    .eq("is_public", true)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const [{ data: tracks }, { data: collectibles }] = await Promise.all([
+    admin
+      .from("portfolio_items")
+      .select("id, title, description, recording_url, created_at, collection_count")
+      .eq("student_id", profile.id)
+      .eq("is_public", true)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    admin
+      .from("student_collectibles")
+      .select("avatar_id, composer_avatars(composer_name, era, rarity, image_path)")
+      .eq("student_id", profile.id),
+  ]);
 
-  return { profile, tracks: tracks ?? [] };
+  // Supabase returns the foreign-key join as an array; cast to the shape the client expects
+  type RawCollectible = { avatar_id: string; composer_avatars: { composer_name: string; era: string; rarity: string; image_path: string }[] | null };
+  const normalizedCollectibles = (collectibles ?? []).map((c: RawCollectible) => ({
+    avatar_id: c.avatar_id,
+    composer_avatars: Array.isArray(c.composer_avatars) ? (c.composer_avatars[0] ?? null) : c.composer_avatars,
+  }));
+
+  return { profile, tracks: tracks ?? [], collectibles: normalizedCollectibles };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

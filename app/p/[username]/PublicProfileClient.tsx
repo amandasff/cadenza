@@ -21,9 +21,26 @@ interface Profile {
   total_days_practiced: number | null;
 }
 
+interface Collectible {
+  avatar_id: string;
+  composer_avatars: {
+    composer_name: string;
+    era: string;
+    rarity: string;
+    image_path: string;
+  } | null;
+}
+
+const RARITY_COLOR: Record<string, string> = {
+  common: "#5B9E79",
+  rare: "#3498db",
+  epic: "#9b59b6",
+  legendary: "#f1c40f",
+};
+
 interface Props {
   username: string;
-  data: { profile: Profile; tracks: Track[] } | null;
+  data: { profile: Profile; tracks: Track[]; collectibles: Collectible[] } | null;
 }
 
 function timeAgo(dateStr: string): string {
@@ -65,7 +82,7 @@ export default function PublicProfileClient({ username, data }: Props) {
     );
   }
 
-  const { profile, tracks } = data;
+  const { profile, tracks, collectibles } = data;
   const name = profile.display_name ?? username;
   const initials = name.split(" ").map((w: string) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 
@@ -133,6 +150,52 @@ export default function PublicProfileClient({ username, data }: Props) {
                 <div style={{ fontSize: "0.6875rem", color: "#C0BBC0" }}>{timeAgo(track.created_at)}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Composer collection */}
+        {collectibles.length > 0 && (
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9590", marginBottom: "0.75rem" }}>
+              Composer Collection · {collectibles.length}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(88px, 1fr))", gap: "0.625rem" }}>
+              {collectibles.map((c) => {
+                const avatar = c.composer_avatars;
+                if (!avatar) return null;
+                const rarityColor = RARITY_COLOR[avatar.rarity] ?? "#9A9590";
+                return (
+                  <div
+                    key={c.avatar_id}
+                    style={{
+                      background: "#FDFCFA",
+                      border: `1px solid ${rarityColor}55`,
+                      borderRadius: 10,
+                      padding: "0.625rem 0.5rem",
+                      textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "0.375rem",
+                    }}
+                  >
+                    {avatar.image_path ? (
+                      <img
+                        src={avatar.image_path}
+                        alt={avatar.composer_name}
+                        style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: `2px solid ${rarityColor}` }}
+                      />
+                    ) : (
+                      <div style={{ width: 48, height: 48, borderRadius: "50%", background: rarityColor + "22", border: `2px solid ${rarityColor}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem" }}>
+                        🎼
+                      </div>
+                    )}
+                    <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "#2C2824", lineHeight: 1.2 }}>{avatar.composer_name}</div>
+                    <div style={{ fontSize: "0.5625rem", color: rarityColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{avatar.rarity}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

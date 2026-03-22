@@ -68,7 +68,7 @@ export async function POST(
   // Ask Claude to extract the melody as JSON
   const claudeRes = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [{
       role: 'user',
       content: [
@@ -78,9 +78,9 @@ export async function POST(
         },
         {
           type: 'text',
-          text: `Analyze this sheet music image. Extract the melody line (top voice in treble clef, or single melodic line for any instrument).
+          text: `Analyze this sheet music image carefully. Extract the melody line (top voice in treble clef, or the single melodic line for monophonic instruments like flute, violin, voice).
 
-Return ONLY valid JSON with no markdown fences and no explanation:
+Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
 {
   "notes": [
     {"note": "C", "octave": 4, "duration": 1.0, "beat": 0.0}
@@ -91,15 +91,36 @@ Return ONLY valid JSON with no markdown fences and no explanation:
   "confidence": 0.85
 }
 
-Rules:
-- note: letter + optional # or b (e.g. "C", "C#", "Bb", "D"). Never use "Cb" — use "B" instead.
-- octave: integer. Middle C = octave 4 (C4). The note above middle C is D4.
-- duration: beats (whole=4.0, half=2.0, quarter=1.0, eighth=0.5, sixteenth=0.25, dotted quarter=1.5)
-- beat: cumulative position from start. First note = 0.0. Each note's beat = previous beat + previous duration.
-- Skip rests entirely — do not include them in the notes array.
-- Maximum 64 notes. If the piece is longer, transcribe the first 64 notes.
-- If chords appear, include only the highest note (the melody).
-- confidence: 0.0-1.0. Use 0.9+ for clean printed music, 0.6 for slightly unclear, 0.3 for handwritten.`,
+CRITICAL RULES — read all of these before generating:
+
+NOTE NAME:
+- Use the letter name + optional accidental: "C", "C#", "Db", "D", "Eb", "E", "F", "F#", "Gb", "G", "Ab", "A", "Bb", "B"
+- APPLY KEY SIGNATURE ACCIDENTALS: if the key is G major (one sharp = F#), every F in the piece must be written as "F#" unless it has a natural sign. Apply ALL key signature sharps/flats to every note throughout the piece.
+- Natural signs cancel the key signature for that note only.
+
+OCTAVE:
+- Middle C (the C on the first ledger line below the treble clef staff) = octave 4.
+- The treble clef staff lines are E4, G4, B4, D5, F5 (bottom to top).
+- The treble clef staff spaces are F4, A4, C5, E5 (bottom to top).
+- Count ledger lines carefully. One ledger line above the staff = A5. One ledger line below = C4 (middle C).
+- Bass clef lines: G2, B2, D3, F3, A3. Bass clef spaces: A2, C3, E3, G3.
+
+DURATION:
+- Whole note = 4.0, half = 2.0, quarter = 1.0, eighth = 0.5, sixteenth = 0.25
+- Dotted note = 1.5× its base (dotted quarter = 1.5, dotted half = 3.0, dotted eighth = 0.75)
+- Tied notes: add the durations together as one entry.
+
+BEAT:
+- First note in the piece = beat 0.0.
+- Each subsequent note's beat = previous note's beat + previous note's duration.
+- Count carefully through rests (rests advance the beat but are not included as notes).
+- In 4/4 time, measure 2 starts at beat 4.0, measure 3 at beat 8.0, etc.
+
+OTHER:
+- Skip rests — do not include them in the notes array, but DO count their duration when computing beat positions.
+- Maximum 64 notes. Transcribe the first 64 if the piece is longer.
+- If chords appear, include only the highest note.
+- confidence: 0.9+ for clean printed music, 0.6 for slightly unclear, 0.3 for handwritten/blurry.`,
         },
       ],
     }],
@@ -126,10 +147,35 @@ Rules:
     return NextResponse.json({ error: 'No notes found in sheet music' }, { status: 500 });
   }
 
+  // ── Apply key signature accidentals the model may have missed ────────────────
+  // Build a set of pitch classes (0-11) that are sharp/flat in the declared key.
+  const KEY_ACCIDENTALS: Record<string, Record<string, string>> = {
+    // sharps: note letter → sharped version
+    'G major':  { F: 'F#' }, 'D major': { F: 'F#', C: 'C#' },
+    'A major':  { F: 'F#', C: 'C#', G: 'G#' },
+    'E major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#' },
+    'B major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#' },
+    'F# major': { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#', E: 'E#' },
+    // flats
+    'F major':  { B: 'Bb' }, 'Bb major': { B: 'Bb', E: 'Eb' },
+    'Eb major': { B: 'Bb', E: 'Eb', A: 'Ab' },
+    'Ab major': { B: 'Bb', E: 'Eb', A: 'Ab', D: 'Db' },
+    'Db major': { B: 'Bb', E: 'Eb', A: 'Ab', D: 'Db', G: 'Gb' },
+    // relative minors map to same accidentals as their relative major
+    'E minor':  { F: 'F#' }, 'B minor': { F: 'F#', C: 'C#' },
+    'A minor':  {}, 'D minor': { B: 'Bb' }, 'G minor': { B: 'Bb', E: 'Eb' },
+  };
+  const keyAccidentals = KEY_ACCIDENTALS[parsed.key ?? ''] ?? {};
+
   // Clamp and validate notes
   const notes = parsed.notes
     .slice(0, 64)
-    .filter(n => n.note && typeof n.octave === 'number' && typeof n.beat === 'number');
+    .filter(n => n.note && typeof n.octave === 'number' && typeof n.beat === 'number')
+    .map(n => {
+      // If the key says this letter should be sharped/flatted and the note is natural, fix it
+      const corrected = keyAccidentals[n.note];
+      return corrected ? { ...n, note: corrected } : n;
+    });
 
   // Upsert — regenerating a piece replaces the old game
   const { data: game, error: saveError } = await admin

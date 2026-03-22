@@ -477,7 +477,14 @@ export default function PlayPage() {
       const detectedMidi = freqToMidi(freq);
       setDetectedNote(midiToNoteName(detectedMidi));
       const expectedMidi = omrNoteToMidi(notes[idx]);
-      const isHit = Math.abs(detectedMidi - expectedMidi) <= 1; // ±1 semitone
+      // Octave-independent pitch class match: OMR commonly misreads octave by ±1.
+      // Compare only the pitch class (0-11) so e.g. B3 matches B4 and B5.
+      // Also allow ±1 semitone within the pitch class to handle slight tuning drift.
+      const pitchClassDiff = Math.min(
+        Math.abs((detectedMidi % 12) - (expectedMidi % 12)),
+        12 - Math.abs((detectedMidi % 12) - (expectedMidi % 12))
+      );
+      const isHit = pitchClassDiff <= 1;
 
       if (isHit) {
         practiceResultsRef.current = [...practiceResultsRef.current, "hit"];
