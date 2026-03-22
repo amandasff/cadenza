@@ -3,6 +3,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 
+export const maxDuration = 60; // Vercel serverless: extend timeout for Claude Vision call
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 interface OMRNote {
@@ -54,16 +56,32 @@ export async function POST(
     return NextResponse.json({ error: 'Could not fetch sheet music image' }, { status: 500 });
   }
 
-  const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-  if (contentType.includes('pdf')) {
+  // Supabase Storage often returns application/octet-stream — derive type from URL extension
+  const rawContentType = imgRes.headers.get('content-type') ?? '';
+  let detectedMime = rawContentType.split(';')[0].trim();
+  if (!detectedMime.startsWith('image/')) {
+    const ext = piece.sheet_music_url.split('.').pop()?.toLowerCase() ?? '';
+    const EXT_MIME: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+    detectedMime = EXT_MIME[ext] ?? 'image/jpeg';
+  }
+  if (detectedMime.includes('pdf')) {
     return NextResponse.json({
       error: 'PDF not yet supported. Please upload a JPG or PNG photo of your sheet music.',
     }, { status: 400 });
   }
 
   const imgBuf = await imgRes.arrayBuffer();
+
+  // Claude rejects base64 payloads over ~5 MB
+  const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+  if (imgBuf.byteLength > MAX_IMAGE_BYTES) {
+    return NextResponse.json({
+      error: 'Sheet music image is too large (max 5 MB). Please upload a smaller or compressed image.',
+    }, { status: 400 });
+  }
+
   const base64 = Buffer.from(imgBuf).toString('base64');
-  const mimeType = (contentType.split(';')[0] as 'image/jpeg' | 'image/png' | 'image/webp') || 'image/jpeg';
+  const mimeType = detectedMime as 'image/jpeg' | 'image/png' | 'image/webp';
 
   // Ask Claude to extract the melody as JSON
   const claudeRes = await anthropic.messages.create({
@@ -155,7 +173,7 @@ OTHER:
     'A major':  { F: 'F#', C: 'C#', G: 'G#' },
     'E major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#' },
     'B major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#' },
-    'F# major': { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#', E: 'E#' },
+    'F# major': { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#' }, // E# omitted: same pitch as F, not in client NOTE_SEMITONES
     // flats
     'F major':  { B: 'Bb' }, 'Bb major': { B: 'Bb', E: 'Eb' },
     'Eb major': { B: 'Bb', E: 'Eb', A: 'Ab' },
@@ -165,17 +183,28 @@ OTHER:
     'E minor':  { F: 'F#' }, 'B minor': { F: 'F#', C: 'C#' },
     'A minor':  {}, 'D minor': { B: 'Bb' }, 'G minor': { B: 'Bb', E: 'Eb' },
   };
-  const keyAccidentals = KEY_ACCIDENTALS[parsed.key ?? ''] ?? {};
+  // Normalize key string: trim whitespace, handle case variants
+  const rawKey = (parsed.key ?? '').trim();
+  const keyAccidentals = KEY_ACCIDENTALS[rawKey]
+    ?? KEY_ACCIDENTALS[Object.keys(KEY_ACCIDENTALS).find(k => k.toLowerCase() === rawKey.toLowerCase()) ?? '']
+    ?? {};
 
-  // Clamp and validate notes
+  // Clamp and validate notes; sort by beat in case Claude returned them out of order
   const notes = parsed.notes
     .slice(0, 64)
-    .filter(n => n.note && typeof n.octave === 'number' && typeof n.beat === 'number')
+    .filter(n =>
+      n.note &&
+      typeof n.octave === 'number' &&
+      typeof n.beat === 'number' &&
+      typeof n.duration === 'number' &&
+      n.duration > 0
+    )
     .map(n => {
       // If the key says this letter should be sharped/flatted and the note is natural, fix it
       const corrected = keyAccidentals[n.note];
       return corrected ? { ...n, note: corrected } : n;
-    });
+    })
+    .sort((a, b) => a.beat - b.beat);
 
   // Upsert — regenerating a piece replaces the old game
   const { data: game, error: saveError } = await admin

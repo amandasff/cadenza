@@ -17,8 +17,16 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json() as FeedbackBody;
+  let body: FeedbackBody;
+  try {
+    body = await request.json() as FeedbackBody;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
   const { pieceTitle, keySignature, totalNotes, hitCount, missedNoteNames } = body;
+  if (!pieceTitle || typeof totalNotes !== 'number' || typeof hitCount !== 'number' || !Array.isArray(missedNoteNames)) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
 
   const accuracy = totalNotes > 0 ? Math.round((hitCount / totalNotes) * 100) : 0;
   const weakNotes = missedNoteNames.length > 0

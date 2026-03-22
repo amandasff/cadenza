@@ -433,14 +433,18 @@ export default function PlayPage() {
   async function generateGame(piece: PieceWithGame) {
     setGeneratingFor(piece.id);
     setGenerateError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90_000); // 90s client-side cap
     try {
-      const res = await fetch(`/api/pieces/${piece.id}/generate-game`, { method: "POST" });
+      const res = await fetch(`/api/pieces/${piece.id}/generate-game`, { method: "POST", signal: controller.signal });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
       await loadPieces(); // refresh list with new game data
     } catch (e) {
-      setGenerateError((e as Error).message);
+      const msg = (e as Error).name === "AbortError" ? "Generation timed out — please try again." : (e as Error).message;
+      setGenerateError(msg);
     } finally {
+      clearTimeout(timeout);
       setGeneratingFor(null);
     }
   }
@@ -577,11 +581,18 @@ export default function PlayPage() {
     const idx = currentNoteIdxRef.current;
     if (notes.length === 0) return;
 
-    // Compute unique pitches sorted high → low
+    // Compute unique pitches sorted high → low; cap at 20 lanes to prevent overflow
     const midiSet = new Set(notes.map(omrNoteToMidi));
-    const sortedMidis = [...midiSet].sort((a, b) => b - a);
+    const sortedMidis = [...midiSet].sort((a, b) => b - a).slice(0, 20);
     const numLanes = sortedMidis.length;
     const LANE_H = Math.max(38, Math.min(60, Math.floor(300 / numLanes)));
+
+    // Build midi → preferred note name from actual score (preserves Bb/Db instead of always sharp)
+    const midiToPreferredName = new Map<number, string>();
+    for (const n of notes) {
+      const m = omrNoteToMidi(n);
+      if (!midiToPreferredName.has(m)) midiToPreferredName.set(m, n.note);
+    }
     const canvasH = numLanes * LANE_H;
     const W = canvas.offsetWidth;
     const dpr = window.devicePixelRatio || 1;
@@ -605,7 +616,7 @@ export default function PlayPage() {
     for (let li = 0; li < numLanes; li++) {
       const midi = sortedMidis[li];
       const y = li * LANE_H + LANE_H / 2;
-      const noteLetter = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"][midi % 12];
+      const noteLetter = midiToPreferredName.get(midi) ?? ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"][midi % 12];
       const noteOct = Math.floor(midi / 12) - 1;
       const color = pitchLaneColor(noteLetter);
 
