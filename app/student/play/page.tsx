@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mic, MicOff, Play, Square, RotateCcw, Music, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, Play, Square, RotateCcw, Music, Zap, FileText, Volume2, VolumeX } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import TranscriptionViewer, { type GameData } from "@/components/TranscriptionViewer";
 
@@ -357,6 +357,38 @@ interface NoteState extends TabNote {
   xPos: number; // current x position in px from left edge
 }
 
+// ── Audio playback synthesis ──────────────────────────────────────────────────
+function midiToFreq(midi: number): number {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function scheduleNote(
+  audioCtx: AudioContext,
+  freq: number,
+  startTime: number,
+  durationBeats: number,
+  bpm: number,
+  volume: number = 0.22,
+) {
+  // Cap note sound at 1.2s regardless of written duration (avoids blurry chords)
+  const durationSec = Math.min((durationBeats / bpm) * 60, 1.2);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "triangle"; // warm, guitar-adjacent timbre
+  osc.frequency.value = freq;
+
+  // Pluck envelope: near-instant attack, exponential decay
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(volume, startTime + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + durationSec);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + durationSec + 0.05);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PlayPage() {
   // Fit 6 strings into available screen height (full-screen overlay minus ~52px HUD).
@@ -401,6 +433,22 @@ export default function PlayPage() {
   const practiceCanvasRef = useRef<HTMLCanvasElement>(null);
   const practiceFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Audio playback (note synthesis) ──────────────────────────────────────
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const audioEnabledRef = useRef(false);
+  const scheduledNoteIdsRef = useRef<Set<number>>(new Set());
+  // Separate AudioContext for playback so it works even without mic permission
+  const playbackCtxRef = useRef<AudioContext | null>(null);
+
+  function toggleAudio() {
+    const next = !audioEnabledRef.current;
+    audioEnabledRef.current = next;
+    setAudioEnabled(next);
+    if (next && !audioCtxRef.current && !playbackCtxRef.current) {
+      try { playbackCtxRef.current = new AudioContext(); } catch { /* unsupported */ }
+    }
+  }
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // { row: 0-5, type: "hit"|"miss", until: performance.now() ms }
@@ -834,6 +882,7 @@ export default function PlayPage() {
     // Clear any in-progress countdown or game loop before starting fresh
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     cancelAnimationFrame(animFrameRef.current);
+    scheduledNoteIdsRef.current = new Set();
     if (!micGranted) {
       await setupMic();
     }
@@ -907,6 +956,24 @@ export default function PlayPage() {
         ...note,
         xPos: note.xPos - scrollSpeed * dt,
       }));
+
+      // ── Audio playback: schedule upcoming notes 150ms ahead ───────────────
+      if (audioEnabledRef.current) {
+        const playCtx = audioCtxRef.current ?? playbackCtxRef.current;
+        if (playCtx) {
+          const LOOKAHEAD = 0.15; // seconds
+          for (const note of updated) {
+            if (scheduledNoteIdsRef.current.has(note.id)) continue;
+            const secToHit = (note.xPos - HIT_ZONE_X) / scrollSpeed;
+            if (secToHit >= 0 && secToHit <= LOOKAHEAD) {
+              const hitTime = playCtx.currentTime + secToHit;
+              const freq = midiToFreq(midiForNote(note.string, note.fret));
+              scheduleNote(playCtx, freq, hitTime, note.duration, song.bpm);
+              scheduledNoteIdsRef.current.add(note.id);
+            }
+          }
+        }
+      }
 
       // Check hits and misses — track whether any result changed to avoid
       // calling setNotes (and triggering a React re-render) on every frame.
@@ -1160,12 +1227,14 @@ export default function PlayPage() {
   function stopGame() {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     cancelAnimationFrame(animFrameRef.current);
+    scheduledNoteIdsRef.current = new Set();
     setGameState("idle");
   }
 
   function resetGame() {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     cancelAnimationFrame(animFrameRef.current);
+    scheduledNoteIdsRef.current = new Set();
     setNotes([]);
     setScore(0);
     setCombo(0);
@@ -1183,6 +1252,7 @@ export default function PlayPage() {
       if (practiceFlashTimerRef.current) clearTimeout(practiceFlashTimerRef.current);
       streamRef.current?.getTracks().forEach(t => t.stop());
       audioCtxRef.current?.close();
+      playbackCtxRef.current?.close();
     };
   }, []);
 
@@ -1534,6 +1604,19 @@ export default function PlayPage() {
                   🎵 {detectedNote}
                 </div>
               )}
+              <button
+                onClick={toggleAudio}
+                style={{
+                  width: 34, height: 34, borderRadius: "50%", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: audioEnabled ? "1px solid rgba(46,204,113,0.6)" : "1px solid rgba(255,255,255,0.2)",
+                  background: audioEnabled ? "rgba(46,204,113,0.15)" : "transparent",
+                  color: audioEnabled ? "#2ecc71" : "rgba(255,255,255,0.5)",
+                }}
+                title={audioEnabled ? "Turn off note audio" : "Turn on note audio (hear the piece as you play)"}
+              >
+                {audioEnabled ? <Volume2 size={15} strokeWidth={1.5} /> : <VolumeX size={15} strokeWidth={1.5} />}
+              </button>
               <button onClick={resetGame} style={{ width: 34, height: 34, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }} title="Restart">
                 <RotateCcw size={15} strokeWidth={1.5} />
               </button>
