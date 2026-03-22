@@ -244,15 +244,23 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
       return;
     }
 
-    // PDF
+    // PDF — fetch as ArrayBuffer first to avoid pdfjs CORS issues with Supabase Storage
     setSheetType("pdf");
     (async () => {
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-      const doc = await pdfjsLib.getDocument(url).promise;
-      pdfDocRef.current = doc as unknown as { getPage: (n: number) => Promise<unknown> };
-      setNumPages(doc.numPages);
-      setPageIndex(0);
+      try {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        // Fetch through the browser (Supabase public URLs are CORS-allowed for GET)
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`Failed to fetch PDF: ${resp.status}`);
+        const arrayBuffer = await resp.arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        pdfDocRef.current = doc as unknown as { getPage: (n: number) => Promise<unknown> };
+        setNumPages(doc.numPages);
+        setPageIndex(0);
+      } catch (err) {
+        console.error("PDF load error:", err);
+      }
     })();
   }, [piece?.sheet_music_url]);
 
@@ -760,7 +768,7 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
         {/* Sheet music + annotation canvas stack */}
         <div style={{ position: "relative", maxWidth: "100%", maxHeight: "100%", display: "inline-flex" }}>
           {sheetType === "pdf" ? (
-            <canvas ref={pdfCanvasRef} style={{ maxWidth: "100%", maxHeight: "calc(100dvh - 128px)", objectFit: "contain", display: "block" }} />
+            <canvas ref={pdfCanvasRef} style={{ maxWidth: "100%", maxHeight: "calc(100dvh - 128px)", objectFit: "contain", display: "block", background: "#fff" }} />
           ) : (
             <img
               ref={imgRef}
