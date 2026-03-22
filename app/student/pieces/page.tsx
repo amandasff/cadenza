@@ -64,6 +64,9 @@ export default function MyPieces() {
   const [uploadError, setUploadError]     = useState<string | null>(null);
   const [viewingTranscription, setViewingTranscription] = useState<{ title: string; game: GameData } | null>(null);
   const [transcriptionLoading, setTranscriptionLoading] = useState<string | null>(null);
+  const [piecesWithGames, setPiecesWithGames] = useState<Set<string>>(new Set());
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Keep upload handler stable for paste effect closure
   const uploadHandlerRef = useRef(handleUploadSheetMusic);
@@ -77,6 +80,15 @@ export default function MyPieces() {
     try {
       const data = await PieceService.create(supabase).getStudentPieces(student.id);
       setPieces(data);
+      // Fetch which pieces already have a game transcription
+      const ids = data.map(p => p.id);
+      if (ids.length > 0) {
+        const { data: games } = await supabase
+          .from("piece_games")
+          .select("piece_id")
+          .in("piece_id", ids);
+        setPiecesWithGames(new Set((games ?? []).map((g: { piece_id: string }) => g.piece_id)));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -96,6 +108,32 @@ export default function MyPieces() {
     setTranscriptionLoading(null);
     if (data) setViewingTranscription({ title, game: data as GameData });
     else toast.error("No transcription found for this piece yet.");
+  }
+
+  async function generateGame(pieceId: string, title: string) {
+    setGenerateError(null);
+    setGeneratingFor(pieceId);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90_000);
+    try {
+      const res = await fetch(`/api/pieces/${pieceId}/generate-game`, {
+        method: "POST",
+        signal: controller.signal,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Generation failed");
+      // Mark this piece as having a game and reload
+      setPiecesWithGames(prev => new Set([...prev, pieceId]));
+      await load();
+      // Immediately open the viewer
+      await openTranscription(pieceId, title);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Generation failed";
+      setGenerateError(msg === "signal is aborted due to timeout" || msg.includes("abort") ? "Timed out — please try again" : msg);
+    } finally {
+      clearTimeout(timeout);
+      setGeneratingFor(null);
+    }
   }
 
   // ── Paste mode clipboard listener ──
@@ -431,6 +469,12 @@ export default function MyPieces() {
           <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--error)", padding: 0, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
         </div>
       )}
+      {generateError && (
+        <div style={{ background: "var(--error-bg)", border: "1px solid rgba(192,80,80,0.3)", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--error)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{generateError}</span>
+          <button onClick={() => setGenerateError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--error)", padding: 0, display: "flex", alignItems: "center" }}><X size={16} strokeWidth={1.5} /></button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -557,15 +601,37 @@ export default function MyPieces() {
                             >
                               {t.student.annotate}
                             </Link>
-                            <button
-                              onClick={() => openTranscription(piece.id, piece.title)}
-                              disabled={transcriptionLoading === piece.id}
-                              style={{ ...btnOutline, display: "flex", alignItems: "center", gap: "0.3rem" }}
-                              title="View AI-transcribed notes"
-                            >
-                              <FileText size={13} strokeWidth={1.5} />
-                              {transcriptionLoading === piece.id ? "Loading…" : "Transcription"}
-                            </button>
+                            {piecesWithGames.has(piece.id) ? (
+                              <>
+                                <button
+                                  onClick={() => openTranscription(piece.id, piece.title)}
+                                  disabled={transcriptionLoading === piece.id}
+                                  style={{ ...btnOutline, display: "flex", alignItems: "center", gap: "0.3rem" }}
+                                  title="View AI-transcribed notes"
+                                >
+                                  <FileText size={13} strokeWidth={1.5} />
+                                  {transcriptionLoading === piece.id ? "Loading…" : "View Game"}
+                                </button>
+                                <button
+                                  onClick={() => generateGame(piece.id, piece.title)}
+                                  disabled={generatingFor === piece.id}
+                                  style={{ ...btnOutline, display: "flex", alignItems: "center", gap: "0.3rem", opacity: generatingFor === piece.id ? 0.6 : 1 }}
+                                  title="Re-run AI transcription"
+                                >
+                                  {generatingFor === piece.id ? "Reading…" : "Regenerate"}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => generateGame(piece.id, piece.title)}
+                                disabled={generatingFor === piece.id}
+                                style={{ ...btnOutline, display: "flex", alignItems: "center", gap: "0.3rem", opacity: generatingFor === piece.id ? 0.6 : 1, borderColor: "var(--sage)", color: "var(--sage)" }}
+                                title="Generate playable game from sheet music"
+                              >
+                                <Play size={13} strokeWidth={1.5} />
+                                {generatingFor === piece.id ? "Reading music…" : "Generate Game"}
+                              </button>
+                            )}
                           </>
                         ) : (
                           <button
