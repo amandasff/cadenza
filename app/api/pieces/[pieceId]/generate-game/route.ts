@@ -59,41 +59,34 @@ export async function POST(
   // Supabase Storage often returns application/octet-stream — derive type from URL extension
   const rawContentType = imgRes.headers.get('content-type') ?? '';
   let detectedMime = rawContentType.split(';')[0].trim();
-  if (!detectedMime.startsWith('image/')) {
-    const ext = piece.sheet_music_url.split('.').pop()?.toLowerCase() ?? '';
-    const EXT_MIME: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+  const ext = piece.sheet_music_url.split('.').pop()?.toLowerCase() ?? '';
+  if (!detectedMime.startsWith('image/') && detectedMime !== 'application/pdf') {
+    const EXT_MIME: Record<string, string> = {
+      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf',
+    };
     detectedMime = EXT_MIME[ext] ?? 'image/jpeg';
   }
-  if (detectedMime.includes('pdf')) {
-    return NextResponse.json({
-      error: 'PDF not yet supported. Please upload a JPG or PNG photo of your sheet music.',
-    }, { status: 400 });
+
+  const fileBuf = await imgRes.arrayBuffer();
+  const MAX_BYTES = 32 * 1024 * 1024; // Claude accepts up to ~32 MB for documents
+  if (fileBuf.byteLength > MAX_BYTES) {
+    return NextResponse.json({ error: 'File is too large (max 32 MB).' }, { status: 400 });
   }
 
-  const imgBuf = await imgRes.arrayBuffer();
-
-  // Claude rejects base64 payloads over ~5 MB
-  const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-  if (imgBuf.byteLength > MAX_IMAGE_BYTES) {
-    return NextResponse.json({
-      error: 'Sheet music image is too large (max 5 MB). Please upload a smaller or compressed image.',
-    }, { status: 400 });
-  }
-
-  const base64 = Buffer.from(imgBuf).toString('base64');
-  const mimeType = detectedMime as 'image/jpeg' | 'image/png' | 'image/webp';
+  const base64 = Buffer.from(fileBuf).toString('base64');
+  const isPdf = detectedMime === 'application/pdf' || ext === 'pdf';
 
   // Ask Claude to extract the melody as JSON
+  // PDFs are sent as document type; images as image type — both supported natively
   const claudeRes = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
     messages: [{
       role: 'user',
       content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: mimeType, data: base64 },
-        },
+        isPdf
+          ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+          : { type: 'image', source: { type: 'base64', media_type: detectedMime as 'image/jpeg' | 'image/png' | 'image/webp', data: base64 } },
         {
           type: 'text',
           text: `Analyze this sheet music image carefully. Extract the melody line (top voice in treble clef, or the single melodic line for monophonic instruments like flute, violin, voice).
