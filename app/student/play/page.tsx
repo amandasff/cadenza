@@ -1283,6 +1283,7 @@ export default function PlayPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
+    <>
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "1.5rem 1.25rem", fontFamily: "Inter, sans-serif" }}>
 
       {/* Header */}
@@ -1726,7 +1727,6 @@ export default function PlayPage() {
 
     </div>
 
-    {/* Transcription viewer modal */}
     {viewingTranscription && (
       <TranscriptionViewer
         title={viewingTranscription.title}
@@ -1734,5 +1734,6 @@ export default function PlayPage() {
         onClose={() => setViewingTranscription(null)}
       />
     )}
+    </>
   );
 }
