@@ -46,13 +46,17 @@ async function getProfile(username: string) {
 
   // Resolve composer details in a separate explicit query — avoids embedded-join null issues
   const avatarIds = (collectiblesRes.data ?? []).map((c: { avatar_id: string }) => c.avatar_id);
-  const { data: composerRows } = avatarIds.length > 0
-    ? await admin.from("composer_avatars").select("id, composer_name, era, rarity, image_path").in("id", avatarIds)
-    : { data: [] };
+  console.log('[public-profile] student_id:', p.id, '| collectibles error:', collectiblesRes.error?.message ?? null, '| avatar_ids:', avatarIds);
 
+  const composerResult = avatarIds.length > 0
+    ? await admin.from("composer_avatars").select("id, composer_name, era, rarity, image_path").in("id", avatarIds)
+    : { data: [], error: null };
+  console.log('[public-profile] composer_avatars error:', composerResult.error?.message ?? null, '| rows:', composerResult.data?.length ?? 0);
+
+  const composerRows = composerResult.data ?? [];
   const normalizedCollectibles = avatarIds.map(aid => ({
     avatar_id: aid,
-    composer_avatars: (composerRows ?? []).find((ca: { id: string }) => ca.id === aid) ?? null,
+    composer_avatars: composerRows.find((ca: { id: string }) => ca.id === aid) ?? null,
   }));
 
   const featuredComposer = featuredComposerRes.data as { composer_name: string; era: string; rarity: string; image_path: string } | null;
