@@ -37,8 +37,14 @@ export async function POST(req: NextRequest) {
     const pieces = ((piecesRes.data ?? []) as Array<{ title: string; composer: string | null; status: string }>)
       .map(p => `${p.title}${p.composer ? ` by ${p.composer}` : ""} (${p.status})`);
 
-    const items = ((inventoryRes.data ?? []) as unknown as Array<{ shop_items: { name: string; category: string; emoji: string }[] }>)
-      .flatMap(i => i.shop_items.map(s => `${s.emoji} ${s.name}`))
+    type ShopItem = { name: string; category: string; emoji: string };
+    const items = ((inventoryRes.data ?? []) as unknown as Array<{ shop_items: ShopItem | ShopItem[] | null }>)
+      .flatMap(i => {
+        const s = i.shop_items;
+        if (!s) return [];
+        const arr = Array.isArray(s) ? s : [s];
+        return arr.map(item => `${item.emoji} ${item.name}`);
+      })
       .filter(Boolean) as string[];
 
     const prompt = `You are a panel of three experts writing a young musician's studio legend card — the kind of profile that feels so cool and specific that the student wants to show it to everyone.

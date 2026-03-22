@@ -10,33 +10,57 @@ async function getProfile(username: string) {
   const admin = getSupabaseAdminClient();
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, display_name, avatar_url, instrument, streak_days, total_days_practiced")
+    .select("id, display_name, avatar_url, instrument, streak_days, total_days_practiced, studio_bio, studio_persona, featured_avatar_id, theme_song_item_id, theme_song_title, artist_name")
     .eq("username", username)
     .single();
   if (!profile) return null;
 
-  const [{ data: tracks }, { data: collectibles }] = await Promise.all([
+  const p = profile as {
+    id: string; display_name: string | null; avatar_url: string | null;
+    instrument: string | null; streak_days: number | null; total_days_practiced: number | null;
+    studio_bio: string | null; studio_persona: string | null;
+    featured_avatar_id: string | null; theme_song_item_id: string | null; theme_song_title: string | null;
+    artist_name: string | null;
+  };
+
+  // Fetch tracks, collectibles, featured composer, and theme song in parallel
+  const [tracksRes, collectiblesRes, featuredComposerRes, themeSongRes] = await Promise.all([
     admin
       .from("portfolio_items")
       .select("id, title, description, recording_url, created_at, collection_count")
-      .eq("student_id", profile.id)
+      .eq("student_id", p.id)
       .eq("is_public", true)
       .order("created_at", { ascending: false })
       .limit(20),
     admin
       .from("student_collectibles")
       .select("avatar_id, composer_avatars(composer_name, era, rarity, image_path)")
-      .eq("student_id", profile.id),
+      .eq("student_id", p.id),
+    p.featured_avatar_id
+      ? admin.from("composer_avatars").select("composer_name, era, rarity, image_path").eq("id", p.featured_avatar_id).single()
+      : Promise.resolve({ data: null }),
+    p.theme_song_item_id
+      ? admin.from("portfolio_items").select("recording_url, title").eq("id", p.theme_song_item_id).single()
+      : Promise.resolve({ data: null }),
   ]);
 
-  // Supabase returns the foreign-key join as an array; cast to the shape the client expects
-  type RawCollectible = { avatar_id: string; composer_avatars: { composer_name: string; era: string; rarity: string; image_path: string }[] | null };
-  const normalizedCollectibles = (collectibles ?? []).map((c: RawCollectible) => ({
+  // Supabase FK joins return objects or arrays depending on cardinality — normalise to single object
+  type RawCollectible = { avatar_id: string; composer_avatars: { composer_name: string; era: string; rarity: string; image_path: string }[] | { composer_name: string; era: string; rarity: string; image_path: string } | null };
+  const normalizedCollectibles = (collectiblesRes.data ?? []).map((c: RawCollectible) => ({
     avatar_id: c.avatar_id,
     composer_avatars: Array.isArray(c.composer_avatars) ? (c.composer_avatars[0] ?? null) : c.composer_avatars,
   }));
 
-  return { profile, tracks: tracks ?? [], collectibles: normalizedCollectibles };
+  const featuredComposer = featuredComposerRes.data as { composer_name: string; era: string; rarity: string; image_path: string } | null;
+  const themeSong = themeSongRes.data as { recording_url: string | null; title: string } | null;
+
+  return {
+    profile: p,
+    tracks: tracksRes.data ?? [],
+    collectibles: normalizedCollectibles,
+    featuredComposer,
+    themeSong,
+  };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
