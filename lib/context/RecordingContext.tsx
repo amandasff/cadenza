@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "../supabase/client";
 import { ChatService } from "../services/ChatService";
 
