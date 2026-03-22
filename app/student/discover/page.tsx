@@ -297,7 +297,7 @@ export default function DiscoverPage() {
       }
 
       const { data: itemData, error: itemError } = await supabase
-        .from("portfolio_items").select("*").eq("is_public", true)
+        .from("portfolio_items").select("*").eq("visibility", "public")
         .order("created_at", { ascending: false });
       if (itemError) throw itemError;
 
@@ -305,7 +305,7 @@ export default function DiscoverPage() {
       setItems(enriched);
     } catch (err) {
       const e = err as { message?: string; code?: string };
-      if (e?.code === "42703" || e?.code === "42P01" || e?.message?.includes("is_public") || e?.message?.includes("media_type")) {
+      if (e?.code === "42703" || e?.code === "42P01" || e?.message?.includes("is_public") || e?.message?.includes("visibility") || e?.message?.includes("media_type")) {
         setMissingColumns(true);
       } else {
         setQueryError(e?.message ?? "Unknown error");
@@ -325,10 +325,30 @@ export default function DiscoverPage() {
     try {
       const followingIds = [...myFollows];
       if (followingIds.length === 0) { setFollowingItems([]); setFollowingLoaded(true); return; }
-      const { data } = await supabase
-        .from("portfolio_items").select("*").eq("is_public", true)
-        .in("student_id", followingIds).order("created_at", { ascending: false });
-      const enriched = await enrichItems((data ?? []) as PortfolioItemRow[], currentUserId);
+
+      // Find mutual follows (people who also follow me back) — they can see "friends" posts
+      const { data: followsMeData } = await supabase
+        .from("follows").select("follower_id").eq("following_id", currentUserId);
+      const followsMeSet = new Set((followsMeData ?? []).map((f: { follower_id: string }) => f.follower_id));
+      const mutualIds = followingIds.filter(id => followsMeSet.has(id));
+
+      // Public posts from anyone I follow + friends posts from mutual follows
+      const [pubRes, friendsRes] = await Promise.all([
+        supabase.from("portfolio_items").select("*").eq("visibility", "public")
+          .in("student_id", followingIds).order("created_at", { ascending: false }),
+        mutualIds.length > 0
+          ? supabase.from("portfolio_items").select("*").eq("visibility", "friends")
+              .in("student_id", mutualIds).order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      // Merge + deduplicate by id, sort by created_at
+      const seen = new Set<string>();
+      const merged = [...(pubRes.data ?? []), ...((friendsRes.data ?? []) as PortfolioItemRow[])]
+        .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; })
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      const enriched = await enrichItems(merged as PortfolioItemRow[], currentUserId);
       setFollowingItems(enriched);
       setFollowingLoaded(true);
     } finally {
@@ -547,7 +567,7 @@ export default function DiscoverPage() {
     const [followerRes, followingRes, itemsRes] = await Promise.all([
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", studentId),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", studentId),
-      supabase.from("portfolio_items").select("*").eq("student_id", studentId).eq("is_public", true).order("created_at", { ascending: false }),
+      supabase.from("portfolio_items").select("*").eq("student_id", studentId).eq("visibility", "public").order("created_at", { ascending: false }),
     ]);
 
     if (profileData) {

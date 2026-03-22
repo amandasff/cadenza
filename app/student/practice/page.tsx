@@ -6,7 +6,7 @@ import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
 import { PieceService } from "../../../lib/services/PieceService";
 import { ChatService } from "../../../lib/services/ChatService";
-import { PortfolioService } from "../../../lib/services/PortfolioService";
+import { PortfolioService, type Visibility } from "../../../lib/services/PortfolioService";
 import { Student } from "../../../lib/models/Student";
 import type { PracticeSegment } from "../../../lib/types";
 import AudioPlayer from "../../../components/AudioPlayer";
@@ -83,7 +83,7 @@ function PracticeInner() {
   const [portfolioSave, setPortfolioSave] = useState(false);
   const [portfolioTitle, setPortfolioTitle] = useState("");
   const [portfolioDesc, setPortfolioDesc] = useState("");
-  const [portfolioAnonymous, setPortfolioAnonymous] = useState(false);
+  const [portfolioVisibility, setPortfolioVisibility] = useState<Visibility>("public");
   const [artistName, setArtistName] = useState<string | null>(null);
 
   // Reflect state
@@ -315,8 +315,7 @@ function PracticeInner() {
             description: portfolioDesc.trim() || undefined,
             recordingUrl,
             sessionId: sessionData.id,
-            displayAs: portfolioAnonymous ? "anonymous" : "real",
-            isPublic: false,
+            visibility: portfolioVisibility,
           });
         } catch (err) {
           console.error("Portfolio save failed:", err);
@@ -723,22 +722,29 @@ function PracticeInner() {
             <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <input autoFocus value={portfolioTitle} onChange={e => setPortfolioTitle(e.target.value)} placeholder="Piece name, e.g. Für Elise" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border-strong)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
               <textarea value={portfolioDesc} onChange={e => setPortfolioDesc(e.target.value)} placeholder="Notes about this recording… (optional)" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none", minHeight: 52 }} />
-              {/* Anonymous toggle */}
-              <button onClick={() => setPortfolioAnonymous(v => !v)}
-                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.75rem", borderRadius: 6, border: `1px solid ${portfolioAnonymous ? "var(--charcoal)" : "var(--border)"}`, background: portfolioAnonymous ? "rgba(44,40,36,0.06)" : "transparent", cursor: "pointer", textAlign: "left", fontFamily: "Inter, sans-serif" }}>
-                <span style={{ fontSize: "1rem" }}>👤</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)" }}>Post anonymously</div>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--muted)" }}>
-                    {portfolioAnonymous
-                      ? `Shows as "${artistName ?? "Anonymous"}" when shared publicly`
-                      : "Your name will appear when shared publicly"}
-                  </div>
+              {/* Visibility picker */}
+              <div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>Who can see this?</div>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  {([
+                    { v: "private" as Visibility, icon: "🔒", label: "Only me",  color: "var(--muted)", desc: "Saved to your journey, invisible to others" },
+                    { v: "friends" as Visibility, icon: "👥", label: "Friends",  color: "#3D6B55", desc: "Visible to mutual followers" },
+                    { v: "public"  as Visibility, icon: "🌍", label: "Everyone", color: "var(--lavender)", desc: "Shown in Discover feed" },
+                  ]).map(({ v, icon, label, color, desc }) => {
+                    const active = portfolioVisibility === v;
+                    return (
+                      <button key={v} type="button" onClick={() => setPortfolioVisibility(v)}
+                        style={{ flex: 1, padding: "0.5rem 0.25rem", borderRadius: 8, border: `1.5px solid ${active ? color : "var(--border)"}`, background: active ? `${color}14` : "transparent", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem", transition: "all 0.15s" }}>
+                        <span style={{ fontSize: "1.1rem" }}>{icon}</span>
+                        <span style={{ fontFamily: "Inter, sans-serif", fontWeight: active ? 600 : 400, fontSize: "0.7rem", color: active ? color : "var(--muted)" }}>{label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div style={{ width: 36, height: 20, borderRadius: 10, background: portfolioAnonymous ? "var(--charcoal)" : "var(--border)", flexShrink: 0, position: "relative", transition: "background 0.15s" }}>
-                  <div style={{ position: "absolute", top: 2, left: portfolioAnonymous ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "white", transition: "left 0.15s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>
+                  {portfolioVisibility === "private" ? "Saved to your journey, invisible to others" : portfolioVisibility === "friends" ? "Visible to mutual followers" : "Shown in Discover feed"}
                 </div>
-              </button>
+              </div>
             </div>
           )}
         </div>

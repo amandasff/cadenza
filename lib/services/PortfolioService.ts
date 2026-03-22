@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+export type Visibility = 'private' | 'friends' | 'public';
+
 export interface PortfolioItemRow {
   id: string;
   student_id: string;
@@ -11,6 +13,7 @@ export interface PortfolioItemRow {
   created_at: string;
   media_type: 'audio' | 'video' | null;
   is_public: boolean | null;
+  visibility: Visibility;
   view_count?: number;
   price_points?: number;
   collection_count?: number;
@@ -32,7 +35,7 @@ interface AddItemInput {
   recordingUrl?: string;
   sessionId?: string;
   mediaType?: 'audio' | 'video';
-  isPublic?: boolean;
+  visibility?: Visibility;
   displayAs?: 'real' | 'alias' | 'anonymous';
 }
 
@@ -69,6 +72,7 @@ export class PortfolioService {
   }
 
   async addItem(input: AddItemInput): Promise<PortfolioItemRow> {
+    const visibility: Visibility = input.visibility ?? 'private';
     const { data, error } = await this.supabase
       .from('portfolio_items')
       .insert({
@@ -79,7 +83,8 @@ export class PortfolioService {
         recording_url: input.recordingUrl ?? null,
         session_id: input.sessionId ?? null,
         media_type: input.mediaType ?? 'audio',
-        is_public: input.isPublic ?? false,
+        visibility,
+        is_public: visibility === 'public',
         display_as: input.displayAs ?? 'real',
       })
       .select()
@@ -89,10 +94,13 @@ export class PortfolioService {
     return data as PortfolioItemRow;
   }
 
-  async updateItem(id: string, updates: { title?: string; description?: string; is_public?: boolean; price_points?: number }): Promise<void> {
+  async updateItem(id: string, updates: { title?: string; description?: string; is_public?: boolean; visibility?: Visibility; price_points?: number }): Promise<void> {
+    // Keep is_public in sync with visibility if visibility is being updated
+    const patch = { ...updates };
+    if (updates.visibility) patch.is_public = updates.visibility === 'public';
     const { error } = await this.supabase
       .from('portfolio_items')
-      .update(updates)
+      .update(patch)
       .eq('id', id);
 
     if (error) throw error;

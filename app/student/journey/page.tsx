@@ -2,7 +2,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../lib/supabase/client";
-import { PortfolioService, type PortfolioItemRow } from "../../../lib/services/PortfolioService";
+import { PortfolioService, type PortfolioItemRow, type Visibility } from "../../../lib/services/PortfolioService";
+
+const VISIBILITY_CONFIG: Record<Visibility, { icon: string; label: string; desc: string; color: string }> = {
+  private: { icon: "🔒", label: "Only me",  desc: "Saved to your journey, invisible to others", color: "var(--muted)" },
+  friends: { icon: "👥", label: "Friends",  desc: "Visible to people you mutually follow",      color: "#3D6B55" },
+  public:  { icon: "🌍", label: "Everyone", desc: "Visible in Discover to everyone",             color: "var(--lavender)" },
+};
+const VISIBILITY_CYCLE: Visibility[] = ["private", "friends", "public"];
 import { Student } from "../../../lib/models/Student";
 import AudioPlayer from "../../../components/AudioPlayer";
 import { useI18n } from "../../../lib/context/I18nContext";
@@ -111,7 +118,7 @@ export default function JourneyPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [sharePublic, setSharePublic] = useState(true);
+  const [uploadVisibility, setUploadVisibility] = useState<Visibility>("public");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // In-app recording
@@ -295,16 +302,17 @@ export default function JourneyPage() {
     }
   }
 
-  async function togglePublic(item: PortfolioItemRow) {
+  async function cycleVisibility(item: PortfolioItemRow) {
     if (togglingPublicId) return;
     setTogglingPublicId(item.id);
-    const newVal = !item.is_public;
-    setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_public: newVal } : i));
+    const cur: Visibility = item.visibility ?? (item.is_public ? "public" : "private");
+    const next = VISIBILITY_CYCLE[(VISIBILITY_CYCLE.indexOf(cur) + 1) % VISIBILITY_CYCLE.length];
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, visibility: next, is_public: next === "public" } : i));
     try {
       const supabase = getSupabaseBrowserClient();
-      await PortfolioService.create(supabase).updateItem(item.id, { is_public: newVal });
+      await PortfolioService.create(supabase).updateItem(item.id, { visibility: next });
     } catch {
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_public: item.is_public } : i));
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, visibility: cur, is_public: item.is_public } : i));
     } finally {
       setTogglingPublicId(null);
     }
@@ -403,7 +411,7 @@ export default function JourneyPage() {
         description: uploadDesc.trim() || undefined,
         recordingUrl: urlData.publicUrl,
         mediaType: coverTab === "record" ? recordMode : "video",
-        isPublic: sharePublic,
+        visibility: uploadVisibility,
       });
       setItems(prev => [item, ...prev]);
       closeModal();
@@ -606,7 +614,9 @@ export default function JourneyPage() {
                   const isExpanded = expandedId === item.id;
                   const isLatest = gi === 0 && idx === 0;
                   const isVideo = item.media_type === "video";
-                  const isPublic = item.is_public === true;
+                  const itemVisibility: Visibility = item.visibility ?? (item.is_public ? "public" : "private");
+                  const isPublic = itemVisibility === "public";
+                  const visConfig = VISIBILITY_CONFIG[itemVisibility];
 
                   return (
                     <div
@@ -663,9 +673,9 @@ export default function JourneyPage() {
                               {t.student.latest}
                             </span>
                           )}
-                          {isPublic && editingId !== item.id && (
-                            <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: "var(--lavender-bg)", color: "var(--lavender)", fontFamily: "Inter, sans-serif" }}>
-                              {t.student.publicLabel}
+                          {itemVisibility !== "private" && editingId !== item.id && (
+                            <span style={{ fontSize: "0.5625rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.2rem 0.5rem", borderRadius: 4, background: itemVisibility === "public" ? "var(--lavender-bg)" : "rgba(61,107,85,0.1)", color: itemVisibility === "public" ? "var(--lavender)" : "#3D6B55", fontFamily: "Inter, sans-serif" }}>
+                              {visConfig.icon} {visConfig.label}
                             </span>
                           )}
                           {editingId !== item.id && (
@@ -729,25 +739,20 @@ export default function JourneyPage() {
 
                                 {/* Public toggle */}
                                 <button
-                                  onClick={() => togglePublic(item)}
+                                  onClick={() => cycleVisibility(item)}
                                   disabled={togglingPublicId === item.id}
+                                  title="Tap to change visibility"
                                   style={{
-                                    background: isPublic ? "rgba(91,79,207,0.07)" : "transparent",
-                                    border: `1px solid ${isPublic ? "var(--lavender)" : "var(--border)"}`,
+                                    background: itemVisibility === "public" ? "rgba(91,79,207,0.07)" : itemVisibility === "friends" ? "rgba(61,107,85,0.07)" : "transparent",
+                                    border: `1px solid ${itemVisibility === "public" ? "var(--lavender)" : itemVisibility === "friends" ? "#3D6B55" : "var(--border)"}`,
                                     borderRadius: 4, cursor: "pointer", padding: "0.2rem 0.5rem",
-                                    color: isPublic ? "var(--lavender)" : "var(--muted)",
+                                    color: itemVisibility === "public" ? "var(--lavender)" : itemVisibility === "friends" ? "#3D6B55" : "var(--muted)",
                                     fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", fontWeight: 500,
                                     display: "flex", alignItems: "center", gap: "0.25rem",
                                     opacity: togglingPublicId === item.id ? 0.5 : 1,
                                   }}
                                 >
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                    {isPublic
-                                      ? <><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>
-                                      : <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>
-                                    }
-                                  </svg>
-                                  {isPublic ? t.student.publicLabel : t.student.privateLabel}
+                                  {visConfig.icon} {visConfig.label}
                                 </button>
 
                                 {item.recording_url && (
@@ -1004,20 +1009,28 @@ export default function JourneyPage() {
                 </div>
               )}
 
-              {/* Share toggle */}
-              <button
-                type="button"
-                onClick={() => setSharePublic(p => !p)}
-                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.625rem 0.875rem", borderRadius: 8, border: `1px solid ${sharePublic ? "rgba(91,79,207,0.3)" : "var(--border)"}`, background: sharePublic ? "rgba(91,79,207,0.06)" : "var(--cream)", cursor: "pointer", textAlign: "left", width: "100%" }}
-              >
-                <div style={{ width: 36, height: 20, borderRadius: 10, background: sharePublic ? "var(--lavender)" : "var(--border)", transition: "background 0.2s", flexShrink: 0, position: "relative" }}>
-                  <div style={{ position: "absolute", top: 2, left: sharePublic ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "var(--white)", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+              {/* Visibility picker */}
+              <div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.375rem" }}>Who can see this?</div>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  {(["private", "friends", "public"] as Visibility[]).map(v => {
+                    const cfg = VISIBILITY_CONFIG[v];
+                    const active = uploadVisibility === v;
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setUploadVisibility(v)}
+                        style={{ flex: 1, padding: "0.5rem 0.25rem", borderRadius: 8, border: `1.5px solid ${active ? cfg.color : "var(--border)"}`, background: active ? `${cfg.color}14` : "var(--cream)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem", transition: "all 0.15s" }}
+                      >
+                        <span style={{ fontSize: "1.1rem" }}>{cfg.icon}</span>
+                        <span style={{ fontFamily: "Inter, sans-serif", fontWeight: active ? 600 : 400, fontSize: "0.7rem", color: active ? cfg.color : "var(--muted)" }}>{cfg.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.8125rem", color: "var(--charcoal)" }}>{t.student.shareToDiscover}</div>
-                  <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)" }}>{t.student.shareToDiscoverDesc}</div>
-                </div>
-              </button>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--muted)", marginTop: "0.25rem" }}>{VISIBILITY_CONFIG[uploadVisibility].desc}</div>
+              </div>
 
               {(uploadError) && (
                 <div style={{ padding: "0.5rem 0.75rem", borderRadius: 6, background: "var(--peach-bg)", border: "1px solid var(--peach-light)", fontSize: "0.8125rem", color: "var(--peach)", fontFamily: "Inter, sans-serif" }}>
