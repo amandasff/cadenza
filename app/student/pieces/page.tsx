@@ -364,6 +364,7 @@ export default function MyPieces() {
   };
 
   return (
+    <>
     <div style={{ background: "var(--cream)", minHeight: "100%", padding: "1.5rem 1.25rem 6rem" }}>
 
       {/* Header */}
@@ -799,7 +800,6 @@ export default function MyPieces() {
         </div>
       )}
     </div>
-
     {viewingTranscription && (
       <TranscriptionViewer
         title={viewingTranscription.title}
@@ -807,5 +807,6 @@ export default function MyPieces() {
         onClose={() => setViewingTranscription(null)}
       />
     )}
+    </>
   );
 }
