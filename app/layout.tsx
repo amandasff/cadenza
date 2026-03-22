@@ -75,7 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Analytics />
         <SpeedInsights />
         <Toaster
-          position="bottom-right"
+          position="top-right"
           toastOptions={{
             style: {
               fontFamily: "Inter, sans-serif",

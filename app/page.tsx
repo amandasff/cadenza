@@ -265,7 +265,7 @@ export default function Home() {
                   </div>
                   {error && <div style={{ border: "1px solid #E8C4BA", borderRadius: 4, padding: "0.5rem 0.75rem", fontSize: "0.8125rem", color: "#B85C3A", fontFamily: "Inter, sans-serif", background: "#FDF6F3" }}>{error}</div>}
                   <button type="submit" disabled={loading || unblurring} style={{ borderRadius: 4, background: loading || unblurring ? "#ADA9A2" : "#4CAF84", color: "#fff", fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.9375rem", padding: "0.75rem", border: "none", cursor: loading || unblurring ? "default" : "pointer", letterSpacing: "0.01em", transition: "background 0.15s", marginTop: "0.125rem" }}>
-                    {unblurring ? "Welcome! Opening Cadenza…" : loading ? "Creating account..." : "Try for free in 30 seconds →"}
+                    {unblurring ? "Welcome! Opening Cadenza…" : loading ? "Creating account..." : "Create free account →"}
                   </button>
                 </form>
                 <div style={{ padding: "0 1.75rem 1.5rem" }}>
