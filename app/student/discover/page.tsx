@@ -59,6 +59,98 @@ function VideoThumbnail({ src }: { src: string }) {
   );
 }
 
+// ── Deterministic label color from title string ──────────────────────────────
+const VINYL_LABEL_COLORS = ["#7B2D3E","#2D5A7B","#3D6B4A","#5A3D7B","#7B5A2D","#2D6B6B","#6B2D5A","#3D4A7B"];
+function vinylColor(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
+  return VINYL_LABEL_COLORS[Math.abs(h) % VINYL_LABEL_COLORS.length];
+}
+
+function VinylCover({ id, title, artist, size, spinning = false }: {
+  id: string; title: string; artist?: string | null; size: number; spinning?: boolean;
+}) {
+  const r = size / 2;
+  const labelR = r * 0.33;
+  const labelColor = vinylColor(title + id);
+  const gradId = `vg-${id}`;
+  const shineId = `vs-${id}`;
+
+  // Truncate text to fit inside the label circle
+  const maxTitleChars = Math.floor(labelR / 4.2);
+  const maxArtistChars = Math.floor(labelR / 3.5);
+  const shortTitle = title.length > maxTitleChars ? title.slice(0, maxTitleChars - 1) + "…" : title;
+  const shortArtist = (artist ?? "").length > maxArtistChars ? (artist ?? "").slice(0, maxArtistChars - 1) + "…" : (artist ?? "");
+
+  return (
+    <div style={{
+      width: size, height: size, flexShrink: 0,
+      animation: spinning ? "vinyl-spin 3s linear infinite" : undefined,
+    }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <defs>
+          {/* Vinyl surface gradient — subtle warm sheen */}
+          <radialGradient id={gradId} cx="38%" cy="30%" r="65%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.13)" />
+            <stop offset="60%" stopColor="rgba(255,255,255,0.02)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
+          </radialGradient>
+          {/* Label inner shine */}
+          <radialGradient id={shineId} cx="35%" cy="28%" r="60%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.25)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+          </radialGradient>
+        </defs>
+
+        {/* Disc body */}
+        <circle cx={r} cy={r} r={r - 0.5} fill="#181412" />
+
+        {/* Grooves — concentric rings at different radii */}
+        {[0.50, 0.58, 0.65, 0.71, 0.76, 0.81, 0.86, 0.90, 0.94].map((pct, i) => (
+          <circle key={i} cx={r} cy={r} r={r * pct}
+            fill="none" stroke="rgba(255,255,255,0.055)" strokeWidth={0.7} />
+        ))}
+
+        {/* Disc sheen overlay */}
+        <circle cx={r} cy={r} r={r - 0.5} fill={`url(#${gradId})`} />
+
+        {/* Label disc */}
+        <circle cx={r} cy={r} r={labelR} fill={labelColor} />
+        <circle cx={r} cy={r} r={labelR} fill={`url(#${shineId})`} />
+        {/* Label edge ring */}
+        <circle cx={r} cy={r} r={labelR} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={0.6} />
+
+        {/* Title text */}
+        <text
+          x={r} y={artist ? r - labelR * 0.14 : r + labelR * 0.08}
+          textAnchor="middle" dominantBaseline="middle"
+          fill="rgba(255,255,255,0.92)"
+          fontSize={Math.max(6, labelR * 0.27)}
+          fontFamily="Inter, sans-serif" fontWeight={600}
+          style={{ letterSpacing: "-0.01em" }}
+        >{shortTitle}</text>
+
+        {/* Artist text */}
+        {shortArtist && (
+          <text
+            x={r} y={r + labelR * 0.32}
+            textAnchor="middle" dominantBaseline="middle"
+            fill="rgba(255,255,255,0.6)"
+            fontSize={Math.max(5, labelR * 0.21)}
+            fontFamily="Inter, sans-serif"
+          >{shortArtist}</text>
+        )}
+
+        {/* Centre spindle hole */}
+        <circle cx={r} cy={r} r={Math.max(2, r * 0.04)} fill="#181412" />
+
+        {/* Disc border */}
+        <circle cx={r} cy={r} r={r - 0.5} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+      </svg>
+    </div>
+  );
+}
+
 const initials = (name?: string | null) =>
   (name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -701,8 +793,8 @@ export default function DiscoverPage() {
               <div key={item.id} onClick={() => openItem(item)} style={{ cursor: "pointer" }}>
                 <div style={{ aspectRatio: "16/9", borderRadius: 8, overflow: "hidden", background: "#1a1a1a", position: "relative" }}>
                   {isVideo && item.recording_url ? <VideoThumbnail src={item.recording_url} /> : (
-                    <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #2C2824 0%, #4a3f38 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                    <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #1a1210 0%, #2e2520 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <VinylCover id={item.id} title={item.title} artist={item.is_anonymous ? undefined : item.display_name} size={72} />
                     </div>
                   )}
                 </div>
@@ -885,8 +977,8 @@ export default function DiscoverPage() {
                   {profileItems.map(pi => (
                     <div key={pi.id} onClick={() => { setProfileInfo(null); setProfileItems([]); openItem(pi); }} style={{ cursor: "pointer", position: "relative", background: "#1a1a1a", overflow: "hidden", aspectRatio: "9/14" }}>
                       {pi.media_type === "video" && pi.recording_url ? <VideoThumbnail src={pi.recording_url} /> : (
-                        <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #2C2824 0%, #4a3f38 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                        <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #1a1210 0%, #2e2520 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <VinylCover id={pi.id} title={pi.title} artist={pi.is_anonymous ? undefined : pi.display_name} size={84} />
                         </div>
                       )}
                       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)", pointerEvents: "none" }} />
@@ -923,10 +1015,8 @@ export default function DiscoverPage() {
               )}
               {/* Audio header */}
               {expandedItem.media_type !== "video" && (
-                <div style={{ background: "linear-gradient(135deg, #2C2824 0%, #4a3f38 100%)", padding: "1.5rem 1rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
-                  </div>
+                <div style={{ background: "linear-gradient(160deg, #1a1210 0%, #2e2520 55%, #3a2d26 100%)", padding: "1.75rem 1.25rem", display: "flex", alignItems: "center", gap: "1.125rem" }}>
+                  <VinylCover id={expandedItem.id} title={expandedItem.title} artist={expandedItem.is_anonymous ? undefined : expandedItem.display_name} size={96} spinning />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "#fff", lineHeight: 1.3 }}>{expandedItem.title}</div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "rgba(255,255,255,0.6)", marginTop: "0.25rem" }}>{expandedItem.is_anonymous ? "👻 Anonymous" : (expandedItem.display_name ?? t.student.musicianFallback)}</div>
@@ -1113,6 +1203,8 @@ export default function DiscoverPage() {
           </div>
         </div>
       )}
+
+      <style>{`@keyframes vinyl-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
