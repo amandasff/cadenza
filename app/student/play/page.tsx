@@ -847,44 +847,66 @@ export default function PlayPage() {
   function drawCanvas(noteList: NoteState[], song: Song) {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const LOGICAL_H = NUM_STRINGS * LANE_HEIGHT;
+
+    // ── Self-heal: canvas is conditionally rendered so the resize useEffect
+    //    fires before the element exists. Fix dimensions on first draw frame. ──
+    const needH = LOGICAL_H * dpr;
+    if (canvas.height !== needH) {
+      canvas.width = (canvas.offsetWidth || window.innerWidth) * dpr;
+      canvas.height = needH;
+    }
+    // Always reset transform so scale is correct (setting .width resets ctx state)
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = canvas.width / dpr;   // logical CSS pixels
-    const H = NUM_STRINGS * LANE_HEIGHT;
-    const LABEL_W = 52;
-    const STRING_LINE_WIDTHS = [0.8, 1.1, 1.4, 1.8, 2.2, 2.8]; // string 1 (thin e) → 6 (thick E)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Gradient background
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, "#0c0c1a");
-    bg.addColorStop(1, "#090912");
-    ctx.fillStyle = bg;
+    const W = canvas.width / dpr;
+    const H = LOGICAL_H;
+    const LABEL_W = 48;
+    const STRING_LINE_WIDTHS = [0.7, 1.0, 1.3, 1.7, 2.1, 2.6];
+
+    // ── Background ────────────────────────────────────────────────────────────
+    ctx.fillStyle = "#0d0d1a";
     ctx.fillRect(0, 0, W, H);
 
-    // String lanes + labels
+    // ── Subtle vertical beat lines ────────────────────────────────────────────
+    const beatsPerSec = song.bpm / 60;
+    const scrollSpeed = SCROLL_SPEED_BASE * (song.bpm / 100);
+    const pxPerBeat = scrollSpeed / beatsPerSec;
+    const beatOffset = (elapsedRef.current * scrollSpeed) % pxPerBeat;
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.lineWidth = 1;
+    for (let x = HIT_ZONE_X - beatOffset; x < W; x += pxPerBeat) {
+      if (x < LABEL_W) continue;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+
+    // ── String lanes + labels ─────────────────────────────────────────────────
     for (let s = 0; s < NUM_STRINGS; s++) {
       const y = s * LANE_HEIGHT + LANE_HEIGHT / 2;
       const color = STRING_COLORS[s];
 
-      // Alternating lane bg
+      // Alternating lane tint
       if (s % 2 === 0) {
-        ctx.fillStyle = "rgba(255,255,255,0.018)";
+        ctx.fillStyle = "rgba(255,255,255,0.015)";
         ctx.fillRect(LABEL_W, s * LANE_HEIGHT, W - LABEL_W, LANE_HEIGHT);
       }
 
-      // Label area bg
-      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      // Label column bg
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
       ctx.fillRect(0, s * LANE_HEIGHT, LABEL_W, LANE_HEIGHT);
 
-      // String name label
+      // String name
       ctx.fillStyle = color;
       ctx.font = "bold 13px Inter, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(STRING_LABELS[s], LABEL_W / 2, y + 5);
 
-      // String line (varying thickness by string gauge)
-      ctx.strokeStyle = color + "55";
+      // String line — bass strings visually heavier
+      ctx.strokeStyle = color + "60";
       ctx.lineWidth = STRING_LINE_WIDTHS[s];
       ctx.beginPath();
       ctx.moveTo(LABEL_W, y);
@@ -892,64 +914,69 @@ export default function PlayPage() {
       ctx.stroke();
     }
 
-    // Label / play area separator
-    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    // Label column separator
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(LABEL_W, 0);
-    ctx.lineTo(LABEL_W, H);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(LABEL_W, 0); ctx.lineTo(LABEL_W, H); ctx.stroke();
 
-    // Hit zone dashed vertical line
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(HIT_ZONE_X, 0);
-    ctx.lineTo(HIT_ZONE_X, H);
-    ctx.stroke();
+    // ── Hit zone: per-string glow circles ─────────────────────────────────────
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(HIT_ZONE_X, 0); ctx.lineTo(HIT_ZONE_X, H); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Hit zone circles — one per string, glowing ring
     for (let s = 0; s < NUM_STRINGS; s++) {
       const y = s * LANE_HEIGHT + LANE_HEIGHT / 2;
       const color = STRING_COLORS[s];
-      const r = LANE_HEIGHT * 0.28;
-
-      const grd = ctx.createRadialGradient(HIT_ZONE_X, y, 0, HIT_ZONE_X, y, r * 2.5);
-      grd.addColorStop(0, color + "20");
-      grd.addColorStop(1, "transparent");
+      const r = LANE_HEIGHT * 0.26;
+      const grd = ctx.createRadialGradient(HIT_ZONE_X, y, 0, HIT_ZONE_X, y, r * 2.2);
+      grd.addColorStop(0, color + "18"); grd.addColorStop(1, "transparent");
       ctx.fillStyle = grd;
-      ctx.beginPath();
-      ctx.arc(HIT_ZONE_X, y, r * 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = color + "50";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(HIT_ZONE_X, y, r, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(HIT_ZONE_X, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = color + "45"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(HIT_ZONE_X, y, r, 0, Math.PI * 2); ctx.stroke();
     }
 
-    // Notes
+    // ── Notes (Yousician-style pills) ─────────────────────────────────────────
     for (const note of noteList) {
-      if (note.xPos < LABEL_W - 50 || note.xPos > W + 80) continue;
-      const row = note.string - 1; // string 1 = row 0 (top)
+      if (note.xPos < LABEL_W - 60 || note.xPos > W + 100) continue;
+      const row = note.string - 1;
       const y = row * LANE_HEIGHT + LANE_HEIGHT / 2;
       const color = STRING_COLORS[row];
       const isHit = note.result === "hit";
       const isMiss = note.result === "miss";
-      const r = LANE_HEIGHT * 0.36;
 
-      ctx.globalAlpha = isMiss ? 0.2 : 1;
+      const pillH = LANE_HEIGHT * 0.54;
+      const pillW = Math.max(NOTE_WIDTH * note.duration, 48);
+      const rx = note.xPos - pillW / 2;
+      const ry = y - pillH / 2;
+      const cr = pillH / 2; // corner radius
+
+      ctx.globalAlpha = isMiss ? 0.22 : 1;
       ctx.shadowColor = isHit ? "#2ecc71" : isMiss ? "transparent" : color;
-      ctx.shadowBlur = isHit ? 24 : 14;
+      ctx.shadowBlur = isHit ? 20 : 10;
 
-      // Circle note
-      ctx.fillStyle = isHit ? "#2ecc71" : isMiss ? "#333" : color;
+      // Pill fill
+      ctx.fillStyle = isHit ? "#2ecc71" : isMiss ? "#2a2a2a" : color;
       ctx.beginPath();
-      ctx.arc(note.xPos, y, r, 0, Math.PI * 2);
+      ctx.moveTo(rx + cr, ry);
+      ctx.lineTo(rx + pillW - cr, ry);
+      ctx.arcTo(rx + pillW, ry, rx + pillW, ry + pillH, cr);
+      ctx.lineTo(rx + pillW, ry + pillH);
+      ctx.arcTo(rx + pillW, ry + pillH, rx + pillW - cr, ry + pillH, cr);
+      ctx.lineTo(rx + cr, ry + pillH);
+      ctx.arcTo(rx, ry + pillH, rx, ry, cr);
+      ctx.arcTo(rx, ry, rx + cr, ry, cr);
+      ctx.closePath();
       ctx.fill();
+
+      // Subtle highlight border
+      if (!isMiss) {
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
 
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
@@ -957,27 +984,28 @@ export default function PlayPage() {
       if (!isMiss) {
         if (isHit) {
           ctx.fillStyle = "#fff";
-          ctx.font = "bold 16px Inter, sans-serif";
+          ctx.font = "bold 15px Inter, sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText("✓", note.xPos, y + 6);
+          ctx.fillText("✓", note.xPos, y + 5);
         } else {
-          // Note name above centre, fret number below — player sees both
           const noteName = noteNameForStringFret(note.string, note.fret);
-          ctx.fillStyle = "rgba(255,255,255,0.95)";
-          ctx.font = "bold 11px Inter, sans-serif";
+          // Note name (small, above centre)
+          ctx.fillStyle = "rgba(255,255,255,0.75)";
+          ctx.font = "10px Inter, sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText(noteName, note.xPos, y - 4);
-          ctx.font = "bold 14px Inter, sans-serif";
-          ctx.fillText(String(note.fret), note.xPos, y + 13);
+          ctx.fillText(noteName, note.xPos, y - 3);
+          // Fret number (large, below)
+          ctx.fillStyle = "#fff";
+          ctx.font = `bold ${Math.round(pillH * 0.52)}px Inter, sans-serif`;
+          ctx.fillText(String(note.fret), note.xPos, y + 11);
         }
       }
     }
 
-    // Song progress bar at bottom
-    const beatsPerSec = song.bpm / 60;
+    // ── Progress bar ──────────────────────────────────────────────────────────
     const lastBeat = Math.max(...song.notes.map(n => n.beat + n.duration));
     const progress = Math.min(1, (elapsedRef.current * beatsPerSec) / lastBeat);
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
     ctx.fillRect(LABEL_W, H - 3, W - LABEL_W, 3);
     ctx.fillStyle = "#5B9E79";
     ctx.fillRect(LABEL_W, H - 3, (W - LABEL_W) * progress, 3);
