@@ -23,7 +23,7 @@ async function getProfile(username: string) {
     artist_name: string | null;
   };
 
-  // Fetch tracks, collectibles, featured composer, and theme song in parallel
+  // Fetch tracks, raw collectible IDs, featured composer, and theme song in parallel
   const [tracksRes, collectiblesRes, featuredComposerRes, themeSongRes] = await Promise.all([
     admin
       .from("portfolio_items")
@@ -34,7 +34,7 @@ async function getProfile(username: string) {
       .limit(20),
     admin
       .from("student_collectibles")
-      .select("avatar_id, composer_avatars(composer_name, era, rarity, image_path)")
+      .select("avatar_id")
       .eq("student_id", p.id),
     p.featured_avatar_id
       ? admin.from("composer_avatars").select("composer_name, era, rarity, image_path").eq("id", p.featured_avatar_id).single()
@@ -44,11 +44,15 @@ async function getProfile(username: string) {
       : Promise.resolve({ data: null }),
   ]);
 
-  // Supabase FK joins return objects or arrays depending on cardinality — normalise to single object
-  type RawCollectible = { avatar_id: string; composer_avatars: { composer_name: string; era: string; rarity: string; image_path: string }[] | { composer_name: string; era: string; rarity: string; image_path: string } | null };
-  const normalizedCollectibles = (collectiblesRes.data ?? []).map((c: RawCollectible) => ({
-    avatar_id: c.avatar_id,
-    composer_avatars: Array.isArray(c.composer_avatars) ? (c.composer_avatars[0] ?? null) : c.composer_avatars,
+  // Resolve composer details in a separate explicit query — avoids embedded-join null issues
+  const avatarIds = (collectiblesRes.data ?? []).map((c: { avatar_id: string }) => c.avatar_id);
+  const { data: composerRows } = avatarIds.length > 0
+    ? await admin.from("composer_avatars").select("id, composer_name, era, rarity, image_path").in("id", avatarIds)
+    : { data: [] };
+
+  const normalizedCollectibles = avatarIds.map(aid => ({
+    avatar_id: aid,
+    composer_avatars: (composerRows ?? []).find((ca: { id: string }) => ca.id === aid) ?? null,
   }));
 
   const featuredComposer = featuredComposerRes.data as { composer_name: string; era: string; rarity: string; image_path: string } | null;
