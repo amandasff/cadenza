@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import PublicProfileClient from "./PublicProfileClient";
 
+// Always render fresh — never serve a cached/static version of a public profile
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ username: string }>;
 }
