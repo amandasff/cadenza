@@ -99,9 +99,7 @@ function omrPieceToSong(piece: PieceWithGame): Song {
   // Key insight: midiForNote(string, fret) determines expected MIDI for hit
   // detection, so any string/fret combo that produces the same MIDI value is
   // equivalent for gameplay — we just need to spread them visually.
-  const midiValues = game.notes_json
-    .map(n => (n.octave + 1) * 12 + (NOTE_SEMITONES[n.note] ?? (NOTE_SEMITONES[n.note.charAt(0)] ?? 0)))
-    .filter(m => m > 0);
+  const midiValues = game.notes_json.map(omrNoteToMidi).filter(m => m > 0);
   const minMidi = midiValues.length ? Math.min(...midiValues) : 60;
   const maxMidi = midiValues.length ? Math.max(...midiValues) : 72;
   const midiSpan = Math.max(1, maxMidi - minMidi);
@@ -831,6 +829,9 @@ export default function PlayPage() {
 
   // ── Start game ─────────────────────────────────────────────────────────────
   async function startGame(song: Song) {
+    // Clear any in-progress countdown or game loop before starting fresh
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    cancelAnimationFrame(animFrameRef.current);
     if (!micGranted) {
       await setupMic();
     }
@@ -872,6 +873,12 @@ export default function PlayPage() {
     const beatsPerSec = song.bpm / 60;
     const HIT_WINDOW_PX = 50; // px tolerance for a hit
 
+    // Pre-compute once — avoids 60fps array allocation; guard empty notes
+    const lastNoteBeat = song.notes.length > 0
+      ? song.notes.reduce((max, n) => Math.max(max, n.beat + n.duration), 0)
+      : 4;
+    const lastNoteSec = lastNoteBeat / beatsPerSec;
+
     let lastFrameTime = 0;
 
     function frame(now: number) {
@@ -899,8 +906,10 @@ export default function PlayPage() {
         xPos: note.xPos - scrollSpeed * dt,
       }));
 
-      // Check hits and misses
+      // Check hits and misses — track whether any result changed to avoid
+      // calling setNotes (and triggering a React re-render) on every frame.
       const PITCH_TOLERANCE = 2; // semitones (exact match)
+      let anyChanged = false;
       for (const note of updated) {
         if (note.result !== "pending") continue;
         const distFromHitZone = Math.abs(note.xPos - HIT_ZONE_X);
@@ -918,6 +927,7 @@ export default function PlayPage() {
           const pitchClassMatch = pitchClassDiff <= 1;
           if (exactMatch || pitchClassMatch) {
             note.result = "hit";
+            anyChanged = true;
             hitZoneFlashRef.current = { row: note.string - 1, type: "hit", until: performance.now() + 160 };
             comboRef.current += 1;
             if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
@@ -930,6 +940,7 @@ export default function PlayPage() {
         } else if (note.xPos < HIT_ZONE_X - HIT_WINDOW_PX) {
           // Passed the hit zone without being hit
           note.result = "miss";
+          anyChanged = true;
           hitZoneFlashRef.current = { row: note.string - 1, type: "miss", until: performance.now() + 200 };
           comboRef.current = 0;
           setCombo(0);
@@ -937,15 +948,16 @@ export default function PlayPage() {
       }
 
       noteStatesRef.current = updated;
-      setNotes([...updated]);
+      // Only re-render when a note result actually changed (avoids 60fps renders)
+      if (anyChanged) setNotes([...updated]);
 
       // Draw canvas
       drawCanvas(updated, song);
 
       // Check if song is done (all notes processed + 2s buffer)
-      const lastNoteBeat = Math.max(...song.notes.map(n => n.beat + n.duration));
-      const lastNoteSec = lastNoteBeat / beatsPerSec;
       if (elapsedSec > lastNoteSec + 2) {
+        // Flush final note states so the results screen has accurate data
+        setNotes([...updated]);
         setGameState("finished");
         return;
       }
@@ -1132,7 +1144,9 @@ export default function PlayPage() {
     }
 
     // ── Progress bar ──────────────────────────────────────────────────────────
-    const lastBeat = Math.max(...song.notes.map(n => n.beat + n.duration));
+    const lastBeat = song.notes.length > 0
+      ? song.notes.reduce((max, n) => Math.max(max, n.beat + n.duration), 0)
+      : 4;
     const progress = Math.min(1, (elapsedRef.current * beatsPerSec) / lastBeat);
     ctx.fillStyle = "rgba(255,255,255,0.05)";
     ctx.fillRect(LABEL_W, H - 3, W - LABEL_W, 3);
@@ -1142,11 +1156,13 @@ export default function PlayPage() {
 
   // ── Stop / cleanup ─────────────────────────────────────────────────────────
   function stopGame() {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     cancelAnimationFrame(animFrameRef.current);
     setGameState("idle");
   }
 
   function resetGame() {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     cancelAnimationFrame(animFrameRef.current);
     setNotes([]);
     setScore(0);
