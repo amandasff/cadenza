@@ -12,32 +12,32 @@ const TeacherHomeDemo = dynamic(() => import("../components/demo/TeacherHomeDemo
 const StudentHomeDemo = dynamic(() => import("../components/demo/StudentHomeDemo"), { ssr: false });
 
 const STUDENT_BULLETS = [
-  "Earn streaks, play music games, and collect composer avatars",
-  "Get AI feedback on your recordings between lessons",
-  "Share your music with your teacher and the world",
-  "Sheet music, chords, tuner, and metronome — all in one place",
-  "Track your practice journey and celebrate your progress",
-  "Discover music you love and find your own sound",
+  "Level up with music games, streaks, and composer collectibles",
+  "Get AI feedback on your recordings — like having a coach 24/7",
+  "Build your sound and share it with the world",
+  "Sheet music, chords, tuner, and metronome — everything in one place",
+  "Celebrate every milestone on your musical journey",
+  "Discover music you love and make it your own",
 ];
 
 const TEACHER_BULLETS = [
-  "Hear your students practice and leave feedback between lessons",
-  "Students stay motivated with streaks, games, and collectibles",
+  "Hear your students play and leave feedback between lessons",
+  "Students stay inspired with games, streaks, and collectibles",
   "Easy studio management, lesson tracking, and billing",
   "Upload and annotate sheet music for every student",
-  "Track each student's practice history at a glance",
+  "See each student's growth at a glance",
   "Everything in one place — no more scattered apps",
 ];
 
 const COPY: Record<string, { headline: string; subline: string; bullets: string[] }> = {
   student: {
-    headline: "Practice every day.\nActually enjoy it.",
-    subline: "The music practice app that students love.",
+    headline: "Make music\nyou love.",
+    subline: "The app that makes you excited to pick up your instrument.",
     bullets: STUDENT_BULLETS,
   },
   teacher: {
-    headline: "Your students\nwill actually practice.",
-    subline: "The music practice app that students love.",
+    headline: "Watch your students\nfall in love with music.",
+    subline: "The studio platform your students will actually use.",
     bullets: TEACHER_BULLETS,
   },
 };

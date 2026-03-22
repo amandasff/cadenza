@@ -456,7 +456,7 @@ export default function StudioPage() {
                 style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", border: "1px solid var(--border)", borderRadius: 4, padding: "0.25rem 0.5rem", outline: "none", background: "var(--cream)" }}
               />
               <div>
-                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.25rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>🎭 Stage name (optional)</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", fontWeight: 600, color: "var(--muted)", marginBottom: "0.25rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>🎭 Artist name (optional)</div>
                 <input
                   value={draftArtistName}
                   onChange={e => setDraftArtistName(e.target.value)}

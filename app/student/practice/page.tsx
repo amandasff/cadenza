@@ -83,7 +83,7 @@ function PracticeInner() {
   const [portfolioSave, setPortfolioSave] = useState(false);
   const [portfolioTitle, setPortfolioTitle] = useState("");
   const [portfolioDesc, setPortfolioDesc] = useState("");
-  const [portfolioDisplayAs, setPortfolioDisplayAs] = useState<"real" | "alias" | "anonymous">("real");
+  const [portfolioAnonymous, setPortfolioAnonymous] = useState(false);
   const [artistName, setArtistName] = useState<string | null>(null);
 
   // Reflect state
@@ -307,15 +307,21 @@ function PracticeInner() {
       const selectedPiece = pieces.find(p => p.id === selectedPieceId);
 
       if (portfolioSave && portfolioTitle.trim()) {
-        await PortfolioService.create(supabase).addItem({
-          studentId: student.id,
-          studioId: student.studioId ?? undefined,
-          title: portfolioTitle.trim(),
-          description: portfolioDesc.trim() || undefined,
-          recordingUrl,
-          sessionId: sessionData.id,
-          displayAs: portfolioDisplayAs,
-        }).catch((err) => { console.error("Portfolio save failed:", err); });
+        try {
+          await PortfolioService.create(supabase).addItem({
+            studentId: student.id,
+            studioId: student.studioId ?? undefined,
+            title: portfolioTitle.trim(),
+            description: portfolioDesc.trim() || undefined,
+            recordingUrl,
+            sessionId: sessionData.id,
+            displayAs: portfolioAnonymous ? "anonymous" : "real",
+            isPublic: false,
+          });
+        } catch (err) {
+          console.error("Portfolio save failed:", err);
+          toast.error("Recording saved, but couldn't add to your Journey. Try again from your Journey page.");
+        }
       }
 
       if (teacherId) {
@@ -717,30 +723,22 @@ function PracticeInner() {
             <div style={{ marginTop: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <input autoFocus value={portfolioTitle} onChange={e => setPortfolioTitle(e.target.value)} placeholder="Piece name, e.g. Für Elise" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border-strong)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box" }} />
               <textarea value={portfolioDesc} onChange={e => setPortfolioDesc(e.target.value)} placeholder="Notes about this recording… (optional)" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.575rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", outline: "none", boxSizing: "border-box", resize: "none", minHeight: 52 }} />
-              {/* Privacy picker */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", paddingTop: "0.25rem" }}>
-                <div style={{ fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "Inter, sans-serif", marginBottom: "0.125rem" }}>Post as</div>
-                {(["real", "alias", "anonymous"] as const).map(opt => {
-                  const labels = {
-                    real:      { icon: "🎵", label: "Your name", sub: null },
-                    alias:     { icon: "🎭", label: artistName ?? "Stage name", sub: artistName ? null : "Set one in your Studio" },
-                    anonymous: { icon: "👻", label: "Anonymous", sub: "No one will know it's you" },
-                  };
-                  const { icon, label, sub } = labels[opt];
-                  const active = portfolioDisplayAs === opt;
-                  return (
-                    <button key={opt} onClick={() => setPortfolioDisplayAs(opt)}
-                      style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0.75rem", borderRadius: 6, border: `1.5px solid ${active ? "var(--charcoal)" : "var(--border)"}`, background: active ? "var(--charcoal)" : "transparent", cursor: "pointer", textAlign: "left", fontFamily: "Inter, sans-serif" }}>
-                      <span style={{ fontSize: "1rem" }}>{icon}</span>
-                      <div>
-                        <div style={{ fontSize: "0.8125rem", fontWeight: active ? 600 : 400, color: active ? "var(--white)" : "var(--charcoal)" }}>{label}</div>
-                        {sub && <div style={{ fontSize: "0.6875rem", color: active ? "rgba(255,255,255,0.6)" : "var(--muted)" }}>{sub}</div>}
-                      </div>
-                      {active && <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "rgba(255,255,255,0.6)" }}>✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Anonymous toggle */}
+              <button onClick={() => setPortfolioAnonymous(v => !v)}
+                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.75rem", borderRadius: 6, border: `1px solid ${portfolioAnonymous ? "var(--charcoal)" : "var(--border)"}`, background: portfolioAnonymous ? "rgba(44,40,36,0.06)" : "transparent", cursor: "pointer", textAlign: "left", fontFamily: "Inter, sans-serif" }}>
+                <span style={{ fontSize: "1rem" }}>👤</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.8125rem", fontWeight: 500, color: "var(--charcoal)" }}>Post anonymously</div>
+                  <div style={{ fontSize: "0.6875rem", color: "var(--muted)" }}>
+                    {portfolioAnonymous
+                      ? `Shows as "${artistName ?? "Anonymous"}" when shared publicly`
+                      : "Your name will appear when shared publicly"}
+                  </div>
+                </div>
+                <div style={{ width: 36, height: 20, borderRadius: 10, background: portfolioAnonymous ? "var(--charcoal)" : "var(--border)", flexShrink: 0, position: "relative", transition: "background 0.15s" }}>
+                  <div style={{ position: "absolute", top: 2, left: portfolioAnonymous ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "white", transition: "left 0.15s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+                </div>
+              </button>
             </div>
           )}
         </div>
