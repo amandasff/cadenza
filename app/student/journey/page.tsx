@@ -383,7 +383,7 @@ export default function JourneyPage() {
     if (recording) { mediaRecorderRef.current?.stop(); recordStreamRef.current?.getTracks().forEach(t => t.stop()); setRecording(false); }
     if (recordedUrl) URL.revokeObjectURL(recordedUrl);
     setRecordedBlob(null); setRecordedUrl(null); setRecordError(""); setRecordSeconds(0); setRecordMode("video");
-    setUploadFile(null); setUploadError(""); setUploadTitle(""); setUploadDesc(""); setSharePublic(false);
+    setUploadFile(null); setUploadError(""); setUploadTitle(""); setUploadDesc(""); setUploadVisibility("public");
     setShowUploadModal(false);
   }
 
