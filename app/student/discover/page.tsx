@@ -67,85 +67,92 @@ function vinylColor(seed: string): string {
   return VINYL_LABEL_COLORS[Math.abs(h) % VINYL_LABEL_COLORS.length];
 }
 
+// VinylCover uses a fixed 200×200 viewBox so all geometry is in stable units,
+// then the SVG scales to whatever `size` pixels the parent requests.
+// Text is only rendered when size >= 110 — below that the label is physically
+// too small (~36 px diameter) for any legible type.
+const VB = 200; // viewBox side length
+const VR = 100; // viewBox radius (centre = 100,100)
+
 function VinylCover({ id, title, artist, size, spinning = false }: {
   id: string; title: string; artist?: string | null; size: number; spinning?: boolean;
 }) {
-  const r = size / 2;
-  const labelR = r * 0.33;
+  const showText = size >= 110;
+  // Label is 40% of disc radius when showing text (needs room), 32% otherwise
+  const labelR = VR * (showText ? 0.40 : 0.32);
   const labelColor = vinylColor(title + id);
   const gradId = `vg-${id}`;
   const shineId = `vs-${id}`;
 
-  // Truncate text to fit inside the label circle
-  const maxTitleChars = Math.floor(labelR / 4.2);
-  const maxArtistChars = Math.floor(labelR / 3.5);
-  const shortTitle = title.length > maxTitleChars ? title.slice(0, maxTitleChars - 1) + "…" : title;
-  const shortArtist = (artist ?? "").length > maxArtistChars ? (artist ?? "").slice(0, maxArtistChars - 1) + "…" : (artist ?? "");
+  // At 200-unit viewBox, labelR ≈ 40 when showing text.
+  // Max chars that fit at fontSize 10: width ≈ chars * 6, must fit in 2*labelR*0.88
+  const maxTitle  = Math.floor((labelR * 1.76) / 6.2);
+  const maxArtist = Math.floor((labelR * 1.76) / 5.0);
+  const shortTitle  = title.length  > maxTitle  ? title.slice(0, maxTitle - 1)  + "…" : title;
+  const shortArtist = (artist ?? "").length > maxArtist ? (artist ?? "").slice(0, maxArtist - 1) + "…" : (artist ?? "");
 
   return (
     <div style={{
       width: size, height: size, flexShrink: 0,
       animation: spinning ? "vinyl-spin 3s linear infinite" : undefined,
     }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${VB} ${VB}`}>
         <defs>
-          {/* Vinyl surface gradient — subtle warm sheen */}
           <radialGradient id={gradId} cx="38%" cy="30%" r="65%">
             <stop offset="0%" stopColor="rgba(255,255,255,0.13)" />
             <stop offset="60%" stopColor="rgba(255,255,255,0.02)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
           </radialGradient>
-          {/* Label inner shine */}
           <radialGradient id={shineId} cx="35%" cy="28%" r="60%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.25)" />
+            <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
             <stop offset="100%" stopColor="rgba(0,0,0,0)" />
           </radialGradient>
         </defs>
 
         {/* Disc body */}
-        <circle cx={r} cy={r} r={r - 0.5} fill="#181412" />
+        <circle cx={VR} cy={VR} r={VR - 1} fill="#181412" />
 
-        {/* Grooves — concentric rings at different radii */}
-        {[0.50, 0.58, 0.65, 0.71, 0.76, 0.81, 0.86, 0.90, 0.94].map((pct, i) => (
-          <circle key={i} cx={r} cy={r} r={r * pct}
-            fill="none" stroke="rgba(255,255,255,0.055)" strokeWidth={0.7} />
+        {/* Grooves */}
+        {[0.50, 0.57, 0.63, 0.69, 0.74, 0.79, 0.84, 0.89, 0.94].map((pct, i) => (
+          <circle key={i} cx={VR} cy={VR} r={VR * pct}
+            fill="none" stroke="rgba(255,255,255,0.055)" strokeWidth={1} />
         ))}
 
-        {/* Disc sheen overlay */}
-        <circle cx={r} cy={r} r={r - 0.5} fill={`url(#${gradId})`} />
+        {/* Disc sheen */}
+        <circle cx={VR} cy={VR} r={VR - 1} fill={`url(#${gradId})`} />
 
         {/* Label disc */}
-        <circle cx={r} cy={r} r={labelR} fill={labelColor} />
-        <circle cx={r} cy={r} r={labelR} fill={`url(#${shineId})`} />
-        {/* Label edge ring */}
-        <circle cx={r} cy={r} r={labelR} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={0.6} />
+        <circle cx={VR} cy={VR} r={labelR} fill={labelColor} />
+        <circle cx={VR} cy={VR} r={labelR} fill={`url(#${shineId})`} />
+        <circle cx={VR} cy={VR} r={labelR} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={0.8} />
 
-        {/* Title text */}
-        <text
-          x={r} y={artist ? r - labelR * 0.14 : r + labelR * 0.08}
-          textAnchor="middle" dominantBaseline="middle"
-          fill="rgba(255,255,255,0.92)"
-          fontSize={Math.max(6, labelR * 0.27)}
-          fontFamily="Inter, sans-serif" fontWeight={600}
-          style={{ letterSpacing: "-0.01em" }}
-        >{shortTitle}</text>
+        {showText && (
+          <>
+            {/* Title — sits just above centre */}
+            <text
+              x={VR} y={shortArtist ? VR - labelR * 0.16 : VR}
+              textAnchor="middle" dominantBaseline="middle"
+              fill="rgba(255,255,255,0.93)"
+              fontSize={11} fontFamily="Inter, sans-serif" fontWeight={700}
+            >{shortTitle}</text>
 
-        {/* Artist text */}
-        {shortArtist && (
-          <text
-            x={r} y={r + labelR * 0.32}
-            textAnchor="middle" dominantBaseline="middle"
-            fill="rgba(255,255,255,0.6)"
-            fontSize={Math.max(5, labelR * 0.21)}
-            fontFamily="Inter, sans-serif"
-          >{shortArtist}</text>
+            {/* Artist — sits just below centre */}
+            {shortArtist && (
+              <text
+                x={VR} y={VR + labelR * 0.35}
+                textAnchor="middle" dominantBaseline="middle"
+                fill="rgba(255,255,255,0.65)"
+                fontSize={8.5} fontFamily="Inter, sans-serif"
+              >{shortArtist}</text>
+            )}
+          </>
         )}
 
-        {/* Centre spindle hole */}
-        <circle cx={r} cy={r} r={Math.max(2, r * 0.04)} fill="#181412" />
+        {/* Spindle hole */}
+        <circle cx={VR} cy={VR} r={5} fill="#181412" />
 
-        {/* Disc border */}
-        <circle cx={r} cy={r} r={r - 0.5} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+        {/* Disc edge */}
+        <circle cx={VR} cy={VR} r={VR - 1} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1.5} />
       </svg>
     </div>
   );
@@ -1016,7 +1023,7 @@ export default function DiscoverPage() {
               {/* Audio header */}
               {expandedItem.media_type !== "video" && (
                 <div style={{ background: "linear-gradient(160deg, #1a1210 0%, #2e2520 55%, #3a2d26 100%)", padding: "1.75rem 1.25rem", display: "flex", alignItems: "center", gap: "1.125rem" }}>
-                  <VinylCover id={expandedItem.id} title={expandedItem.title} artist={expandedItem.is_anonymous ? undefined : expandedItem.display_name} size={96} spinning />
+                  <VinylCover id={expandedItem.id} title={expandedItem.title} artist={expandedItem.is_anonymous ? undefined : expandedItem.display_name} size={140} spinning />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "1rem", color: "#fff", lineHeight: 1.3 }}>{expandedItem.title}</div>
                     <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "rgba(255,255,255,0.6)", marginTop: "0.25rem" }}>{expandedItem.is_anonymous ? "👻 Anonymous" : (expandedItem.display_name ?? t.student.musicianFallback)}</div>
