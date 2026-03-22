@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { useAuth } from "../../../../lib/context/AuthContext";
 import { getSupabaseBrowserClient } from "../../../../lib/supabase/client";
 import { ShopService } from "../../../../lib/services/ShopService";
-import { CollectibleService } from "../../../../lib/services/CollectibleService";
 import type { InventoryItemWithDetails, StudentCollectibleWithAvatar, PieceRow, ShopItemRow, StudioGiftWithDetails } from "../../../../lib/types";
 import { playComposerAudio } from "../../../../lib/composerTunes";
 import type { PortfolioItemRow } from "../../../../lib/services/PortfolioService";
@@ -145,13 +144,13 @@ export default function VisitorStudioPage() {
       setLoading(true);
       setTabsLoading(true);
       try {
-        const collectibles = CollectibleService.create(supabase);
-
         // ── Phase 1: above-fold content (profile + composers) ──
-        const [profileRes, comps] = await Promise.all([
+        // Fetch composers via API route (admin client) so RLS doesn't block visiting other studios
+        const [profileRes, composersRes] = await Promise.all([
           supabase.from("profiles").select("display_name,avatar_url,instrument,streak_days,total_points,studio_name,studio_tagline,featured_avatar_id,studio_persona,studio_bio,theme_song_item_id,theme_song_title").eq("id", userId).maybeSingle(),
-          collectibles.getCollection(userId),
+          fetch(`/api/collectibles?userId=${userId}`).then(r => r.json()),
         ]);
+        const comps = (composersRes.collectibles ?? []) as StudentCollectibleWithAvatar[];
 
         if (!profileRes.data) { setNotFound(true); setLoading(false); return; }
         const profileData = profileRes.data as ProfileData;
