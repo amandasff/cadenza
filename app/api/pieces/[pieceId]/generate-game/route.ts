@@ -128,10 +128,12 @@ Use this format:
 }
 
 TAB READING RULES:
-- The TAB has 6 horizontal lines. Top line = string 1 (high e). Bottom line = string 6 (low E).
-- The number on a line = fret number (0 = open string).
-- Numbers aligned in the same vertical column = notes played simultaneously.
-- MELODY SELECTION: For each simultaneous group, output ONLY the note on the lowest-numbered string (string 1 if it has a number, else string 2, etc.). Skip pure bass/accompaniment open strings that repeat throughout.
+- The TAB has 6 horizontal lines. Top line = string 1 (high e, open = E4). Bottom line = string 6 (low E, open = E2).
+- Standard tuning open pitches: string 1 = E4, string 2 = B3, string 3 = G3, string 4 = D3, string 5 = A2, string 6 = E2.
+- The number on a line = fret number (0 = open string). Each fret adds one semitone.
+- Numbers aligned in the same vertical column = notes played simultaneously (a chord or arpeggio group).
+- MELODY = STRING 1 ONLY: For every beat group, output ONLY the fret number from the TOP line (string 1). Ignore ALL other strings completely — even if string 1 shows 0 (open E4), output string 1 fret 0. Never output notes from strings 2-6.
+- EXCEPTION: If string 1 is blank/absent for an entire measure (no numbers at all on that line), then use string 2 for that measure only.
 - TIMING: Get beat positions and durations from the rhythmic notation (note heads, stems, beams) above the TAB, not from the TAB numbers themselves.
 - BEAT: beat 0.0 = first note. Each note's beat = previous beat + previous duration. In 3/4 time, measure 2 = beat 3.0, measure 3 = beat 6.0. In 4/4, measure 2 = beat 4.0.
 - DURATION: whole=4.0, half=2.0, quarter=1.0, eighth=0.5, sixteenth=0.25. Dotted=1.5×base.
@@ -224,6 +226,14 @@ confidence: 0.9+ clean print, 0.6 slightly unclear, 0.3 handwritten/blurry`,
         typeof t.beat === 'number' &&
         typeof t.duration === 'number' && t.duration > 0
       )
+      // Sanity check: the computed MIDI must be reachable on the declared string
+      // (open string MIDI + fret must equal what tabToNote returns — catches wrong-string reads)
+      .filter(t => {
+        const openMidi = STRING_OPEN_MIDI_SERVER[t.string - 1];
+        const computedMidi = openMidi + t.fret;
+        // Reject notes below the open pitch of their string (impossible) or above fret 22
+        return computedMidi >= openMidi && computedMidi <= openMidi + 22;
+      })
       .sort((a, b) => a.beat - b.beat)
       .map(t => {
         const { note, octave } = tabToNote(t.string, t.fret);
