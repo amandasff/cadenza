@@ -202,16 +202,14 @@ export default function LinkedAccountSwitcher() {
               title="Switch to this account"
               style={{
                 background: "var(--charcoal)", border: "none", borderRadius: 4,
-                padding: "0.25rem 0.5rem", cursor: "pointer", flexShrink: 0,
-                fontFamily: "Inter, sans-serif", fontSize: "0.5625rem", fontWeight: 600,
+                width: 26, height: 26, cursor: "pointer", flexShrink: 0,
                 color: "var(--white)", opacity: switching === a.id ? 0.5 : 1,
-                display: "flex", alignItems: "center", gap: "0.2rem",
+                display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
               {switching === a.id
                 ? <Loader size={10} strokeWidth={1.5} style={{ animation: "spin 1s linear infinite" }} />
                 : <ArrowLeftRight size={10} strokeWidth={1.5} />}
-              {switching === a.id ? "" : "Switch"}
             </button>
 
             {/* Unlink */}

@@ -88,8 +88,7 @@ function PracticeInner() {
 
   // Reflect state
   const [mood, setMood] = useState<string>("");
-  const [wentWell, setWentWell] = useState("");
-  const [focusNext, setFocusNext] = useState("");
+  const [sessionNote, setSessionNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -272,8 +271,7 @@ function PracticeInner() {
       const moodData = MOODS.find(m => m.key === mood);
       const notesParts: string[] = [];
       if (moodData) notesParts.push(`[mood:${mood}]`);
-      if (wentWell.trim()) notesParts.push(`Well: ${wentWell.trim()}`);
-      if (focusNext.trim()) notesParts.push(`Focus: ${focusNext.trim()}`);
+      if (sessionNote.trim()) notesParts.push(sessionNote.trim());
       const notesStr = notesParts.join(" | ") || undefined;
 
       const logRes = await fetch("/api/practice/log", {
@@ -328,8 +326,7 @@ function PracticeInner() {
         const lines: string[] = [];
         if (selectedPiece) lines.push(`🎵 Practiced: ${selectedPiece.title}${selectedPiece.composer ? ` — ${selectedPiece.composer}` : ""}`);
         lines.push(`⏱ ${mins} min${moodData ? `  |  Mood: ${moodData.label}` : ""}${sessionSegments.length > 0 ? `  |  ${sessionSegments.length} segment${sessionSegments.length !== 1 ? "s" : ""}` : ""}`);
-        if (wentWell.trim()) lines.push(`✅ Went well: ${wentWell.trim()}`);
-        if (focusNext.trim()) lines.push(`🎯 Focus next: ${focusNext.trim()}`);
+        if (sessionNote.trim()) lines.push(`📝 ${sessionNote.trim()}`);
         sessionSegments.forEach(s =>
           lines.push(`${AREAS[s.practice_area]?.label ?? "Practice"}: ${s.title} · ${fmt(s.start_seconds)}`)
         );
@@ -696,12 +693,10 @@ function PracticeInner() {
         </div>
       </div>
 
-      {/* Reflection textareas */}
+      {/* Session note */}
       <div className="card-base" style={{ width: "100%", maxWidth: 320, padding: "1.25rem", marginBottom: "1rem", textAlign: "left" }}>
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>{t.student.wentWell}</div>
-        <textarea value={wentWell} onChange={e => setWentWell(e.target.value)} placeholder="e.g. The tricky passage in bar 8 is clicking…" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
-        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0.75rem 0 0.5rem" }}>{t.student.focusNext}</div>
-        <textarea value={focusNext} onChange={e => setFocusNext(e.target.value)} placeholder="e.g. Work on the dynamics in the second section…" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 60, outline: "none", boxSizing: "border-box" }} />
+        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "0.6875rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>Any notes?</div>
+        <textarea value={sessionNote} onChange={e => setSessionNote(e.target.value)} placeholder="Anything you want to remember from this session…" style={{ width: "100%", borderRadius: 4, border: "1px solid var(--border)", padding: "0.625rem 0.75rem", fontFamily: "Inter, sans-serif", fontSize: "0.875rem", background: "var(--cream-deep)", color: "var(--charcoal)", resize: "none", minHeight: 72, outline: "none", boxSizing: "border-box" }} />
       </div>
 
       {/* Audio recording review */}

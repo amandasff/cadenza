@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 
-const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const SPEEDS = [0.75, 1, 1.5, 2, 3, 4];
 
 function fmt(s: number) {
   if (!isFinite(s)) return "0:00";
