@@ -1,8 +1,9 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mic, MicOff, Play, Square, RotateCcw, Music, Zap } from "lucide-react";
+import { ArrowLeft, Mic, MicOff, Play, Square, RotateCcw, Music, Zap, FileText } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import TranscriptionViewer, { type GameData } from "@/components/TranscriptionViewer";
 
 // ── Pitch detection (YIN algorithm) ─────────────────────────────────────────
 function detectPitch(buf: Float32Array, sampleRate: number): number | null {
@@ -382,6 +383,7 @@ export default function PlayPage() {
   const [piecesLoading, setPiecesLoading] = useState(false);
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [viewingTranscription, setViewingTranscription] = useState<{ title: string; game: GameData } | null>(null);
   const [practiceGameState, setPracticeGameState] = useState<"idle" | "playing" | "finished">("idle");
   const [activePiece, setActivePiece] = useState<PieceWithGame | null>(null);
   const [practiceNotes, setPracticeNotes] = useState<OMRNote[]>([]);
@@ -1327,6 +1329,13 @@ export default function PlayPage() {
                           <Play size={14} /> Play
                         </button>
                         <button
+                          onClick={() => setViewingTranscription({ title: piece.title, game: piece.game! })}
+                          style={{ padding: "0.5rem 0.75rem", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, cursor: "pointer", fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.375rem" }}
+                          title="View AI transcription"
+                        >
+                          <FileText size={13} /> View
+                        </button>
+                        <button
                           onClick={() => generateGame(piece)}
                           disabled={generatingFor === piece.id}
                           style={{ padding: "0.5rem 0.75rem", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, cursor: "pointer", fontSize: "0.8125rem" }}
@@ -1633,5 +1642,14 @@ export default function PlayPage() {
       )}
 
     </div>
+
+    {/* Transcription viewer modal */}
+    {viewingTranscription && (
+      <TranscriptionViewer
+        title={viewingTranscription.title}
+        game={viewingTranscription.game}
+        onClose={() => setViewingTranscription(null)}
+      />
+    )}
   );
 }

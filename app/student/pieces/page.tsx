@@ -11,7 +11,8 @@ import Link from "next/link";
 import YouTubeSearch from "../../../components/YouTubeSearch";
 import type { YouTubeResult, PieceRecording } from "../../../lib/types";
 import { useI18n } from "../../../lib/context/I18nContext";
-import { Sparkles, Music2, Play, Star, X } from "lucide-react";
+import { Sparkles, Music2, Play, Star, X, FileText } from "lucide-react";
+import TranscriptionViewer, { type GameData } from "../../../components/TranscriptionViewer";
 
 export default function MyPieces() {
   const { t } = useI18n();
@@ -61,6 +62,8 @@ export default function MyPieces() {
   const [pasteModeFor, setPasteModeFor]   = useState<string | null>(null);
   const [pendingPastes, setPendingPastes] = useState<File[]>([]);
   const [uploadError, setUploadError]     = useState<string | null>(null);
+  const [viewingTranscription, setViewingTranscription] = useState<{ title: string; game: GameData } | null>(null);
+  const [transcriptionLoading, setTranscriptionLoading] = useState<string | null>(null);
 
   // Keep upload handler stable for paste effect closure
   const uploadHandlerRef = useRef(handleUploadSheetMusic);
@@ -82,6 +85,18 @@ export default function MyPieces() {
   }, [student?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
+
+  async function openTranscription(pieceId: string, title: string) {
+    setTranscriptionLoading(pieceId);
+    const { data } = await supabase
+      .from("piece_games")
+      .select("notes_json, key_signature, time_signature, bpm_suggestion, omr_confidence")
+      .eq("piece_id", pieceId)
+      .maybeSingle();
+    setTranscriptionLoading(null);
+    if (data) setViewingTranscription({ title, game: data as GameData });
+    else toast.error("No transcription found for this piece yet.");
+  }
 
   // ── Paste mode clipboard listener ──
   useEffect(() => {
@@ -534,12 +549,23 @@ export default function MyPieces() {
 
                         {/* Sheet music → annotate page */}
                         {piece.sheet_music_url ? (
-                          <Link
-                            href={`/student/perform/${piece.id}`}
-                            style={{ ...btnOutline, textDecoration: "none" }}
-                          >
-                            {t.student.annotate}
-                          </Link>
+                          <>
+                            <Link
+                              href={`/student/perform/${piece.id}`}
+                              style={{ ...btnOutline, textDecoration: "none" }}
+                            >
+                              {t.student.annotate}
+                            </Link>
+                            <button
+                              onClick={() => openTranscription(piece.id, piece.title)}
+                              disabled={transcriptionLoading === piece.id}
+                              style={{ ...btnOutline, display: "flex", alignItems: "center", gap: "0.3rem" }}
+                              title="View AI-transcribed notes"
+                            >
+                              <FileText size={13} strokeWidth={1.5} />
+                              {transcriptionLoading === piece.id ? "Loading…" : "Transcription"}
+                            </button>
+                          </>
                         ) : (
                           <button
                             onClick={() => openFilePicker(piece.id)}
@@ -773,5 +799,13 @@ export default function MyPieces() {
         </div>
       )}
     </div>
+
+    {viewingTranscription && (
+      <TranscriptionViewer
+        title={viewingTranscription.title}
+        game={viewingTranscription.game}
+        onClose={() => setViewingTranscription(null)}
+      />
+    )}
   );
 }

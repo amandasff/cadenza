@@ -17,6 +17,7 @@ import YouTubeSearch from "../../../../components/YouTubeSearch";
 import { useLesson } from "../../../../lib/context/LessonContext";
 import { useI18n } from "../../../../lib/context/I18nContext";
 import { FileText, Music, Hourglass, Bot, Clipboard, Star, Frown, Smile, PartyPopper, Image, X, Check, BookOpen, CreditCard, ChevronUp, ChevronDown, Pencil, Trash2, Flame, Snowflake, Play } from "lucide-react";
+import TranscriptionViewer, { type GameData } from "../../../../components/TranscriptionViewer";
 
 const CATEGORIES_BASE: { value: string; colorKey: keyof typeof CATEGORY_COLORS }[] = [
   { value: "technique",    colorKey: "technique" },
@@ -252,6 +253,21 @@ function PieceBlock({
   const [addingRecording, setAddingRecording] = useState(false);
   const [pasteMode, setPasteMode] = useState(false);
   const [pendingPastes, setPendingPastes] = useState<File[]>([]);
+  const [transcription, setTranscription] = useState<GameData | null>(null);
+  const [transcriptionLoading, setTranscriptionLoading] = useState(false);
+
+  async function openTranscription() {
+    setTranscriptionLoading(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase
+      .from("piece_games")
+      .select("notes_json, key_signature, time_signature, bpm_suggestion, omr_confidence")
+      .eq("piece_id", piece.id)
+      .eq("student_id", studentId)
+      .maybeSingle();
+    setTranscriptionLoading(false);
+    if (data) setTranscription(data as GameData);
+  }
   const [pastePreviewUrls, setPastePreviewUrls] = useState<string[]>([]);
   const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
 
@@ -400,6 +416,17 @@ function PieceBlock({
               Notes
             </Link>
           )}
+          {piece.sheet_music_url && (
+            <button
+              onClick={openTranscription}
+              disabled={transcriptionLoading}
+              style={{ ...ghostBtnStyle, padding: "0.25rem 0.5rem", fontSize: "0.6875rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+              title="View AI-transcribed notes"
+            >
+              <FileText size={11} strokeWidth={1.5} />
+              {transcriptionLoading ? "…" : "Transcription"}
+            </button>
+          )}
           <button
             onClick={() => onSetAddGoalFor(addGoalFor === piece.id ? null : piece.id)}
             style={{ ...ghostBtnStyle, padding: "0.25rem 0.6rem", fontSize: "0.6875rem", flexShrink: 0 }}
@@ -529,6 +556,14 @@ function PieceBlock({
             onCancel={() => onSetAddGoalFor(null)}
           />
         </div>
+      )}
+
+      {transcription && (
+        <TranscriptionViewer
+          title={piece.title}
+          game={transcription}
+          onClose={() => setTranscription(null)}
+        />
       )}
     </div>
   );
