@@ -331,7 +331,6 @@ export default function PlayPage() {
   const [detectedNote, setDetectedNote] = useState<string | null>(null);
   const [notes, setNotes] = useState<NoteState[]>([]);
   const [elapsed, setElapsed] = useState(0); // seconds since song start
-  const [hitFlash, setHitFlash] = useState<number | null>(null); // note id of last hit
 
   // ── Practice mode state ───────────────────────────────────────────────────
   const [tab, setTab] = useState<"guitar" | "practice">("guitar");
@@ -355,7 +354,6 @@ export default function PlayPage() {
   const practiceNotesRef = useRef<OMRNote[]>([]);
   const practiceCanvasRef = useRef<HTMLCanvasElement>(null);
   const practiceFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hitFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -371,11 +369,16 @@ export default function PlayPage() {
   const songRef = useRef<Song | null>(null);
 
   // ── Mic setup ──────────────────────────────────────────────────────────────
+  const micSettingUpRef = useRef(false);
   const setupMic = useCallback(async () => {
+    if (micSettingUpRef.current || audioCtxRef.current) return; // guard against double-call
+    micSettingUpRef.current = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       streamRef.current = stream;
       const ctx = new AudioContext({ sampleRate: 44100 });
+      // Chrome starts AudioContext suspended until a user gesture resumes it
+      if (ctx.state === "suspended") await ctx.resume();
       audioCtxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
@@ -386,6 +389,8 @@ export default function PlayPage() {
       setMicGranted(true);
     } catch {
       setMicError("Microphone access denied. Please allow microphone access to play.");
+    } finally {
+      micSettingUpRef.current = false;
     }
   }, []);
 
@@ -474,7 +479,7 @@ export default function PlayPage() {
         const next = idx + 1;
         currentNoteIdxRef.current = next;
         setCurrentNoteIdx(next);
-        if (next >= notes.length) finishPractice();
+        if (next >= notes.length) finishPractice(piece);
       } else {
         const attempts = wrongAttemptsRef.current + 1;
         wrongAttemptsRef.current = attempts;
@@ -491,16 +496,16 @@ export default function PlayPage() {
           const next = idx + 1;
           currentNoteIdxRef.current = next;
           setCurrentNoteIdx(next);
-          if (next >= notes.length) finishPractice();
+          if (next >= notes.length) finishPractice(piece);
         }
       }
     }, 100); // 10fps
   }
 
-  function finishPractice() {
+  function finishPractice(piece: PieceWithGame) {
     if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
     setPracticeGameState("finished");
-    fetchPracticeFeedback();
+    fetchPracticeFeedback(piece);
   }
 
   function stopPractice() {
@@ -509,8 +514,8 @@ export default function PlayPage() {
     setActivePiece(null);
   }
 
-  async function fetchPracticeFeedback() {
-    if (!activePiece?.game) return;
+  async function fetchPracticeFeedback(piece: PieceWithGame) {
+    if (!piece.game) return;
     setFeedbackLoading(true);
     const results = practiceResultsRef.current;
     const hits = results.filter(r => r === "hit").length;
@@ -528,8 +533,8 @@ export default function PlayPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pieceTitle: activePiece.title,
-          keySignature: activePiece.game.key_signature,
+          pieceTitle: piece.title,
+          keySignature: piece.game.key_signature,
           totalNotes: results.length,
           hitCount: hits,
           missedNoteNames: topMissed,
@@ -757,7 +762,8 @@ export default function PlayPage() {
       setCountdown(c);
       if (c <= 0) {
         if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-        startTimeRef.current = performance.now();
+        // startTimeRef is set inside the first RAF frame so it aligns with actual paint
+        startTimeRef.current = 0;
         setGameState("playing");
         runGameLoop(song);
       }
@@ -770,9 +776,12 @@ export default function PlayPage() {
     const beatsPerSec = song.bpm / 60;
     const HIT_WINDOW_PX = 50; // px tolerance for a hit
 
-    let lastFrameTime = performance.now();
+    let lastFrameTime = 0;
 
     function frame(now: number) {
+      // Set start time on the very first frame so timing aligns with actual paint
+      if (startTimeRef.current === 0) startTimeRef.current = now;
+      if (lastFrameTime === 0) lastFrameTime = now;
       const dt = (now - lastFrameTime) / 1000;
       lastFrameTime = now;
       const elapsedSec = (now - startTimeRef.current) / 1000;
@@ -811,9 +820,6 @@ export default function PlayPage() {
             setScore(scoreRef.current);
             setCombo(comboRef.current);
             setMaxCombo(maxComboRef.current);
-            setHitFlash(note.id);
-            if (hitFlashTimerRef.current) clearTimeout(hitFlashTimerRef.current);
-            hitFlashTimerRef.current = setTimeout(() => setHitFlash(null), 200);
           }
         } else if (note.xPos < HIT_ZONE_X - HIT_WINDOW_PX) {
           // Passed the hit zone without being hit
@@ -842,6 +848,10 @@ export default function PlayPage() {
 
     animFrameRef.current = requestAnimationFrame(frame);
   }
+
+  // Need elapsed in draw without re-render dependency
+  const elapsedRef = useRef(0);
+  useEffect(() => { elapsedRef.current = elapsed; }, [elapsed]);
 
   // ── Canvas draw ────────────────────────────────────────────────────────────
   function drawCanvas(noteList: NoteState[], song: Song) {
@@ -876,11 +886,13 @@ export default function PlayPage() {
     const beatsPerSec = song.bpm / 60;
     const scrollSpeed = SCROLL_SPEED_BASE * (song.bpm / 100);
     const pxPerBeat = scrollSpeed / beatsPerSec;
+    // Anchor beat lines to the hit zone, scrolling with elapsed time
     const beatOffset = (elapsedRef.current * scrollSpeed) % pxPerBeat;
     ctx.strokeStyle = "rgba(255,255,255,0.05)";
     ctx.lineWidth = 1;
-    for (let x = HIT_ZONE_X - beatOffset; x < W; x += pxPerBeat) {
-      if (x < LABEL_W) continue;
+    // Start far enough left to cover the full canvas
+    const beatStart = LABEL_W + ((HIT_ZONE_X - LABEL_W - beatOffset) % pxPerBeat + pxPerBeat) % pxPerBeat;
+    for (let x = beatStart; x < W; x += pxPerBeat) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
     }
 
@@ -1011,10 +1023,6 @@ export default function PlayPage() {
     ctx.fillRect(LABEL_W, H - 3, (W - LABEL_W) * progress, 3);
   }
 
-  // Need elapsed in draw without re-render dependency
-  const elapsedRef = useRef(0);
-  useEffect(() => { elapsedRef.current = elapsed; }, [elapsed]);
-
   // ── Stop / cleanup ─────────────────────────────────────────────────────────
   function stopGame() {
     cancelAnimationFrame(animFrameRef.current);
@@ -1038,7 +1046,6 @@ export default function PlayPage() {
       if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       if (practiceFlashTimerRef.current) clearTimeout(practiceFlashTimerRef.current);
-      if (hitFlashTimerRef.current) clearTimeout(hitFlashTimerRef.current);
       streamRef.current?.getTracks().forEach(t => t.stop());
       audioCtxRef.current?.close();
     };
@@ -1492,8 +1499,6 @@ export default function PlayPage() {
         </div>
       )}
 
-      {/* hitFlash invisible — just to suppress unused warning */}
-      {hitFlash !== null && <span style={{ display: "none" }} />}
     </div>
   );
 }
