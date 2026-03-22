@@ -129,7 +129,7 @@ BEAT:
 
 OTHER:
 - Skip rests — do not include them in the notes array, but DO count their duration when computing beat positions.
-- Maximum 64 notes. Transcribe the first 64 if the piece is longer.
+- Maximum 128 notes. Transcribe the first 128 if the piece is longer.
 - If chords appear, include only the highest note.
 - confidence: 0.9+ for clean printed music, 0.6 for slightly unclear, 0.3 for handwritten/blurry.`,
         },
@@ -206,7 +206,7 @@ OTHER:
 
   // Clamp and validate notes; sort by beat in case Claude returned them out of order
   const notes = parsed.notes
-    .slice(0, 64)
+    .slice(0, 128)
     .filter(n =>
       n.note &&
       typeof n.octave === 'number' &&
