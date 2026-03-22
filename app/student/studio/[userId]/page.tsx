@@ -341,9 +341,8 @@ export default function VisitorStudioPage() {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1.5rem", position: "relative" }}>
 
-      {/* Theme song */}
+      {/* Theme song — hidden auto-play */}
       {themeSongUrl && <audio ref={audioRef} src={themeSongUrl} autoPlay loop style={{ display: "none" }} />}
-
 
       {/* ── Featured composer banner ── */}
       {featuredComposer && (
@@ -373,6 +372,29 @@ export default function VisitorStudioPage() {
         </div>
       )}
 
+      {/* ── Theme song card ── */}
+      {themeSongTitle && (
+        <div className="card-base" style={{ padding: "0.75rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <span style={{ fontSize: "1rem", flexShrink: 0 }}>♫</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>Theme: </span>
+            <span style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontStyle: "italic", fontSize: "0.9375rem", color: "var(--charcoal)" }}>&ldquo;{themeSongTitle}&rdquo;</span>
+          </div>
+          {themeSongUrl && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+              <audio controls src={themeSongUrl} style={{ height: 28, minWidth: 0, maxWidth: 160, flexShrink: 1 }} />
+              <button
+                onClick={() => setThemeMuted(m => !m)}
+                title={themeMuted ? "Unmute auto-play" : "Mute auto-play"}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "0.875rem", color: "var(--muted)" }}
+              >
+                {themeMuted ? "🔇" : "🔊"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Profile card ── */}
       <div className="card-base" style={{ padding: "1.25rem 1.5rem", marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
@@ -382,31 +404,12 @@ export default function VisitorStudioPage() {
               : (profile?.display_name?.[0]?.toUpperCase() ?? "?")}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", flexWrap: "wrap" }}>
-              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
-                {studioTitle}
-              </div>
-              {themeSongUrl && themeSongTitle && (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.1875rem 0.625rem", background: "var(--cream)", border: "1px solid var(--border)", borderRadius: 100, flexShrink: 0 }}>
-                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>♫ {themeSongTitle}</span>
-                  <button
-                    onClick={() => setThemeMuted(m => !m)}
-                    title={themeMuted ? "Unmute" : "Mute"}
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, fontSize: "0.75rem", color: "var(--muted)" }}
-                  >
-                    {themeMuted ? "🔇" : "🔊"}
-                  </button>
-                </div>
-              )}
+            <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.375rem", color: "var(--charcoal)" }}>
+              {studioTitle}
             </div>
             {profile?.studio_tagline && (
               <div style={{ fontFamily: "Inter, sans-serif", fontStyle: "italic", fontSize: "0.8125rem", color: "var(--muted)", marginTop: "0.125rem" }}>
                 {profile.studio_tagline}
-              </div>
-            )}
-            {profile?.studio_persona && (
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", marginTop: "0.2rem" }}>
-                ✦ {profile.studio_persona}
               </div>
             )}
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.3rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -457,11 +460,21 @@ export default function VisitorStudioPage() {
         </div>
       </div>
 
-      {/* ── AI Bio ── */}
-      {profile?.studio_bio && (
-        <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem" }}>
-          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontStyle: "italic", fontSize: "1rem", color: "var(--charcoal)", lineHeight: 1.6 }}>
-            {profile.studio_bio}
+      {/* ── AI Musical Persona ── */}
+      {(profile?.studio_persona || profile?.studio_bio) && (
+        <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: "0.875rem" }}>
+          <div style={{ fontSize: "1.5rem", flexShrink: 0 }}>✦</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {profile?.studio_persona && (
+              <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: "0.8125rem", color: "var(--charcoal)", marginBottom: "0.25rem" }}>
+                {profile.studio_persona}
+              </div>
+            )}
+            {profile?.studio_bio && (
+              <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontStyle: "italic", fontSize: "0.9375rem", color: "var(--charcoal)", lineHeight: 1.5 }}>
+                {profile.studio_bio}
+              </div>
+            )}
           </div>
         </div>
       )}
