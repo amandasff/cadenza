@@ -87,6 +87,47 @@ function omrNoteToMidi(n: OMRNote): number {
   return (n.octave + 1) * 12 + (NOTE_SEMITONES[n.note] ?? 0);
 }
 
+// Convert an OMR piece (note+octave data) to a Song (string+fret data) so it
+// can play through the same Yousician-style guitar game UI as built-in songs.
+function omrPieceToSong(piece: PieceWithGame): Song {
+  const game = piece.game!;
+  const tsParts = (game.time_signature ?? "4/4").split("/").map(Number);
+  const timeSignature: [number, number] = [tsParts[0] ?? 4, tsParts[1] ?? 4];
+
+  const notes: TabNote[] = game.notes_json.map(n => {
+    const targetMidi = omrNoteToMidi(n);
+    // Pick the string+fret with the lowest fret number (easiest position, spreads range naturally)
+    let bestString = 1, bestFret = 0, lowestFret = 99;
+    for (let s = 1; s <= 6; s++) {
+      const openMidi = STRING_OPEN_MIDI[6 - s];
+      const fret = targetMidi - openMidi;
+      if (fret >= 0 && fret <= 22 && fret < lowestFret) {
+        lowestFret = fret;
+        bestFret = fret;
+        bestString = s;
+      }
+    }
+    // If note is out of guitar range, clamp to nearest string open note
+    if (lowestFret === 99) {
+      const distToHigh = Math.abs(targetMidi - STRING_OPEN_MIDI[5]); // string 1 open
+      const distToLow  = Math.abs(targetMidi - STRING_OPEN_MIDI[0]); // string 6 open
+      bestString = distToHigh <= distToLow ? 1 : 6;
+      bestFret = Math.max(0, Math.min(22, targetMidi - STRING_OPEN_MIDI[6 - bestString]));
+    }
+    return { beat: n.beat, string: bestString, fret: bestFret, duration: n.duration };
+  });
+
+  return {
+    id: piece.id,
+    title: piece.title,
+    artist: piece.composer ?? "Original",
+    bpm: game.bpm_suggestion ?? 80,
+    timeSignature,
+    notes,
+    difficulty: "intermediate",
+  };
+}
+
 function pitchLaneColor(noteName: string): string {
   const colors: Record<string, string> = {
     C: "#e74c3c", D: "#e67e22", E: "#f1c40f",
@@ -1255,7 +1296,7 @@ export default function PlayPage() {
                     {piece.game ? (
                       <>
                         <button
-                          onClick={() => startPractice(piece)}
+                          onClick={() => startGame(omrPieceToSong(piece))}
                           style={{ padding: "0.5rem 1.25rem", background: "var(--sage)", border: "none", color: "white", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.375rem" }}
                         >
                           <Play size={14} /> Play
