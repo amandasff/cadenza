@@ -86,7 +86,7 @@ export async function POST(
   // Ask Claude to extract the melody as JSON
   const claudeRes = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [{
       role: 'user',
       content: [
@@ -151,11 +151,33 @@ OTHER:
 
   let parsed: ClaudeOMRResponse;
   try {
-    const raw = textBlock.text.trim()
+    let raw = textBlock.text.trim()
       .replace(/^```json?\n?/, '')
       .replace(/\n?```$/, '')
       .trim();
-    parsed = JSON.parse(raw) as ClaudeOMRResponse;
+
+    // If JSON is truncated (hit max_tokens), attempt to recover completed notes.
+    // Find the last complete note object and close the array/object.
+    let jsonToParse = raw;
+    try {
+      JSON.parse(raw);
+    } catch {
+      // Find last complete note: last '}' before any incomplete entry
+      const lastComplete = raw.lastIndexOf('},');
+      const lastClose = raw.lastIndexOf('}');
+      const cutPoint = lastComplete !== -1 ? lastComplete + 1 : lastClose !== -1 ? lastClose + 1 : -1;
+      if (cutPoint > 0) {
+        // Close the notes array and object with minimal required fields
+        jsonToParse = raw.slice(0, cutPoint) + ']}';
+        // Ensure outer object structure
+        if (!jsonToParse.trimStart().startsWith('{')) {
+          jsonToParse = '{"notes":' + jsonToParse;
+        }
+        console.warn('OMR response truncated — recovered partial JSON');
+      }
+    }
+
+    parsed = JSON.parse(jsonToParse) as ClaudeOMRResponse;
   } catch {
     console.error('OMR parse error. Raw:', textBlock.text.slice(0, 500));
     return NextResponse.json({ error: 'Could not parse note data from sheet music' }, { status: 500 });
