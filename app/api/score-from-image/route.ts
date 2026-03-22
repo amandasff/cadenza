@@ -26,6 +26,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing imageBase64 or mimeType" }, { status: 400 });
     }
 
+    const isPdf = mimeType === "application/pdf" || mimeType === "application/octet-stream";
+    const fileContent = isPdf
+      ? { type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: imageBase64 } }
+      : { type: "image" as const, source: { type: "base64" as const, media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp", data: imageBase64 } };
+
     const response = await client.messages.create({
       model: "claude-opus-4-6",
       max_tokens: 8192,
@@ -34,10 +39,7 @@ export async function POST(req: NextRequest) {
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp", data: imageBase64 },
-            },
+            fileContent,
             {
               type: "text",
               text: "Please transcribe this sheet music into MusicXML format.",

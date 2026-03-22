@@ -290,7 +290,7 @@ export default function MyPieces() {
   function openAiConvertPicker(pieceId: string) {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = "image/*,.pdf,application/pdf";
     input.onchange = () => {
       const file = input.files?.[0];
       if (file) void handleAiConvertScore(pieceId, file);
