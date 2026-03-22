@@ -257,14 +257,28 @@ export default function MyPieces() {
     input.click();
   }
 
-  // ── AI image → MusicXML ──
-  async function handleAiConvertScore(pieceId: string, file: File) {
+  // ── AI image/PDF → MusicXML ──
+  async function handleAiConvertScore(pieceId: string, source: File | string) {
     setAiConvertingFor(pieceId);
     setUploadError(null);
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      const mimeType = file.type || "image/png";
+      let base64: string;
+      let mimeType: string;
+      if (typeof source === "string") {
+        // URL — fetch the already-uploaded file
+        const res = await fetch(source);
+        const buf = await res.arrayBuffer();
+        base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const ct = res.headers.get("content-type") ?? "";
+        const ext = source.split(".").pop()?.toLowerCase() ?? "";
+        mimeType = ct.startsWith("image/") || ct === "application/pdf"
+          ? ct.split(";")[0].trim()
+          : ext === "pdf" ? "application/pdf" : "image/jpeg";
+      } else {
+        const arrayBuffer = await source.arrayBuffer();
+        base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        mimeType = source.type || "image/png";
+      }
       const res = await fetch("/api/score-from-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -792,14 +806,25 @@ export default function MyPieces() {
                               >
                                 {uploadingScoreFor === piece.id ? t.student.uploadingLabel : scoreUrl ? t.student.replaceScore : t.student.uploadScoreFile}
                               </button>
-                              <button
-                                onClick={() => openAiConvertPicker(piece.id)}
-                                disabled={aiConvertingFor === piece.id}
-                                style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
-                                title="Take a photo or screenshot of your sheet music and convert it to a playable score with AI"
-                              >
-                                {aiConvertingFor === piece.id ? t.student.convertingLabel : t.student.aiConvertPhoto}
-                              </button>
+                              {piece.sheet_music_url ? (
+                                <button
+                                  onClick={() => void handleAiConvertScore(piece.id, piece.sheet_music_url!)}
+                                  disabled={aiConvertingFor === piece.id}
+                                  style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
+                                  title="Convert your uploaded sheet music to a playable score with AI"
+                                >
+                                  {aiConvertingFor === piece.id ? t.student.convertingLabel : "AI convert from sheet music"}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => openAiConvertPicker(piece.id)}
+                                  disabled={aiConvertingFor === piece.id}
+                                  style={{ ...btnGhost, fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}
+                                  title="Take a photo or screenshot of your sheet music and convert it to a playable score with AI"
+                                >
+                                  {aiConvertingFor === piece.id ? t.student.convertingLabel : t.student.aiConvertPhoto}
+                                </button>
+                              )}
                             </div>
                           </div>
 
