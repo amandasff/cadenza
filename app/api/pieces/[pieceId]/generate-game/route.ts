@@ -14,12 +14,30 @@ interface OMRNote {
   beat: number;    // cumulative beat position from start
 }
 
+interface TabNote {
+  string: number;  // 1 = high e, 6 = low E
+  fret: number;    // 0-22
+  beat: number;
+  duration: number;
+}
+
 interface ClaudeOMRResponse {
+  format?: 'tab' | 'pitch';
   notes: OMRNote[];
+  tabNotes?: TabNote[];
   key?: string;
   timeSignature?: string;
   bpmSuggestion?: number;
   confidence?: number;
+}
+
+// Guitar standard tuning MIDI values: strings 1-6 (high e → low E)
+const STRING_OPEN_MIDI_SERVER = [64, 59, 55, 50, 45, 40];
+const NOTE_NAMES_SERVER = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function tabToNote(string: number, fret: number): { note: string; octave: number } {
+  const midi = (STRING_OPEN_MIDI_SERVER[string - 1] ?? 64) + fret;
+  return { note: NOTE_NAMES_SERVER[midi % 12], octave: Math.floor(midi / 12) - 1 };
 }
 
 export async function POST(
@@ -89,49 +107,63 @@ export async function POST(
           : { type: 'image', source: { type: 'base64', media_type: detectedMime as 'image/jpeg' | 'image/png' | 'image/webp', data: base64 } },
         {
           type: 'text',
-          text: `Analyze this sheet music image carefully. Extract the melody line (top voice in treble clef, or the single melodic line for monophonic instruments like flute, violin, voice).
+          text: `Analyze this sheet music. First, check whether guitar TAB is present (a 6-line grid with numbers below the staff). Then follow the matching path below.
 
-Return ONLY valid JSON — no markdown fences, no explanation, no trailing text:
+Return ONLY valid JSON — no markdown fences, no explanation, no trailing text.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PATH A — Guitar TAB is present
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Use this format:
 {
+  "format": "tab",
+  "tabNotes": [
+    {"string": 1, "fret": 7, "beat": 0.0, "duration": 0.333}
+  ],
+  "notes": [],
+  "key": "E minor",
+  "timeSignature": "3/4",
+  "bpmSuggestion": 100,
+  "confidence": 0.92
+}
+
+TAB READING RULES:
+- The TAB has 6 horizontal lines. Top line = string 1 (high e). Bottom line = string 6 (low E).
+- The number on a line = fret number (0 = open string).
+- Numbers aligned in the same vertical column = notes played simultaneously.
+- MELODY SELECTION: For each simultaneous group, output ONLY the note on the lowest-numbered string (string 1 if it has a number, else string 2, etc.). Skip pure bass/accompaniment open strings that repeat throughout.
+- TIMING: Get beat positions and durations from the rhythmic notation (note heads, stems, beams) above the TAB, not from the TAB numbers themselves.
+- BEAT: beat 0.0 = first note. Each note's beat = previous beat + previous duration. In 3/4 time, measure 2 = beat 3.0, measure 3 = beat 6.0. In 4/4, measure 2 = beat 4.0.
+- DURATION: whole=4.0, half=2.0, quarter=1.0, eighth=0.5, sixteenth=0.25. Dotted=1.5×base.
+- Maximum 128 melody notes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PATH B — Standard notation only (no TAB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Use this format:
+{
+  "format": "pitch",
   "notes": [
     {"note": "C", "octave": 4, "duration": 1.0, "beat": 0.0}
   ],
+  "tabNotes": [],
   "key": "G major",
   "timeSignature": "4/4",
   "bpmSuggestion": 80,
   "confidence": 0.85
 }
 
-CRITICAL RULES — read all of these before generating:
+PITCH READING RULES:
+- Extract melody (top voice / stems-up notes in treble clef).
+- Note names: C C# Db D Eb E F F# Gb G Ab A Bb B
+- Apply key signature accidentals to every note (e.g. G major → every F becomes F# unless natural sign).
+- Octave: middle C = 4. Treble clef lines bottom→top: E4 G4 B4 D5 F5. Spaces: F4 A4 C5 E5.
+- Duration and beat: same rules as Path A.
+- If chords, include only the highest note.
+- Maximum 128 notes.
 
-NOTE NAME:
-- Use the letter name + optional accidental: "C", "C#", "Db", "D", "Eb", "E", "F", "F#", "Gb", "G", "Ab", "A", "Bb", "B"
-- APPLY KEY SIGNATURE ACCIDENTALS: if the key is G major (one sharp = F#), every F in the piece must be written as "F#" unless it has a natural sign. Apply ALL key signature sharps/flats to every note throughout the piece.
-- Natural signs cancel the key signature for that note only.
-
-OCTAVE:
-- Middle C (the C on the first ledger line below the treble clef staff) = octave 4.
-- The treble clef staff lines are E4, G4, B4, D5, F5 (bottom to top).
-- The treble clef staff spaces are F4, A4, C5, E5 (bottom to top).
-- Count ledger lines carefully. One ledger line above the staff = A5. One ledger line below = C4 (middle C).
-- Bass clef lines: G2, B2, D3, F3, A3. Bass clef spaces: A2, C3, E3, G3.
-
-DURATION:
-- Whole note = 4.0, half = 2.0, quarter = 1.0, eighth = 0.5, sixteenth = 0.25
-- Dotted note = 1.5× its base (dotted quarter = 1.5, dotted half = 3.0, dotted eighth = 0.75)
-- Tied notes: add the durations together as one entry.
-
-BEAT:
-- First note in the piece = beat 0.0.
-- Each subsequent note's beat = previous note's beat + previous note's duration.
-- Count carefully through rests (rests advance the beat but are not included as notes).
-- In 4/4 time, measure 2 starts at beat 4.0, measure 3 at beat 8.0, etc.
-
-OTHER:
-- Skip rests — do not include them in the notes array, but DO count their duration when computing beat positions.
-- Maximum 128 notes. Transcribe the first 128 if the piece is longer.
-- If chords appear, include only the highest note.
-- confidence: 0.9+ for clean printed music, 0.6 for slightly unclear, 0.3 for handwritten/blurry.`,
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+confidence: 0.9+ clean print, 0.6 slightly unclear, 0.3 handwritten/blurry`,
         },
       ],
     }],
@@ -176,50 +208,70 @@ OTHER:
     return NextResponse.json({ error: 'Could not parse note data from sheet music' }, { status: 500 });
   }
 
-  if (!parsed.notes || !Array.isArray(parsed.notes) || parsed.notes.length === 0) {
-    return NextResponse.json({ error: 'No notes found in sheet music' }, { status: 500 });
+  // ── Build final note list from whichever format Claude returned ─────────────
+  const isTabFormat = parsed.format === 'tab' && Array.isArray(parsed.tabNotes) && parsed.tabNotes.length > 0;
+
+  let notes: OMRNote[];
+
+  if (isTabFormat) {
+    // TAB path: convert string+fret → note+octave, keep string/fret on the object
+    // so omrPieceToSong() can use them directly without re-mapping
+    notes = (parsed.tabNotes ?? [])
+      .slice(0, 128)
+      .filter(t =>
+        typeof t.string === 'number' && t.string >= 1 && t.string <= 6 &&
+        typeof t.fret === 'number' && t.fret >= 0 && t.fret <= 22 &&
+        typeof t.beat === 'number' &&
+        typeof t.duration === 'number' && t.duration > 0
+      )
+      .sort((a, b) => a.beat - b.beat)
+      .map(t => {
+        const { note, octave } = tabToNote(t.string, t.fret);
+        return { note, octave, beat: t.beat, duration: t.duration, string: t.string, fret: t.fret };
+      });
+  } else {
+    // Pitch path: standard notation — apply key signature corrections
+    if (!parsed.notes || !Array.isArray(parsed.notes) || parsed.notes.length === 0) {
+      return NextResponse.json({ error: 'No notes found in sheet music' }, { status: 500 });
+    }
+
+    const KEY_ACCIDENTALS: Record<string, Record<string, string>> = {
+      'G major':  { F: 'F#' }, 'D major': { F: 'F#', C: 'C#' },
+      'A major':  { F: 'F#', C: 'C#', G: 'G#' },
+      'E major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#' },
+      'B major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#' },
+      'F# major': { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#' },
+      'F major':  { B: 'Bb' }, 'Bb major': { B: 'Bb', E: 'Eb' },
+      'Eb major': { B: 'Bb', E: 'Eb', A: 'Ab' },
+      'Ab major': { B: 'Bb', E: 'Eb', A: 'Ab', D: 'Db' },
+      'Db major': { B: 'Bb', E: 'Eb', A: 'Ab', D: 'Db', G: 'Gb' },
+      'E minor':  { F: 'F#' }, 'B minor': { F: 'F#', C: 'C#' },
+      'A minor':  {}, 'D minor': { B: 'Bb' }, 'G minor': { B: 'Bb', E: 'Eb' },
+    };
+    const rawKey = (parsed.key ?? '').trim();
+    const keyAccidentals = KEY_ACCIDENTALS[rawKey]
+      ?? KEY_ACCIDENTALS[Object.keys(KEY_ACCIDENTALS).find(k => k.toLowerCase() === rawKey.toLowerCase()) ?? '']
+      ?? {};
+
+    notes = parsed.notes
+      .slice(0, 128)
+      .filter(n =>
+        n.note &&
+        typeof n.octave === 'number' &&
+        typeof n.beat === 'number' &&
+        typeof n.duration === 'number' &&
+        n.duration > 0
+      )
+      .map(n => {
+        const corrected = keyAccidentals[n.note];
+        return corrected ? { ...n, note: corrected } : n;
+      })
+      .sort((a, b) => a.beat - b.beat);
   }
 
-  // ── Apply key signature accidentals the model may have missed ────────────────
-  // Build a set of pitch classes (0-11) that are sharp/flat in the declared key.
-  const KEY_ACCIDENTALS: Record<string, Record<string, string>> = {
-    // sharps: note letter → sharped version
-    'G major':  { F: 'F#' }, 'D major': { F: 'F#', C: 'C#' },
-    'A major':  { F: 'F#', C: 'C#', G: 'G#' },
-    'E major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#' },
-    'B major':  { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#' },
-    'F# major': { F: 'F#', C: 'C#', G: 'G#', D: 'D#', A: 'A#' }, // E# omitted: same pitch as F, not in client NOTE_SEMITONES
-    // flats
-    'F major':  { B: 'Bb' }, 'Bb major': { B: 'Bb', E: 'Eb' },
-    'Eb major': { B: 'Bb', E: 'Eb', A: 'Ab' },
-    'Ab major': { B: 'Bb', E: 'Eb', A: 'Ab', D: 'Db' },
-    'Db major': { B: 'Bb', E: 'Eb', A: 'Ab', D: 'Db', G: 'Gb' },
-    // relative minors map to same accidentals as their relative major
-    'E minor':  { F: 'F#' }, 'B minor': { F: 'F#', C: 'C#' },
-    'A minor':  {}, 'D minor': { B: 'Bb' }, 'G minor': { B: 'Bb', E: 'Eb' },
-  };
-  // Normalize key string: trim whitespace, handle case variants
-  const rawKey = (parsed.key ?? '').trim();
-  const keyAccidentals = KEY_ACCIDENTALS[rawKey]
-    ?? KEY_ACCIDENTALS[Object.keys(KEY_ACCIDENTALS).find(k => k.toLowerCase() === rawKey.toLowerCase()) ?? '']
-    ?? {};
-
-  // Clamp and validate notes; sort by beat in case Claude returned them out of order
-  const notes = parsed.notes
-    .slice(0, 128)
-    .filter(n =>
-      n.note &&
-      typeof n.octave === 'number' &&
-      typeof n.beat === 'number' &&
-      typeof n.duration === 'number' &&
-      n.duration > 0
-    )
-    .map(n => {
-      // If the key says this letter should be sharped/flatted and the note is natural, fix it
-      const corrected = keyAccidentals[n.note];
-      return corrected ? { ...n, note: corrected } : n;
-    })
-    .sort((a, b) => a.beat - b.beat);
+  if (notes.length === 0) {
+    return NextResponse.json({ error: 'No valid notes found in sheet music' }, { status: 500 });
+  }
 
   // Upsert — regenerating a piece replaces the old game
   const { data: game, error: saveError } = await admin

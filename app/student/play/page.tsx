@@ -62,6 +62,9 @@ interface OMRNote {
   octave: number;  // 4 = middle C
   duration: number;
   beat: number;
+  // Present when source had guitar TAB — use directly, no re-mapping needed
+  string?: number; // 1 = high e, 6 = low E
+  fret?: number;   // 0-22
 }
 
 interface PieceWithGame {
@@ -95,21 +98,20 @@ function omrPieceToSong(piece: PieceWithGame): Song {
   const tsParts = (game.time_signature ?? "4/4").split("/").map(Number);
   const timeSignature: [number, number] = [tsParts[0] ?? 4, tsParts[1] ?? 4];
 
-  // Map the piece's pitch range evenly across all 6 strings so every lane is
-  // used and the game looks visually full, not clustered on 2 strings.
-  // Key insight: midiForNote(string, fret) determines expected MIDI for hit
-  // detection, so any string/fret combo that produces the same MIDI value is
-  // equivalent for gameplay — we just need to spread them visually.
-  const midiValues = game.notes_json.map(omrNoteToMidi).filter(m => m > 0);
-  const minMidi = midiValues.length ? Math.min(...midiValues) : 60;
-  const maxMidi = midiValues.length ? Math.max(...midiValues) : 72;
-  const midiSpan = Math.max(1, maxMidi - minMidi);
-
   const notes: TabNote[] = game.notes_json.map(n => {
+    // If the note has TAB data (string + fret from direct TAB reading), use it directly.
+    // This is far more accurate than pitch-to-string re-mapping.
+    if (typeof n.string === 'number' && typeof n.fret === 'number') {
+      return { beat: n.beat, string: n.string, fret: n.fret, duration: n.duration };
+    }
+
+    // Fallback: pitch-to-string mapping for pieces without TAB
+    const midiValues = game.notes_json.map(omrNoteToMidi).filter(m => m > 0);
+    const minMidi = midiValues.length ? Math.min(...midiValues) : 60;
+    const maxMidi = midiValues.length ? Math.max(...midiValues) : 72;
+    const midiSpan = Math.max(1, maxMidi - minMidi);
     const targetMidi = omrNoteToMidi(n);
-    // Assign string by mapping pitch position in the piece's range to strings 1-6
-    // (highest pitch → string 1, lowest → string 6). Then fret = targetMidi - openMidi.
-    const normalized = (targetMidi - minMidi) / midiSpan; // 0.0 (low) … 1.0 (high)
+    const normalized = (targetMidi - minMidi) / midiSpan;
     const stringAssign = Math.min(6, Math.max(1, Math.round(6 - normalized * 5)));
     const openMidi = STRING_OPEN_MIDI[6 - stringAssign];
     const fret = Math.max(0, Math.min(22, targetMidi - openMidi));
