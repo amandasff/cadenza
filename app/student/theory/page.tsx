@@ -1257,7 +1257,9 @@ function KeySigGame({ onBack }: { onBack: () => void }) {
   }
 
   function answer(choice: string) {
+    if (game.selected) return;
     const ok = choice === q.correct;
+    game.setSelected(choice);
     game.scoreAnswer(ok);
     game.scheduleNext(ok, () => setQ(makeKeySigQ(pool, askRelative)));
   }
@@ -1426,8 +1428,9 @@ function ScaleGame({ onBack }: { onBack: () => void }) {
   }
 
   function answer(st: ScaleType) {
-    if (!played) return;
+    if (!played || game.selected) return;
     const ok = st === q.scaleType;
+    game.setSelected(st);
     game.scoreAnswer(ok);
     game.scheduleNext(ok, () => {
       const newQ = makeScaleQ(POOL_BY_DIFF[diff]);
