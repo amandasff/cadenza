@@ -114,7 +114,11 @@ export async function POST(request: Request) {
   if (isFirstSessionToday) updates.total_days_practiced = (current.total_days_practiced ?? 0) + 1;
 
   if (Object.keys(updates).length > 0) {
-    await admin.from('profiles').update(updates).eq('id', user.id);
+    const { error: updateError } = await admin.from('profiles').update(updates).eq('id', user.id);
+    if (updateError) {
+      console.error('[practice/log] Failed to update profile streak/points:', updateError.message);
+      return NextResponse.json({ error: 'Failed to update streak: ' + updateError.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({

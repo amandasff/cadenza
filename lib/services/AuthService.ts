@@ -130,7 +130,7 @@ export class AuthService {
   }
 
   private async fetchUser(id: string, email: string): Promise<AuthUser> {
-    const [{ data: profile, error }, { data: lastSession }] = await Promise.all([
+    const [{ data: profile, error }, { data: lastSession, error: sessionError }] = await Promise.all([
       this.supabase.from('profiles').select('*').eq('id', id).single<ProfileRow>(),
       this.supabase
         .from('practice_sessions')
@@ -148,7 +148,8 @@ export class AuthService {
     // Compute live streak: streak_days in the DB is only updated when a session
     // is logged — there is no cron job to zero it. Recompute it here so the
     // displayed value is always accurate.
-    if (profile.streak_days > 0) {
+    // If the session query errored (e.g. RLS policy), skip zeroing — trust the DB value.
+    if (profile.streak_days > 0 && !sessionError) {
       const lastAt = lastSession?.created_at ?? null;
       if (!lastAt) {
         profile.streak_days = 0;
