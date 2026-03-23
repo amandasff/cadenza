@@ -27,6 +27,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher/chat",         label: t.nav.chat },
     { href: "/teacher/inspirations", label: t.nav.inspire },
     { href: "/teacher/books",        label: "Books" },
+    { href: "/student/discover",     label: t.nav.discover },
   ];
 
 
@@ -52,6 +53,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher/chat",         label: t.nav.chat },
     { href: "/teacher/inspirations", label: t.nav.inspire },
     { href: "/teacher/books",        label: "Books" },
+    { href: "/student/discover",     label: t.nav.discover },
   ];
   const fileInputRef = useRef<HTMLInputElement>(null);
 
