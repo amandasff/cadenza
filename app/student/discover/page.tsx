@@ -296,16 +296,29 @@ export default function DiscoverPage() {
         }
       }
 
-      const { data: itemData, error: itemError } = await supabase
+      // Try visibility column first; fall back to is_public if migration hasn't run yet
+      let itemData: PortfolioItemRow[] | null = null;
+      const { data: visData, error: visError } = await supabase
         .from("portfolio_items").select("*").eq("visibility", "public")
         .order("created_at", { ascending: false });
-      if (itemError) throw itemError;
+      if (visError && (visError.code === "42703" || visError.message?.includes("visibility"))) {
+        // visibility column not yet migrated — fall back to is_public
+        const { data: pubData, error: pubError } = await supabase
+          .from("portfolio_items").select("*").eq("is_public", true)
+          .order("created_at", { ascending: false });
+        if (pubError) throw pubError;
+        itemData = (pubData ?? []) as PortfolioItemRow[];
+      } else if (visError) {
+        throw visError;
+      } else {
+        itemData = (visData ?? []) as PortfolioItemRow[];
+      }
 
-      const enriched = await enrichItems((itemData ?? []) as PortfolioItemRow[], uid);
+      const enriched = await enrichItems(itemData, uid);
       setItems(enriched);
     } catch (err) {
       const e = err as { message?: string; code?: string };
-      if (e?.code === "42703" || e?.code === "42P01" || e?.message?.includes("is_public") || e?.message?.includes("visibility") || e?.message?.includes("media_type")) {
+      if (e?.code === "42703" || e?.code === "42P01" || e?.message?.includes("is_public") || e?.message?.includes("media_type")) {
         setMissingColumns(true);
       } else {
         setQueryError(e?.message ?? "Unknown error");
@@ -333,20 +346,26 @@ export default function DiscoverPage() {
       const mutualIds = followingIds.filter(id => followsMeSet.has(id));
 
       // Public posts from anyone I follow + friends posts from mutual follows
-      const [pubRes, friendsRes] = await Promise.all([
-        supabase.from("portfolio_items").select("*").eq("visibility", "public")
-          .in("student_id", followingIds).order("created_at", { ascending: false }),
-        mutualIds.length > 0
-          ? supabase.from("portfolio_items").select("*").eq("visibility", "friends")
-              .in("student_id", mutualIds).order("created_at", { ascending: false })
-          : Promise.resolve({ data: [] }),
-      ]);
+      // Fall back to is_public if visibility column not yet migrated
+      const pubRes = await supabase.from("portfolio_items").select("*").eq("visibility", "public")
+        .in("student_id", followingIds).order("created_at", { ascending: false });
+      const useIsPublic = pubRes.error && (pubRes.error.code === "42703" || pubRes.error.message?.includes("visibility"));
 
-      // Merge + deduplicate by id, sort by created_at
-      const seen = new Set<string>();
-      const merged = [...(pubRes.data ?? []), ...((friendsRes.data ?? []) as PortfolioItemRow[])]
-        .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; })
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      let merged: PortfolioItemRow[];
+      if (useIsPublic) {
+        const { data } = await supabase.from("portfolio_items").select("*").eq("is_public", true)
+          .in("student_id", followingIds).order("created_at", { ascending: false });
+        merged = (data ?? []) as PortfolioItemRow[];
+      } else {
+        const friendsRes = mutualIds.length > 0 && !useIsPublic
+          ? await supabase.from("portfolio_items").select("*").eq("visibility", "friends")
+              .in("student_id", mutualIds).order("created_at", { ascending: false })
+          : { data: [] };
+        const seen = new Set<string>();
+        merged = [...(pubRes.data ?? []), ...((friendsRes.data ?? []) as PortfolioItemRow[])]
+          .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; })
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
 
       const enriched = await enrichItems(merged as PortfolioItemRow[], currentUserId);
       setFollowingItems(enriched);
