@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node_modules/.bin/vitest.cmd run",
+    "test:smoke": "bun test __tests__/smoke-signup.test.ts __tests__/smoke-practice-streak.test.ts __tests__/smoke-stripe-webhook.test.ts",
     "test:watch": "node_modules/.bin/vitest.cmd"
   },
   "dependencies": {
