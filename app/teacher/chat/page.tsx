@@ -49,6 +49,7 @@ export default function TeacherChat() {
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const [sendingImage, setSendingImage] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ id: string; senderName: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -126,20 +127,41 @@ export default function TeacherChat() {
     scrollToBottom(instant);
   }, [messages, scrollToBottom]);
 
+  function parseReply(content: string): { replyId: string; replySender: string; body: string } | null {
+    if (!content.startsWith('REPLYTO:')) return null;
+    const nl = content.indexOf('\n');
+    if (nl === -1) return null;
+    const header = content.slice(8, nl);
+    const sep = header.indexOf('|');
+    if (sep === -1) return null;
+    return { replyId: header.slice(0, sep), replySender: header.slice(sep + 1), body: content.slice(nl + 1) };
+  }
+
+  function getReplyPreview(msgId: string): string {
+    const original = messages.find(m => m.id === msgId);
+    if (!original) return '…';
+    const parsed = parseReply(original.content);
+    const raw = parsed ? parsed.body : original.content;
+    const text = raw.replace(/^(AUDIO:|VIDEO:|IMAGE:)\S+\n?/m, '').trim();
+    return text.length > 60 ? text.slice(0, 60) + '…' : text || '(media)';
+  }
+
   async function handleSend() {
     const text = input.trim();
     if (!text || !teacher?.studioId || sending) return;
+    const content = replyTo ? `REPLYTO:${replyTo.id}|${replyTo.senderName}\n${text}` : text;
     setInput("");
+    setReplyTo(null);
     setSending(true);
     try {
       const supabase = getSupabaseBrowserClient();
       const service = ChatService.create(supabase);
       if (selectedStudent === null) {
-        await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, text);
+        await service.postAnnouncement(teacher.studioId, teacher.id, teacher.displayName, content);
         const fresh = await service.getAnnouncements(teacher.studioId);
         setMessages(fresh);
       } else {
-        await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, text);
+        await service.sendPrivateMessage(teacher.studioId, teacher.id, teacher.displayName, selectedStudent.id, content);
         const fresh = await service.getPrivateThread(teacher.studioId, teacher.id, selectedStudent.id);
         setMessages(fresh);
       }
@@ -440,26 +462,50 @@ export default function TeacherChat() {
                       {audioLabel && <p style={{ margin: "0 0 0.375rem", fontSize: "0.8125rem", color: isMe ? (isAnnouncements ? "var(--charcoal)" : "var(--cream)") : "var(--charcoal)" }}>{audioLabel}</p>}
                       <audio controls src={audioSrc} style={{ height: 32, maxWidth: "100%" }} />
                     </div>
-                  ) : (
-                    <div style={{
-                      maxWidth: "66%", padding: "0.5rem 0.875rem", fontSize: "0.875rem", lineHeight: 1.6,
-                      background: isMe ? (isAnnouncements ? "var(--peach-bg)" : "var(--charcoal)") : "var(--white)",
-                      color: isMe ? (isAnnouncements ? "var(--charcoal)" : "var(--cream)") : "var(--charcoal)",
-                      border: isMe ? (isAnnouncements ? "1px solid var(--peach-light)" : "none") : "1px solid var(--border-strong)",
-                      borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                      overflowWrap: "break-word", wordBreak: "break-word",
-                      whiteSpace: "pre-wrap",
-                    }}>
-                      {msg.content}
-                    </div>
-                  )}
+                  ) : (() => {
+                    const replyData = parseReply(msg.content);
+                    const displayContent = replyData ? replyData.body : msg.content;
+                    const bgColor = isMe ? (isAnnouncements ? "var(--peach-bg)" : "var(--charcoal)") : "var(--white)";
+                    const textColor = isMe ? (isAnnouncements ? "var(--charcoal)" : "var(--cream)") : "var(--charcoal)";
+                    const borderStyle = isMe ? (isAnnouncements ? "1px solid var(--peach-light)" : "none") : "1px solid var(--border-strong)";
+                    return (
+                      <div style={{
+                        maxWidth: "66%", fontSize: "0.875rem", lineHeight: 1.6,
+                        background: bgColor, color: textColor,
+                        border: borderStyle,
+                        borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                        overflowWrap: "break-word", wordBreak: "break-word",
+                        overflow: "hidden",
+                      }}>
+                        {replyData && (
+                          <div style={{
+                            borderLeft: `3px solid ${isMe ? (isAnnouncements ? "var(--peach)" : "rgba(255,255,255,0.3)") : "var(--sage)"}`,
+                            background: isMe ? (isAnnouncements ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)") : "var(--cream)",
+                            padding: "0.375rem 0.625rem",
+                          }}>
+                            <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: isMe ? (isAnnouncements ? "var(--peach)" : "rgba(255,255,255,0.6)") : "var(--sage)", marginBottom: "0.1rem" }}>
+                              {replyData.replySender}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: isMe ? (isAnnouncements ? "var(--muted)" : "rgba(255,255,255,0.5)") : "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {getReplyPreview(replyData.replyId)}
+                            </div>
+                          </div>
+                        )}
+                        <div style={{ padding: "0.5rem 0.875rem", whiteSpace: "pre-wrap" }}>{displayContent}</div>
+                      </div>
+                    );
+                  })()}
 
-                  {/* Edit/Delete — shown on ALL own messages when hovered */}
-                  {isMe && !isEditing && (
-                    <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none", paddingRight: "0.25rem" }}>
-                      <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{t.common.edit}</button>
-                      <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                      <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{t.common.delete}</button>
+                  {/* Reply / Edit / Delete — hovered actions */}
+                  {!isEditing && (
+                    <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: isHovered ? 1 : 0, transition: "opacity 0.15s", pointerEvents: isHovered ? "auto" : "none", paddingLeft: isMe ? 0 : "0.25rem", paddingRight: isMe ? "0.25rem" : 0 }}>
+                      <button onClick={() => { setReplyTo({ id: msg.id, senderName: msg.sender_name ?? "them" }); inputRef.current?.focus(); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>↩ Reply</button>
+                      {isMe && <>
+                        <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
+                        <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{t.common.edit}</button>
+                        <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
+                        <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{t.common.delete}</button>
+                      </>}
                     </div>
                   )}
 
@@ -489,7 +535,17 @@ export default function TeacherChat() {
               <button onClick={clearError} style={{ background: "none", border: "none", cursor: "pointer", padding: "0 0.25rem", color: "var(--error, #d00)", display: "flex", alignItems: "center" }}><X size={14} strokeWidth={1.5} /></button>
             </div>
           )}
-          <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid var(--border)", background: "var(--white)", display: "flex", gap: "0.625rem", alignItems: "flex-end" }}>
+          <div style={{ borderTop: "1px solid var(--border)", background: "var(--white)" }}>
+          {replyTo && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1.25rem", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ flex: 1, borderLeft: "2px solid var(--sage)", paddingLeft: "0.5rem", minWidth: 0 }}>
+                <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--sage)" }}>Replying to {replyTo.senderName}</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{getReplyPreview(replyTo.id)}</div>
+              </div>
+              <button onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: "0.125rem", display: "flex", flexShrink: 0 }}><X size={14} strokeWidth={1.5} /></button>
+            </div>
+          )}
+          <div style={{ padding: "0.75rem 1.25rem", display: "flex", gap: "0.625rem", alignItems: "flex-end" }}>
             <textarea
               ref={inputRef}
               value={input}
@@ -554,6 +610,7 @@ export default function TeacherChat() {
             >
               {t.common.send}
             </button>
+          </div>
           </div>
         </div>
       </div>

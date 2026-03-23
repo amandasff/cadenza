@@ -49,6 +49,7 @@ export default function StudentChat() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [sendingImage, setSendingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; senderName: string } | null>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -163,15 +164,38 @@ export default function StudentChat() {
     scrollToBottom(instant);
   }, [announcements, privateMessages, tab, scrollToBottom]);
 
+  // Parse reply header out of message content
+  function parseReply(content: string): { replyId: string; replySender: string; body: string } | null {
+    if (!content.startsWith('REPLYTO:')) return null;
+    const nl = content.indexOf('\n');
+    if (nl === -1) return null;
+    const header = content.slice(8, nl);
+    const sep = header.indexOf('|');
+    if (sep === -1) return null;
+    return { replyId: header.slice(0, sep), replySender: header.slice(sep + 1), body: content.slice(nl + 1) };
+  }
+
+  function getReplyPreview(msgId: string): string {
+    const original = activeMessages.find(m => m.id === msgId);
+    if (!original) return '…';
+    const parsed = parseReply(original.content);
+    const raw = parsed ? parsed.body : original.content;
+    // Strip media prefixes for preview
+    const text = raw.replace(/^(AUDIO:|VIDEO:|IMAGE:)\S+\n?/m, '').trim();
+    return text.length > 60 ? text.slice(0, 60) + '…' : text || '(media)';
+  }
+
   async function handleSend() {
     const text = input.trim();
     if (!text || !student?.studioId || !teacherId || sending) return;
+    const content = replyTo ? `REPLYTO:${replyTo.id}|${replyTo.senderName}\n${text}` : text;
     setInput("");
+    setReplyTo(null);
     setSending(true);
     try {
       const supabase = getSupabaseBrowserClient();
       const svc = ChatService.create(supabase);
-      await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, text);
+      await svc.sendPrivateMessage(student.studioId, student.id, student.displayName, teacherId, content);
       const fresh = await svc.getPrivateThread(student.studioId!, student.id, teacherId);
       setPrivateMessages(fresh);
       setTab("private");
@@ -445,27 +469,50 @@ export default function StudentChat() {
                     {audioLabel && <p style={{ margin: "0 0 0.375rem", fontSize: "0.8125rem", color: isMe ? "var(--cream)" : "var(--charcoal)" }}>{audioLabel}</p>}
                     <audio controls src={audioSrc} style={{ height: 32, maxWidth: "100%" }} />
                   </div>
-                ) : (
-                  <div style={{
-                    maxWidth: "78%", padding: "0.5rem 0.875rem",
-                    background: isMe ? "var(--charcoal)" : "var(--white)",
-                    color: isMe ? "var(--cream)" : "var(--charcoal)",
-                    borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                    border: isMe ? "none" : "1px solid var(--border-strong)",
-                    fontSize: "0.875rem", lineHeight: 1.6,
-                    overflowWrap: "break-word", wordBreak: "break-word",
-                    whiteSpace: "pre-wrap",
-                  }}>
-                    {msg.content}
-                  </div>
-                )}
+                ) : (() => {
+                  const replyData = parseReply(msg.content);
+                  const displayContent = replyData ? replyData.body : msg.content;
+                  return (
+                    <div style={{
+                      maxWidth: "78%", padding: replyData ? "0" : "0.5rem 0.875rem",
+                      background: isMe ? "var(--charcoal)" : "var(--white)",
+                      color: isMe ? "var(--cream)" : "var(--charcoal)",
+                      borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                      border: isMe ? "none" : "1px solid var(--border-strong)",
+                      fontSize: "0.875rem", lineHeight: 1.6,
+                      overflowWrap: "break-word", wordBreak: "break-word",
+                      overflow: "hidden",
+                    }}>
+                      {replyData && (
+                        <div style={{
+                          borderLeft: `3px solid ${isMe ? "rgba(255,255,255,0.3)" : "var(--sage)"}`,
+                          background: isMe ? "rgba(255,255,255,0.08)" : "var(--cream)",
+                          padding: "0.375rem 0.625rem",
+                          margin: "0",
+                        }}>
+                          <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: isMe ? "rgba(255,255,255,0.6)" : "var(--sage)", marginBottom: "0.1rem" }}>
+                            {replyData.replySender}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: isMe ? "rgba(255,255,255,0.5)" : "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {getReplyPreview(replyData.replyId)}
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ padding: "0.5rem 0.875rem", whiteSpace: "pre-wrap" }}>{displayContent}</div>
+                    </div>
+                  );
+                })()}
 
-                {/* Edit/Delete — all own private messages when hovered */}
-                {canAct && !isEditing && (
-                  <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: hoveredId === msg.id ? 1 : 0, transition: "opacity 0.15s", pointerEvents: hoveredId === msg.id ? "auto" : "none", paddingRight: "0.25rem" }}>
-                    <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{tr.common.edit}</button>
-                    <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
-                    <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{tr.common.delete}</button>
+                {/* Reply / Edit / Delete — hovered actions */}
+                {tab === "private" && !isEditing && (
+                  <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.15rem", opacity: hoveredId === msg.id ? 1 : 0, transition: "opacity 0.15s", pointerEvents: hoveredId === msg.id ? "auto" : "none", paddingLeft: isMe ? 0 : "0.25rem", paddingRight: isMe ? "0.25rem" : 0 }}>
+                    <button onClick={() => { setReplyTo({ id: msg.id, senderName: msg.sender_name ?? "them" }); inputRef.current?.focus(); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>↩ Reply</button>
+                    {canAct && <>
+                      <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
+                      <button onClick={() => { setEditingId(msg.id); setEditText(msg.content); setEditError(null); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{tr.common.edit}</button>
+                      <span style={{ fontSize: "0.625rem", color: "var(--border-strong)" }}>·</span>
+                      <button onClick={() => handleDelete(msg.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "0.625rem", color: "var(--muted)" }}>{tr.common.delete}</button>
+                    </>}
                   </div>
                 )}
 
@@ -510,7 +557,17 @@ export default function StudentChat() {
         </div>
       )}
       {tab === "private" && (
-        <div style={{ flexShrink: 0, padding: "0.75rem 1rem", background: "var(--white)", borderTop: "1px solid var(--border)", display: "flex", gap: "0.5rem", alignItems: "flex-end", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
+        <div style={{ flexShrink: 0, background: "var(--white)", borderTop: "1px solid var(--border)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+          {replyTo && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.5rem 1rem 0", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ flex: 1, borderLeft: "2px solid var(--sage)", paddingLeft: "0.5rem", minWidth: 0 }}>
+                <div style={{ fontSize: "0.6875rem", fontWeight: 600, color: "var(--sage)" }}>Replying to {replyTo.senderName}</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{getReplyPreview(replyTo.id)}</div>
+              </div>
+              <button onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", padding: "0.125rem", display: "flex", flexShrink: 0 }}><X size={14} strokeWidth={1.5} /></button>
+            </div>
+          )}
+        <div style={{ padding: "0.75rem 1rem", display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
           <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={student?.isSolo && !student?.studioId ? "Join a studio to message your teacher" : teacherId ? tr.student.chatMessageTeacher : tr.common.loading} disabled={sending || !teacherId || isRecording || uploadingAudio || (student?.isSolo && !student?.studioId)} rows={Math.min(5, Math.max(1, input.split("\n").length))} style={{ flex: 1, borderRadius: 3, border: "1px solid var(--border)", padding: "0.5rem 0.875rem", fontSize: "0.875rem", outline: "none", background: "var(--cream)", color: "var(--charcoal)", resize: "none", lineHeight: 1.5, fontFamily: "inherit" }} />
           {/* Mic button — audio-only voice note */}
           <button
@@ -560,6 +617,7 @@ export default function StudentChat() {
             {sendingImage ? <Hourglass size={18} strokeWidth={1.5} /> : <Image size={18} strokeWidth={1.5} />}
           </button>
           <button onClick={handleSend} disabled={!input.trim() || sending || !teacherId || isRecording} style={{ padding: "0.5rem 1rem", borderRadius: 3, border: "none", background: input.trim() && teacherId && !isRecording ? "var(--charcoal)" : "var(--border)", color: "var(--white)", cursor: input.trim() && teacherId && !isRecording ? "pointer" : "default", fontSize: "0.8125rem", fontWeight: 500, flexShrink: 0, transition: "background 0.15s", marginBottom: "0.0625rem" }}>{tr.common.send}</button>
+        </div>
         </div>
       )}
 

@@ -1299,6 +1299,15 @@ export default function PlayPage() {
         </div>
       </div>
 
+      {/* Development warning */}
+      <div style={{ background: "#FFF8E1", border: "1px solid #F9A825", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+        <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>⚠️</span>
+        <div>
+          <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#5D4037", fontFamily: "Inter, sans-serif" }}>This page is in active development and has known bugs</div>
+          <div style={{ fontSize: "0.75rem", color: "#795548", fontFamily: "Inter, sans-serif", marginTop: "0.2rem", lineHeight: 1.5 }}>Pitch detection, note matching, and piece import are experimental. Expect rough edges — we're actively improving it.</div>
+        </div>
+      </div>
+
       {/* Mic status */}
       {!micGranted && !micError && (
         <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>

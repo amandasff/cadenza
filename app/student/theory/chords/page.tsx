@@ -58,6 +58,41 @@ const GUITAR_CHORDS: GChord[] = [
   { name: "Am7", frets: [-1, 0, 2, 0, 1, 0] },
   { name: "Em7", frets: [0, 2, 0, 0, 0, 0] },
   { name: "Dm7", frets: [-1, -1, 0, 2, 1, 1] },
+  { name: "Bm7", frets: [-1, 2, 0, 2, 0, 2] },
+  { name: "Cm7", frets: [-1, 3, 5, 3, 4, 3] },
+  { name: "Fm7", frets: [1, 3, 1, 1, 1, 1] },
+  { name: "Gm7", frets: [-1, -1, 5, 3, 3, 3] },
+  // ── Major 7th ──
+  { name: "Cmaj7", frets: [-1, 3, 2, 0, 0, 0] },
+  { name: "Dmaj7", frets: [-1, -1, 0, 2, 2, 2] },
+  { name: "Emaj7", frets: [0, 2, 1, 1, 0, 0] },
+  { name: "Fmaj7", frets: [-1, -1, 3, 2, 1, 0] },
+  { name: "Gmaj7", frets: [3, 2, 0, 0, 0, 2] },
+  { name: "Amaj7", frets: [-1, 0, 2, 1, 2, 0] },
+  // ── Diminished ──
+  { name: "Adim", frets: [-1, 0, 1, 2, 1, 0] },
+  { name: "Bdim", frets: [-1, -1, 3, 4, 3, 1] },
+  { name: "Cdim", frets: [-1, 3, 4, 5, 4, -1] },
+  { name: "Ddim", frets: [-1, -1, 0, 1, 0, 1] },
+  { name: "Edim", frets: [0, 1, 2, 0, 0, 0] },
+  { name: "Gdim", frets: [-1, -1, 5, 3, 2, 3] },
+  // ── Augmented ──
+  { name: "Caug", frets: [-1, 3, 2, 1, 1, 0] },
+  { name: "Eaug", frets: [0, 3, 2, 1, 1, 0] },
+  { name: "Gaug", frets: [3, 2, 1, 0, 0, 3] },
+  { name: "Aaug", frets: [-1, 0, 3, 2, 2, 1] },
+  // ── Sus 2 ──
+  { name: "Asus2",  frets: [-1, 0, 2, 2, 0, 0] },
+  { name: "Csus2",  frets: [-1, 3, 0, 0, 3, 3] },
+  { name: "Dsus2",  frets: [-1, -1, 0, 2, 3, 0] },
+  { name: "Esus2",  frets: [0, 2, 4, 4, 0, 0] },
+  { name: "Gsus2",  frets: [3, -1, 0, 2, 3, 3] },
+  // ── Sus 4 ──
+  { name: "Asus4",  frets: [-1, 0, 2, 2, 3, 0] },
+  { name: "Csus4",  frets: [-1, 3, 3, 0, 1, 1] },
+  { name: "Dsus4",  frets: [-1, -1, 0, 2, 3, 3] },
+  { name: "Esus4",  frets: [0, 2, 2, 2, 0, 0] },
+  { name: "Gsus4",  frets: [3, 3, 0, 0, 1, 3] },
 ];
 
 // Ukulele chord database (strings: G C E A, low to high)
