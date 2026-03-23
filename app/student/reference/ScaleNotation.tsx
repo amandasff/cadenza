@@ -42,6 +42,26 @@ const HARMONIC_MINOR_NOTES: Record<string, string[]> = {
   G:   ["g", "a", "bb", "c", "d", "eb", "f#"],
   C:   ["c", "d", "eb", "f", "g", "ab", "b"],
   F:   ["f", "g", "ab", "bb", "c", "db", "e"],
+  "Ab": ["ab", "bb", "cb", "db", "eb", "fb", "g"],
+  "Eb": ["eb", "f", "gb", "ab", "bb", "cb", "d"],
+  "Bb": ["bb", "c", "db", "eb", "f", "gb", "a"],
+  "C#": ["c#", "d#", "e", "f#", "g#", "a", "b#"],
+};
+
+// Melodic minor — ascending form (raised 6th + 7th); descending reverts to natural
+const MELODIC_MINOR_NOTES: Record<string, string[]> = {
+  A:   ["a", "b", "c", "d", "e", "f#", "g#"],
+  E:   ["e", "f#", "g", "a", "b", "c#", "d#"],
+  B:   ["b", "c#", "d", "e", "f#", "g#", "a#"],
+  "F#": ["f#", "g#", "a", "b", "c#", "d#", "e#"],
+  D:   ["d", "e", "f", "g", "a", "b", "c#"],
+  G:   ["g", "a", "bb", "c", "d", "e", "f#"],
+  C:   ["c", "d", "eb", "f", "g", "a", "b"],
+  F:   ["f", "g", "ab", "bb", "c", "d", "e"],
+  "Ab": ["ab", "bb", "cb", "db", "eb", "f", "g"],
+  "Eb": ["eb", "f", "gb", "ab", "bb", "c", "d"],
+  "Bb": ["bb", "c", "db", "eb", "f", "g", "a"],
+  "C#": ["c#", "d#", "e", "f#", "g#", "a#", "b#"],
 };
 
 // VexFlow key signature string for each root + mode
@@ -125,7 +145,7 @@ function midiToHz(midi: number): number {
 
 export function inferKeyAndScale(sectionTitle: string, item: TechItem): {
   keyRoot: string;
-  scaleType: "major" | "minor" | "harmonicMinor" | "arpeggio" | "chromatic" | "pentascale";
+  scaleType: "major" | "minor" | "harmonicMinor" | "melodicMinor" | "arpeggio" | "chromatic" | "pentascale";
   isMinorArp: boolean;
   vfKeySig: string;
   diatonicNotes: string[];
@@ -154,10 +174,11 @@ export function inferKeyAndScale(sectionTitle: string, item: TechItem): {
 
   // Determine if minor
   const isMinor = l.includes("minor") || l.includes(" min") || t.includes("minor");
-  const isHarmonicMinor = l.includes("harmonic");
+  const isHarmonicMinor = l.includes("harmonic") || t.includes("harmonic");
+  const isMelodicMinor = l.includes("melodic") || t.includes("melodic");
 
   // Scale type
-  let scaleType: "major" | "minor" | "harmonicMinor" | "arpeggio" | "chromatic" | "pentascale" = "major";
+  let scaleType: "major" | "minor" | "harmonicMinor" | "melodicMinor" | "arpeggio" | "chromatic" | "pentascale" = "major";
   let isMinorArp = false;
 
   if (t.includes("chromatic") || l.includes("chromatic")) {
@@ -167,6 +188,8 @@ export function inferKeyAndScale(sectionTitle: string, item: TechItem): {
     isMinorArp = isMinor;
   } else if (t.includes("penta") || t.includes("5-finger")) {
     scaleType = "pentascale";
+  } else if (isMelodicMinor) {
+    scaleType = "melodicMinor";
   } else if (isHarmonicMinor) {
     scaleType = "harmonicMinor";
   } else if (isMinor) {
@@ -185,6 +208,9 @@ export function inferKeyAndScale(sectionTitle: string, item: TechItem): {
     vfKeySig = `${keyRoot}m`;
   } else if (scaleType === "harmonicMinor") {
     diatonicNotes = HARMONIC_MINOR_NOTES[keyRoot] ?? HARMONIC_MINOR_NOTES.A;
+    vfKeySig = `${keyRoot}m`;
+  } else if (scaleType === "melodicMinor") {
+    diatonicNotes = MELODIC_MINOR_NOTES[keyRoot] ?? MELODIC_MINOR_NOTES.A;
     vfKeySig = `${keyRoot}m`;
   } else if (isMinorArp) {
     diatonicNotes = NATURAL_MINOR_NOTES[keyRoot] ?? NATURAL_MINOR_NOTES.A;
@@ -232,7 +258,7 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
 
   const info = useMemo(() => inferKeyAndScale(sectionTitle, item), [sectionTitle, item]);
 
-  // Build note sequences
+  // Build note sequences — ascending only for clean notation preview
   const displayNotes = useMemo((): string[] => {
     if (!info.isSupported) return [];
     const { scaleType, diatonicNotes, isMinorArp, keyRoot, displayOctaves } = info;
@@ -240,19 +266,15 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
 
     if (scaleType === "chromatic") {
       const rootMidi = (4 + 1) * 12 + (NOTE_SEMITONES[keyRoot.toLowerCase()] ?? 0);
-      const asc = buildChromatic(rootMidi, displayOctaves);
-      return [...asc, ...asc.slice().reverse().slice(1)];
+      return buildChromatic(rootMidi, displayOctaves);
     }
     if (scaleType === "arpeggio") {
-      const asc = buildArpeggio(diatonicNotes, startOct, displayOctaves, isMinorArp);
-      return [...asc, ...asc.slice().reverse().slice(1)];
+      return buildArpeggio(diatonicNotes, startOct, displayOctaves, isMinorArp);
     }
     if (scaleType === "pentascale") {
-      const asc = buildPentascale(diatonicNotes, startOct);
-      return [...asc, ...asc.slice().reverse().slice(1)];
+      return buildPentascale(diatonicNotes, startOct);
     }
-    const asc = buildAscending(diatonicNotes, startOct, displayOctaves);
-    return [...asc, ...asc.slice().reverse().slice(1)];
+    return buildAscending(diatonicNotes, startOct, displayOctaves);
   }, [info]);
 
   // Full audio notes (item.octaves, not capped)
@@ -459,9 +481,12 @@ export default function ScaleNotation({ sectionTitle, item }: Props) {
 
   const { keyRoot, scaleType, displayOctaves } = info;
   const keyLabel = item.keys.toLowerCase().includes("all") ? `C (preview — apply to all keys)` : keyRoot;
-  const typeLabel = scaleType === "major" ? "Major" : scaleType === "minor" ? "Natural Minor" :
-    scaleType === "harmonicMinor" ? "Harmonic Minor" : scaleType === "arpeggio" ? "Arpeggio" :
-    scaleType === "chromatic" ? "Chromatic" : "Pentascale";
+  const typeLabel = scaleType === "major" ? "Major"
+    : scaleType === "minor" ? "Natural Minor"
+    : scaleType === "harmonicMinor" ? "Harmonic Minor"
+    : scaleType === "melodicMinor" ? "Melodic Minor (asc.)"
+    : scaleType === "arpeggio" ? "Arpeggio"
+    : scaleType === "chromatic" ? "Chromatic" : "Pentascale";
 
   return (
     <div style={{ marginTop: "0.875rem" }}>

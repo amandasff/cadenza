@@ -84,6 +84,7 @@ function PracticeInner() {
   const [portfolioTitle, setPortfolioTitle] = useState("");
   const [portfolioDesc, setPortfolioDesc] = useState("");
   const [portfolioVisibility, setPortfolioVisibility] = useState<Visibility>("public");
+  const [portfolioDisplayAs, setPortfolioDisplayAs] = useState<"real" | "anonymous">("real");
   const [artistName, setArtistName] = useState<string | null>(null);
 
   // Reflect state
@@ -314,6 +315,7 @@ function PracticeInner() {
             recordingUrl,
             sessionId: sessionData.id,
             visibility: portfolioVisibility,
+            displayAs: portfolioDisplayAs,
           });
         } catch (err) {
           console.error("Portfolio save failed:", err);
@@ -740,6 +742,28 @@ function PracticeInner() {
                   {portfolioVisibility === "private" ? "Saved to your journey, invisible to others" : portfolioVisibility === "friends" ? "Visible to mutual followers" : "Shown in Discover feed"}
                 </div>
               </div>
+              {/* Anonymous toggle — only relevant when visible to others */}
+              {portfolioVisibility !== "private" && (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.375rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => setPortfolioDisplayAs(portfolioDisplayAs === "anonymous" ? "real" : "anonymous")}
+                    style={{
+                      width: 32, height: 18, borderRadius: 99, border: "none", cursor: "pointer", flexShrink: 0,
+                      background: portfolioDisplayAs === "anonymous" ? "#5B4DA3" : "var(--border-strong)",
+                      position: "relative", transition: "background 0.15s",
+                    }}
+                  >
+                    <span style={{
+                      position: "absolute", top: 2, left: portfolioDisplayAs === "anonymous" ? 14 : 2,
+                      width: 14, height: 14, borderRadius: "50%", background: "#fff", transition: "left 0.15s",
+                    }} />
+                  </button>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.6875rem", color: "var(--charcoal)" }}>
+                    Post anonymously
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

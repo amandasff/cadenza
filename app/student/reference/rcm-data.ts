@@ -153,13 +153,6 @@ export const GRADES: GradeData[] = [
         ],
       },
       {
-        title: "Natural Minor Scales",
-        color: "#1A5276",
-        items: [
-          { label: "A, E, D natural minor", keys: "Am, Em, Dm", hands: "HS", octaves: 2, bpm: 69, beatUnit: "♪" },
-        ],
-      },
-      {
         title: "Harmonic Minor Scales",
         color: "#154360",
         items: [
