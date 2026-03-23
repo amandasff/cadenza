@@ -29,18 +29,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher/books",        label: "Books" },
   ];
 
-  const practiceTabs = [
-    { href: "/student/practice",   label: t.nav.practice },
-    { href: "/student/journey",    label: t.nav.profile },
-    { href: "/student/studio",     label: "Studio" },
-    { href: "/student/store",      label: "Shop" },
-    { href: "/student/collection", label: "Composers" },
-    { href: "/student/theory",     label: t.nav.games },
-    { href: "/student/ai-tutor",   label: t.nav.ai },
-    { href: "/student/discover",   label: t.nav.discover },
-    { href: "/student/pieces",     label: t.nav.pieces },
-    { href: "/student/rewards",    label: t.nav.awards },
-  ];
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -64,16 +52,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { href: "/teacher/chat",         label: t.nav.chat },
     { href: "/teacher/inspirations", label: t.nav.inspire },
     { href: "/teacher/books",        label: "Books" },
-  ];
-  const moreMobilePracticeTabs = [
-    { href: "/student/studio",     label: "Studio" },
-    { href: "/student/store",      label: "Shop" },
-    { href: "/student/collection", label: "Composers" },
-    { href: "/student/theory",     label: t.nav.games },
-    { href: "/student/ai-tutor",   label: t.nav.ai },
-    { href: "/student/discover",   label: t.nav.discover },
-    { href: "/student/pieces",     label: t.nav.pieces },
-    { href: "/student/rewards",    label: t.nav.awards },
   ];
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -355,27 +333,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             );
           })}
 
-          {/* My Practice section */}
-          <div style={{ fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", padding: "0 0.75rem 0.375rem", marginTop: "1.25rem" }}>
-            My Practice
-          </div>
-          {practiceTabs.map(tab => {
-            const active = path.startsWith(tab.href);
-            return (
-              <button key={tab.href} onClick={() => { window.location.href = tab.href; }} className="sidebar-nav-item" style={{
-                display: "flex", alignItems: "center", width: "100%",
-                padding: "0.5rem 0.75rem", border: "none", cursor: "pointer",
-                borderLeft: active ? "2px solid var(--charcoal)" : "2px solid transparent",
-                background: active ? "var(--cream-deep)" : "transparent",
-                color: active ? "var(--charcoal)" : "var(--muted)",
-                fontFamily: "Inter, sans-serif", fontWeight: active ? 500 : 400,
-                fontSize: "0.875rem", textAlign: "left",
-                transition: "all 0.15s", letterSpacing: "0.005em",
-              }}>
-                {tab.label}
-              </button>
-            );
-          })}
         </nav>
 
         {/* Footer */}
@@ -476,7 +433,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           style={{
             flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
             background: "none", border: "none", padding: "0.375rem 0", cursor: "pointer",
-            color: [...moreMobileStudioTabs, ...moreMobilePracticeTabs].some(tab => path.startsWith(tab.href)) ? "var(--charcoal)" : "var(--muted)",
+            color: moreMobileStudioTabs.some(tab => path.startsWith(tab.href)) ? "var(--charcoal)" : "var(--muted)",
             position: "relative",
           }}
         >
@@ -515,21 +472,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
               );
             })}
 
-            <div style={{ padding: "1rem 1.5rem 0.5rem", fontSize: "0.5625rem", fontFamily: "Inter, sans-serif", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>My Practice</div>
-            {moreMobilePracticeTabs.map(tab => {
-              const active = path.startsWith(tab.href);
-              return (
-                <button key={tab.href} onClick={() => { setMoreOpen(false); window.location.href = tab.href; }} style={{
-                  display: "flex", alignItems: "center", width: "100%",
-                  padding: "0.875rem 1.5rem", fontFamily: "Inter, sans-serif", fontSize: "1rem",
-                  fontWeight: active ? 600 : 400, color: active ? "var(--charcoal)" : "var(--muted)",
-                  background: "none", border: "none", borderLeft: active ? "3px solid var(--charcoal)" : "3px solid transparent",
-                  cursor: "pointer", textAlign: "left",
-                }}>
-                  {tab.label}
-                </button>
-              );
-            })}
           </div>
         </div>
       )}
