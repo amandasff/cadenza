@@ -58,6 +58,7 @@ export default function TeacherDashboard() {
   const { t } = useI18n();
 
   const [students, setStudents] = useState<StudentWithGoals[]>([]);
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
   const [recentSessions, setRecentSessions] = useState<PracticeSessionRow[]>([]);
   const [studentMap, setStudentMap] = useState<Record<string, ProfileRow>>({});
   const [lastSessionMap, setLastSessionMap] = useState<Record<string, string>>({});
@@ -174,6 +175,30 @@ export default function TeacherDashboard() {
       for (const p of profiles) map[p.id] = p;
       setStudentMap(map);
       setRecentSessions(sessions);
+
+      // Compute unread message indicators per student
+      if (studentIds.length > 0) {
+        const { data: latestMsgs } = await supabase
+          .from("messages")
+          .select("sender_id, created_at")
+          .eq("studio_id", teacher.studioId)
+          .in("sender_id", studentIds)
+          .order("created_at", { ascending: false });
+        if (latestMsgs) {
+          const latestPerStudent: Record<string, string> = {};
+          for (const m of latestMsgs as { sender_id: string; created_at: string }[]) {
+            if (!latestPerStudent[m.sender_id]) latestPerStudent[m.sender_id] = m.created_at;
+          }
+          const unread = new Set<string>();
+          for (const p of profiles) {
+            const latest = latestPerStudent[p.id];
+            if (!latest) continue;
+            const lastRead = localStorage.getItem(`cadenza_chat_read_${teacher.id}_${p.id}`);
+            if (!lastRead || latest > lastRead) unread.add(p.id);
+          }
+          setUnreadIds(unread);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -371,6 +396,7 @@ export default function TeacherDashboard() {
                 const total = goals.length;
                 const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
                 const initials = profile.display_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+                const hasUnread = unreadIds.has(profile.id);
 
                 return (
                   <div key={profile.id} style={{ position: "relative" }}>
@@ -395,13 +421,15 @@ export default function TeacherDashboard() {
                         flexShrink: 0,
                         letterSpacing: "0.02em",
                         overflow: "hidden",
+                        position: "relative",
                       }}>
                         {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
+                        {hasUnread && <span style={{ position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: "50%", background: "var(--peach)", border: "1.5px solid var(--white)" }} />}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
                           fontFamily: "Inter, sans-serif",
-                          fontWeight: 500,
+                          fontWeight: hasUnread ? 700 : 500,
                           fontSize: "0.875rem",
                           color: "var(--charcoal)",
                           overflow: "hidden",

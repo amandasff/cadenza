@@ -25,11 +25,13 @@ export default function AudioPlayer({ src }: { src: string }) {
     audio.playbackRate = speed;
   }, [speed]);
 
-  // Reset when src changes
+  // Reset when src changes and force metadata load
   useEffect(() => {
     setPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    const audio = audioRef.current;
+    if (audio) audio.load();
   }, [src]);
 
   function onLoadedMetadata() {
@@ -94,7 +96,7 @@ export default function AudioPlayer({ src }: { src: string }) {
         onDurationChange={onDurationChange}
         onTimeUpdate={onTimeUpdate}
         onEnded={onEnded}
-        preload="metadata"
+        preload="auto"
       />
 
       {/* Seek bar */}

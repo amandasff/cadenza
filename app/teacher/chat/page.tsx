@@ -50,6 +50,7 @@ export default function TeacherChat() {
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const [sendingImage, setSendingImage] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; senderName: string } | null>(null);
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -61,13 +62,38 @@ export default function TeacherChat() {
   }, []);
 
   useEffect(() => {
-    if (!teacher?.studioId) return;
+    if (!teacher?.studioId || !teacher?.id) return;
     const supabase = getSupabaseBrowserClient();
     StudioService.create(supabase)
       .getStudents(teacher.studioId)
-      .then(data => { setStudents(data); setLoadingStudents(false); })
+      .then(async (data) => {
+        setStudents(data);
+        setLoadingStudents(false);
+        if (data.length === 0) return;
+        // Check for unread messages: latest message from each student vs localStorage last-read
+        const studentIds = data.map(s => s.id);
+        const { data: latestMsgs } = await supabase
+          .from("messages")
+          .select("sender_id, created_at")
+          .eq("studio_id", teacher.studioId)
+          .in("sender_id", studentIds)
+          .order("created_at", { ascending: false });
+        if (!latestMsgs) return;
+        const latestPerStudent: Record<string, string> = {};
+        for (const m of latestMsgs as { sender_id: string; created_at: string }[]) {
+          if (!latestPerStudent[m.sender_id]) latestPerStudent[m.sender_id] = m.created_at;
+        }
+        const unread = new Set<string>();
+        for (const s of data) {
+          const latest = latestPerStudent[s.id];
+          if (!latest) continue;
+          const lastRead = localStorage.getItem(`cadenza_chat_read_${teacher.id}_${s.id}`);
+          if (!lastRead || latest > lastRead) unread.add(s.id);
+        }
+        setUnreadIds(unread);
+      })
       .catch(() => setLoadingStudents(false));
-  }, [teacher?.studioId]);
+  }, [teacher?.studioId, teacher?.id]);
 
   useEffect(() => {
     if (!teacher?.studioId || !teacher?.id) return;
@@ -283,6 +309,10 @@ export default function TeacherChat() {
   function selectAndOpen(s: ProfileRow | null) {
     setSelectedStudent(s);
     setMobilePane("chat");
+    if (s && teacher?.id) {
+      localStorage.setItem(`cadenza_chat_read_${teacher.id}_${s.id}`, new Date().toISOString());
+      setUnreadIds(prev => { const next = new Set(prev); next.delete(s.id); return next; });
+    }
   }
 
   return (
@@ -327,12 +357,14 @@ export default function TeacherChat() {
               </div>
             ) : students.map(s => {
               const isSel = selectedStudent?.id === s.id;
+              const hasUnread = unreadIds.has(s.id);
               return (
                 <button key={s.id} onClick={() => selectAndOpen(s)} style={{ all: "unset", display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderBottom: "1px solid var(--border)", cursor: "pointer", background: isSel ? "var(--cream)" : "transparent", width: "100%", boxSizing: "border-box" }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: isSel ? "var(--charcoal)" : "var(--cream-deep)", border: `1px solid ${isSel ? "var(--charcoal)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: isSel ? "var(--white)" : "var(--muted)", flexShrink: 0, overflow: "hidden" }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: isSel ? "var(--charcoal)" : "var(--cream-deep)", border: `1px solid ${isSel ? "var(--charcoal)" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5625rem", fontWeight: 600, color: isSel ? "var(--white)" : "var(--muted)", flexShrink: 0, overflow: "hidden", position: "relative" }}>
                     {s.avatar_url ? <img src={s.avatar_url} alt={s.display_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(s.display_name)}
+                    {hasUnread && !isSel && <span style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--peach)", border: "1.5px solid var(--white)" }} />}
                   </div>
-                  <span style={{ fontSize: "0.8125rem", fontWeight: isSel ? 500 : 400, color: isSel ? "var(--charcoal)" : "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: "0.8125rem", fontWeight: isSel || hasUnread ? 600 : 400, color: isSel || hasUnread ? "var(--charcoal)" : "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {s.display_name}
                   </span>
                 </button>

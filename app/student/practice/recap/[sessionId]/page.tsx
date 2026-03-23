@@ -508,6 +508,17 @@ export default function PracticeRecapPage({ params }: { params: Promise<{ sessio
             <Gamepad2 size={16} strokeWidth={1.5} style={{ marginRight: "0.375rem", verticalAlign: "middle" }} />Play a Game
           </button>
           <button
+            onClick={() => router.replace("/student/practice")}
+            style={{
+              width: "100%", padding: "0.75rem", fontSize: "0.875rem",
+              background: "transparent", border: "1px solid var(--border)",
+              borderRadius: 8, cursor: "pointer",
+              fontFamily: "Inter, sans-serif", color: "var(--charcoal)",
+            }}
+          >
+            Practice Again
+          </button>
+          <button
             onClick={() => router.replace("/student")}
             style={{
               width: "100%", padding: "0.75rem", fontSize: "0.875rem",
