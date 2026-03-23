@@ -596,14 +596,14 @@ const REFERENCE_VIDEOS = [
 // ── Progression builder data ──────────────────────────────────────────────────
 
 const BUILDER_QUALITIES = [
-  { id:"major",       label:"Major",  suffix:"",      intervals:[0,4,7]    },
-  { id:"minor",       label:"Minor",  suffix:"m",     intervals:[0,3,7]    },
-  { id:"dominant 7",  label:"Dom 7",  suffix:"7",     intervals:[0,4,7,10] },
-  { id:"major 7",     label:"Maj 7",  suffix:"maj7",  intervals:[0,4,7,11] },
-  { id:"minor 7",     label:"Min 7",  suffix:"m7",    intervals:[0,3,7,10] },
-  { id:"diminished",  label:"Dim",    suffix:"°",     intervals:[0,3,6]    },
-  { id:"sus4",        label:"Sus 4",  suffix:"sus4",  intervals:[0,5,7]    },
-  { id:"sus2",        label:"Sus 2",  suffix:"sus2",  intervals:[0,2,7]    },
+  { id:"major", label:"Major",  suffix:"",     guitarSuffix:"",     intervals:[0,4,7]    },
+  { id:"minor", label:"Minor",  suffix:"m",    guitarSuffix:"m",    intervals:[0,3,7]    },
+  { id:"dom7",  label:"Dom 7",  suffix:"7",    guitarSuffix:"7",    intervals:[0,4,7,10] },
+  { id:"maj7",  label:"Maj 7",  suffix:"maj7", guitarSuffix:"maj7", intervals:[0,4,7,11] },
+  { id:"m7",    label:"Min 7",  suffix:"m7",   guitarSuffix:"m7",   intervals:[0,3,7,10] },
+  { id:"dim",   label:"Dim",    suffix:"°",    guitarSuffix:"dim",  intervals:[0,3,6]    },
+  { id:"sus4",  label:"Sus 4",  suffix:"sus4", guitarSuffix:"sus4", intervals:[0,5,7]    },
+  { id:"sus2",  label:"Sus 2",  suffix:"sus2", guitarSuffix:"sus2", intervals:[0,2,7]    },
 ];
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -653,9 +653,8 @@ export default function ReferencePage() {
       const t = setTimeout(() => {
         setPlayingIdx(i);
         const qInfo = BUILDER_QUALITIES.find(q => q.id === ch.quality);
-        const suffix = qInfo?.suffix ?? "";
-        const chordName = NOTE_NAMES[ch.noteIdx] + suffix;
-        const guitarChord = (GUITAR_CHORDS[ch.quality as keyof typeof GUITAR_CHORDS] ?? []).find(c => c.name === chordName);
+        const guitarChordName = NOTE_NAMES[ch.noteIdx] + (qInfo?.guitarSuffix ?? qInfo?.suffix ?? "");
+        const guitarChord = (GUITAR_CHORDS[ch.quality as keyof typeof GUITAR_CHORDS] ?? []).find(c => c.name === guitarChordName);
         if (guitarChord) {
           playSound(chordFreqs(guitarChord.frets, GUITAR_OPEN_FREQS), "pluck");
         } else if (qInfo) {
@@ -920,7 +919,8 @@ export default function ReferencePage() {
                       {builderChords.map((ch, i) => {
                         const qInfo = BUILDER_QUALITIES.find(q=>q.id===ch.quality)!;
                         const chordName = NOTE_NAMES[ch.noteIdx] + qInfo.suffix;
-                        const guitarChord = (GUITAR_CHORDS[ch.quality as keyof typeof GUITAR_CHORDS] ?? []).find(c=>c.name===chordName);
+                        const guitarChordName = NOTE_NAMES[ch.noteIdx] + (qInfo.guitarSuffix ?? qInfo.suffix);
+                        const guitarChord = (GUITAR_CHORDS[ch.quality as keyof typeof GUITAR_CHORDS] ?? []).find(c=>c.name===guitarChordName);
                         const isPlaying = playingIdx === i;
                         return (
                           <div key={i} style={{
