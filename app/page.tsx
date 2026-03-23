@@ -52,6 +52,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [unblurring, setUnblurring] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   const switchMode = (m: "signup" | "signin") => {
     setMode(m);
@@ -63,7 +64,7 @@ export default function Home() {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: import("@supabase/supabase-js").Session | null } }) => {
-      if (!session?.user) return;
+      if (!session?.user) { setChecking(false); return; }
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", session.user.id).single();
       if (profile?.role === "teacher") router.replace("/teacher");
       else router.replace("/student");
@@ -117,6 +118,14 @@ export default function Home() {
     fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "#2C2824",
     padding: "0.625rem 0.875rem", outline: "none", width: "100%", boxSizing: "border-box",
   };
+
+  if (checking) {
+    return (
+      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--cream, #FDFCFA)" }}>
+        <p style={{ fontFamily: "Inter, sans-serif", color: "#ADA9A2", fontSize: "0.8125rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>Loading…</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "fixed", inset: 0, overflow: "hidden", fontFamily: "Inter, sans-serif" }}>
