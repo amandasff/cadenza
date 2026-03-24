@@ -4,6 +4,15 @@ import { createServerClient } from "@supabase/ssr";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // cadenza.social/{username} → /p/{username}
+  const host = request.headers.get("host") ?? "";
+  if (host.includes("cadenza.social") && !pathname.startsWith("/p/") && !pathname.startsWith("/api/") && !pathname.startsWith("/_next/") && !pathname.startsWith("/auth/") && pathname !== "/" && !pathname.includes(".")) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/p${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
   const response = NextResponse.next();
 
   const supabase = createServerClient(
@@ -57,5 +66,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/student/:path*", "/teacher/:path*", "/auth/:path*"],
+  matcher: ["/student/:path*", "/teacher/:path*", "/auth/:path*", "/:path*"],
 };
