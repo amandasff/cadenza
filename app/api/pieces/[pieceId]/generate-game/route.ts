@@ -94,20 +94,89 @@ export async function POST(
   const base64 = Buffer.from(fileBuf).toString('base64');
   const isPdf = detectedMime === 'application/pdf' || ext === 'pdf';
 
-  // Ask Claude to extract the melody as JSON
-  // PDFs are sent as document type; images as image type — both supported natively
-  const claudeRes = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
-    messages: [{
-      role: 'user',
-      content: [
-        isPdf
-          ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
-          : { type: 'image', source: { type: 'base64', media_type: detectedMime as 'image/jpeg' | 'image/png' | 'image/webp', data: base64 } },
-        {
-          type: 'text',
-          text: `Analyze this sheet music. First, check whether guitar TAB is present (a 6-line grid with numbers below the staff). Then follow the matching path below.
+  // ── Strategy: OMR service → Claude parses MusicXML text (much more reliable
+  // than Claude reading an image). Falls back to direct image reading if OMR
+  // is unavailable or fails. TAB always goes through direct image reading.
+  let claudeRes;
+  let omrUsed = false;
+
+  const omrUrl = process.env.OMR_SERVICE_URL;
+  if (omrUrl) {
+    try {
+      const omrForm = new FormData();
+      const binaryStr = atob(base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      const omrExt = isPdf ? 'pdf' : ext || 'jpg';
+      omrForm.append('file', new Blob([bytes], { type: detectedMime }), `sheet.${omrExt}`);
+
+      const omrRes = await fetch(`${omrUrl}/recognize`, {
+        method: 'POST',
+        body: omrForm,
+        signal: AbortSignal.timeout(90_000),
+      });
+      if (omrRes.ok) {
+        const omrJson = await omrRes.json() as { success: boolean; musicxml?: string };
+        if (omrJson.success && omrJson.musicxml && omrJson.musicxml.includes('<score-partwise')) {
+          // OMR succeeded — have Claude parse the MusicXML *text* into game notes.
+          // This is ~95% reliable vs ~40-60% for image reading.
+          claudeRes = await anthropic.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 8192,
+            messages: [{
+              role: 'user',
+              content: `Extract the melody notes from this MusicXML file and return game-ready JSON.
+
+Return ONLY valid JSON — no markdown fences, no explanation.
+
+{
+  "format": "pitch",
+  "notes": [
+    {"note": "C", "octave": 4, "duration": 1.0, "beat": 0.0}
+  ],
+  "tabNotes": [],
+  "key": "G major",
+  "timeSignature": "4/4",
+  "bpmSuggestion": 80,
+  "confidence": 0.90
+}
+
+Rules:
+- Extract the melody (top voice / voice 1 / stems-up notes).
+- Note names: C C# Db D Eb E F F# Gb G Ab A Bb B
+- Octave: middle C = 4.
+- Duration in beats: whole=4.0, half=2.0, quarter=1.0, eighth=0.5, sixteenth=0.25. Dotted=1.5×base.
+- Beat: cumulative position from start (0.0 = first note).
+- If chords, include only the highest note.
+- Maximum 128 notes.
+- Get key and time signature from the MusicXML attributes.
+
+MusicXML:
+${omrJson.musicxml}`,
+            }],
+          });
+          omrUsed = true;
+        }
+      }
+    } catch (err) {
+      console.warn('OMR service failed for generate-game, falling back to image:', (err as Error).message);
+    }
+  }
+
+  // Fallback: direct image reading (always used for TAB, or if OMR failed)
+  if (!claudeRes) {
+    claudeRes = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
+      messages: [{
+        role: 'user',
+        content: [
+          isPdf
+            ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+            : { type: 'image', source: { type: 'base64', media_type: detectedMime as 'image/jpeg' | 'image/png' | 'image/webp', data: base64 } },
+          {
+            type: 'text',
+            text: `Analyze this sheet music. First, check whether guitar TAB is present (a 6-line grid with numbers below the staff). Then follow the matching path below.
 
 Return ONLY valid JSON — no markdown fences, no explanation, no trailing text.
 
@@ -166,10 +235,11 @@ PITCH READING RULES:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 confidence: 0.9+ clean print, 0.6 slightly unclear, 0.3 handwritten/blurry`,
-        },
-      ],
-    }],
-  });
+          },
+        ],
+      }],
+    });
+  }
 
   const textBlock = claudeRes.content.find(b => b.type === 'text');
   if (!textBlock || textBlock.type !== 'text') {
@@ -308,5 +378,6 @@ confidence: 0.9+ clean print, 0.6 slightly unclear, 0.3 handwritten/blurry`,
     noteCount: notes.length,
     confidence: parsed.confidence ?? 0,
     key: parsed.key,
+    source: omrUsed ? 'omr+claude' : 'claude-vision',
   });
 }

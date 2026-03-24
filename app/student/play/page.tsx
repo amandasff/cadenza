@@ -417,7 +417,7 @@ export default function PlayPage() {
   const [piecesLoading, setPiecesLoading] = useState(false);
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [viewingTranscription, setViewingTranscription] = useState<{ title: string; game: GameData } | null>(null);
+  const [viewingTranscription, setViewingTranscription] = useState<{ pieceId: string; title: string; game: GameData } | null>(null);
   const [practiceGameState, setPracticeGameState] = useState<"idle" | "playing" | "finished">("idle");
   const [activePiece, setActivePiece] = useState<PieceWithGame | null>(null);
   const [practiceNotes, setPracticeNotes] = useState<OMRNote[]>([]);
@@ -1411,7 +1411,7 @@ export default function PlayPage() {
                           <Play size={14} /> Play
                         </button>
                         <button
-                          onClick={() => setViewingTranscription({ title: piece.title, game: piece.game! })}
+                          onClick={() => setViewingTranscription({ pieceId: piece.id, title: piece.title, game: piece.game! })}
                           style={{ padding: "0.5rem 0.75rem", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, cursor: "pointer", fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.375rem" }}
                           title="View AI transcription"
                         >
@@ -1743,6 +1743,21 @@ export default function PlayPage() {
         title={viewingTranscription.title}
         game={viewingTranscription.game}
         onClose={() => setViewingTranscription(null)}
+        onSave={async (notes) => {
+          const res = await fetch(`/api/pieces/${viewingTranscription.pieceId}/update-game`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes }),
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error ?? "Failed to save");
+          }
+          // Refresh pieces so the game data reflects corrections
+          await loadPieces();
+          // Update the viewer's game data with corrected notes
+          setViewingTranscription(prev => prev ? { ...prev, game: { ...prev.game, notes_json: notes } } : null);
+        }}
       />
     )}
     </>
