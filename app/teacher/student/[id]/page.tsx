@@ -255,18 +255,33 @@ function PieceBlock({
   const [pendingPastes, setPendingPastes] = useState<File[]>([]);
   const [transcription, setTranscription] = useState<GameData | null>(null);
   const [transcriptionLoading, setTranscriptionLoading] = useState(false);
+  const [gameStats, setGameStats] = useState<{ best: number; count: number; recent: number } | null>(null);
 
   async function openTranscription() {
     setTranscriptionLoading(true);
     const supabase = getSupabaseBrowserClient();
-    const { data } = await supabase
-      .from("piece_games")
-      .select("notes_json, key_signature, time_signature, bpm_suggestion, omr_confidence")
-      .eq("piece_id", piece.id)
-      .eq("student_id", studentId)
-      .maybeSingle();
+    const [{ data }, { data: results }] = await Promise.all([
+      supabase
+        .from("piece_games")
+        .select("notes_json, key_signature, time_signature, bpm_suggestion, omr_confidence")
+        .eq("piece_id", piece.id)
+        .eq("student_id", studentId)
+        .maybeSingle(),
+      supabase
+        .from("piece_game_results")
+        .select("accuracy, played_at")
+        .eq("piece_id", piece.id)
+        .eq("student_id", studentId)
+        .order("played_at", { ascending: false })
+        .limit(20),
+    ]);
     setTranscriptionLoading(false);
     if (data) setTranscription(data as GameData);
+    if (results && results.length > 0) {
+      const best = Math.max(...results.map((r: { accuracy: number }) => r.accuracy));
+      const recent = results[0].accuracy;
+      setGameStats({ best, count: results.length, recent });
+    }
   }
   const [pastePreviewUrls, setPastePreviewUrls] = useState<string[]>([]);
   const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
@@ -435,6 +450,21 @@ function PieceBlock({
           </button>
         </div>
       </div>
+
+      {/* Game accuracy stats */}
+      {gameStats && (
+        <div style={{ padding: "0.375rem 1rem", background: "var(--bg)", fontSize: "0.6875rem", color: "var(--muted)", display: "flex", gap: "1rem", alignItems: "center" }}>
+          <span>
+            Best: <strong style={{ color: gameStats.best >= 0.8 ? "#2ecc71" : gameStats.best >= 0.5 ? "#e67e22" : "#c0392b" }}>
+              {Math.round(gameStats.best * 100)}%
+            </strong>
+          </span>
+          <span>
+            Latest: <strong>{Math.round(gameStats.recent * 100)}%</strong>
+          </span>
+          <span>Practiced {gameStats.count}x</span>
+        </div>
+      )}
 
       {/* Paste mode banner */}
       {pasteMode && (
