@@ -16,6 +16,9 @@ type Comment = {
   display_name?: string;
 };
 
+type ReactionGroup = { emoji: string; count: number; userReacted: boolean };
+const REACTION_EMOJIS = ["\uD83D\uDD25", "\u2764\uFE0F", "\uD83D\uDC4F", "\uD83D\uDE0D", "\uD83D\uDCAF"];
+
 type PublicItem = PortfolioItemRow & {
   display_name?: string;
   avatar_url?: string | null;
@@ -195,6 +198,8 @@ export default function DiscoverPage() {
   const [commentsOpen, setCommentsOpen]         = useState(false);
   const [commentText, setCommentText]           = useState("");
   const [commentPosting, setCommentPosting]     = useState(false);
+  const [reactionsMap, setReactionsMap]         = useState<Record<string, ReactionGroup[]>>({});
+  const [reactionPickerOpen, setReactionPickerOpen] = useState<string | null>(null);
   const [likingId, setLikingId]                 = useState<string | null>(null);
   const [likeError, setLikeError]               = useState<string | null>(null);
 
@@ -509,7 +514,9 @@ export default function DiscoverPage() {
       const { data: profiles } = await supabase.from("profiles").select("id, display_name").in("id", authorIds);
       (profiles ?? []).forEach((p: { id: string; display_name?: string }) => { if (p.display_name) nameMap[p.id] = p.display_name; });
     }
-    setCommentsMap(prev => ({ ...prev, [itemId]: comments.map(c => ({ ...c, display_name: nameMap[c.user_id] })) }));
+    const enriched = comments.map(c => ({ ...c, display_name: nameMap[c.user_id] }));
+    setCommentsMap(prev => ({ ...prev, [itemId]: enriched }));
+    if (comments.length > 0) loadReactions(comments.map(c => c.id));
   }
 
   async function postComment(itemId: string) {
@@ -529,6 +536,61 @@ export default function DiscoverPage() {
         setCommentText("");
       }
     } finally { setCommentPosting(false); }
+  }
+
+  // ── Comment reactions ────────────────────────────────────────────────────────
+
+  async function loadReactions(commentIds: string[]) {
+    if (commentIds.length === 0) return;
+    const { data } = await supabase
+      .from("portfolio_comment_reactions")
+      .select("comment_id, emoji, user_id")
+      .in("comment_id", commentIds);
+    if (!data) return;
+    const grouped: Record<string, ReactionGroup[]> = {};
+    for (const cid of commentIds) {
+      const rows = (data as { comment_id: string; emoji: string; user_id: string }[]).filter(r => r.comment_id === cid);
+      const emojiMap: Record<string, { count: number; userReacted: boolean }> = {};
+      for (const r of rows) {
+        if (!emojiMap[r.emoji]) emojiMap[r.emoji] = { count: 0, userReacted: false };
+        emojiMap[r.emoji].count++;
+        if (r.user_id === currentUserId) emojiMap[r.emoji].userReacted = true;
+      }
+      grouped[cid] = Object.entries(emojiMap).map(([emoji, v]) => ({ emoji, ...v }));
+    }
+    setReactionsMap(prev => ({ ...prev, ...grouped }));
+  }
+
+  async function toggleReaction(commentId: string, emoji: string) {
+    if (!currentUserId) return;
+    const current = reactionsMap[commentId] ?? [];
+    const existing = current.find(r => r.emoji === emoji);
+    const wasReacted = existing?.userReacted ?? false;
+
+    // Optimistic update
+    let next: ReactionGroup[];
+    if (wasReacted) {
+      next = current.map(r => r.emoji === emoji ? { ...r, count: r.count - 1, userReacted: false } : r).filter(r => r.count > 0);
+    } else {
+      if (existing) {
+        next = current.map(r => r.emoji === emoji ? { ...r, count: r.count + 1, userReacted: true } : r);
+      } else {
+        next = [...current, { emoji, count: 1, userReacted: true }];
+      }
+    }
+    setReactionsMap(prev => ({ ...prev, [commentId]: next }));
+
+    try {
+      if (wasReacted) {
+        await supabase.from("portfolio_comment_reactions").delete()
+          .eq("comment_id", commentId).eq("user_id", currentUserId).eq("emoji", emoji);
+      } else {
+        await supabase.from("portfolio_comment_reactions").insert({ comment_id: commentId, user_id: currentUserId, emoji });
+      }
+    } catch {
+      // Revert
+      setReactionsMap(prev => ({ ...prev, [commentId]: current }));
+    }
   }
 
   // ── Follow / unfollow ────────────────────────────────────────────────────────
@@ -1220,6 +1282,68 @@ export default function DiscoverPage() {
                             <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.625rem", color: "var(--muted)" }}>{formatRelative(c.created_at, t.schedule.today, t.schedule.yesterday, t.schedule.daysAgo, t.student.weekAgo, t.student.monthAgo)}</span>
                           </div>
                           <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)", margin: 0, lineHeight: 1.5 }}>{c.content}</p>
+                          {/* Emoji reactions */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.375rem", flexWrap: "wrap" }}>
+                            {(reactionsMap[c.id] ?? []).map(r => (
+                              <button
+                                key={r.emoji}
+                                onClick={() => toggleReaction(c.id, r.emoji)}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: "0.2rem",
+                                  padding: "0.15rem 0.45rem", borderRadius: 99,
+                                  border: `1px solid ${r.userReacted ? "var(--charcoal)" : "var(--border)"}`,
+                                  background: r.userReacted ? "var(--cream)" : "transparent",
+                                  cursor: currentUserId ? "pointer" : "default",
+                                  fontFamily: "Inter, sans-serif", fontSize: "0.6875rem",
+                                  color: "var(--charcoal)", lineHeight: 1, transition: "all 0.15s",
+                                }}
+                              >
+                                <span style={{ fontSize: "0.75rem" }}>{r.emoji}</span>
+                                <span style={{ fontWeight: 600, fontSize: "0.625rem" }}>{r.count}</span>
+                              </button>
+                            ))}
+                            {currentUserId && (
+                              <div style={{ position: "relative" }}>
+                                <button
+                                  onClick={() => setReactionPickerOpen(prev => prev === c.id ? null : c.id)}
+                                  style={{
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                    width: 24, height: 24, borderRadius: 99,
+                                    border: "1px solid var(--border)", background: "transparent",
+                                    cursor: "pointer", fontSize: "0.75rem", color: "var(--muted)",
+                                    transition: "all 0.15s", lineHeight: 1, padding: 0,
+                                  }}
+                                  title="React"
+                                >
+                                  +
+                                </button>
+                                {reactionPickerOpen === c.id && (
+                                  <div style={{
+                                    position: "absolute", bottom: "calc(100% + 4px)", left: 0, zIndex: 10,
+                                    display: "flex", gap: "0.15rem", padding: "0.3rem 0.4rem",
+                                    background: "var(--white)", border: "1px solid var(--border)",
+                                    borderRadius: 12, boxShadow: "var(--shadow-md)",
+                                  }}>
+                                    {REACTION_EMOJIS.map(emoji => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => { toggleReaction(c.id, emoji); setReactionPickerOpen(null); }}
+                                        style={{
+                                          background: "none", border: "none", cursor: "pointer",
+                                          fontSize: "1.125rem", padding: "0.2rem 0.3rem", borderRadius: 6,
+                                          lineHeight: 1, transition: "background 0.1s",
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = "var(--cream)")}
+                                        onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
