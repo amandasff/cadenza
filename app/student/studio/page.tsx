@@ -144,6 +144,7 @@ export default function StudioPage() {
   const [savingTrack, setSavingTrack] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [copiedTrackId, setCopiedTrackId] = useState<string | null>(null);
+  const [copiedProfile, setCopiedProfile] = useState(false);
 
   // Self-assigned pieces + sheet music
   const [showAddPiece, setShowAddPiece] = useState(false);
@@ -510,6 +511,46 @@ export default function StudioPage() {
         </Link>
       </div>
 
+      {/* ── Share Profile ── */}
+      {username ? (
+        <div className="card-base" style={{ padding: "0.75rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <span style={{ fontSize: "1rem", flexShrink: 0 }}>🔗</span>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)" }}>cadenza.social/</span>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", fontWeight: 600, color: "var(--charcoal)" }}>{username}</span>
+          </div>
+          <button
+            onClick={() => {
+              const url = `https://cadenza.social/${username}`;
+              if (navigator.share) {
+                navigator.share({ title: profile?.display_name ?? username, url }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(url).then(() => {
+                  setCopiedProfile(true);
+                  setTimeout(() => setCopiedProfile(false), 2000);
+                });
+              }
+            }}
+            style={{ flexShrink: 0, background: "var(--charcoal)", color: "var(--white)", border: "none", borderRadius: 6, padding: "0.375rem 0.875rem", cursor: "pointer", fontSize: "0.75rem", fontWeight: 600, fontFamily: "Inter, sans-serif" }}
+          >
+            {copiedProfile ? "Copied!" : "Share Profile"}
+          </button>
+        </div>
+      ) : (
+        <div className="card-base" style={{ padding: "0.75rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <span style={{ fontSize: "1rem", flexShrink: 0 }}>🔗</span>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--muted)", flex: 1 }}>
+            Claim a username to share your profile
+          </span>
+          <Link
+            href="/student/settings"
+            style={{ flexShrink: 0, background: "var(--charcoal)", color: "var(--white)", borderRadius: 6, padding: "0.375rem 0.875rem", fontSize: "0.75rem", fontWeight: 600, fontFamily: "Inter, sans-serif", textDecoration: "none" }}
+          >
+            Set Username
+          </Link>
+        </div>
+      )}
+
       {/* ── AI Musical Persona ── */}
       {(profile?.studio_persona || !personaLoading) && (
         <div className="card-base" style={{ padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "flex-start", gap: "0.875rem" }}>
@@ -744,7 +785,7 @@ export default function StudioPage() {
                         {username && (
                           <button
                             onClick={() => {
-                              const url = `https://cadenza.social/p/${username}`;
+                              const url = `https://cadenza.social/${username}`;
                               if (navigator.share) {
                                 navigator.share({ title: track.title, url }).catch(() => {});
                               } else {
