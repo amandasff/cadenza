@@ -19,11 +19,11 @@ export class ChatService {
       .select()
       .eq('studio_id', studioId)
       .is('recipient_id', null)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
-    return (data ?? []) as MessageRow[];
+    return ((data ?? []) as MessageRow[]).reverse();
   }
 
   // Private thread between two specific users
@@ -41,11 +41,11 @@ export class ChatService {
         `and(sender_id.eq.${userId1},recipient_id.eq.${userId2}),` +
         `and(sender_id.eq.${userId2},recipient_id.eq.${userId1})`
       )
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
-    return (data ?? []) as MessageRow[];
+    return ((data ?? []) as MessageRow[]).reverse();
   }
 
   async postAnnouncement(
