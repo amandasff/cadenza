@@ -79,6 +79,8 @@ interface PieceWithGame {
     bpm_suggestion: number;
     omr_confidence: number;
   } | null;
+  bestAccuracy?: number;   // 0-1, loaded from piece_game_results
+  playCount?: number;       // how many times practiced
 }
 
 const NOTE_SEMITONES: Record<string, number> = {
@@ -418,7 +420,7 @@ export default function PlayPage() {
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [viewingTranscription, setViewingTranscription] = useState<{ pieceId: string; title: string; game: GameData } | null>(null);
-  const [practiceGameState, setPracticeGameState] = useState<"idle" | "playing" | "finished">("idle");
+  const [practiceGameState, setPracticeGameState] = useState<"idle" | "calibrating" | "playing" | "finished">("idle");
   const [activePiece, setActivePiece] = useState<PieceWithGame | null>(null);
   const [practiceNotes, setPracticeNotes] = useState<OMRNote[]>([]);
   const [currentNoteIdx, setCurrentNoteIdx] = useState(0);
@@ -435,6 +437,11 @@ export default function PlayPage() {
   const practiceCanvasRef = useRef<HTMLCanvasElement>(null);
   const practiceFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Noise gate: RMS threshold measured during calibration (ambient noise floor)
+  const noiseGateRef = useRef(0.01);
+  const [calibrationProgress, setCalibrationProgress] = useState(0);
+  // Pitch proximity: how many semitones away from target (-1 = too low, +1 = too high, 0 = correct)
+  const [pitchProximity, setPitchProximity] = useState<number | null>(null);
 
   // ── Audio playback (note synthesis) ──────────────────────────────────────
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -499,18 +506,35 @@ export default function PlayPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setPiecesLoading(false); return; }
 
-    const [{ data: pieces }, { data: games }] = await Promise.all([
+    const [{ data: pieces }, { data: games }, { data: results }] = await Promise.all([
       supabase.from("pieces").select("id, title, composer, sheet_music_url")
         .eq("student_id", user.id).not("sheet_music_url", "is", null).order("created_at", { ascending: false }),
       supabase.from("piece_games").select("piece_id, notes_json, key_signature, time_signature, bpm_suggestion, omr_confidence")
         .eq("student_id", user.id),
+      supabase.from("piece_game_results").select("piece_id, accuracy")
+        .eq("student_id", user.id),
     ]);
+
+    // Compute best accuracy and play count per piece
+    type ResultRow = { piece_id: string; accuracy: number };
+    const resultsByPiece = new Map<string, { best: number; count: number }>();
+    for (const r of (results ?? []) as ResultRow[]) {
+      const existing = resultsByPiece.get(r.piece_id);
+      if (existing) {
+        existing.best = Math.max(existing.best, r.accuracy);
+        existing.count++;
+      } else {
+        resultsByPiece.set(r.piece_id, { best: r.accuracy, count: 1 });
+      }
+    }
 
     type RawPiece = { id: string; title: string; composer: string | null; sheet_music_url: string | null };
     type RawGame = { piece_id: string; notes_json: OMRNote[]; key_signature: string | null; time_signature: string | null; bpm_suggestion: number; omr_confidence: number };
     const merged: PieceWithGame[] = (pieces ?? []).map((p: RawPiece) => ({
       ...p,
       game: (games ?? []).find((g: RawGame) => g.piece_id === p.id) ?? null,
+      bestAccuracy: resultsByPiece.get(p.id)?.best,
+      playCount: resultsByPiece.get(p.id)?.count,
     }));
     setStudentPieces(merged);
     setPiecesLoading(false);
@@ -540,6 +564,70 @@ export default function PlayPage() {
     }
   }
 
+  // ── Noise gate calibration ──────────────────────────────────────────────────
+  async function calibrateNoiseGate(): Promise<void> {
+    return new Promise((resolve) => {
+      const analyser = analyserRef.current;
+      const ctx = audioCtxRef.current;
+      if (!analyser || !ctx) { resolve(); return; }
+
+      const samples: number[] = [];
+      const buf = new Float32Array(analyser.fftSize);
+      let elapsed = 0;
+      const interval = setInterval(() => {
+        analyser.getFloatTimeDomainData(buf);
+        const rms = Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length);
+        samples.push(rms);
+        elapsed += 100;
+        setCalibrationProgress(Math.min(100, Math.round(elapsed / 20))); // 2s = 100%
+        if (elapsed >= 2000) {
+          clearInterval(interval);
+          // Set gate at 2x the average ambient noise level (with a minimum floor)
+          const avgRms = samples.reduce((a, b) => a + b, 0) / samples.length;
+          noiseGateRef.current = Math.max(0.008, avgRms * 2);
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
+  // ── Play reference tone for current note ──────────────────────────────────
+  function playReferenceTone(note: OMRNote) {
+    try {
+      if (!playbackCtxRef.current) playbackCtxRef.current = new AudioContext();
+      const ctx = playbackCtxRef.current;
+      const midi = omrNoteToMidi(note);
+      const freq = 440 * Math.pow(2, (midi - 69) / 12);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.0);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 1.05);
+    } catch { /* audio not supported */ }
+  }
+
+  // ── Skip current note ─────────────────────────────────────────────────────
+  function skipNote() {
+    const idx = currentNoteIdxRef.current;
+    const notes = practiceNotesRef.current;
+    if (idx >= notes.length) return;
+    practiceResultsRef.current = [...practiceResultsRef.current, "miss"];
+    setPracticeResults([...practiceResultsRef.current]);
+    wrongAttemptsRef.current = 0;
+    setWrongAttempts(0);
+    setPitchProximity(null);
+    const next = idx + 1;
+    currentNoteIdxRef.current = next;
+    setCurrentNoteIdx(next);
+    if (next >= notes.length && activePiece) finishPractice(activePiece);
+  }
+
   // ── Start practice game ────────────────────────────────────────────────────
   async function startPractice(piece: PieceWithGame) {
     if (!piece.game) return;
@@ -556,6 +644,12 @@ export default function PlayPage() {
     practiceResultsRef.current = [];
     setPracticeFlash(null);
     setPracticeFeedback(null);
+    setPitchProximity(null);
+
+    // Calibrate noise gate (2s ambient measurement)
+    setPracticeGameState("calibrating");
+    setCalibrationProgress(0);
+    await calibrateNoiseGate();
     setPracticeGameState("playing");
 
     // Polling loop — check pitch at 10fps
@@ -567,24 +661,39 @@ export default function PlayPage() {
       const freq = getPitch();
       if (!freq) {
         setDetectedNote(null);
+        setPitchProximity(null);
         return;
       }
+
+      // Check against calibrated noise gate
+      const analyser = analyserRef.current;
+      if (analyser && pitchBufRef.current) {
+        const rms = Math.sqrt(pitchBufRef.current.reduce((s, v) => s + v * v, 0) / pitchBufRef.current.length);
+        if (rms < noiseGateRef.current) {
+          setDetectedNote(null);
+          setPitchProximity(null);
+          return;
+        }
+      }
+
       const detectedMidi = freqToMidi(freq);
       setDetectedNote(midiToNoteName(detectedMidi));
       const expectedMidi = omrNoteToMidi(notes[idx]);
-      // Octave-independent pitch class match: OMR commonly misreads octave by ±1.
-      // Compare only the pitch class (0-11) so e.g. B3 matches B4 and B5.
-      // Also allow ±1 semitone within the pitch class to handle slight tuning drift.
-      const pitchClassDiff = Math.min(
-        Math.abs((detectedMidi % 12) - (expectedMidi % 12)),
-        12 - Math.abs((detectedMidi % 12) - (expectedMidi % 12))
-      );
+
+      // Compute pitch proximity (signed, pitch-class-aware)
+      const rawDiff = (detectedMidi % 12) - (expectedMidi % 12);
+      const wrappedDiff = rawDiff > 6 ? rawDiff - 12 : rawDiff < -6 ? rawDiff + 12 : rawDiff;
+      setPitchProximity(wrappedDiff);
+
+      // Octave-independent pitch class match with ±1 semitone tolerance
+      const pitchClassDiff = Math.abs(wrappedDiff);
       const isHit = pitchClassDiff <= 1;
 
       if (isHit) {
         practiceResultsRef.current = [...practiceResultsRef.current, "hit"];
         setPracticeResults([...practiceResultsRef.current]);
         setPracticeFlash("hit");
+        setPitchProximity(null);
         if (practiceFlashTimerRef.current) clearTimeout(practiceFlashTimerRef.current);
         practiceFlashTimerRef.current = setTimeout(() => setPracticeFlash(null), 300);
         wrongAttemptsRef.current = 0;
@@ -600,12 +709,13 @@ export default function PlayPage() {
         setPracticeFlash("miss");
         if (practiceFlashTimerRef.current) clearTimeout(practiceFlashTimerRef.current);
         practiceFlashTimerRef.current = setTimeout(() => setPracticeFlash(null), 200);
-        if (attempts >= 3) {
-          // Auto-advance after 3 misses
+        if (attempts >= 5) {
+          // Auto-advance after 5 misses (increased from 3 — gives more time to find the note)
           practiceResultsRef.current = [...practiceResultsRef.current, "miss"];
           setPracticeResults([...practiceResultsRef.current]);
           wrongAttemptsRef.current = 0;
           setWrongAttempts(0);
+          setPitchProximity(null);
           const next = idx + 1;
           currentNoteIdxRef.current = next;
           setCurrentNoteIdx(next);
@@ -617,13 +727,37 @@ export default function PlayPage() {
 
   function finishPractice(piece: PieceWithGame) {
     if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
+    setPitchProximity(null);
     setPracticeGameState("finished");
     fetchPracticeFeedback(piece);
+    // Save game results for accuracy tracking
+    saveGameResult(piece);
+  }
+
+  async function saveGameResult(piece: PieceWithGame) {
+    const results = practiceResultsRef.current;
+    const notes = practiceNotesRef.current;
+    const hits = results.filter(r => r === "hit").length;
+    const misses = results.filter(r => r === "miss").length;
+    const accuracy = results.length > 0 ? hits / results.length : 0;
+    const perNote = results.map((r, i) => ({
+      note: notes[i]?.note ?? "?",
+      octave: notes[i]?.octave ?? 4,
+      result: r,
+    }));
+    try {
+      await fetch(`/api/pieces/${piece.id}/game-result`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ totalNotes: results.length, hits, misses, accuracy, perNote }),
+      });
+    } catch { /* non-critical — don't block UI */ }
   }
 
   function stopPractice() {
     if (practiceIntervalRef.current) clearInterval(practiceIntervalRef.current);
     setDetectedNote(null);
+    setPitchProximity(null);
     setPracticeGameState("idle");
     setActivePiece(null);
   }
@@ -816,13 +950,13 @@ export default function PlayPage() {
       }
     }
 
-    // Attempt dots below hit zone
+    // Attempt dots below hit zone (5 attempts)
     if (practiceGameState === "playing" && idx < notes.length) {
       const dotY = (sortedMidis.indexOf(omrNoteToMidi(notes[idx])) + 1) * LANE_H - 5;
-      const remaining = 3 - wrongAttempts;
-      for (let d = 0; d < 3; d++) {
+      const remaining = 5 - wrongAttempts;
+      for (let d = 0; d < 5; d++) {
         ctx.beginPath();
-        ctx.arc(HIT_X - 10 + d * 12, Math.min(dotY, canvasH - 8), 4, 0, Math.PI * 2);
+        ctx.arc(HIT_X - 22 + d * 11, Math.min(dotY, canvasH - 8), 3.5, 0, Math.PI * 2);
         ctx.fillStyle = d < remaining ? "#5B9E79" : "rgba(255,255,255,0.2)";
         ctx.fill();
       }
@@ -1392,11 +1526,19 @@ export default function PlayPage() {
                     <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "var(--charcoal)" }}>{piece.title}</div>
                     {piece.composer && <div style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>{piece.composer}</div>}
                     {piece.game && (
-                      <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem", display: "flex", gap: "0.75rem" }}>
+                      <div style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                         <span>{piece.game.notes_json.length} notes</span>
                         {piece.game.key_signature && <span>{piece.game.key_signature}</span>}
+                        {piece.bestAccuracy !== undefined && (
+                          <span style={{ color: piece.bestAccuracy >= 0.8 ? "#2ecc71" : piece.bestAccuracy >= 0.5 ? "#e67e22" : "var(--muted)" }}>
+                            Best: {Math.round(piece.bestAccuracy * 100)}%
+                          </span>
+                        )}
+                        {piece.playCount !== undefined && piece.playCount > 0 && (
+                          <span>Practiced {piece.playCount}x</span>
+                        )}
                         {piece.game.omr_confidence < 0.65 && (
-                          <span style={{ color: "#e67e22" }}>⚠ Low confidence — notes may not be perfect</span>
+                          <span style={{ color: "#e67e22" }}>⚠ Low confidence</span>
                         )}
                       </div>
                     )}
@@ -1405,17 +1547,23 @@ export default function PlayPage() {
                     {piece.game ? (
                       <>
                         <button
-                          onClick={() => startGame(omrPieceToSong(piece))}
+                          onClick={() => startPractice(piece)}
                           style={{ padding: "0.5rem 1.25rem", background: "var(--sage)", border: "none", color: "white", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.875rem", display: "flex", alignItems: "center", gap: "0.375rem" }}
                         >
-                          <Play size={14} /> Play
+                          <Mic size={14} /> Practice
+                        </button>
+                        <button
+                          onClick={() => startGame(omrPieceToSong(piece))}
+                          style={{ padding: "0.5rem 0.75rem", background: "transparent", border: "1px solid var(--sage)", color: "var(--sage)", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.375rem" }}
+                        >
+                          <Zap size={13} /> Lane
                         </button>
                         <button
                           onClick={() => setViewingTranscription({ pieceId: piece.id, title: piece.title, game: piece.game! })}
                           style={{ padding: "0.5rem 0.75rem", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, cursor: "pointer", fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.375rem" }}
-                          title="View AI transcription"
+                          title="View & edit transcription"
                         >
-                          <FileText size={13} /> View
+                          <FileText size={13} /> Edit
                         </button>
                         <button
                           onClick={() => generateGame(piece)}
@@ -1423,7 +1571,7 @@ export default function PlayPage() {
                           style={{ padding: "0.5rem 0.75rem", background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, cursor: "pointer", fontSize: "0.8125rem" }}
                           title="Regenerate from sheet music"
                         >
-                          {generatingFor === piece.id ? "..." : "Regenerate"}
+                          {generatingFor === piece.id ? "..." : "Redo"}
                         </button>
                       </>
                     ) : (
@@ -1443,6 +1591,21 @@ export default function PlayPage() {
         </div>
       )}
 
+      {/* ── CALIBRATION SCREEN ─────────────────────────────────────────── */}
+      {tab === "practice" && practiceGameState === "calibrating" && activePiece && (
+        <div className="card-base" style={{ padding: "2rem", textAlign: "center" }}>
+          <div style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "1.5rem", fontWeight: 600, color: "var(--charcoal)", marginBottom: "0.75rem" }}>
+            Calibrating microphone...
+          </div>
+          <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "1.25rem" }}>
+            Stay quiet for a moment so we can filter out background noise.
+          </div>
+          <div style={{ width: "100%", height: 6, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: `${calibrationProgress}%`, height: "100%", background: "var(--sage)", borderRadius: 3, transition: "width 0.1s" }} />
+          </div>
+        </div>
+      )}
+
       {/* ── PRACTICE GAME ─────────────────────────────────────────────────── */}
       {tab === "practice" && practiceGameState === "playing" && activePiece && (
         <div>
@@ -1459,14 +1622,42 @@ export default function PlayPage() {
                 )}
               </div>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+              {/* Pitch proximity indicator */}
+              {pitchProximity !== null && detectedNote && (
+                <div style={{
+                  padding: "0.2rem 0.5rem", borderRadius: 12, fontSize: "0.75rem", fontWeight: 600,
+                  background: Math.abs(pitchProximity) <= 1 ? "#eafaf1" : Math.abs(pitchProximity) <= 3 ? "#fef9e7" : "#fdedec",
+                  color: Math.abs(pitchProximity) <= 1 ? "#1e8449" : Math.abs(pitchProximity) <= 3 ? "#b7950b" : "#c0392b",
+                }}>
+                  {pitchProximity === 0 ? "On pitch" : pitchProximity > 0 ? `${pitchProximity} high` : `${Math.abs(pitchProximity)} low`}
+                </div>
+              )}
               {detectedNote && (
                 <div style={{ padding: "0.25rem 0.75rem", background: "#eafaf1", border: "1px solid #a9dfbf", borderRadius: 20, fontSize: "0.8125rem", fontWeight: 600, color: "#1e8449" }}>
                   {detectedNote}
                 </div>
               )}
-              <button onClick={stopPractice} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Square size={16} strokeWidth={1.5} />
+              {/* Reference tone button */}
+              {practiceNotes[currentNoteIdx] && (
+                <button
+                  onClick={() => playReferenceTone(practiceNotes[currentNoteIdx])}
+                  title="Hear this note"
+                  style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8125rem" }}
+                >
+                  <Volume2 size={14} strokeWidth={1.5} />
+                </button>
+              )}
+              {/* Skip note button */}
+              <button
+                onClick={skipNote}
+                title="Skip this note"
+                style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", color: "var(--muted)" }}
+              >
+                <ArrowLeft size={14} strokeWidth={1.5} style={{ transform: "rotate(180deg)" }} />
+              </button>
+              <button onClick={stopPractice} style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid var(--border)", background: "var(--white)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Square size={14} strokeWidth={1.5} />
               </button>
             </div>
           </div>
@@ -1478,8 +1669,8 @@ export default function PlayPage() {
           />
 
           <div style={{ marginTop: "0.75rem", fontSize: "0.8125rem", color: "var(--muted)", textAlign: "center" }}>
-            Play the highlighted note. It will advance automatically when you hit it.
-            {wrongAttempts > 0 && wrongAttempts < 3 && <span style={{ color: "#e67e22", marginLeft: "0.5rem" }}>{3 - wrongAttempts} attempt{3 - wrongAttempts !== 1 ? "s" : ""} left before skip</span>}
+            Play the highlighted note. It advances when you hit it.
+            {wrongAttempts > 0 && wrongAttempts < 5 && <span style={{ color: "#e67e22", marginLeft: "0.5rem" }}>{5 - wrongAttempts} attempt{5 - wrongAttempts !== 1 ? "s" : ""} left</span>}
           </div>
         </div>
       )}
