@@ -95,7 +95,7 @@ export default function PublicProfileClient({ username, data }: Props) {
         <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🎵</div>
         <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "#2C2824", marginBottom: "0.5rem" }}>Profile not found</div>
         <div style={{ fontSize: "0.875rem", color: "#9A9590", marginBottom: "2rem" }}>cadenza.social/{username} doesn&apos;t exist yet.</div>
-        <a href="/" style={{ padding: "0.75rem 1.5rem", borderRadius: 8, background: "#2C2824", color: "#FDFCFA", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600 }}>
+        <a href="https://cadenza.social" style={{ padding: "0.75rem 1.5rem", borderRadius: 8, background: "#2C2824", color: "#FDFCFA", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600 }}>
           Make your own on Cadenza
         </a>
       </div>
@@ -112,7 +112,7 @@ export default function PublicProfileClient({ username, data }: Props) {
       {/* Header bar */}
       <div style={{ background: "#FDFCFA", borderBottom: "1px solid #E8E3D9", padding: "0.875rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, fontSize: "1.125rem", color: "#2C2824", letterSpacing: "-0.01em" }}>Cadenza</span>
-        <a href="/" style={{ fontSize: "0.75rem", color: "#9A9590", textDecoration: "none", border: "1px solid #E8E3D9", borderRadius: 6, padding: "0.3rem 0.75rem", fontWeight: 500 }}>
+        <a href="https://cadenza.social" style={{ fontSize: "0.75rem", color: "#9A9590", textDecoration: "none", border: "1px solid #E8E3D9", borderRadius: 6, padding: "0.3rem 0.75rem", fontWeight: 500 }}>
           Make your own
         </a>
       </div>
@@ -281,7 +281,7 @@ export default function PublicProfileClient({ username, data }: Props) {
           <div style={{ fontSize: "0.8125rem", color: "#9A9590", marginBottom: "1.25rem", lineHeight: 1.6 }}>
             Record covers, track your practice, and get your own Cadenza profile.
           </div>
-          <a href="/" style={{ display: "inline-block", padding: "0.75rem 1.75rem", borderRadius: 8, background: "#2C2824", color: "#FDFCFA", textDecoration: "none", fontSize: "0.9375rem", fontWeight: 600 }}>
+          <a href="https://cadenza.social" style={{ display: "inline-block", padding: "0.75rem 1.75rem", borderRadius: 8, background: "#2C2824", color: "#FDFCFA", textDecoration: "none", fontSize: "0.9375rem", fontWeight: 600 }}>
             Get started free
           </a>
         </div>
