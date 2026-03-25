@@ -6,8 +6,10 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // cadenza.social/{username} → /p/{username}
+  // Only rewrite paths that aren't known app routes
+  const APP_PREFIXES = ["/p/", "/api/", "/_next/", "/auth/", "/student", "/teacher", "/parent", "/enroll", "/lesson"];
   const host = request.headers.get("host") ?? "";
-  if (host.includes("cadenza.social") && !pathname.startsWith("/p/") && !pathname.startsWith("/api/") && !pathname.startsWith("/_next/") && !pathname.startsWith("/auth/") && pathname !== "/" && !pathname.includes(".")) {
+  if (host.includes("cadenza.social") && pathname !== "/" && !pathname.includes(".") && !APP_PREFIXES.some(p => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = `/p${pathname}`;
     return NextResponse.rewrite(url);
@@ -66,11 +68,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/student/:path*",
-    "/teacher/:path*",
-    "/auth/:path*",
-    // cadenza.social/{username} rewrites — match single-segment paths that aren't known app routes
-    "/((?!api|_next|p|student|teacher|auth|parent|enroll|lesson|favicon\\.ico).*)",
-  ],
+  matcher: ["/student/:path*", "/teacher/:path*", "/auth/:path*", "/:path((?!api|_next|p|favicon\\.ico).*)"],
 };
