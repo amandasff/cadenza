@@ -100,6 +100,7 @@ export default function TeacherChat() {
     setLoadingMessages(true);
     setMessages([]);
     setHearts({});
+    initialScrollDone.current = false;
     setEditingId(null);
     setEditError(null);
     const supabase = getSupabaseBrowserClient();
@@ -148,6 +149,7 @@ export default function TeacherChat() {
   }, [teacher?.studioId, teacher?.id, selectedStudent]);
 
   useEffect(() => {
+    if (messages.length === 0) return;
     const instant = !initialScrollDone.current;
     if (instant) initialScrollDone.current = true;
     scrollToBottom(instant);

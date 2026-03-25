@@ -159,6 +159,12 @@ export default function StudentChat() {
   }, [announcements, privateMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    initialScrollDone.current = false;
+  }, [tab]);
+
+  useEffect(() => {
+    const msgs = tab === "announcements" ? announcements : privateMessages;
+    if (msgs.length === 0) return;
     const instant = !initialScrollDone.current;
     if (instant) initialScrollDone.current = true;
     scrollToBottom(instant);
