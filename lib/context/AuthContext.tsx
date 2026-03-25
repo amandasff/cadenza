@@ -27,6 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const service = AuthService.getInstance(supabase);
     const currentUser = await service.getCurrentUser();
     setUser(currentUser);
+    // Sync the live streak to DB so all consumers (leaderboard, public profile,
+    // teacher dashboard) see the correct value. Fire-and-forget.
+    if (currentUser) {
+      fetch('/api/streak/sync', { method: 'POST' }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {

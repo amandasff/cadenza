@@ -386,10 +386,49 @@ export default function DiscoverPage() {
     try {
       const { data: users } = await supabase
         .from("profiles")
-        .select("id, display_name, avatar_url, streak_days, total_days_practiced, role")
+        .select("id, display_name, avatar_url, streak_days, total_days_practiced, role, streak_freeze_count")
         .gt("streak_days", 0)
         .order("streak_days", { ascending: false })
         .limit(100);
+
+      // Compute live streaks — the stored streak_days can be stale if the
+      // student hasn't logged in since missing a day.
+      const userIds = (users ?? []).map((u: { id: string }) => u.id);
+      const lastSessionMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        // Fetch most recent session per student in a single query
+        const { data: sessions } = await supabase.rpc("get_last_sessions", { student_ids: userIds });
+        if (sessions) {
+          for (const s of sessions as { student_id: string; last_at: string }[]) {
+            lastSessionMap[s.student_id] = s.last_at;
+          }
+        }
+      }
+
+      const toUTC = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+      const now = new Date();
+      const todayUTC = toUTC(now);
+      const yesterdayUTC = toUTC(new Date(now.getTime() - 86_400_000));
+
+      const liveUsers = (users ?? []).map((u: { id: string; streak_days: number; streak_freeze_count?: number; display_name: string; avatar_url: string | null; total_days_practiced: number; role: string | null }) => {
+        const lastAt = lastSessionMap[u.id];
+        let streak = u.streak_days;
+        if (streak > 0 && lastAt) {
+          const lastUTC = toUTC(new Date(lastAt));
+          if (lastUTC !== todayUTC && lastUTC !== yesterdayUTC) {
+            const lastMs = new Date(lastUTC + "T00:00:00Z").getTime();
+            const todayMs = new Date(todayUTC + "T00:00:00Z").getTime();
+            const missedDays = Math.round((todayMs - lastMs) / 86_400_000) - 1;
+            if (missedDays < 1 || missedDays > (u.streak_freeze_count ?? 0)) {
+              streak = 0;
+            }
+          }
+        } else if (streak > 0 && !lastAt) {
+          streak = 0;
+        }
+        return { ...u, streak_days: streak };
+      }).filter((u: { streak_days: number }) => u.streak_days > 0)
+        .sort((a: { streak_days: number }, b: { streak_days: number }) => b.streak_days - a.streak_days);
 
       let followsMeSet = new Set<string>();
       if (currentUserId) {
@@ -400,7 +439,7 @@ export default function DiscoverPage() {
         followsMeSet = new Set((fmData ?? []).map((f: { follower_id: string }) => f.follower_id));
       }
 
-      setLeaderboard(users ?? []);
+      setLeaderboard(liveUsers);
       setFollowsMe(followsMeSet);
       setLeaderboardLoaded(true);
     } finally {

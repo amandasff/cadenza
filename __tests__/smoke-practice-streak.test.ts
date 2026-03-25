@@ -201,4 +201,77 @@ describe("Practice streak smoke tests", () => {
       expect(totalPoints).toBe(950);
     });
   });
+
+  // ── Live streak sync tests ───────────────────────────────────────────────
+  // Mirrors the logic in /api/streak/sync and the leaderboard's live
+  // computation. Given a stored streak and the last session date, compute
+  // the streak value that should be displayed/stored.
+
+  describe("live streak sync (stale DB correction)", () => {
+    function computeLiveStreak(params: {
+      storedStreak: number;
+      lastSessionDate: string | null; // ISO timestamp or null
+      freezeCount: number;
+      todayStr: string;
+    }): number {
+      const { storedStreak, lastSessionDate, freezeCount, todayStr } = params;
+      if (storedStreak <= 0) return storedStreak;
+      if (!lastSessionDate) return 0;
+
+      const lastUTC = toUTCDateStr(new Date(lastSessionDate));
+      const todayMs = new Date(todayStr + "T00:00:00Z").getTime();
+      const yesterdayUTC = toUTCDateStr(new Date(todayMs - 86_400_000));
+
+      if (lastUTC === todayStr || lastUTC === yesterdayUTC) return storedStreak;
+
+      const lastMs = new Date(lastUTC + "T00:00:00Z").getTime();
+      const gapDays = Math.round((todayMs - lastMs) / 86_400_000);
+      const missedDays = gapDays - 1;
+      if (missedDays >= 1 && missedDays <= freezeCount) return storedStreak;
+
+      return 0;
+    }
+
+    it("returns stored streak if last session was today", () => {
+      expect(computeLiveStreak({ storedStreak: 10, lastSessionDate: "2026-01-10T15:00:00Z", freezeCount: 0, todayStr: TODAY })).toBe(10);
+    });
+
+    it("returns stored streak if last session was yesterday", () => {
+      expect(computeLiveStreak({ storedStreak: 10, lastSessionDate: "2026-01-09T20:00:00Z", freezeCount: 0, todayStr: TODAY })).toBe(10);
+    });
+
+    it("zeros streak if last session was 2 days ago and no freezes", () => {
+      expect(computeLiveStreak({ storedStreak: 10, lastSessionDate: "2026-01-08T12:00:00Z", freezeCount: 0, todayStr: TODAY })).toBe(0);
+    });
+
+    it("preserves streak if last session was 2 days ago with 1 freeze", () => {
+      expect(computeLiveStreak({ storedStreak: 10, lastSessionDate: "2026-01-08T12:00:00Z", freezeCount: 1, todayStr: TODAY })).toBe(10);
+    });
+
+    it("zeros streak if last session was 4 days ago with only 1 freeze", () => {
+      expect(computeLiveStreak({ storedStreak: 10, lastSessionDate: "2026-01-06T12:00:00Z", freezeCount: 1, todayStr: TODAY })).toBe(0);
+    });
+
+    it("preserves streak if last session was 4 days ago with 3 freezes", () => {
+      expect(computeLiveStreak({ storedStreak: 10, lastSessionDate: "2026-01-06T12:00:00Z", freezeCount: 3, todayStr: TODAY })).toBe(10);
+    });
+
+    it("zeros streak if no session exists", () => {
+      expect(computeLiveStreak({ storedStreak: 5, lastSessionDate: null, freezeCount: 0, todayStr: TODAY })).toBe(0);
+    });
+
+    it("returns 0 if stored streak is already 0", () => {
+      expect(computeLiveStreak({ storedStreak: 0, lastSessionDate: "2026-01-10T12:00:00Z", freezeCount: 0, todayStr: TODAY })).toBe(0);
+    });
+
+    it("manual DB edit without matching session gets zeroed (Adrien's bug)", () => {
+      // Teacher manually sets streak_days=15 in DB, but last session is a week old
+      expect(computeLiveStreak({ storedStreak: 15, lastSessionDate: "2026-01-03T12:00:00Z", freezeCount: 0, todayStr: TODAY })).toBe(0);
+    });
+
+    it("excused absence (inserted backdated session) preserves streak", () => {
+      // After teacher excuses yesterday, last session is now yesterday
+      expect(computeLiveStreak({ storedStreak: 15, lastSessionDate: "2026-01-09T12:00:00Z", freezeCount: 0, todayStr: TODAY })).toBe(15);
+    });
+  });
 });

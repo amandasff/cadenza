@@ -640,6 +640,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [awardError, setAwardError] = useState("");
   const [grantingFreeze, setGrantingFreeze] = useState(false);
   const [freezeSuccess, setFreezeSuccess] = useState(false);
+  const [excuseDate, setExcuseDate] = useState("");
+  const [excusingAbsence, setExcusingAbsence] = useState(false);
+  const [excuseResult, setExcuseResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const [showAddPiece, setShowAddPiece] = useState(false);
   const [pieceForm, setPieceForm] = useState(emptyPieceForm());
@@ -1727,6 +1730,60 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             <p style={{ marginTop: "0.375rem", fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}>
               Protects their streak if they miss a day.
             </p>
+          </div>
+
+          {/* Excuse absence — restore a broken streak */}
+          <div style={{ borderTop: "1px solid var(--border)", marginTop: "1rem", paddingTop: "1rem" }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", fontWeight: 500 }}>
+              Excuse an absence
+            </span>
+            <p style={{ marginTop: "0.25rem", fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.5, marginBottom: "0.5rem" }}>
+              Insert a make-up session for a missed day to restore their streak.
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <input
+                type="date"
+                value={excuseDate}
+                onChange={e => { setExcuseDate(e.target.value); setExcuseResult(null); }}
+                max={new Date().toISOString().slice(0, 10)}
+                style={{ flex: 1, padding: "0.4rem 0.5rem", borderRadius: 3, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", background: "none" }}
+              />
+              <button
+                onClick={async () => {
+                  if (!excuseDate || excusingAbsence) return;
+                  setExcusingAbsence(true);
+                  setExcuseResult(null);
+                  try {
+                    const res = await fetch("/api/teacher/excuse-absence", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ studentId: student.id, date: excuseDate }),
+                    });
+                    const data = await res.json() as { ok?: boolean; streak_days?: number; error?: string };
+                    if (res.ok && data.ok) {
+                      setExcuseResult({ ok: true, message: `Streak restored to ${data.streak_days} days` });
+                      setStudent(prev => prev ? { ...prev, streak_days: data.streak_days ?? prev.streak_days } : prev);
+                      setExcuseDate("");
+                    } else {
+                      setExcuseResult({ ok: false, message: data.error ?? "Failed" });
+                    }
+                  } catch {
+                    setExcuseResult({ ok: false, message: "Network error" });
+                  } finally {
+                    setExcusingAbsence(false);
+                  }
+                }}
+                disabled={!excuseDate || excusingAbsence}
+                style={{ padding: "0.4rem 0.75rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: excuseResult?.ok ? "var(--sage-bg, #EFF7EF)" : "none", color: excuseResult?.ok ? "var(--sage)" : "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: !excuseDate || excusingAbsence ? "default" : "pointer", opacity: !excuseDate || excusingAbsence ? 0.5 : 1, whiteSpace: "nowrap" }}
+              >
+                {excusingAbsence ? "Saving…" : "Excuse"}
+              </button>
+            </div>
+            {excuseResult && (
+              <p style={{ marginTop: "0.375rem", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", color: excuseResult.ok ? "var(--sage)" : "var(--error, #c0392b)", lineHeight: 1.5 }}>
+                {excuseResult.message}
+              </p>
+            )}
           </div>
         </div>
       </div>
