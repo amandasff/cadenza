@@ -66,5 +66,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/student/:path*", "/teacher/:path*", "/auth/:path*", "/:path*"],
+  matcher: [
+    "/student/:path*",
+    "/teacher/:path*",
+    "/auth/:path*",
+    // cadenza.social/{username} rewrites — match single-segment paths that aren't known app routes
+    "/((?!api|_next|p|student|teacher|auth|parent|enroll|lesson|favicon\\.ico).*)",
+  ],
 };
