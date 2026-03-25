@@ -44,6 +44,7 @@ export default function StudentChat() {
   const [sessionFeedbacks, setSessionFeedbacks] = useState<Record<string, string>>({});
   const { isRecording, recordingSeconds, uploadingAudio, audioError, startRecording, stopRecording, clearError } = useRecording();
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -53,9 +54,19 @@ export default function StudentChat() {
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
-    requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
-    });
+    const el = scrollRef.current;
+    if (!el) return;
+    const go = () => { el.scrollTop = el.scrollHeight; };
+    if (instant) {
+      go();
+      // Double-tap: catch layout shifts from images/audio
+      setTimeout(go, 50);
+      setTimeout(go, 200);
+    } else {
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -331,7 +342,7 @@ export default function StudentChat() {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "1.25rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "1rem" }}>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "1.25rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.25rem", paddingBottom: "1rem" }}>
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", paddingTop: "1rem" }}>
             {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 40, borderRadius: 3, width: i % 2 === 0 ? "58%" : "44%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />)}

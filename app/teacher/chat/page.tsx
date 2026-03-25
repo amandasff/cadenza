@@ -51,14 +51,24 @@ export default function TeacherChat() {
   const [sendingImage, setSendingImage] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; senderName: string } | null>(null);
   const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const initialScrollDone = useRef(false);
   const scrollToBottom = useCallback((instant?: boolean) => {
-    requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior: instant ? "instant" : "smooth" });
-    });
+    const el = scrollRef.current;
+    if (!el) return;
+    const go = () => { el.scrollTop = el.scrollHeight; };
+    if (instant) {
+      go();
+      setTimeout(go, 50);
+      setTimeout(go, 200);
+    } else {
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -397,7 +407,7 @@ export default function TeacherChat() {
             <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{headerSub}</span>
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "1.25rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
             {loadingMessages ? (
               [1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: 38, borderRadius: 3, width: i % 2 === 0 ? "55%" : "42%", alignSelf: i % 2 === 0 ? "flex-end" : "flex-start" }} />)
             ) : messages.length === 0 ? (
