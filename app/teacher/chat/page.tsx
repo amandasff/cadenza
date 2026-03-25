@@ -159,11 +159,12 @@ export default function TeacherChat() {
   }, [teacher?.studioId, teacher?.id, selectedStudent]);
 
   useEffect(() => {
+    if (loadingMessages) return;
     if (messages.length === 0) return;
     const instant = !initialScrollDone.current;
     if (instant) initialScrollDone.current = true;
     scrollToBottom(instant);
-  }, [messages, scrollToBottom]);
+  }, [loadingMessages, messages, scrollToBottom]);
 
   function parseReply(content: string): { replyId: string; replySender: string; body: string } | null {
     if (!content.startsWith('REPLYTO:')) return null;

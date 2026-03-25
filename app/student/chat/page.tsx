@@ -174,12 +174,13 @@ export default function StudentChat() {
   }, [tab]);
 
   useEffect(() => {
+    if (loading) return;
     const msgs = tab === "announcements" ? announcements : privateMessages;
     if (msgs.length === 0) return;
     const instant = !initialScrollDone.current;
     if (instant) initialScrollDone.current = true;
     scrollToBottom(instant);
-  }, [announcements, privateMessages, tab, scrollToBottom]);
+  }, [loading, announcements, privateMessages, tab, scrollToBottom]);
 
   // Parse reply header out of message content
   function parseReply(content: string): { replyId: string; replySender: string; body: string } | null {
