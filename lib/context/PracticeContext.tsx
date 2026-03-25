@@ -59,6 +59,7 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const boostedStreamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mimeTypeRef = useRef<string>("");
   const elapsedRef = useRef(0);
@@ -169,15 +170,26 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
     micStreamRef.current = stream;
 
     const source = ctx.createMediaStreamSource(stream);
+
+    // Gentle gain boost (1.5×) — phone/laptop mics are often quiet for instruments.
+    // Lower than the 2× used for voice notes to avoid clipping loud passages.
+    const gain = ctx.createGain();
+    gain.gain.value = 1.5;
+    const dest = ctx.createMediaStreamDestination();
+    source.connect(gain);
+    gain.connect(dest);
+    const boostedStream = dest.stream;
+    boostedStreamRef.current = boostedStream;
+
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
-    source.connect(analyser);
+    gain.connect(analyser);
     analyserRef.current = analyser;
     setAnalyserNode(analyser);
 
     if (typeof MediaRecorder !== "undefined") {
       const opts = makeMimeOpts();
-      const recorder = new MediaRecorder(stream, opts);
+      const recorder = new MediaRecorder(boostedStream, opts);
       chunksRef.current = [];
       recorder.ondataavailable = e => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -209,9 +221,10 @@ export function PracticeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startClip = useCallback(() => {
-    if (!micStreamRef.current || clipping) return;
+    const stream = boostedStreamRef.current ?? micStreamRef.current;
+    if (!stream || clipping) return;
     const opts = makeMimeOpts();
-    const clipRecorder = new MediaRecorder(micStreamRef.current, opts);
+    const clipRecorder = new MediaRecorder(stream, opts);
     clipChunksRef.current = [];
     clipRecorder.ondataavailable = e => {
       if (e.data.size > 0) clipChunksRef.current.push(e.data);

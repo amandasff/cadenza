@@ -618,10 +618,19 @@ export default function PerformerMode({ params }: { params: Promise<{ pieceId: s
     setRecUrl(null);
     setRecSaved(false);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const rawStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000 },
       });
-      micStreamRef.current = stream;
+      micStreamRef.current = rawStream;
+      // Gentle gain boost (1.5×) — phone/laptop mics are often quiet for instruments
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(rawStream);
+      const gain = audioCtx.createGain();
+      gain.gain.value = 1.5;
+      const dest = audioCtx.createMediaStreamDestination();
+      source.connect(gain);
+      gain.connect(dest);
+      const stream = dest.stream;
       const preferredTypes = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4;codecs=aac", "audio/webm"];
       const mimeType = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) ?? "";
       const opts: MediaRecorderOptions = { audioBitsPerSecond: 128000 };
