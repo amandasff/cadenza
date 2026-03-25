@@ -29,6 +29,18 @@ const TEACHER_BULLETS = [
   "Everything in one place — no more scattered apps",
 ];
 
+// Condensed bullets for mobile — 3 most compelling per role
+const STUDENT_BULLETS_MOBILE = [
+  { icon: "🎮", text: "Music games, streaks & collectibles" },
+  { icon: "🎙️", text: "AI feedback on your recordings" },
+  { icon: "🌍", text: "Build your sound, share it with the world" },
+];
+const TEACHER_BULLETS_MOBILE = [
+  { icon: "🎧", text: "Hear students play between lessons" },
+  { icon: "📊", text: "See each student's growth at a glance" },
+  { icon: "✨", text: "Games & streaks keep them practicing" },
+];
+
 const COPY: Record<string, { headline: string; subline: string; bullets: string[] }> = {
   student: {
     headline: "Make music\nyou love.",
@@ -166,7 +178,7 @@ export default function Home() {
       }} />
 
       {/* ── Layer 3: wordmark ── */}
-      <div style={{
+      <div className="landing-header" style={{
         position: "absolute", top: 24, left: 28, zIndex: 10,
         opacity: unblurring ? 0 : 1, transition: "opacity 0.6s ease",
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -182,7 +194,7 @@ export default function Home() {
       </div>
 
       {/* ── Layer 4: floating card ── */}
-      <div style={{
+      <div className="landing-outer" style={{
         position: "absolute", inset: 0, zIndex: 5,
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "1rem",
@@ -240,6 +252,16 @@ export default function Home() {
               ))}
             </div>
 
+          </div>
+
+          {/* Mobile feature highlights — visible only on small screens */}
+          <div className="landing-mobile-bullets">
+            {(role === "teacher" ? TEACHER_BULLETS_MOBILE : STUDENT_BULLETS_MOBILE).map(b => (
+              <div key={b.text} style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                <span style={{ fontSize: "0.9375rem", flexShrink: 0, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(91,158,121,0.08)", borderRadius: 8 }}>{b.icon}</span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "#2C2824", lineHeight: 1.4 }}>{b.text}</span>
+              </div>
+            ))}
           </div>
 
           {/* RIGHT — form */}
@@ -335,14 +357,100 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Mobile: stack copy above form ── */}
+      {/* ── Responsive styles ── */}
       <style>{`
+        .landing-mobile-bullets { display: none !important; }
+
         @media (max-width: 640px) {
-          .landing-card { flex-direction: column !important; height: 100dvh; overflow: hidden; }
-          .landing-copy { border-right: none !important; border-bottom: 1px solid rgba(44,40,36,0.08) !important; padding: 1.25rem 1.25rem 1rem !important; flex-shrink: 0 !important; }
-          .landing-copy h1 { font-size: 1.5rem !important; margin-bottom: 0 !important; }
-          .landing-copy p, .landing-copy .proof, .landing-bullets { display: none !important; }
-          .landing-form-col { flex: 1 1 0 !important; overflow-y: auto !important; min-height: 0 !important; }
+          /* Full-page scroll instead of fixed card */
+          .landing-card {
+            flex-direction: column !important;
+            max-width: 100% !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: rgba(253,252,250,0.97) !important;
+            min-height: 100dvh;
+            overflow: visible !important;
+          }
+
+          /* Hero copy section — breathable, bold */
+          .landing-copy {
+            border-right: none !important;
+            border-bottom: none !important;
+            padding: 1.75rem 1.5rem 1rem !important;
+            flex-shrink: 0 !important;
+            text-align: center !important;
+            align-items: center !important;
+          }
+          .landing-copy h1 {
+            font-size: 2rem !important;
+            margin-bottom: 0.25rem !important;
+            line-height: 1.1 !important;
+          }
+          .landing-copy p {
+            display: block !important;
+            font-size: 0.875rem !important;
+            margin-bottom: 0 !important;
+            text-align: center !important;
+          }
+          /* Hide desktop bullets on mobile */
+          .landing-bullets { display: none !important; }
+
+          /* Show mobile bullets */
+          .landing-mobile-bullets {
+            display: flex !important;
+            flex-direction: column;
+            gap: 0.625rem;
+            padding: 0 1.5rem 0.5rem;
+          }
+
+          /* Form column — no fixed width, natural flow */
+          .landing-form-col {
+            flex: none !important;
+            overflow: visible !important;
+            min-height: auto !important;
+          }
+          .landing-form-col form {
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+          }
+          .landing-form-col form input {
+            padding: 0.75rem 0.875rem !important;
+            font-size: 1rem !important;
+          }
+          .landing-form-col form button[type="submit"] {
+            padding: 0.875rem !important;
+            font-size: 1rem !important;
+          }
+
+          /* Role toggle — larger, more tappable */
+          .landing-form-col > div:first-child {
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+          }
+
+          /* Google button + footer links */
+          .landing-form-col > div:last-child {
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+            padding-bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
+          }
+
+          /* Outer wrapper — scrollable on mobile */
+          .landing-outer {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            align-items: flex-start !important;
+            padding: 0 !important;
+          }
+
+          /* Header bar — safe area aware */
+          .landing-header {
+            padding-top: max(16px, env(safe-area-inset-top)) !important;
+            padding-left: 1.25rem !important;
+            padding-right: 1.25rem !important;
+          }
         }
       `}</style>
     </div>
