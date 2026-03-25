@@ -643,6 +643,9 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
   const [excuseDate, setExcuseDate] = useState("");
   const [excusingAbsence, setExcusingAbsence] = useState(false);
   const [excuseResult, setExcuseResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [streakDraft, setStreakDraft] = useState("");
+  const [settingStreak, setSettingStreak] = useState(false);
+  const [streakSetResult, setStreakSetResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const [showAddPiece, setShowAddPiece] = useState(false);
   const [pieceForm, setPieceForm] = useState(emptyPieceForm());
@@ -1782,6 +1785,62 @@ export default function StudentProfile({ params }: { params: Promise<{ id: strin
             {excuseResult && (
               <p style={{ marginTop: "0.375rem", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", color: excuseResult.ok ? "var(--sage)" : "var(--error, #c0392b)", lineHeight: 1.5 }}>
                 {excuseResult.message}
+              </p>
+            )}
+          </div>
+
+          {/* Set streak directly */}
+          <div style={{ borderTop: "1px solid var(--border)", marginTop: "1rem", paddingTop: "1rem" }}>
+            <span style={{ fontFamily: "Inter, sans-serif", fontSize: "0.75rem", color: "var(--charcoal)", fontWeight: 500 }}>
+              Set streak
+            </span>
+            <p style={{ marginTop: "0.25rem", fontSize: "0.6875rem", color: "var(--muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.5, marginBottom: "0.5rem" }}>
+              Override the streak to a specific number. It will continue naturally when they practice.
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <input
+                type="number"
+                min="0"
+                value={streakDraft}
+                onChange={e => { setStreakDraft(e.target.value); setStreakSetResult(null); }}
+                placeholder="e.g. 4"
+                style={{ width: 80, padding: "0.4rem 0.5rem", borderRadius: 3, border: "1px solid var(--border-strong)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", color: "var(--charcoal)", background: "none", textAlign: "center" }}
+              />
+              <button
+                onClick={async () => {
+                  const val = parseInt(streakDraft, 10);
+                  if (isNaN(val) || val < 0 || settingStreak) return;
+                  setSettingStreak(true);
+                  setStreakSetResult(null);
+                  try {
+                    const res = await fetch("/api/teacher/set-streak", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ studentId: student.id, streak: val }),
+                    });
+                    const data = await res.json() as { ok?: boolean; streak_days?: number; error?: string };
+                    if (res.ok && data.ok) {
+                      setStreakSetResult({ ok: true, message: `Streak set to ${data.streak_days}` });
+                      setStudent(prev => prev ? { ...prev, streak_days: data.streak_days ?? prev.streak_days } : prev);
+                      setStreakDraft("");
+                    } else {
+                      setStreakSetResult({ ok: false, message: data.error ?? "Failed" });
+                    }
+                  } catch {
+                    setStreakSetResult({ ok: false, message: "Network error" });
+                  } finally {
+                    setSettingStreak(false);
+                  }
+                }}
+                disabled={!streakDraft || isNaN(parseInt(streakDraft, 10)) || settingStreak}
+                style={{ padding: "0.4rem 0.75rem", borderRadius: 3, border: "1px solid var(--border-strong)", background: streakSetResult?.ok ? "var(--sage-bg, #EFF7EF)" : "none", color: streakSetResult?.ok ? "var(--sage)" : "var(--muted)", fontFamily: "Inter, sans-serif", fontSize: "0.8125rem", cursor: !streakDraft || settingStreak ? "default" : "pointer", opacity: !streakDraft || settingStreak ? 0.5 : 1, whiteSpace: "nowrap" }}
+              >
+                {settingStreak ? "Setting…" : "Set"}
+              </button>
+            </div>
+            {streakSetResult && (
+              <p style={{ marginTop: "0.375rem", fontSize: "0.6875rem", fontFamily: "Inter, sans-serif", color: streakSetResult.ok ? "var(--sage)" : "var(--error, #c0392b)", lineHeight: 1.5 }}>
+                {streakSetResult.message}
               </p>
             )}
           </div>
