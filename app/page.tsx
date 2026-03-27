@@ -74,23 +74,6 @@ const FEATURES = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    quote: "Cadenza has transformed my teaching studio. My students are finally excited to practice and I can track their progress easily.",
-    name: "Sarah Jenkins",
-    role: "Piano Pedagogue",
-  },
-  {
-    quote: "The interface is so clean and editorial. It feels like a high-end journal rather than just another boring practice app.",
-    name: "Marcus Thorne",
-    role: "Violin Instructor",
-  },
-  {
-    quote: "The composer collectibles are a hit. Students are actually researching music history just to unlock their favorite masters.",
-    name: "Elena Rodriguez",
-    role: "Studio Director",
-  },
-];
 
 export default function Home() {
   const router = useRouter();
@@ -452,47 +435,6 @@ export default function Home() {
                   <p style={{ fontSize: "0.875rem", color: "#9A9590", lineHeight: 1.65, margin: 0 }}>
                     {f.desc}
                   </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════
-          TESTIMONIALS SECTION
-          ═══════════════════════════════════════════════════════ */}
-      <section style={{ background: "#FDFCFA", padding: "5rem 1.5rem", borderTop: "1px solid #E8E3D9" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-            <h2 style={{
-              fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 500,
-              fontSize: "clamp(1.375rem, 3vw, 1.875rem)", color: "#2C2824",
-              lineHeight: 1.2, letterSpacing: "-0.01em", margin: 0,
-            }}>
-              Trusted by private music studios
-            </h2>
-          </div>
-
-          <div className="landing-testimonials" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            {TESTIMONIALS.map(t => (
-              <div key={t.name} style={{
-                background: "#F8F6F2", border: "1px solid #E8E3D9", borderRadius: 12,
-                padding: "1.5rem 1.75rem",
-              }}>
-                <div style={{ fontSize: "1.25rem", color: "#D0CBC0", fontFamily: "Cormorant Garamond, Georgia, serif", fontWeight: 600, lineHeight: 1, marginBottom: "0.75rem" }}>
-                  &ldquo;&rdquo;
-                </div>
-                <p style={{
-                  fontFamily: "Cormorant Garamond, Georgia, serif", fontStyle: "italic",
-                  fontSize: "1.0625rem", color: "#2C2824", lineHeight: 1.6,
-                  margin: "0 0 1rem",
-                }}>
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-                <div>
-                  <div style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#2C2824" }}>{t.name}</div>
-                  <div style={{ fontSize: "0.6875rem", color: "#9A9590", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 500, marginTop: "0.125rem" }}>{t.role}</div>
                 </div>
               </div>
             ))}
