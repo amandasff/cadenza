@@ -1,8 +1,11 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { formatDate } from "@/components/ContributionsGraph";
 import PublicProfileClient from "./PublicProfileClient";
+
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 // Always render fresh — never serve a cached/static version of a public profile
 export const dynamic = "force-dynamic";
