@@ -1,5 +1,7 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { formatDate } from "@/components/ContributionsGraph";
 import PublicProfileClient from "./PublicProfileClient";
 
 // Always render fresh — never serve a cached/static version of a public profile
@@ -9,7 +11,7 @@ interface Props {
   params: Promise<{ username: string }>;
 }
 
-async function getProfile(username: string) {
+const getProfile = cache(async function getProfile(username: string) {
   const admin = getSupabaseAdminClient();
   const { data: profile } = await admin
     .from("profiles")
@@ -26,8 +28,13 @@ async function getProfile(username: string) {
     artist_name: string | null;
   };
 
-  // Fetch tracks, raw collectible IDs, featured composer, and theme song in parallel
-  const [tracksRes, collectiblesRes, featuredComposerRes, themeSongRes] = await Promise.all([
+  // Compute cutoff date for practice data (past 365 days)
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 364);
+  const cutoffStr = formatDate(cutoff);
+
+  // Fetch tracks, raw collectible IDs, featured composer, theme song, and practice data in parallel
+  const [tracksRes, collectiblesRes, featuredComposerRes, themeSongRes, sessionsRes, clipsRes] = await Promise.all([
     admin
       .from("portfolio_items")
       .select("id, title, description, recording_url, created_at, collection_count")
@@ -45,17 +52,16 @@ async function getProfile(username: string) {
     p.theme_song_item_id
       ? admin.from("portfolio_items").select("recording_url, title").eq("id", p.theme_song_item_id).single()
       : Promise.resolve({ data: null }),
+    admin.from("practice_sessions").select("created_at").eq("student_id", p.id).gte("created_at", cutoffStr),
+    admin.from("practice_clips").select("created_at").eq("student_id", p.id).gte("created_at", cutoffStr),
   ]);
 
   // Resolve composer details in a separate explicit query — avoids embedded-join null issues
   const avatarIds = (collectiblesRes.data ?? []).map((c: { avatar_id: string }) => c.avatar_id);
-  console.log('[public-profile] student_id:', p.id, '| collectibles error:', collectiblesRes.error?.message ?? null, '| avatar_ids:', avatarIds);
 
   const composerResult = avatarIds.length > 0
     ? await admin.from("composer_avatars").select("id, composer_name, era, rarity, image_path").in("id", avatarIds)
     : { data: [], error: null };
-  console.log('[public-profile] composer_avatars error:', composerResult.error?.message ?? null, '| rows:', composerResult.data?.length ?? 0);
-
   const composerRows = composerResult.data ?? [];
   const normalizedCollectibles = avatarIds.map(aid => ({
     avatar_id: aid,
@@ -65,14 +71,29 @@ async function getProfile(username: string) {
   const featuredComposer = featuredComposerRes.data as { composer_name: string; era: string; rarity: string; image_path: string } | null;
   const themeSong = themeSongRes.data as { recording_url: string | null; title: string } | null;
 
+  // Aggregate practice data by day
+  const practiceMap = new Map<string, { date: string; sessions: number; clips: number }>();
+  for (const row of sessionsRes.data ?? []) {
+    const key = formatDate(new Date(row.created_at));
+    const existing = practiceMap.get(key) ?? { date: key, sessions: 0, clips: 0 };
+    practiceMap.set(key, { ...existing, sessions: existing.sessions + 1 });
+  }
+  for (const row of clipsRes.data ?? []) {
+    const key = formatDate(new Date(row.created_at));
+    const existing = practiceMap.get(key) ?? { date: key, sessions: 0, clips: 0 };
+    practiceMap.set(key, { ...existing, clips: existing.clips + 1 });
+  }
+  const practiceData = Array.from(practiceMap.values());
+
   return {
     profile: p,
     tracks: tracksRes.data ?? [],
     collectibles: normalizedCollectibles,
     featuredComposer,
     themeSong,
+    practiceData,
   };
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;

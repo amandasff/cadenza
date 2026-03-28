@@ -11,13 +11,25 @@ CREATE TABLE IF NOT EXISTS public.linked_accounts (
 -- Only the owner can read/delete their own rows; inserts go through the API (admin client)
 ALTER TABLE public.linked_accounts ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read their own links"
-  ON public.linked_accounts FOR SELECT
-  USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename='linked_accounts' AND policyname='Users can read their own links'
+  ) THEN
+    CREATE POLICY "Users can read their own links"
+      ON public.linked_accounts FOR SELECT
+      USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
-CREATE POLICY "Users can delete their own links"
-  ON public.linked_accounts FOR DELETE
-  USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename='linked_accounts' AND policyname='Users can delete their own links'
+  ) THEN
+    CREATE POLICY "Users can delete their own links"
+      ON public.linked_accounts FOR DELETE
+      USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- Index for fast lookup
 CREATE INDEX IF NOT EXISTS linked_accounts_user_id_idx ON public.linked_accounts(user_id);

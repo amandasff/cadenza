@@ -175,3 +175,20 @@ Items identified during CEO + engineering review (2026-03-12 and 2026-03-13) tha
 **Effort:** L
 **Priority:** P2
 **Depends on:** Email service setup (Resend account + API key), `parent_email` column migration.
+
+---
+
+### 11. SQL GROUP BY for practice data aggregation
+**What:** Replace the row-level `practice_sessions` and `practice_clips` fetches (used in public profiles and ContributionsGraph) with a Supabase RPC function that uses `GROUP BY DATE(created_at)` to return per-day counts directly from Postgres.
+
+**Why:** Public profiles are unauthenticated pages that currently fetch every individual session/clip row for 365 days and aggregate in JS. At scale (hundreds of students, years of data), this becomes a performance issue — potentially thousands of rows transferred and processed per page view.
+
+**Pros:** Faster page loads, less server memory, moves computation to Postgres where it's efficient. Also cleans up the duplicated aggregation logic in `app/p/[username]/page.tsx` and `components/ContributionsGraph.tsx`.
+
+**Cons:** Adds an RPC function to maintain. Not needed at current scale (<100 users).
+
+**Context:** The queries are in `app/p/[username]/page.tsx` (lines 53-54, server-side) and `components/ContributionsGraph.tsx` (lines 84-93, client-side). Both do the same pattern: fetch all rows → loop → build a Map<date, {sessions, clips}>. A single RPC like `get_practice_heatmap(student_id UUID, cutoff DATE)` returning `TABLE(date DATE, sessions INT, clips INT)` would replace both.
+
+**Effort:** S
+**Priority:** P3
+**Depends on:** Nothing.

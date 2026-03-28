@@ -52,18 +52,31 @@ function friendlyDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
+export { formatDate };
+export type { DayData };
+
 interface Props {
   studentId: string;
   /** Whether to use dark palette (for the dark studio background) */
   dark?: boolean;
+  /** Pre-fetched day data — skips client-side Supabase fetch when provided (e.g. public profiles) */
+  initialData?: DayData[];
 }
 
-export default function ContributionsGraph({ studentId, dark = false }: Props) {
-  const [dayMap, setDayMap] = useState<Map<string, DayData>>(new Map());
-  const [loading, setLoading] = useState(true);
+export default function ContributionsGraph({ studentId, dark = false, initialData }: Props) {
+  const [dayMap, setDayMap] = useState<Map<string, DayData>>(() => {
+    if (initialData) {
+      const map = new Map<string, DayData>();
+      for (const d of initialData) map.set(d.date, d);
+      return map;
+    }
+    return new Map();
+  });
+  const [loading, setLoading] = useState(!initialData);
   const [selected, setSelected] = useState<DayDetail | null>(null);
 
   const load = useCallback(async () => {
+    if (initialData) return;
     const sb = getSupabaseBrowserClient();
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 364);
@@ -93,7 +106,7 @@ export default function ContributionsGraph({ studentId, dark = false }: Props) {
     }
     setDayMap(map);
     setLoading(false);
-  }, [studentId]);
+  }, [studentId, initialData]);
 
   useEffect(() => { load(); }, [load]);
 

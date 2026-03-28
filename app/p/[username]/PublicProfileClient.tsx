@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import AudioPlayer from "@/components/AudioPlayer";
+import ContributionsGraph, { type DayData } from "@/components/ContributionsGraph";
 
 interface Track {
   id: string;
@@ -60,6 +61,7 @@ interface Props {
     collectibles: Collectible[];
     featuredComposer: FeaturedComposer | null;
     themeSong: ThemeSong | null;
+    practiceData?: DayData[];
   } | null;
 }
 
@@ -164,6 +166,45 @@ export default function PublicProfileClient({ username, data }: Props) {
           </div>
         )}
 
+        {/* ── Tracks (Discography) ── */}
+        {tracks.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#9A9590", fontSize: "0.875rem" }}>
+            No public recordings yet.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9590", marginBottom: "0.25rem" }}>
+              Recordings · {tracks.length}
+            </div>
+            {tracks.map(track => (
+              <div key={track.id} style={{ background: "#FDFCFA", border: "1px solid #E8E3D9", borderRadius: 10, padding: "1rem 1.125rem" }}>
+                <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#2C2824", marginBottom: "0.25rem" }}>{track.title}</div>
+                {track.description && (
+                  <div style={{ fontSize: "0.8125rem", color: "#9A9590", marginBottom: "0.625rem", lineHeight: 1.5 }}>{track.description}</div>
+                )}
+                {track.recording_url && (
+                  <div style={{ marginBottom: "0.625rem" }}>
+                    <AudioPlayer src={track.recording_url} />
+                  </div>
+                )}
+                <div style={{ fontSize: "0.6875rem", color: "#C0BBC0" }}>{timeAgo(track.created_at)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Practice tracker ── */}
+        {data.practiceData && data.practiceData.length > 0 && (
+          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9590", marginBottom: "0.625rem" }}>
+              Practice Activity
+            </div>
+            <div style={{ background: "#FDFCFA", border: "1px solid #E8E3D9", borderRadius: 12, padding: "1rem 1.125rem" }}>
+              <ContributionsGraph studentId={profile.id} initialData={data.practiceData} />
+            </div>
+          </div>
+        )}
+
         {/* ── Featured composer ── */}
         {featuredComposer && (
           <div style={{ marginBottom: "1.5rem" }}>
@@ -198,33 +239,6 @@ export default function PublicProfileClient({ username, data }: Props) {
               <div style={{ fontWeight: 500, fontSize: "0.875rem", color: "#2C2824", marginBottom: "0.625rem" }}>♫ {themeSong.title}</div>
               <AudioPlayer src={themeSong.recording_url} />
             </div>
-          </div>
-        )}
-
-        {/* ── Tracks ── */}
-        {tracks.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#9A9590", fontSize: "0.875rem" }}>
-            No public recordings yet.
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
-            <div style={{ fontSize: "0.625rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9590", marginBottom: "0.25rem" }}>
-              Recordings · {tracks.length}
-            </div>
-            {tracks.map(track => (
-              <div key={track.id} style={{ background: "#FDFCFA", border: "1px solid #E8E3D9", borderRadius: 10, padding: "1rem 1.125rem" }}>
-                <div style={{ fontWeight: 600, fontSize: "0.9375rem", color: "#2C2824", marginBottom: "0.25rem" }}>{track.title}</div>
-                {track.description && (
-                  <div style={{ fontSize: "0.8125rem", color: "#9A9590", marginBottom: "0.625rem", lineHeight: 1.5 }}>{track.description}</div>
-                )}
-                {track.recording_url && (
-                  <div style={{ marginBottom: "0.625rem" }}>
-                    <AudioPlayer src={track.recording_url} />
-                  </div>
-                )}
-                <div style={{ fontSize: "0.6875rem", color: "#C0BBC0" }}>{timeAgo(track.created_at)}</div>
-              </div>
-            ))}
           </div>
         )}
 
