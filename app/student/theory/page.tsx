@@ -2062,11 +2062,68 @@ function GuitarChordGame({ onBack }: { onBack: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Game: Rhythm Echo (scrolling timeline — hit the beats!)
+// Game: Rhythm Reading (read notation → clap the rhythm!)
 // ─────────────────────────────────────────────────────────────────────────────
 
-type RhythmTier = "perfect" | "great" | "good" | "ok" | "miss";
+type NoteValue = "whole" | "half" | "dottedHalf" | "quarter" | "dottedQuarter" | "eighth";
+const NOTE_DUR: Record<NoteValue, number> = {
+  whole: 4, half: 2, dottedHalf: 3, quarter: 1, dottedQuarter: 1.5, eighth: 0.5,
+};
 
+interface RhythmEvent {
+  value: NoteValue;
+  beat: number; // position in quarter-note units from start
+}
+
+function buildRP(measures: NoteValue[][]): RhythmEvent[] {
+  const events: RhythmEvent[] = [];
+  let beat = 0;
+  for (const m of measures) {
+    for (const v of m) { events.push({ value: v, beat }); beat += NOTE_DUR[v]; }
+  }
+  return events;
+}
+
+// ── Pattern pools: 3 levels × 4 patterns (2 measures each in 4/4) ──
+
+const RP_LEVELS: { label: string; diff: "easy" | "medium" | "hard"; desc: string; patterns: RhythmEvent[][] }[] = [
+  {
+    label: "Quarters & Halves", diff: "easy", desc: "Simple counting: 1, 2, 3, 4",
+    patterns: [
+      buildRP([["quarter","quarter","quarter","quarter"], ["quarter","quarter","quarter","quarter"]]),
+      buildRP([["half","half"], ["quarter","quarter","quarter","quarter"]]),
+      buildRP([["quarter","quarter","half"], ["half","quarter","quarter"]]),
+      buildRP([["half","quarter","quarter"], ["quarter","quarter","half"]]),
+    ],
+  },
+  {
+    label: "Eighth Notes", diff: "medium", desc: "And-beats: 1 & 2 & 3 & 4 &",
+    patterns: [
+      buildRP([["quarter","quarter","eighth","eighth","quarter"], ["quarter","eighth","eighth","quarter","quarter"]]),
+      buildRP([["eighth","eighth","eighth","eighth","quarter","quarter"], ["quarter","quarter","eighth","eighth","eighth","eighth"]]),
+      buildRP([["quarter","eighth","eighth","quarter","eighth","eighth"], ["eighth","eighth","quarter","eighth","eighth","quarter"]]),
+      buildRP([["eighth","eighth","quarter","quarter","eighth","eighth"], ["quarter","eighth","eighth","eighth","eighth","quarter"]]),
+    ],
+  },
+  {
+    label: "Dotted & Syncopated", diff: "hard", desc: "Dotted quarters and off-beats",
+    patterns: [
+      buildRP([["dottedQuarter","eighth","quarter","quarter"], ["quarter","dottedQuarter","eighth","quarter"]]),
+      buildRP([["eighth","dottedQuarter","eighth","dottedQuarter"], ["eighth","dottedQuarter","eighth","dottedQuarter"]]),
+      buildRP([["dottedQuarter","eighth","eighth","eighth","quarter"], ["eighth","eighth","dottedQuarter","eighth","quarter"]]),
+      buildRP([["half","eighth","eighth","eighth","eighth"], ["dottedQuarter","eighth","half"]]),
+    ],
+  },
+];
+
+const RP_TOTAL_BEATS = 8;  // 2 measures of 4/4
+const RP_COUNTIN = 4;
+const RP_HIT_WINDOW = 200; // ms
+const RP_MISS_DEADLINE = 160;
+
+// ── Scoring ──
+
+type RhythmTier = "perfect" | "great" | "good" | "ok" | "miss";
 const RHYTHM_TIER_DEFS: { name: RhythmTier; maxMs: number; pts: number; color: string; label: string }[] = [
   { name: "perfect", maxMs: 30,  pts: 100, color: "#4ade80", label: "PERFECT" },
   { name: "great",   maxMs: 60,  pts: 75,  color: "#a3e635", label: "GREAT" },
@@ -2080,46 +2137,20 @@ function getRhythmTier(absMs: number): (typeof RHYTHM_TIER_DEFS)[number] {
   return RHYTHM_TIER_DEFS[4];
 }
 
-interface RhythmNote {
-  timeMs: number;
-  tier: RhythmTier | null;
-  devMs: number | null;
+// ── Count label below each note ──
+
+function getCountLabel(beat: number): string {
+  const inMeasure = beat % 4;
+  const wholeBeat = Math.floor(inMeasure);
+  const frac = +(inMeasure - wholeBeat).toFixed(2);
+  if (frac === 0) return String(wholeBeat + 1);
+  if (frac === 0.5) return "&";
+  return "";
 }
 
-interface RhythmPatternDef {
-  id: string;
-  label: string;
-  desc: string;
-  diff: "easy" | "medium" | "hard";
-  getBeats: (measures: number) => number[];
-}
+// ── Audio ──
 
-const RHYTHM_PATTERNS: RhythmPatternDef[] = [
-  {
-    id: "quarters", label: "Steady Quarters", desc: "One tap per beat", diff: "easy",
-    getBeats: (m) => Array.from({ length: m * 4 }, (_, i) => i),
-  },
-  {
-    id: "eighths", label: "Rock Eighths", desc: "Two taps per beat", diff: "medium",
-    getBeats: (m) => Array.from({ length: m * 8 }, (_, i) => i * 0.5),
-  },
-  {
-    id: "syncopated", label: "Syncopated", desc: "Off-beat accents", diff: "hard",
-    getBeats: (m) => {
-      const pat = [0, 0.5, 1, 2.5, 3];
-      return Array.from({ length: m }, (_, mi) => pat.map(b => mi * 4 + b)).flat();
-    },
-  },
-];
-
-const RHYTHM_GAME_MEASURES = 4;
-const RHYTHM_COUNTIN = 4;
-const RHYTHM_LOOK_AHEAD_MS = 2000;
-const RHYTHM_HIT_ZONE_X = 0.18;
-const RHYTHM_HIT_WINDOW_MS = 200;
-const RHYTHM_MISS_DEADLINE_MS = 160;
-
-function rhythmMetroBeep(ctx: AudioContext, time: number, accent: boolean) {
+function rpMetroBeep(ctx: AudioContext, time: number, accent: boolean) {
   const o = ctx.createOscillator();
   const g = ctx.createGain();
   o.type = "triangle"; o.connect(g); g.connect(ctx.destination);
@@ -2129,7 +2160,7 @@ function rhythmMetroBeep(ctx: AudioContext, time: number, accent: boolean) {
   o.start(time); o.stop(time + 0.03);
 }
 
-function rhythmTapSnd(ctx: AudioContext) {
+function rpTapSnd(ctx: AudioContext) {
   const o = ctx.createOscillator();
   const g = ctx.createGain();
   o.connect(g); g.connect(ctx.destination);
@@ -2140,40 +2171,79 @@ function rhythmTapSnd(ctx: AudioContext) {
   o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.12);
 }
 
+// ── Notation drawing helpers ──
+
+const NRX = 5.5, NRY = 4, NTILT = -0.3, STEM = 30, SDX = 4.5;
+
+function drawHead(cx: CanvasRenderingContext2D, x: number, y: number, filled: boolean, c: string) {
+  cx.beginPath();
+  cx.ellipse(x, y, NRX, NRY, NTILT, 0, Math.PI * 2);
+  if (filled) { cx.fillStyle = c; cx.fill(); }
+  else { cx.strokeStyle = c; cx.lineWidth = 1.8; cx.stroke(); }
+}
+
+function drawStemUp(cx: CanvasRenderingContext2D, x: number, y: number, c: string) {
+  cx.beginPath(); cx.moveTo(x + SDX, y - 1); cx.lineTo(x + SDX, y - STEM);
+  cx.strokeStyle = c; cx.lineWidth = 1.5; cx.stroke();
+}
+
+function drawFlag(cx: CanvasRenderingContext2D, x: number, y: number, c: string) {
+  const top = y - STEM;
+  cx.beginPath(); cx.moveTo(x + SDX, top);
+  cx.bezierCurveTo(x + SDX + 10, top + 7, x + SDX + 8, top + 15, x + SDX + 2, top + 17);
+  cx.strokeStyle = c; cx.lineWidth = 1.8; cx.stroke();
+}
+
+function drawBeamLine(cx: CanvasRenderingContext2D, x1: number, x2: number, y: number, c: string) {
+  cx.fillStyle = c;
+  cx.fillRect(x1 + SDX - 0.5, y - STEM, x2 - x1 + 1, 3.5);
+}
+
+function drawDot(cx: CanvasRenderingContext2D, x: number, y: number, c: string) {
+  cx.beginPath(); cx.arc(x + NRX + 4, y - 1.5, 1.8, 0, Math.PI * 2);
+  cx.fillStyle = c; cx.fill();
+}
+
+// ── Main component ──
+
+interface ScoredNote { tier: RhythmTier | null; devMs: number | null }
 type RhythmPhase = "idle" | "countdown" | "playing" | "results";
 
 function RhythmEchoGame({ onBack }: { onBack: () => void }) {
-  const [phase, setPhase]       = useState<RhythmPhase>("idle");
-  const [patIdx, setPatIdx]     = useState(0);
-  const [tempo, setTempo]       = useState(100);
-  const [score, setScore]       = useState(0);
-  const [combo, setCombo]       = useState(0);
-  const [maxCombo, setMaxCombo] = useState(0);
+  const [phase, setPhase]         = useState<RhythmPhase>("idle");
+  const [levelIdx, setLevelIdx]   = useState(0);
+  const [tempo, setTempo]         = useState(100);
+  const [score, setScore]         = useState(0);
+  const [combo, setCombo]         = useState(0);
+  const [maxCombo, setMaxCombo]   = useState(0);
   const [countBeat, setCountBeat] = useState(0);
   const [tierFlash, setTierFlash] = useState<{ label: string; color: string } | null>(null);
-  const [hiScore, setHiScore]   = useState(0);
-  const [isNewHi, setIsNewHi]   = useState(false);
+  const [hiScore, setHiScore]     = useState(0);
+  const [isNewHi, setIsNewHi]     = useState(false);
   const [resultTally, setResultTally] = useState<{ label: string; color: string; count: number }[]>([]);
-  const [tapFlash, setTapFlash] = useState(false);
+  const [tapFlash, setTapFlash]   = useState(false);
 
-  const canvasRef       = useRef<HTMLCanvasElement>(null);
-  const phaseRef        = useRef<RhythmPhase>("idle");
-  const notesRef        = useRef<RhythmNote[]>([]);
-  const scoreRef        = useRef(0);
-  const comboRef        = useRef(0);
-  const maxComboRef     = useRef(0);
-  const t0Ref           = useRef(0);
-  const audioRef        = useRef<AudioContext | null>(null);
-  const rafRef          = useRef(0);
-  const countIvRef      = useRef<ReturnType<typeof setInterval> | null>(null);
-  const patIdxRef       = useRef(0);
-  const tierTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const phaseRef     = useRef<RhythmPhase>("idle");
+  const eventsRef    = useRef<RhythmEvent[]>([]);
+  const scoredRef    = useRef<ScoredNote[]>([]);
+  const scoreRef     = useRef(0);
+  const comboRef     = useRef(0);
+  const maxComboRef  = useRef(0);
+  const t0Ref        = useRef(0);
+  const audioRef     = useRef<AudioContext | null>(null);
+  const rafRef       = useRef(0);
+  const countIvRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const levelIdxRef  = useRef(0);
+  const tierTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tempoRef     = useRef(100);
 
-  useEffect(() => { patIdxRef.current = patIdx; }, [patIdx]);
+  useEffect(() => { levelIdxRef.current = levelIdx; }, [levelIdx]);
+  useEffect(() => { tempoRef.current = tempo; }, [tempo]);
   useEffect(() => {
-    const d = RHYTHM_PATTERNS[patIdx].diff;
+    const d = RP_LEVELS[levelIdx].diff;
     setHiScore(Number(localStorage.getItem(`theory_hi_rhythm_${d}`) ?? 0));
-  }, [patIdx]);
+  }, [levelIdx]);
 
   function getAudio() {
     if (!audioRef.current || audioRef.current.state === "closed")
@@ -2181,10 +2251,9 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
     if (audioRef.current.state === "suspended") void audioRef.current.resume();
     return audioRef.current;
   }
-
   function setP(p: RhythmPhase) { phaseRef.current = p; setPhase(p); }
 
-  // ---------- Canvas draw loop ----------
+  // ── Canvas draw loop ──
   const draw = useCallback(() => {
     const cv = canvasRef.current;
     if (!cv) {
@@ -2194,72 +2263,121 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
     }
     const cx = cv.getContext("2d");
     if (!cx) return;
-
-    const w = cv.clientWidth;
-    const h = cv.clientHeight;
+    const w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) { rafRef.current = requestAnimationFrame(draw); return; }
     if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
 
     const elapsed = performance.now() - t0Ref.current;
-    const hitX = w * RHYTHM_HIT_ZONE_X;
-    const pxMs = (w * (1 - RHYTHM_HIT_ZONE_X)) / RHYTHM_LOOK_AHEAD_MS;
-    const midY = h / 2;
+    const beatMs = 60000 / tempoRef.current;
+    const countInMs = RP_COUNTIN * beatMs;
+    const patternMs = RP_TOTAL_BEATS * beatMs;
+    const patElapsed = elapsed - countInMs;
+
+    const lm = 40, rm = 12;
+    const sw = w - lm - rm;
+    const sy = h * 0.42;
 
     cx.clearRect(0, 0, w, h);
 
-    // Track lane
-    cx.fillStyle = "rgba(255,255,255,0.015)";
-    cx.fillRect(0, midY - 22, w, 44);
+    // Staff line
+    cx.beginPath(); cx.moveTo(lm - 4, sy); cx.lineTo(w - rm + 4, sy);
+    cx.strokeStyle = "rgba(255,255,255,0.18)"; cx.lineWidth = 1; cx.stroke();
 
-    // Hit zone band + line
-    cx.fillStyle = "rgba(168,85,247,0.1)";
-    cx.fillRect(hitX - 14, 0, 28, h);
-    cx.beginPath(); cx.moveTo(hitX, 4); cx.lineTo(hitX, h - 4);
-    cx.strokeStyle = "rgba(168,85,247,0.55)"; cx.lineWidth = 2; cx.stroke();
+    // Time signature
+    cx.fillStyle = "rgba(255,255,255,0.45)";
+    cx.font = "bold 15px Inter, sans-serif"; cx.textAlign = "center";
+    cx.fillText("4", 18, sy - 5); cx.fillText("4", 18, sy + 14);
 
-    // Draw notes
-    const notes = notesRef.current;
-    for (const n of notes) {
-      const x = hitX + (n.timeMs - elapsed) * pxMs;
-      if (x < -36 || x > w + 36) continue;
+    // Bar line between measures
+    const barX = lm + (4 / RP_TOTAL_BEATS) * sw;
+    cx.beginPath(); cx.moveTo(barX, sy - 22); cx.lineTo(barX, sy + 22);
+    cx.strokeStyle = "rgba(255,255,255,0.12)"; cx.lineWidth = 1; cx.stroke();
 
-      const tier = n.tier;
-      const td = tier ? RHYTHM_TIER_DEFS.find(t => t.name === tier)! : null;
-      const color = td ? td.color : "rgba(255,255,255,0.85)";
-      const r = tier === "perfect" ? 14 : tier === "great" ? 13 : 12;
+    // Double bar at end
+    cx.beginPath(); cx.moveTo(w - rm, sy - 22); cx.lineTo(w - rm, sy + 22);
+    cx.strokeStyle = "rgba(255,255,255,0.15)"; cx.lineWidth = 2; cx.stroke();
+    cx.beginPath(); cx.moveTo(w - rm - 5, sy - 22); cx.lineTo(w - rm - 5, sy + 22);
+    cx.strokeStyle = "rgba(255,255,255,0.1)"; cx.lineWidth = 1; cx.stroke();
 
-      cx.beginPath();
-      cx.arc(x, midY, r, 0, Math.PI * 2);
-      cx.fillStyle = color;
-      cx.fill();
+    const events = eventsRef.current;
+    const scored = scoredRef.current;
+    const noteXs = events.map(e => lm + (e.beat / RP_TOTAL_BEATS) * sw);
 
-      if (!tier) {
-        cx.beginPath(); cx.arc(x, midY, r, 0, Math.PI * 2);
-        cx.strokeStyle = "rgba(255,255,255,0.2)"; cx.lineWidth = 1.5; cx.stroke();
-      }
-
-      if (tier === "perfect" || tier === "great") {
-        cx.save(); cx.globalAlpha = 0.3;
-        cx.beginPath(); cx.arc(x, midY, r + 7, 0, Math.PI * 2);
-        cx.strokeStyle = color; cx.lineWidth = 2; cx.stroke();
-        cx.restore();
+    // Beam pairs: consecutive eighths on the same beat
+    const beamPartner = new Map<number, number>();
+    for (let i = 0; i < events.length - 1; i++) {
+      if (events[i].value === "eighth" && events[i + 1].value === "eighth"
+          && Math.floor(events[i].beat) === Math.floor(events[i + 1].beat)
+          && !beamPartner.has(i)) {
+        beamPartner.set(i, i + 1);
+        beamPartner.set(i + 1, i);
       }
     }
 
-    // Auto-miss notes past the deadline
+    // Draw each note
+    for (let i = 0; i < events.length; i++) {
+      const e = events[i], x = noteXs[i], s = scored[i];
+      const td = s?.tier ? RHYTHM_TIER_DEFS.find(t => t.name === s.tier)! : null;
+      const col = td ? td.color : "rgba(255,255,255,0.85)";
+      const filled = e.value !== "half" && e.value !== "dottedHalf" && e.value !== "whole";
+      const hasStem = e.value !== "whole";
+
+      drawHead(cx, x, sy, filled, col);
+      if (hasStem) drawStemUp(cx, x, sy, col);
+      if (e.value === "eighth" && !beamPartner.has(i)) drawFlag(cx, x, sy, col);
+      if (e.value === "dottedQuarter" || e.value === "dottedHalf") drawDot(cx, x, sy, col);
+
+      // Count label
+      const cl = getCountLabel(e.beat);
+      if (cl) {
+        cx.fillStyle = td ? td.color : "rgba(255,255,255,0.22)";
+        cx.font = "500 10px Inter, sans-serif"; cx.textAlign = "center";
+        cx.fillText(cl, x, sy + 30);
+      }
+    }
+
+    // Draw beams
+    const drawnB = new Set<string>();
+    for (const [a, b] of beamPartner) {
+      const key = Math.min(a, b) + "-" + Math.max(a, b);
+      if (drawnB.has(key)) continue;
+      drawnB.add(key);
+      const s = scored[a];
+      const td = s?.tier ? RHYTHM_TIER_DEFS.find(t => t.name === s.tier)! : null;
+      const col = td ? td.color : "rgba(255,255,255,0.85)";
+      drawBeamLine(cx, noteXs[a], noteXs[b], sy, col);
+    }
+
+    // Playhead
+    if (patElapsed >= -200 && patElapsed <= patternMs + 200) {
+      const prog = Math.max(0, Math.min(1, patElapsed / patternMs));
+      const px = lm + prog * sw;
+
+      const grad = cx.createLinearGradient(px - 12, 0, px + 12, 0);
+      grad.addColorStop(0, "rgba(168,85,247,0)");
+      grad.addColorStop(0.5, "rgba(168,85,247,0.12)");
+      grad.addColorStop(1, "rgba(168,85,247,0)");
+      cx.fillStyle = grad;
+      cx.fillRect(px - 12, sy - 38, 24, 76);
+
+      cx.beginPath(); cx.moveTo(px, sy - 35); cx.lineTo(px, sy + 25);
+      cx.strokeStyle = "rgba(168,85,247,0.65)"; cx.lineWidth = 2; cx.stroke();
+    }
+
+    // Auto-miss
     let comboChanged = false;
-    for (const n of notes) {
-      if (!n.tier && elapsed > n.timeMs + RHYTHM_MISS_DEADLINE_MS) {
-        n.tier = "miss"; n.devMs = null;
+    for (let i = 0; i < events.length; i++) {
+      const noteMs = countInMs + events[i].beat * beatMs;
+      if (!scored[i].tier && elapsed > noteMs + RP_MISS_DEADLINE) {
+        scored[i].tier = "miss"; scored[i].devMs = null;
         comboRef.current = 0; comboChanged = true;
       }
     }
     if (comboChanged) setCombo(0);
 
-    // Check if game is over
-    const allDone = notes.length > 0 && notes.every(n => n.tier !== null);
-    const lastTime = notes.length > 0 ? notes[notes.length - 1].timeMs : 0;
-    if (allDone && elapsed > lastTime + 500) { doFinish(); return; }
+    // Game end
+    const allDone = events.length > 0 && scored.every(s => s.tier !== null);
+    if (allDone && patElapsed > patternMs + 300) { doFinish(); return; }
 
     if (phaseRef.current === "countdown" || phaseRef.current === "playing")
       rafRef.current = requestAnimationFrame(draw);
@@ -2269,15 +2387,14 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
   function doFinish() {
     if (phaseRef.current === "results") return;
     setP("results");
-
     const tally = RHYTHM_TIER_DEFS.map(t => ({
       label: t.label, color: t.color,
-      count: notesRef.current.filter(n => n.tier === t.name).length,
+      count: scoredRef.current.filter(s => s.tier === t.name).length,
     }));
     setResultTally(tally);
     setMaxCombo(maxComboRef.current);
 
-    const diff = RHYTHM_PATTERNS[patIdxRef.current].diff;
+    const diff = RP_LEVELS[levelIdxRef.current].diff;
     const stored = Number(localStorage.getItem(`theory_hi_rhythm_${diff}`) ?? 0);
     if (scoreRef.current > stored) {
       localStorage.setItem(`theory_hi_rhythm_${diff}`, String(scoreRef.current));
@@ -2286,49 +2403,40 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
   }
 
   function startGame() {
-    // Cancel any lingering timers
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (countIvRef.current) clearInterval(countIvRef.current);
 
-    const pat = RHYTHM_PATTERNS[patIdx];
-    const beatMs = (60 / tempo) * 1000;
-    const countInMs = RHYTHM_COUNTIN * beatMs;
-    const beats = pat.getBeats(RHYTHM_GAME_MEASURES);
-    const notes: RhythmNote[] = beats.map(b => ({
-      timeMs: countInMs + b * beatMs, tier: null, devMs: null,
-    }));
+    const level = RP_LEVELS[levelIdx];
+    const pattern = level.patterns[Math.floor(Math.random() * level.patterns.length)];
+    const beatMs = 60000 / tempo;
 
-    notesRef.current = notes;
+    eventsRef.current = pattern;
+    scoredRef.current = pattern.map(() => ({ tier: null, devMs: null }));
     scoreRef.current = 0; comboRef.current = 0; maxComboRef.current = 0;
     setScore(0); setCombo(0); setMaxCombo(0); setTierFlash(null); setIsNewHi(false);
 
-    // Game clock starts now — note times include count-in offset
     t0Ref.current = performance.now();
     setP("countdown"); setCountBeat(0);
 
-    // Schedule all audio via AudioContext
     const ctx = getAudio();
     const audioNow = ctx.currentTime + 0.05;
+    const beatSec = beatMs / 1000;
 
-    for (let i = 0; i < RHYTHM_COUNTIN; i++)
-      rhythmMetroBeep(ctx, audioNow + i * (beatMs / 1000), i === 0);
+    // Count-in beeps
+    for (let i = 0; i < RP_COUNTIN; i++)
+      rpMetroBeep(ctx, audioNow + i * beatSec, i === 0);
 
-    const lastBeatQ = Math.ceil(beats[beats.length - 1]) + 1;
-    for (let i = 0; i <= lastBeatQ; i++)
-      rhythmMetroBeep(ctx, audioNow + (RHYTHM_COUNTIN + i) * (beatMs / 1000), i % 4 === 0);
+    // Metronome during pattern
+    for (let i = 0; i <= RP_TOTAL_BEATS; i++)
+      rpMetroBeep(ctx, audioNow + (RP_COUNTIN + i) * beatSec, i % 4 === 0);
 
-    // Start drawing immediately (notes approach during countdown)
     rafRef.current = requestAnimationFrame(draw);
 
-    // Visual countdown ticks
     let beat = 0;
     const iv = setInterval(() => {
       beat++;
       setCountBeat(beat);
-      if (beat >= RHYTHM_COUNTIN) {
-        clearInterval(iv);
-        setP("playing");
-      }
+      if (beat >= RP_COUNTIN) { clearInterval(iv); setP("playing"); }
     }, beatMs);
     countIvRef.current = iv;
   }
@@ -2336,65 +2444,58 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
   function handleTap() {
     if (phaseRef.current !== "playing") return;
     const elapsed = performance.now() - t0Ref.current;
+    const beatMs = 60000 / tempoRef.current;
+    const countInMs = RP_COUNTIN * beatMs;
 
-    rhythmTapSnd(getAudio());
-    setTapFlash(true);
-    setTimeout(() => setTapFlash(false), 70);
+    rpTapSnd(getAudio());
+    setTapFlash(true); setTimeout(() => setTapFlash(false), 70);
 
-    // Match nearest unscored note within hit window
     let bestIdx = -1, bestAbs = Infinity;
-    for (let i = 0; i < notesRef.current.length; i++) {
-      const n = notesRef.current[i];
-      if (n.tier !== null) continue;
-      const abs = Math.abs(elapsed - n.timeMs);
-      if (abs < bestAbs && abs <= RHYTHM_HIT_WINDOW_MS) {
-        bestAbs = abs; bestIdx = i;
-      }
+    for (let i = 0; i < eventsRef.current.length; i++) {
+      if (scoredRef.current[i].tier !== null) continue;
+      const noteMs = countInMs + eventsRef.current[i].beat * beatMs;
+      const abs = Math.abs(elapsed - noteMs);
+      if (abs < bestAbs && abs <= RP_HIT_WINDOW) { bestAbs = abs; bestIdx = i; }
     }
     if (bestIdx < 0) return;
 
-    const n = notesRef.current[bestIdx];
-    const dev = elapsed - n.timeMs;
+    const noteMs = countInMs + eventsRef.current[bestIdx].beat * beatMs;
+    const dev = elapsed - noteMs;
     const t = getRhythmTier(Math.abs(dev));
-    n.tier = t.name; n.devMs = dev;
+    scoredRef.current[bestIdx] = { tier: t.name, devMs: dev };
 
     if (t.name !== "miss") {
       const mult = Math.min(Math.floor(comboRef.current / 5) + 1, 4);
       scoreRef.current += t.pts * mult;
       comboRef.current++;
       if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
-    } else {
-      comboRef.current = 0;
-    }
-    setScore(scoreRef.current);
-    setCombo(comboRef.current);
+    } else { comboRef.current = 0; }
+    setScore(scoreRef.current); setCombo(comboRef.current);
 
     setTierFlash({ label: t.label, color: t.color });
     if (tierTimerRef.current) clearTimeout(tierTimerRef.current);
     tierTimerRef.current = setTimeout(() => setTierFlash(null), 500);
   }
 
-  // Cleanup on unmount
   useEffect(() => () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (countIvRef.current) clearInterval(countIvRef.current);
     if (tierTimerRef.current) clearTimeout(tierTimerRef.current);
   }, []);
 
-  const pat = RHYTHM_PATTERNS[patIdx];
-  const noteCount = pat.getBeats(RHYTHM_GAME_MEASURES).length;
+  const level = RP_LEVELS[levelIdx];
 
   return (
     <div style={{ minHeight: "100%", background: "linear-gradient(160deg, #2d1b69 0%, #11145c 60%, #0a1a3a 100%)", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
-      <TopBar onBack={onBack} label="🥁 Rhythm Echo" />
+      <TopBar onBack={onBack} label="🥁 Rhythm Reading" />
 
       {/* ── Idle ── */}
       {phase === "idle" && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem" }}>
           <div style={{ maxWidth: 380, width: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>🥁</div>
-            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#FDFCFA", marginBottom: "0.25rem" }}>Rhythm Echo</div>
-            <div style={{ fontSize: "0.9375rem", color: "rgba(255,255,255,0.5)", marginBottom: "1.5rem" }}>Hit the beats as they scroll by!</div>
+            <div style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>🎼</div>
+            <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#FDFCFA", marginBottom: "0.25rem" }}>Rhythm Reading</div>
+            <div style={{ fontSize: "0.9375rem", color: "rgba(255,255,255,0.5)", marginBottom: "1.5rem" }}>Read the notation, clap the rhythm!</div>
 
             {hiScore > 0 && (
               <div style={{ background: "rgba(255,255,255,0.07)", borderRadius: 12, padding: "0.75rem 1.25rem", marginBottom: "1.25rem", display: "inline-block" }}>
@@ -2403,22 +2504,22 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
               </div>
             )}
 
-            {/* Pattern selector */}
+            {/* Level selector */}
             <div style={{ marginBottom: "1.25rem" }}>
-              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.625rem" }}>Pattern:</div>
+              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.625rem" }}>Level:</div>
               <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
-                {RHYTHM_PATTERNS.map((p, i) => (
-                  <button key={p.id} onClick={() => setPatIdx(i)} style={{
+                {RP_LEVELS.map((lv, i) => (
+                  <button key={lv.diff} onClick={() => setLevelIdx(i)} style={{
                     padding: "0.625rem 1rem", borderRadius: 12, cursor: "pointer",
-                    background: i === patIdx ? "#a855f7" : "rgba(255,255,255,0.08)",
-                    border: `2px solid ${i === patIdx ? "#c084fc" : "rgba(255,255,255,0.12)"}`,
+                    background: i === levelIdx ? "#a855f7" : "rgba(255,255,255,0.08)",
+                    border: `2px solid ${i === levelIdx ? "#c084fc" : "rgba(255,255,255,0.12)"}`,
                     color: "#fff", fontSize: "0.75rem", fontFamily: "Inter, sans-serif",
-                    fontWeight: i === patIdx ? 700 : 400, transition: "all 0.15s",
-                    boxShadow: i === patIdx ? "0 0 16px rgba(168,85,247,0.5)" : "none",
+                    fontWeight: i === levelIdx ? 700 : 400, transition: "all 0.15s",
+                    boxShadow: i === levelIdx ? "0 0 16px rgba(168,85,247,0.5)" : "none",
                     textAlign: "center",
                   }}>
-                    <div style={{ fontWeight: 600 }}>{p.label}</div>
-                    <div style={{ fontSize: "0.625rem", opacity: 0.6, marginTop: 2 }}>{p.desc}</div>
+                    <div style={{ fontWeight: 600 }}>{lv.label}</div>
+                    <div style={{ fontSize: "0.625rem", opacity: 0.6, marginTop: 2 }}>{lv.desc}</div>
                   </button>
                 ))}
               </div>
@@ -2438,11 +2539,6 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
               </div>
             </div>
 
-            {/* Note count preview */}
-            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", marginBottom: "1rem" }}>
-              {noteCount} beats · {RHYTHM_GAME_MEASURES} measures
-            </div>
-
             <button onClick={startGame}
               style={{ width: "100%", padding: "1.1rem", borderRadius: 16, border: "none", background: "linear-gradient(135deg, #a855f7, #6366f1)", color: "#fff", fontSize: "1.2rem", fontFamily: "Inter, sans-serif", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 24px rgba(168,85,247,0.5)", letterSpacing: "0.02em" }}>
               Let&apos;s Go!
@@ -2451,13 +2547,13 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {/* ── Countdown + Playing (shared layout with canvas) ── */}
+      {/* ── Countdown + Playing ── */}
       {(phase === "countdown" || phase === "playing") && (
         <div
           onPointerDown={handleTap}
           style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", cursor: "pointer", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}
         >
-          {/* Score + combo overlay */}
+          {/* Score + combo */}
           <div style={{ position: "absolute", top: 12, right: 16, textAlign: "right", zIndex: 2, pointerEvents: "none" }}>
             <div style={{ fontSize: "2rem", fontWeight: 900, color: "#FDFCFA", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{score}</div>
             {combo >= 3 && (
@@ -2481,17 +2577,17 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 3, pointerEvents: "none", background: "rgba(0,0,0,0.3)" }}>
               <div style={{ fontSize: "0.9375rem", color: "rgba(255,255,255,0.5)", fontWeight: 600, marginBottom: "0.5rem" }}>Get ready...</div>
               <div style={{ fontSize: "7rem", fontWeight: 900, color: "#FDFCFA", lineHeight: 1, textShadow: "0 0 40px rgba(168,85,247,0.6)" }}>
-                {RHYTHM_COUNTIN - countBeat}
+                {RP_COUNTIN - countBeat}
               </div>
-              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.3)", marginTop: "0.75rem" }}>{pat.label} · {tempo} BPM</div>
+              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.3)", marginTop: "0.75rem" }}>{level.label} · {tempo} BPM</div>
             </div>
           )}
 
-          {/* Canvas timeline */}
+          {/* Canvas — notation staff */}
           <div style={{ flex: 1, display: "flex", alignItems: "center", padding: "1rem" }}>
             <canvas ref={canvasRef}
               style={{
-                width: "100%", height: 120, borderRadius: 12,
+                width: "100%", height: 180, borderRadius: 12,
                 background: "rgba(0,0,0,0.3)",
                 border: tapFlash ? "2px solid rgba(168,85,247,0.6)" : "2px solid rgba(255,255,255,0.04)",
                 transition: "border-color 0.06s",
@@ -2502,7 +2598,7 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
           {/* Tap hint */}
           {phase === "playing" && (
             <div style={{ textAlign: "center", paddingBottom: "2rem", pointerEvents: "none" }}>
-              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.2)" }}>Tap anywhere to the beat</div>
+              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.2)" }}>Tap anywhere to clap the rhythm</div>
             </div>
           )}
         </div>
@@ -2515,13 +2611,13 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
 
           <div style={{ fontSize: "4rem", fontWeight: 900, color: "#FDFCFA", lineHeight: 1 }}>{score}</div>
           <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.4)" }}>
-            {pat.label} · {tempo} BPM
+            {level.label} · {tempo} BPM
           </div>
 
-          {/* Tier breakdown bars */}
+          {/* Tier breakdown */}
           <div style={{ width: "100%", maxWidth: 300, display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
             {resultTally.map(t => {
-              const total = notesRef.current.length || 1;
+              const total = eventsRef.current.length || 1;
               const pct = (t.count / total) * 100;
               return (
                 <div key={t.label} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -3167,8 +3263,8 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       desc: "Requirements by level.", badge: null, active: true },
     { view: "menu" as View, icon: "📖", title: "Sight Reading", category: "Piano", logicalGame: "",
       desc: "Name notes left to right.", badge: null, active: false },
-    { view: "rhythmEcho" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm", logicalGame: "",
-      desc: "Hit the beats as they scroll by.", badge: scores.rhythm > 0 ? `🏆 ${scores.rhythm.toLocaleString()}` : null, active: true },
+    { view: "rhythmEcho" as View, icon: "🎼", title: "Rhythm Reading", category: "Rhythm", logicalGame: "",
+      desc: "Read notation, clap the rhythm.", badge: scores.rhythm > 0 ? `🏆 ${scores.rhythm.toLocaleString()}` : null, active: true },
     { view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar", logicalGame: "fretboard",
       desc: "Name the note on the neck.", badge: scoreBadge("fretboard", scores.fretboard), active: true },
     { view: "guitarChord" as View, icon: "🤘", title: "Guitar Chords", category: "Guitar", logicalGame: "guitarChord",
