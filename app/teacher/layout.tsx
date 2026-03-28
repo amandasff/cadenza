@@ -12,6 +12,7 @@ import RecordingIndicator from "../../components/RecordingIndicator";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useI18n } from "../../lib/context/I18nContext";
 import { Camera, Palette } from "lucide-react";
+import LinkedAccountSwitcher from "../../components/LinkedAccountSwitcher";
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
@@ -306,6 +307,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
 
+        {/* Account switcher */}
+        <LinkedAccountSwitcher />
+
         {/* Nav links */}
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, marginTop: "1.5rem", paddingTop: "1.25rem", borderTop: "1px solid var(--border)", overflowY: "auto" }}>
 
@@ -473,6 +477,11 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 </Link>
               );
             })}
+
+            {/* Account switcher */}
+            <div style={{ padding: "0.75rem 1.5rem", borderTop: "1px solid var(--border)" }}>
+              <LinkedAccountSwitcher />
+            </div>
 
           </div>
         </div>
