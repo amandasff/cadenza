@@ -2062,283 +2062,327 @@ function GuitarChordGame({ onBack }: { onBack: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Game: Rhythm Echo (hear + tap back)
+// Game: Rhythm Echo (scrolling timeline — hit the beats!)
 // ─────────────────────────────────────────────────────────────────────────────
-const RHYTHM_BPM  = 80;
-const BEAT_MS     = (60 / RHYTHM_BPM) * 1000;   // 750 ms per quarter note
-const SIXTEENTH_MS = BEAT_MS / 4;                 // 187.5 ms per 16th note
-const COUNT_IN    = 2;                             // quarter-note count-in beats
 
-type RhythmPattern = { label: string; beats: number[] }; // beats: 16th-note onset positions
+type RhythmTier = "perfect" | "great" | "good" | "ok" | "miss";
 
-const RHYTHMS_LEVEL1: RhythmPattern[] = [
-  { label: "♩ ♩ ♩ ♩",       beats: [0, 4, 8, 12] },
-  { label: "♩♩ ♩ ♩",        beats: [0, 2, 4, 8] },
-  { label: "♩ ♩ ♩♩",        beats: [0, 4, 8, 10] },
-  { label: "♩♩♩ ♩",         beats: [0, 2, 4, 8] },
-];
-const RHYTHMS_LEVEL2: RhythmPattern[] = [
-  ...RHYTHMS_LEVEL1,
-  { label: "♩. ♪ ♩♩",       beats: [0, 6, 8, 12, 14] },
-  { label: "♪♪♩ ♩ ♩",       beats: [0, 2, 4, 8, 12] },
-  { label: "♩ ♩♪♪ ♩",       beats: [0, 4, 8, 10, 12] },
-  { label: "♩♩♩♩♩♩♩♩",      beats: [0,2,4,6,8,10,12,14] },
-];
-const RHYTHMS_LEVEL3: RhythmPattern[] = [
-  ...RHYTHMS_LEVEL2,
-  { label: "♩. ♪♩. ♪",      beats: [0, 6, 8, 14] },
-  { label: "♪♩♪♩♪♩♪",       beats: [0, 2, 4, 6, 8, 10, 12] },
-  { label: "♩♩. ♪♩♪♪",      beats: [0, 4, 6, 8, 12, 14] },
-  { label: "♩♪♪♩. ♪♩",      beats: [0, 4, 6, 8, 12, 14] },
+const RHYTHM_TIER_DEFS: { name: RhythmTier; maxMs: number; pts: number; color: string; label: string }[] = [
+  { name: "perfect", maxMs: 30,  pts: 100, color: "#4ade80", label: "PERFECT" },
+  { name: "great",   maxMs: 60,  pts: 75,  color: "#a3e635", label: "GREAT" },
+  { name: "good",    maxMs: 100, pts: 50,  color: "#fbbf24", label: "GOOD" },
+  { name: "ok",      maxMs: 150, pts: 25,  color: "#f97316", label: "OK" },
+  { name: "miss",    maxMs: 9999, pts: 0,  color: "#6b7280", label: "MISS" },
 ];
 
-type RhythmLevel = "level1" | "level2" | "level3";
-const RHYTHM_POOLS: Record<RhythmLevel, RhythmPattern[]> = {
-  level1: RHYTHMS_LEVEL1, level2: RHYTHMS_LEVEL2, level3: RHYTHMS_LEVEL3,
-};
-const RHYTHM_LEVEL_LABELS: Record<RhythmLevel, string> = {
-  level1: "Easy", level2: "Medium", level3: "Hard",
-};
-
-// Metronome tick: ultra-short triangle wave — sounds like a real woodblock tick
-function playTick(ctx: AudioContext, time: number, accent: boolean) {
-  const osc = ctx.createOscillator();
-  const g   = ctx.createGain();
-  osc.type  = "triangle";
-  osc.connect(g); g.connect(ctx.destination);
-  osc.frequency.value = accent ? 1800 : 1100;
-  g.gain.setValueAtTime(accent ? 0.35 : 0.18, time);
-  g.gain.exponentialRampToValueAtTime(0.001, time + 0.025); // very short — just a tick
-  osc.start(time); osc.stop(time + 0.03);
+function getRhythmTier(absMs: number): (typeof RHYTHM_TIER_DEFS)[number] {
+  for (const t of RHYTHM_TIER_DEFS) if (absMs <= t.maxMs) return t;
+  return RHYTHM_TIER_DEFS[4];
 }
 
-// Pattern beat: warm round "boing" — sine, musical pitch, longer decay
-// Completely different character from the metronome tick
-function playBoing(ctx: AudioContext, time: number) {
-  const osc = ctx.createOscillator();
-  const g   = ctx.createGain();
-  osc.type  = "sine";
-  osc.connect(g); g.connect(ctx.destination);
-  osc.frequency.setValueAtTime(523, time);           // C5
-  osc.frequency.exponentialRampToValueAtTime(392, time + 0.18); // slide to G4 — warm boing
-  g.gain.setValueAtTime(0, time);
-  g.gain.linearRampToValueAtTime(0.55, time + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
-  osc.start(time); osc.stop(time + 0.3);
+interface RhythmNote {
+  timeMs: number;
+  tier: RhythmTier | null;
+  devMs: number | null;
 }
 
-// Play count-in + pattern + metronome pulse during pattern, return timing info
-function playRhythmFull(beats: number[], ctx: AudioContext): { patternStartMs: number; totalDurMs: number } {
-  const s16   = SIXTEENTH_MS / 1000;
-  const sBeat = BEAT_MS / 1000;
-  const now   = ctx.currentTime + 0.05;
-  const patternStartSec = now + COUNT_IN * sBeat;
-
-  // Count-in ticks
-  for (let i = 0; i < COUNT_IN; i++) {
-    playTick(ctx, now + i * sBeat, i === 0);
-  }
-
-  // Pattern notes — warm boings, very distinct from ticks
-  beats.forEach(b => {
-    playBoing(ctx, patternStartSec + b * s16);
-  });
-
-  // Metronome ticks under pattern
-  const maxBeat16 = Math.max(...beats);
-  const numQBeats = Math.ceil((maxBeat16 + 4) / 4) + 1;
-  for (let q = 0; q < numQBeats; q++) {
-    playTick(ctx, patternStartSec + q * sBeat, q % 4 === 0);
-  }
-
-  const patternStartMs = (patternStartSec - ctx.currentTime) * 1000 + Date.now();
-  const totalDurMs     = COUNT_IN * BEAT_MS + (maxBeat16 + 4) * SIXTEENTH_MS + 400;
-  return { patternStartMs, totalDurMs };
+interface RhythmPatternDef {
+  id: string;
+  label: string;
+  desc: string;
+  diff: "easy" | "medium" | "hard";
+  getBeats: (measures: number) => number[];
 }
 
-// Start a repeating tick metronome for durationMs
-function startMetronomeAudio(ctx: AudioContext, durationMs: number) {
-  const sBeat = BEAT_MS / 1000;
-  const now   = ctx.currentTime + 0.02;
-  const beats = Math.ceil(durationMs / BEAT_MS) + 2;
-  for (let i = 0; i < beats; i++) {
-    playTick(ctx, now + i * sBeat, i % 4 === 0);
-  }
+const RHYTHM_PATTERNS: RhythmPatternDef[] = [
+  {
+    id: "quarters", label: "Steady Quarters", desc: "One tap per beat", diff: "easy",
+    getBeats: (m) => Array.from({ length: m * 4 }, (_, i) => i),
+  },
+  {
+    id: "eighths", label: "Rock Eighths", desc: "Two taps per beat", diff: "medium",
+    getBeats: (m) => Array.from({ length: m * 8 }, (_, i) => i * 0.5),
+  },
+  {
+    id: "syncopated", label: "Syncopated", desc: "Off-beat accents", diff: "hard",
+    getBeats: (m) => {
+      const pat = [0, 0.5, 1, 2.5, 3];
+      return Array.from({ length: m }, (_, mi) => pat.map(b => mi * 4 + b)).flat();
+    },
+  },
+];
+
+const RHYTHM_GAME_MEASURES = 4;
+const RHYTHM_COUNTIN = 4;
+const RHYTHM_LOOK_AHEAD_MS = 2000;
+const RHYTHM_HIT_ZONE_X = 0.18;
+const RHYTHM_HIT_WINDOW_MS = 200;
+const RHYTHM_MISS_DEADLINE_MS = 160;
+
+function rhythmMetroBeep(ctx: AudioContext, time: number, accent: boolean) {
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "triangle"; o.connect(g); g.connect(ctx.destination);
+  o.frequency.value = accent ? 1800 : 1100;
+  g.gain.setValueAtTime(accent ? 0.28 : 0.14, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.025);
+  o.start(time); o.stop(time + 0.03);
 }
 
-// Relative rhythm scoring: compare inter-tap intervals to expected intervals
-// This rewards rhythmic accuracy regardless of small global tempo drift
-function scoreRhythmRelative(expectedBeats: number[], tapMs: number[]): number {
-  const n = expectedBeats.length;
-  if (tapMs.length === 0) return 0;
-
-  // Count score: penalise wrong number of taps (each wrong tap = -0.4 / n)
-  const countDiff = Math.abs(tapMs.length - n);
-  const countScore = Math.max(0, 1 - (countDiff / n) * 0.6);
-
-  const usable = Math.min(tapMs.length, n);
-  if (usable < 2) return countScore * (usable / n);
-
-  // Interval score: compare consecutive gaps
-  const expIntervals = expectedBeats.slice(1, usable).map((b, i) => (b - expectedBeats[i]) * SIXTEENTH_MS);
-  const tapIntervals = tapMs.slice(1, usable).map((t, i) => t - tapMs[i]);
-
-  let intScore = 0;
-  for (let i = 0; i < expIntervals.length; i++) {
-    const window = Math.max(expIntervals[i] * 0.3, 130); // ±30% or ±130ms
-    intScore += Math.max(0, 1 - Math.abs(tapIntervals[i] - expIntervals[i]) / window);
-  }
-  intScore /= expIntervals.length;
-
-  // 65% interval accuracy + 35% count accuracy
-  return intScore * 0.65 + countScore * 0.35;
+function rhythmTapSnd(ctx: AudioContext) {
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.frequency.setValueAtTime(200, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.06);
+  g.gain.setValueAtTime(0.45, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+  o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.12);
 }
 
-type RhythmPhase = "idle" | "listen" | "tapping" | "result";
+type RhythmPhase = "idle" | "countdown" | "playing" | "results";
 
 function RhythmEchoGame({ onBack }: { onBack: () => void }) {
-  const [level,     setLevel]  = useState<RhythmLevel>("level1");
-  const [pattern,   setPat]    = useState<RhythmPattern | null>(null);
-  const [phase,     setPhase]  = useState<RhythmPhase>("idle");
-  const [score,     setScore]  = useState(0);
-  const [round,     setRound]  = useState(0);
-  const [lastAcc,   setLastAcc]= useState<number | null>(null);
-  const [hiScore,   setHi]     = useState(0);
-  const [newRecord, setNR]     = useState(false);
-  const [metBeat,   setMetBeat]= useState(false);
-  const [tapCount,  setTapCount]= useState(0);
-  const [tapFlash,  setTapFlash]= useState(false);
+  const [phase, setPhase]       = useState<RhythmPhase>("idle");
+  const [patIdx, setPatIdx]     = useState(0);
+  const [tempo, setTempo]       = useState(100);
+  const [score, setScore]       = useState(0);
+  const [combo, setCombo]       = useState(0);
+  const [maxCombo, setMaxCombo] = useState(0);
+  const [countBeat, setCountBeat] = useState(0);
+  const [tierFlash, setTierFlash] = useState<{ label: string; color: string } | null>(null);
+  const [hiScore, setHiScore]   = useState(0);
+  const [isNewHi, setIsNewHi]   = useState(false);
+  const [resultTally, setResultTally] = useState<{ label: string; color: string; count: number }[]>([]);
+  const [tapFlash, setTapFlash] = useState(false);
 
-  // Refs that closures can safely read without going stale
-  const phaseRef       = useRef<RhythmPhase>("idle");
-  const tapsRef        = useRef<number[]>([]);
-  const patRef         = useRef<RhythmPattern | null>(null);
-  const scoreRef       = useRef(0);
-  const roundRef       = useRef(0);
-  const audioCtxRef    = useRef<AudioContext | null>(null);
-  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const metTimerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const canvasRef       = useRef<HTMLCanvasElement>(null);
+  const phaseRef        = useRef<RhythmPhase>("idle");
+  const notesRef        = useRef<RhythmNote[]>([]);
+  const scoreRef        = useRef(0);
+  const comboRef        = useRef(0);
+  const maxComboRef     = useRef(0);
+  const t0Ref           = useRef(0);
+  const audioRef        = useRef<AudioContext | null>(null);
+  const rafRef          = useRef(0);
+  const countIvRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const patIdxRef       = useRef(0);
+  const tierTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { patIdxRef.current = patIdx; }, [patIdx]);
+  useEffect(() => {
+    const d = RHYTHM_PATTERNS[patIdx].diff;
+    setHiScore(Number(localStorage.getItem(`theory_hi_rhythm_${d}`) ?? 0));
+  }, [patIdx]);
+
+  function getAudio() {
+    if (!audioRef.current || audioRef.current.state === "closed")
+      audioRef.current = new AudioContext();
+    if (audioRef.current.state === "suspended") void audioRef.current.resume();
+    return audioRef.current;
+  }
 
   function setP(p: RhythmPhase) { phaseRef.current = p; setPhase(p); }
 
-  useEffect(() => {
-    setHi(Number(localStorage.getItem(`theory_hi_rhythm_${level}`) ?? 0));
-  }, [level]);
-
-  // Metronome visual pulse — starts/stops with phase
-  useEffect(() => {
-    if (phase === "listen" || phase === "tapping") {
-      // Sync pulse to BEAT_MS
-      const id = setInterval(() => setMetBeat(v => !v), BEAT_MS);
-      metTimerRef.current = id;
-      return () => { clearInterval(id); metTimerRef.current = null; };
+  // ---------- Canvas draw loop ----------
+  const draw = useCallback(() => {
+    const cv = canvasRef.current;
+    if (!cv) {
+      if (phaseRef.current === "countdown" || phaseRef.current === "playing")
+        rafRef.current = requestAnimationFrame(draw);
+      return;
     }
-  }, [phase]);
+    const cx = cv.getContext("2d");
+    if (!cx) return;
 
-  function getCtx() {
-    if (!audioCtxRef.current || audioCtxRef.current.state === "closed")
-      audioCtxRef.current = new AudioContext();
-    if (audioCtxRef.current.state === "suspended") void audioCtxRef.current.resume();
-    return audioCtxRef.current;
-  }
+    const w = cv.clientWidth;
+    const h = cv.clientHeight;
+    if (!w || !h) { rafRef.current = requestAnimationFrame(draw); return; }
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
 
-  function startRound() {
-    // Clear any previous auto-finish timer
-    if (finishTimerRef.current) { clearTimeout(finishTimerRef.current); finishTimerRef.current = null; }
-    const pool = RHYTHM_POOLS[level];
-    const p    = pool[Math.floor(Math.random() * pool.length)];
-    setPat(p); patRef.current = p;
-    tapsRef.current = [];
-    setTapCount(0); setLastAcc(null);
-    setP("listen");
-    const { totalDurMs } = playRhythmFull(p.beats, getCtx());
-    // After listening, go straight to tapping — no extra "ready" screen
-    finishTimerRef.current = setTimeout(() => {
-      setP("tapping");
-      tapsRef.current = [];
-      setTapCount(0);
-      // Audio metronome while tapping — distinct from pattern sound
-      const maxBeatMs = Math.max(...p.beats) * SIXTEENTH_MS;
-      startMetronomeAudio(getCtx(), maxBeatMs + 3500);
-      // Hard deadline: auto-score after window closes
-      finishTimerRef.current = setTimeout(doFinish, maxBeatMs + 3000);
-    }, totalDurMs);
-  }
+    const elapsed = performance.now() - t0Ref.current;
+    const hitX = w * RHYTHM_HIT_ZONE_X;
+    const pxMs = (w * (1 - RHYTHM_HIT_ZONE_X)) / RHYTHM_LOOK_AHEAD_MS;
+    const midY = h / 2;
 
-  function replayPattern() {
-    if (!patRef.current) return;
-    playRhythmFull(patRef.current.beats, getCtx());
-  }
+    cx.clearRect(0, 0, w, h);
 
-  function recordTap() {
-    if (phaseRef.current !== "tapping") return;
-    tapsRef.current.push(Date.now());
-    const count = tapsRef.current.length;
-    setTapCount(count);
-    // Flash
-    setTapFlash(true);
-    setTimeout(() => setTapFlash(false), 80);
-    // Tap sound: low thud — completely different from metronome clicks
-    const ctx = getCtx();
-    const osc = ctx.createOscillator();
-    const g   = ctx.createGain();
-    osc.connect(g); g.connect(ctx.destination);
-    osc.frequency.setValueAtTime(160, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.08);
-    g.gain.setValueAtTime(0.7, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.14);
-    // Auto-finish once they've tapped enough
-    const expected = patRef.current?.beats.length ?? 4;
-    if (count >= expected + 1) doFinish();
-  }
+    // Track lane
+    cx.fillStyle = "rgba(255,255,255,0.015)";
+    cx.fillRect(0, midY - 22, w, 44);
+
+    // Hit zone band + line
+    cx.fillStyle = "rgba(168,85,247,0.1)";
+    cx.fillRect(hitX - 14, 0, 28, h);
+    cx.beginPath(); cx.moveTo(hitX, 4); cx.lineTo(hitX, h - 4);
+    cx.strokeStyle = "rgba(168,85,247,0.55)"; cx.lineWidth = 2; cx.stroke();
+
+    // Draw notes
+    const notes = notesRef.current;
+    for (const n of notes) {
+      const x = hitX + (n.timeMs - elapsed) * pxMs;
+      if (x < -36 || x > w + 36) continue;
+
+      const tier = n.tier;
+      const td = tier ? RHYTHM_TIER_DEFS.find(t => t.name === tier)! : null;
+      const color = td ? td.color : "rgba(255,255,255,0.85)";
+      const r = tier === "perfect" ? 14 : tier === "great" ? 13 : 12;
+
+      cx.beginPath();
+      cx.arc(x, midY, r, 0, Math.PI * 2);
+      cx.fillStyle = color;
+      cx.fill();
+
+      if (!tier) {
+        cx.beginPath(); cx.arc(x, midY, r, 0, Math.PI * 2);
+        cx.strokeStyle = "rgba(255,255,255,0.2)"; cx.lineWidth = 1.5; cx.stroke();
+      }
+
+      if (tier === "perfect" || tier === "great") {
+        cx.save(); cx.globalAlpha = 0.3;
+        cx.beginPath(); cx.arc(x, midY, r + 7, 0, Math.PI * 2);
+        cx.strokeStyle = color; cx.lineWidth = 2; cx.stroke();
+        cx.restore();
+      }
+    }
+
+    // Auto-miss notes past the deadline
+    let comboChanged = false;
+    for (const n of notes) {
+      if (!n.tier && elapsed > n.timeMs + RHYTHM_MISS_DEADLINE_MS) {
+        n.tier = "miss"; n.devMs = null;
+        comboRef.current = 0; comboChanged = true;
+      }
+    }
+    if (comboChanged) setCombo(0);
+
+    // Check if game is over
+    const allDone = notes.length > 0 && notes.every(n => n.tier !== null);
+    const lastTime = notes.length > 0 ? notes[notes.length - 1].timeMs : 0;
+    if (allDone && elapsed > lastTime + 500) { doFinish(); return; }
+
+    if (phaseRef.current === "countdown" || phaseRef.current === "playing")
+      rafRef.current = requestAnimationFrame(draw);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function doFinish() {
-    if (phaseRef.current !== "tapping") return;
-    if (finishTimerRef.current) { clearTimeout(finishTimerRef.current); finishTimerRef.current = null; }
-    setP("result");
-    const p   = patRef.current!;
-    const raw = tapsRef.current;
-    // Convert to relative ms from first tap
-    const rel = raw.length > 0 ? raw.map(t => t - raw[0]) : [];
-    const acc = scoreRhythmRelative(p.beats, rel);
-    setLastAcc(acc);
-    const pts = Math.round(acc * 100);
-    const ns  = scoreRef.current + pts;
-    scoreRef.current = ns;
-    setScore(ns);
-    const nr = roundRef.current + 1;
-    roundRef.current = nr;
-    setRound(nr);
+    if (phaseRef.current === "results") return;
+    setP("results");
+
+    const tally = RHYTHM_TIER_DEFS.map(t => ({
+      label: t.label, color: t.color,
+      count: notesRef.current.filter(n => n.tier === t.name).length,
+    }));
+    setResultTally(tally);
+    setMaxCombo(maxComboRef.current);
+
+    const diff = RHYTHM_PATTERNS[patIdxRef.current].diff;
+    const stored = Number(localStorage.getItem(`theory_hi_rhythm_${diff}`) ?? 0);
+    if (scoreRef.current > stored) {
+      localStorage.setItem(`theory_hi_rhythm_${diff}`, String(scoreRef.current));
+      setHiScore(scoreRef.current); setIsNewHi(true);
+    } else { setIsNewHi(false); }
   }
 
-  function nextRound() {
-    if (roundRef.current >= 5) {
-      const stored = Number(localStorage.getItem(`theory_hi_rhythm_${level}`) ?? 0);
-      if (scoreRef.current > stored) {
-        localStorage.setItem(`theory_hi_rhythm_${level}`, String(scoreRef.current));
-        setHi(scoreRef.current); setNR(true);
+  function startGame() {
+    // Cancel any lingering timers
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (countIvRef.current) clearInterval(countIvRef.current);
+
+    const pat = RHYTHM_PATTERNS[patIdx];
+    const beatMs = (60 / tempo) * 1000;
+    const countInMs = RHYTHM_COUNTIN * beatMs;
+    const beats = pat.getBeats(RHYTHM_GAME_MEASURES);
+    const notes: RhythmNote[] = beats.map(b => ({
+      timeMs: countInMs + b * beatMs, tier: null, devMs: null,
+    }));
+
+    notesRef.current = notes;
+    scoreRef.current = 0; comboRef.current = 0; maxComboRef.current = 0;
+    setScore(0); setCombo(0); setMaxCombo(0); setTierFlash(null); setIsNewHi(false);
+
+    // Game clock starts now — note times include count-in offset
+    t0Ref.current = performance.now();
+    setP("countdown"); setCountBeat(0);
+
+    // Schedule all audio via AudioContext
+    const ctx = getAudio();
+    const audioNow = ctx.currentTime + 0.05;
+
+    for (let i = 0; i < RHYTHM_COUNTIN; i++)
+      rhythmMetroBeep(ctx, audioNow + i * (beatMs / 1000), i === 0);
+
+    const lastBeatQ = Math.ceil(beats[beats.length - 1]) + 1;
+    for (let i = 0; i <= lastBeatQ; i++)
+      rhythmMetroBeep(ctx, audioNow + (RHYTHM_COUNTIN + i) * (beatMs / 1000), i % 4 === 0);
+
+    // Start drawing immediately (notes approach during countdown)
+    rafRef.current = requestAnimationFrame(draw);
+
+    // Visual countdown ticks
+    let beat = 0;
+    const iv = setInterval(() => {
+      beat++;
+      setCountBeat(beat);
+      if (beat >= RHYTHM_COUNTIN) {
+        clearInterval(iv);
+        setP("playing");
       }
-      setP("idle"); setScore(0); setRound(0); setNR(false);
-      scoreRef.current = 0; roundRef.current = 0;
-    } else {
-      startRound();
-    }
+    }, beatMs);
+    countIvRef.current = iv;
   }
 
-  const accPct = lastAcc !== null ? Math.round(lastAcc * 100) : null;
+  function handleTap() {
+    if (phaseRef.current !== "playing") return;
+    const elapsed = performance.now() - t0Ref.current;
 
-  const MetDot = ({ size = 32 }: { size?: number }) => (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: metBeat ? "rgba(255,210,60,0.95)" : "rgba(255,210,60,0.15)",
-      border: `2px solid rgba(255,210,60,${metBeat ? 1 : 0.3})`,
-      transition: `background ${BEAT_MS * 0.15}ms, border-color ${BEAT_MS * 0.15}ms`,
-    }} />
-  );
+    rhythmTapSnd(getAudio());
+    setTapFlash(true);
+    setTimeout(() => setTapFlash(false), 70);
 
-  const resultEmoji = accPct === null ? "" : accPct >= 90 ? "🌟" : accPct >= 75 ? "🎉" : accPct >= 55 ? "👍" : "💪";
-  const resultMsg   = accPct === null ? "" : accPct >= 90 ? "Amazing!!" : accPct >= 75 ? "Great job!" : accPct >= 55 ? "Getting there!" : "Keep trying!";
+    // Match nearest unscored note within hit window
+    let bestIdx = -1, bestAbs = Infinity;
+    for (let i = 0; i < notesRef.current.length; i++) {
+      const n = notesRef.current[i];
+      if (n.tier !== null) continue;
+      const abs = Math.abs(elapsed - n.timeMs);
+      if (abs < bestAbs && abs <= RHYTHM_HIT_WINDOW_MS) {
+        bestAbs = abs; bestIdx = i;
+      }
+    }
+    if (bestIdx < 0) return;
+
+    const n = notesRef.current[bestIdx];
+    const dev = elapsed - n.timeMs;
+    const t = getRhythmTier(Math.abs(dev));
+    n.tier = t.name; n.devMs = dev;
+
+    if (t.name !== "miss") {
+      const mult = Math.min(Math.floor(comboRef.current / 5) + 1, 4);
+      scoreRef.current += t.pts * mult;
+      comboRef.current++;
+      if (comboRef.current > maxComboRef.current) maxComboRef.current = comboRef.current;
+    } else {
+      comboRef.current = 0;
+    }
+    setScore(scoreRef.current);
+    setCombo(comboRef.current);
+
+    setTierFlash({ label: t.label, color: t.color });
+    if (tierTimerRef.current) clearTimeout(tierTimerRef.current);
+    tierTimerRef.current = setTimeout(() => setTierFlash(null), 500);
+  }
+
+  // Cleanup on unmount
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (countIvRef.current) clearInterval(countIvRef.current);
+    if (tierTimerRef.current) clearTimeout(tierTimerRef.current);
+  }, []);
+
+  const pat = RHYTHM_PATTERNS[patIdx];
+  const noteCount = pat.getBeats(RHYTHM_GAME_MEASURES).length;
 
   return (
     <div style={{ minHeight: "100%", background: "linear-gradient(160deg, #2d1b69 0%, #11145c 60%, #0a1a3a 100%)", display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
@@ -2347,160 +2391,164 @@ function RhythmEchoGame({ onBack }: { onBack: () => void }) {
       {/* ── Idle ── */}
       {phase === "idle" && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem" }}>
-          <div style={{ maxWidth: 340, width: "100%", textAlign: "center" }}>
+          <div style={{ maxWidth: 380, width: "100%", textAlign: "center" }}>
             <div style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>🥁</div>
             <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#FDFCFA", marginBottom: "0.25rem" }}>Rhythm Echo</div>
-            <div style={{ fontSize: "0.9375rem", color: "rgba(255,255,255,0.5)", marginBottom: "1.5rem" }}>Listen 👂 then tap it back! 🖐</div>
-
-            {newRecord && <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#FFD700", marginBottom: "0.75rem" }}>🏆 New Best Score!</div>}
+            <div style={{ fontSize: "0.9375rem", color: "rgba(255,255,255,0.5)", marginBottom: "1.5rem" }}>Hit the beats as they scroll by!</div>
 
             {hiScore > 0 && (
-              <div style={{ background: "rgba(255,255,255,0.07)", borderRadius: 12, padding: "0.75rem 1.25rem", marginBottom: "1.5rem", display: "inline-block" }}>
+              <div style={{ background: "rgba(255,255,255,0.07)", borderRadius: 12, padding: "0.75rem 1.25rem", marginBottom: "1.25rem", display: "inline-block" }}>
                 <div style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Best Score</div>
-                <div style={{ fontSize: "2rem", fontWeight: 800, color: "#FFD700" }}>{hiScore} <span style={{ fontSize: "1rem", color: "rgba(255,255,255,0.4)" }}>/ 500</span></div>
+                <div style={{ fontSize: "2rem", fontWeight: 800, color: "#FFD700" }}>{hiScore}</div>
               </div>
             )}
 
-            {/* Level picker */}
-            <div style={{ marginBottom: "1.75rem" }}>
-              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.75rem" }}>Pick a level:</div>
-              <div style={{ display: "flex", gap: "0.625rem", justifyContent: "center" }}>
-                {(["level1","level2","level3"] as RhythmLevel[]).map(lv => (
-                  <button key={lv} onClick={() => setLevel(lv)} style={{
+            {/* Pattern selector */}
+            <div style={{ marginBottom: "1.25rem" }}>
+              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.625rem" }}>Pattern:</div>
+              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
+                {RHYTHM_PATTERNS.map((p, i) => (
+                  <button key={p.id} onClick={() => setPatIdx(i)} style={{
                     padding: "0.625rem 1rem", borderRadius: 12, cursor: "pointer",
-                    background: level === lv ? "#a855f7" : "rgba(255,255,255,0.08)",
-                    border: `2px solid ${level === lv ? "#c084fc" : "rgba(255,255,255,0.12)"}`,
-                    color: "#fff", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif",
-                    fontWeight: level === lv ? 700 : 400, transition: "all 0.15s",
-                    boxShadow: level === lv ? "0 0 16px rgba(168,85,247,0.5)" : "none",
+                    background: i === patIdx ? "#a855f7" : "rgba(255,255,255,0.08)",
+                    border: `2px solid ${i === patIdx ? "#c084fc" : "rgba(255,255,255,0.12)"}`,
+                    color: "#fff", fontSize: "0.75rem", fontFamily: "Inter, sans-serif",
+                    fontWeight: i === patIdx ? 700 : 400, transition: "all 0.15s",
+                    boxShadow: i === patIdx ? "0 0 16px rgba(168,85,247,0.5)" : "none",
+                    textAlign: "center",
                   }}>
-                    {RHYTHM_LEVEL_LABELS[lv]}
+                    <div style={{ fontWeight: 600 }}>{p.label}</div>
+                    <div style={{ fontSize: "0.625rem", opacity: 0.6, marginTop: 2 }}>{p.desc}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <button
-              onClick={() => { setScore(0); scoreRef.current = 0; setRound(0); roundRef.current = 0; setNR(false); startRound(); }}
-              style={{ width: "100%", padding: "1.1rem", borderRadius: 16, border: "none", background: "linear-gradient(135deg, #a855f7, #6366f1)", color: "#fff", fontSize: "1.2rem", fontFamily: "Inter, sans-serif", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 24px rgba(168,85,247,0.5)", letterSpacing: "0.02em" }}
-            >
-              Let&apos;s Go! 🚀
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Listen ── */}
-      {phase === "listen" && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "1.25rem" }}>
-          {/* Round badge */}
-          <div style={{ display: "flex", gap: "0.375rem" }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: i < round ? "#a855f7" : i === round ? "#FFD700" : "rgba(255,255,255,0.15)" }} />
-            ))}
-          </div>
-
-          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.04em" }}>Round {round + 1} of 5</div>
-
-          {/* Big pulsing ear */}
-          <div style={{
-            fontSize: "6rem", lineHeight: 1,
-            filter: metBeat ? "drop-shadow(0 0 20px rgba(255,210,60,0.9))" : "none",
-            transition: `filter ${BEAT_MS * 0.2}ms`,
-          }}>👂</div>
-
-          {/* Metronome pulse dot */}
-          <MetDot size={40} />
-
-          <div style={{ fontSize: "1rem", fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>Listen carefully…</div>
-          <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.25)" }}>Tapping starts right after!</div>
-        </div>
-      )}
-
-      {/* ── Tapping ── */}
-      {phase === "tapping" && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "1.1rem" }}>
-          {/* Round dots */}
-          <div style={{ display: "flex", gap: "0.375rem" }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: i < round ? "#a855f7" : i === round ? "#FFD700" : "rgba(255,255,255,0.15)" }} />
-            ))}
-          </div>
-
-          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>Your turn! Tap the beat</div>
-
-          {/* Metronome + replay row */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.875rem" }}>
-            <MetDot size={24} />
-            <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)" }}>keep the beat</span>
-            <button
-              onClick={replayPattern}
-              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "0.3rem 0.75rem", color: "rgba(255,255,255,0.6)", fontSize: "0.8125rem", fontFamily: "Inter, sans-serif", cursor: "pointer", touchAction: "manipulation" }}
-            >
-              🔁 Hear again
-            </button>
-          </div>
-
-          {/* Tap progress — bigger, colourful stars */}
-          <div style={{ display: "flex", gap: "0.625rem", flexWrap: "wrap", justifyContent: "center", minHeight: 32 }}>
-            {Array.from({ length: patRef.current?.beats.length ?? 4 }).map((_, i) => (
-              <div key={i} style={{ fontSize: i < tapCount ? "1.5rem" : "1.1rem", transition: "font-size 0.1s", opacity: i < tapCount ? 1 : 0.25, lineHeight: 1 }}>
-                {i < tapCount ? "★" : "○"}
+            {/* Tempo slider */}
+            <div style={{ marginBottom: "1.75rem" }}>
+              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.5rem" }}>
+                Tempo: <strong style={{ color: "#FDFCFA" }}>{tempo} BPM</strong>
               </div>
-            ))}
+              <input type="range" min={60} max={180} step={5} value={tempo}
+                onChange={e => setTempo(Number(e.target.value))}
+                style={{ width: "100%", accentColor: "#a855f7" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.625rem", color: "rgba(255,255,255,0.2)", marginTop: "0.125rem" }}>
+                <span>60</span><span>120</span><span>180</span>
+              </div>
+            </div>
+
+            {/* Note count preview */}
+            <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", marginBottom: "1rem" }}>
+              {noteCount} beats · {RHYTHM_GAME_MEASURES} measures
+            </div>
+
+            <button onClick={startGame}
+              style={{ width: "100%", padding: "1.1rem", borderRadius: 16, border: "none", background: "linear-gradient(135deg, #a855f7, #6366f1)", color: "#fff", fontSize: "1.2rem", fontFamily: "Inter, sans-serif", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 24px rgba(168,85,247,0.5)", letterSpacing: "0.02em" }}>
+              Let&apos;s Go!
+            </button>
           </div>
-
-          {/* Big drum tap button */}
-          <button
-            onPointerDown={recordTap}
-            style={{
-              width: 180, height: 180, borderRadius: "50%",
-              border: `5px solid ${tapFlash ? "#fff" : "#a855f7"}`,
-              background: tapFlash
-                ? "rgba(255,255,255,0.3)"
-                : "linear-gradient(135deg, rgba(168,85,247,0.35), rgba(99,102,241,0.25))",
-              color: "#fff",
-              fontSize: tapFlash ? "4rem" : "3.5rem",
-              cursor: "pointer", userSelect: "none", WebkitUserSelect: "none",
-              touchAction: "manipulation",
-              transition: "border-color 0.05s, background 0.05s, font-size 0.05s",
-              boxShadow: tapFlash ? "0 0 40px rgba(255,255,255,0.4)" : "0 0 30px rgba(168,85,247,0.4)",
-            }}
-          >
-            🥁
-          </button>
-
-          <button
-            onPointerDown={doFinish}
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "0.625rem 2rem", color: "rgba(255,255,255,0.5)", fontSize: "0.9rem", fontFamily: "Inter, sans-serif", fontWeight: 600, cursor: "pointer", touchAction: "manipulation" }}
-          >
-            ✅ Done!
-          </button>
         </div>
       )}
 
-      {/* ── Result ── */}
-      {phase === "result" && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "0.875rem" }}>
-          <div style={{ fontSize: "5rem", lineHeight: 1 }}>{resultEmoji}</div>
-          <div style={{ fontSize: "2rem", fontWeight: 800, color: "#FDFCFA" }}>{resultMsg}</div>
-          <div style={{ fontSize: "4rem", fontWeight: 900, color: accPct! >= 80 ? "#4ade80" : accPct! >= 50 ? "#fbbf24" : "#f87171", lineHeight: 1 }}>{accPct}%</div>
-
-          {/* Round progress bar */}
-          <div style={{ display: "flex", gap: "0.375rem", marginTop: "0.25rem" }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: i < round ? "#a855f7" : "rgba(255,255,255,0.15)" }} />
-            ))}
+      {/* ── Countdown + Playing (shared layout with canvas) ── */}
+      {(phase === "countdown" || phase === "playing") && (
+        <div
+          onPointerDown={handleTap}
+          style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", cursor: "pointer", userSelect: "none", WebkitUserSelect: "none", touchAction: "manipulation" }}
+        >
+          {/* Score + combo overlay */}
+          <div style={{ position: "absolute", top: 12, right: 16, textAlign: "right", zIndex: 2, pointerEvents: "none" }}>
+            <div style={{ fontSize: "2rem", fontWeight: 900, color: "#FDFCFA", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{score}</div>
+            {combo >= 3 && (
+              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#c084fc", textShadow: "0 0 12px rgba(168,85,247,0.6)" }}>
+                {combo}x combo
+              </div>
+            )}
           </div>
 
-          <div style={{ fontSize: "1rem", color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>Score: <strong style={{ color: "#FDFCFA" }}>{score}</strong> / {round * 100}</div>
+          {/* Tier flash */}
+          {tierFlash && (
+            <div style={{ position: "absolute", top: 16, left: 16, zIndex: 2, pointerEvents: "none" }}>
+              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: tierFlash.color, textTransform: "uppercase", textShadow: `0 0 10px ${tierFlash.color}`, animation: "fade-in 0.08s ease" }}>
+                {tierFlash.label}
+              </div>
+            </div>
+          )}
 
-          <button
-            onClick={nextRound}
-            style={{ padding: "1rem 3rem", borderRadius: 16, border: "none", background: "linear-gradient(135deg, #a855f7, #6366f1)", color: "#fff", fontSize: "1.1rem", fontFamily: "Inter, sans-serif", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 24px rgba(168,85,247,0.45)", marginTop: "0.5rem", letterSpacing: "0.02em" }}
-          >
-            {round >= 5 ? "🏁 See My Score!" : "Next Round →"}
-          </button>
+          {/* Countdown overlay */}
+          {phase === "countdown" && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 3, pointerEvents: "none", background: "rgba(0,0,0,0.3)" }}>
+              <div style={{ fontSize: "0.9375rem", color: "rgba(255,255,255,0.5)", fontWeight: 600, marginBottom: "0.5rem" }}>Get ready...</div>
+              <div style={{ fontSize: "7rem", fontWeight: 900, color: "#FDFCFA", lineHeight: 1, textShadow: "0 0 40px rgba(168,85,247,0.6)" }}>
+                {RHYTHM_COUNTIN - countBeat}
+              </div>
+              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.3)", marginTop: "0.75rem" }}>{pat.label} · {tempo} BPM</div>
+            </div>
+          )}
+
+          {/* Canvas timeline */}
+          <div style={{ flex: 1, display: "flex", alignItems: "center", padding: "1rem" }}>
+            <canvas ref={canvasRef}
+              style={{
+                width: "100%", height: 120, borderRadius: 12,
+                background: "rgba(0,0,0,0.3)",
+                border: tapFlash ? "2px solid rgba(168,85,247,0.6)" : "2px solid rgba(255,255,255,0.04)",
+                transition: "border-color 0.06s",
+              }}
+            />
+          </div>
+
+          {/* Tap hint */}
+          {phase === "playing" && (
+            <div style={{ textAlign: "center", paddingBottom: "2rem", pointerEvents: "none" }}>
+              <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.2)" }}>Tap anywhere to the beat</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Results ── */}
+      {phase === "results" && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1.5rem", gap: "0.875rem" }}>
+          {isNewHi && <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "#FFD700" }}>New Best Score!</div>}
+
+          <div style={{ fontSize: "4rem", fontWeight: 900, color: "#FDFCFA", lineHeight: 1 }}>{score}</div>
+          <div style={{ fontSize: "0.875rem", color: "rgba(255,255,255,0.4)" }}>
+            {pat.label} · {tempo} BPM
+          </div>
+
+          {/* Tier breakdown bars */}
+          <div style={{ width: "100%", maxWidth: 300, display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+            {resultTally.map(t => {
+              const total = notesRef.current.length || 1;
+              const pct = (t.count / total) * 100;
+              return (
+                <div key={t.label} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <div style={{ width: 58, fontSize: "0.6875rem", fontWeight: 600, color: t.color, textAlign: "right" }}>{t.label}</div>
+                  <div style={{ flex: 1, height: 14, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 4, background: t.color, width: `${Math.max(t.count > 0 ? 4 : 0, pct)}%`, transition: "width 0.3s" }} />
+                  </div>
+                  <div style={{ width: 22, fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", textAlign: "center" }}>{t.count}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.35)", marginTop: "0.25rem" }}>
+            Best combo: <strong style={{ color: "rgba(255,255,255,0.6)" }}>{maxCombo}</strong>
+          </div>
+
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
+            <button onClick={() => setP("idle")}
+              style={{ padding: "0.875rem 1.75rem", borderRadius: 14, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", fontSize: "0.9375rem", fontFamily: "Inter, sans-serif", fontWeight: 600, cursor: "pointer" }}>
+              Menu
+            </button>
+            <button onClick={startGame}
+              style={{ padding: "0.875rem 1.75rem", borderRadius: 14, border: "none", background: "linear-gradient(135deg, #a855f7, #6366f1)", color: "#fff", fontSize: "0.9375rem", fontFamily: "Inter, sans-serif", fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 20px rgba(168,85,247,0.45)" }}>
+              Play Again
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -3119,8 +3167,8 @@ function Menu({ onSelect }: { onSelect: (v: View) => void }) {
       desc: "Requirements by level.", badge: null, active: true },
     { view: "menu" as View, icon: "📖", title: "Sight Reading", category: "Piano", logicalGame: "",
       desc: "Name notes left to right.", badge: null, active: false },
-    { view: "menu" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm", logicalGame: "",
-      desc: "Hear it, tap it back.", badge: scores.rhythm > 0 ? `🏆 ${scores.rhythm.toLocaleString()}` : null, active: false },
+    { view: "rhythmEcho" as View, icon: "🥁", title: "Rhythm Echo", category: "Rhythm", logicalGame: "",
+      desc: "Hit the beats as they scroll by.", badge: scores.rhythm > 0 ? `🏆 ${scores.rhythm.toLocaleString()}` : null, active: true },
     { view: "fretboard" as View, icon: "𝄞", title: "Fretboard Notes", category: "Guitar", logicalGame: "fretboard",
       desc: "Name the note on the neck.", badge: scoreBadge("fretboard", scores.fretboard), active: true },
     { view: "guitarChord" as View, icon: "🤘", title: "Guitar Chords", category: "Guitar", logicalGame: "guitarChord",
