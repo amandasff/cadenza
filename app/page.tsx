@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AuthService } from "@/lib/services/AuthService";
@@ -20,6 +20,13 @@ const SLIDES = [
 
 const PAD = (n: number) => String(n).padStart(3, "0");
 
+interface Recording {
+  id: string;
+  title: string;
+  url: string;
+  artist: string;
+}
+
 export default function Home() {
   const router = useRouter();
   const [mode, setMode] = useState<"signup" | "signin">("signup");
@@ -30,8 +37,14 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [slide, setSlide] = useState(3);
+  const [slide, setSlide] = useState(0);
   const [time, setTime] = useState("");
+
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [showPlayer, setShowPlayer] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const tick = () =>
@@ -53,10 +66,35 @@ export default function Home() {
     });
   }, [router]);
 
+  useEffect(() => {
+    fetch("/api/public/recordings")
+      .then(r => r.json())
+      .then(d => setRecordings(d.recordings ?? []))
+      .catch(() => {});
+  }, []);
+
   const preview = (slide + 1) % SLIDES.length;
   const prevSlide = () => setSlide(s => (s - 1 + SLIDES.length) % SLIDES.length);
   const nextSlide = () => setSlide(s => (s + 1) % SLIDES.length);
   const switchMode = (m: "signup" | "signin") => { setMode(m); setError(""); setPassword(""); };
+
+  const playRecording = useCallback((rec: Recording) => {
+    if (!audioRef.current) return;
+    if (playingId === rec.id) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play().catch(() => setIsPlaying(false));
+        setIsPlaying(true);
+      }
+      return;
+    }
+    audioRef.current.src = rec.url;
+    audioRef.current.play().catch(() => setIsPlaying(false));
+    setPlayingId(rec.id);
+    setIsPlaying(true);
+  }, [playingId, isPlaying]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +138,7 @@ export default function Home() {
       <div style={{
         height: "100dvh", display: "flex", alignItems: "center", justifyContent: "center",
         background: "#fbf9f4", fontFamily: "'Space Grotesk', sans-serif",
-        fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#777",
+        fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#777",
       }}>
         Loading
       </div>
@@ -119,6 +157,12 @@ export default function Home() {
     </svg>
   );
 
+  /* ── label style helper ── */
+  const lbl: React.CSSProperties = {
+    fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: "0.15em",
+    textTransform: "uppercase", position: "absolute", top: -16, left: 0, color: "rgba(0,0,0,0.7)",
+  };
+
   return (
     <>
       <style>{`
@@ -132,6 +176,7 @@ export default function Home() {
 
         @keyframes cad-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .cad-vinyl-spin { animation: cad-spin 8s linear infinite; }
+        .cad-vinyl-paused { animation-play-state: paused; }
         .cad-vinyl-grooves {
           background: repeating-radial-gradient(circle, transparent, transparent 2px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 4px);
         }
@@ -139,16 +184,13 @@ export default function Home() {
         .cad-input {
           width: 100%; background: transparent; border: none;
           border-bottom: 1px solid #000; outline: none;
-          font-family: 'Work Sans', sans-serif; font-size: 14px;
-          padding: 8px 0; color: #000; border-radius: 0;
+          font-family: 'Work Sans', sans-serif; font-size: 13px;
+          padding: 6px 0; color: #000; border-radius: 0;
         }
         .cad-input::placeholder { color: rgba(0,0,0,0.3); }
 
         .cad-hero-img { transition: transform 0.7s ease-out; }
         .cad-hero-img:hover { transform: scale(1.05); }
-
-        .cad-vinyl-wrap .cad-vinyl-label { opacity: 0; transition: opacity 0.3s; }
-        .cad-vinyl-wrap:hover .cad-vinyl-label { opacity: 1; }
 
         .cad-nav-arrow { transition: opacity 0.2s; }
         .cad-nav-arrow:hover { opacity: 0.5; }
@@ -160,34 +202,47 @@ export default function Home() {
         .cad-btn-outline:hover { background: rgba(0,0,0,0.04); }
 
         .cad-link:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 0.5px; }
+
+        .cad-track { transition: background 0.15s; }
+        .cad-track:hover { background: rgba(255,255,255,0.08) !important; }
+
+        .cad-player-scroll::-webkit-scrollbar { width: 3px; }
+        .cad-player-scroll::-webkit-scrollbar-track { background: transparent; }
+        .cad-player-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
       `}</style>
 
       <div className="cad-noise" />
+      {/* Hidden audio element */}
+      <audio
+        ref={audioRef}
+        onEnded={() => { setIsPlaying(false); setPlayingId(null); }}
+        style={{ display: "none" }}
+      />
 
       <div style={{
         background: "#fbf9f4", color: "#000", fontFamily: "'Work Sans', sans-serif",
-        minHeight: "100vh", display: "flex", flexDirection: "column",
-        overflowX: "hidden", position: "relative",
+        height: "100dvh", display: "flex", flexDirection: "column",
+        overflow: "hidden", position: "relative",
       }}>
 
         {/* ── HEADER ── */}
         <header style={{
+          flexShrink: 0,
           display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-          padding: "2rem 2.5rem 1rem",
-          borderBottom: "0.5px solid #000",
-          margin: "0 1rem",
+          padding: "1.25rem 2.5rem 0.75rem",
+          borderBottom: "0.5px solid #000", margin: "0 1rem",
         }}>
-          <div style={{ width: "33.33%", display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+          <div style={{ width: "33.33%", display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase" }}>
               Toronto, CA
             </span>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase" }}>
               {time} EST
             </span>
           </div>
           <div style={{ width: "33.33%", textAlign: "center" }}>
             <h1 style={{
-              fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.75rem, 3.5vw, 3rem)",
+              fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.5rem, 3vw, 2.75rem)",
               fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase", lineHeight: 1, margin: 0,
             }}>
               CADENZA
@@ -195,7 +250,7 @@ export default function Home() {
           </div>
           <nav style={{
             width: "33.33%", display: "flex", justifyContent: "flex-end", gap: "1.5rem",
-            fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase",
+            fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
           }}>
             <a href="#" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Home</a>
             <a href="mailto:amanda.sf.wu@gmail.com" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Contact</a>
@@ -204,11 +259,12 @@ export default function Home() {
 
         {/* ── MAIN ── */}
         <main style={{
-          flexGrow: 1, display: "flex", flexDirection: "column",
-          justifyContent: "center", padding: "3rem",
+          flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
+          padding: "1rem 2.5rem",
         }}>
+          {/* 3-column card area */}
           <div style={{
-            display: "flex", gap: "2rem", height: 716, alignItems: "center",
+            flex: 1, minHeight: 0, display: "flex", gap: "2rem", alignItems: "center",
           }}>
 
             {/* LEFT — FORM */}
@@ -218,24 +274,24 @@ export default function Home() {
               borderRight: "0.5px solid #000", paddingRight: "2rem",
             }}>
               <h2 style={{
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.5rem",
+                fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.35rem",
                 fontWeight: 700, textTransform: "uppercase", letterSpacing: "-0.02em",
-                margin: "0 0 2rem 0",
+                margin: "0 0 1.5rem 0",
               }}>
                 {mode === "signup" ? "Initiate Access" : "Welcome Back"}
               </h2>
 
               <form
                 onSubmit={mode === "signup" ? handleSubmit : handleSignIn}
-                style={{ display: "flex", flexDirection: "column", gap: "2rem" }}
+                style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
               >
                 {mode === "signup" && (
-                  <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.5rem" }}>
+                  <div style={{ display: "flex", gap: "1.25rem", marginBottom: "0.25rem" }}>
                     {(["student", "teacher"] as UserRole[]).map(r => (
-                      <label key={r} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                      <label key={r} style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
                         <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: "none" }} />
                         <div style={{
-                          width: 12, height: 12, borderRadius: "50%", border: "1px solid #000",
+                          width: 11, height: 11, borderRadius: "50%", border: "1px solid #000",
                           background: role === r ? "#000" : "transparent", transition: "background 0.15s",
                         }} />
                         <span style={{
@@ -252,39 +308,30 @@ export default function Home() {
 
                 {mode === "signup" && (
                   <div style={{ position: "relative" }}>
-                    <label style={{
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: "0.15em",
-                      textTransform: "uppercase", position: "absolute", top: -16, left: 0, color: "rgba(0,0,0,0.7)",
-                    }}>Display Name</label>
+                    <label style={lbl}>Display Name</label>
                     <input className="cad-input" type="text" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
                   </div>
                 )}
 
                 <div style={{ position: "relative" }}>
-                  <label style={{
-                    fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: "0.15em",
-                    textTransform: "uppercase", position: "absolute", top: -16, left: 0, color: "rgba(0,0,0,0.7)",
-                  }}>Email Address</label>
+                  <label style={lbl}>Email Address</label>
                   <input className="cad-input" type="email" placeholder="user@domain.com" value={email} onChange={e => setEmail(e.target.value)} required />
                 </div>
 
                 <div style={{ position: "relative" }}>
-                  <label style={{
-                    fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: "0.15em",
-                    textTransform: "uppercase", position: "absolute", top: -16, left: 0, color: "rgba(0,0,0,0.7)",
-                  }}>Security Key</label>
+                  <label style={lbl}>Security Key</label>
                   <input className="cad-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
                 </div>
 
                 {error && (
-                  <div style={{ fontSize: 12, color: "#ba1a1a", letterSpacing: "0.04em" }}>{error}</div>
+                  <div style={{ fontSize: 11, color: "#ba1a1a", letterSpacing: "0.04em" }}>{error}</div>
                 )}
 
                 <button type="submit" disabled={loading} className="cad-btn-primary" style={{
-                  marginTop: "1rem", background: "#000", color: "#fbf9f4", border: "none",
-                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
+                  marginTop: "0.5rem", background: "#000", color: "#fbf9f4", border: "none",
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                   textTransform: "uppercase", letterSpacing: "0.15em",
-                  padding: "1rem 1.5rem", cursor: loading ? "default" : "pointer",
+                  padding: "0.85rem 1rem", cursor: loading ? "default" : "pointer",
                   opacity: loading ? 0.6 : 1, width: "100%", textAlign: "center", borderRadius: 0,
                 }}>
                   {mode === "signup"
@@ -296,7 +343,7 @@ export default function Home() {
                   width: "100%", background: "transparent", border: "0.5px solid #000",
                   fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
                   letterSpacing: "0.12em", textTransform: "uppercase", color: "#000",
-                  padding: "0.75rem 1rem", cursor: "pointer", borderRadius: 0,
+                  padding: "0.6rem 1rem", cursor: "pointer", borderRadius: 0,
                   display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
                 }}>
                   {googleSvg} Continue with Google
@@ -304,7 +351,7 @@ export default function Home() {
 
                 <div style={{
                   textAlign: "center", fontFamily: "'Space Grotesk', sans-serif",
-                  fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: "1rem",
+                  fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: "0.5rem",
                 }}>
                   <span style={{ color: "rgba(0,0,0,0.6)" }}>
                     {mode === "signup" ? "Already have an account? " : "Don\u2019t have an account? "}
@@ -343,7 +390,7 @@ export default function Home() {
                   {cur.label.split("\n").map((line, i) => (
                     <p key={i} style={{
                       fontFamily: "'Space Grotesk', sans-serif", color: "#fbf9f4",
-                      fontSize: "clamp(1.5rem, 2vw, 1.875rem)", fontWeight: 700,
+                      fontSize: "clamp(1.25rem, 2vw, 1.75rem)", fontWeight: 700,
                       letterSpacing: "-0.02em", textTransform: "uppercase", lineHeight: 1, margin: 0,
                     }}>
                       {line}
@@ -352,7 +399,7 @@ export default function Home() {
                 </div>
                 <div style={{
                   position: "absolute", top: 16, right: 16,
-                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                   letterSpacing: "0.15em", color: "#fbf9f4",
                   mixBlendMode: "difference", transform: "rotate(90deg)", transformOrigin: "right top",
                   whiteSpace: "nowrap", zIndex: 2,
@@ -394,8 +441,8 @@ export default function Home() {
 
           {/* CAROUSEL NAV */}
           <div style={{
-            display: "flex", justifyContent: "center", alignItems: "center",
-            marginTop: "3rem", gap: "1rem",
+            flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center",
+            padding: "0.75rem 0", gap: "1rem",
             fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.15em",
           }}>
             <button onClick={prevSlide} className="cad-nav-arrow" style={{
@@ -409,46 +456,135 @@ export default function Home() {
           </div>
         </main>
 
-        {/* VINYL PLAYER */}
-        <div className="cad-vinyl-wrap" style={{
-          position: "fixed", bottom: "6rem", right: "3rem", zIndex: 50,
-          display: "flex", alignItems: "center", gap: "1rem", cursor: "pointer", flexDirection: "row-reverse",
+        {/* ── VINYL PLAYER ── */}
+        <div style={{
+          position: "fixed", bottom: "4.5rem", right: "2.5rem", zIndex: 50,
+          display: "flex", flexDirection: "column", alignItems: "flex-end",
         }}>
-          <div className="cad-vinyl-spin" style={{
-            position: "relative", width: 64, height: 64, borderRadius: "50%",
-            background: "#000", display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-          }}>
-            <div className="cad-vinyl-grooves" style={{ position: "absolute", inset: 0, borderRadius: "50%" }} />
+          {/* Recording list panel */}
+          {showPlayer && (
             <div style={{
-              width: 24, height: 24, borderRadius: "50%", background: "#fbf9f4",
-              border: "0.5px solid #000", display: "flex", alignItems: "center", justifyContent: "center",
-              position: "relative", zIndex: 10,
+              marginBottom: "0.75rem", background: "#000", color: "#fbf9f4",
+              width: 260, maxHeight: 300, display: "flex", flexDirection: "column",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
             }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#000" }} />
+              <div style={{
+                padding: "0.75rem 1rem", borderBottom: "0.5px solid rgba(255,255,255,0.12)",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                flexShrink: 0,
+              }}>
+                <span style={{
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
+                  letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700,
+                }}>
+                  Student Archives
+                </span>
+                <button onClick={() => setShowPlayer(false)} style={{
+                  background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+                  cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0,
+                }}>
+                  &#10005;
+                </button>
+              </div>
+              <div className="cad-player-scroll" style={{ overflowY: "auto", flex: 1 }}>
+                {recordings.length === 0 ? (
+                  <div style={{
+                    padding: "2rem 1rem", textAlign: "center",
+                    fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
+                    letterSpacing: "0.1em", textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.35)",
+                  }}>
+                    No recordings yet
+                  </div>
+                ) : (
+                  recordings.map(rec => (
+                    <button
+                      key={rec.id}
+                      className="cad-track"
+                      onClick={() => playRecording(rec)}
+                      style={{
+                        display: "block", width: "100%", padding: "0.6rem 1rem",
+                        background: playingId === rec.id ? "rgba(255,255,255,0.1)" : "transparent",
+                        border: "none", borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+                        cursor: "pointer", textAlign: "left",
+                      }}
+                    >
+                      <div style={{
+                        fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "#fbf9f4",
+                        display: "flex", alignItems: "center", gap: 6,
+                      }}>
+                        <span style={{ fontSize: 9, opacity: 0.6 }}>
+                          {playingId === rec.id && isPlaying ? "\u25A0" : "\u25B6"}
+                        </span>
+                        {rec.title}
+                      </div>
+                      <div style={{
+                        fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
+                        color: "rgba(255,255,255,0.4)", marginTop: 2,
+                        letterSpacing: "0.1em", textTransform: "uppercase",
+                      }}>
+                        {rec.artist}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
-            <div style={{
-              position: "absolute", inset: 0, borderRadius: "50%",
-              background: "linear-gradient(to top right, rgba(255,255,255,0.2), transparent)",
-              mixBlendMode: "overlay",
-            }} />
-          </div>
-          <div className="cad-vinyl-label" style={{ display: "flex", flexDirection: "column", textAlign: "right" }}>
-            <span style={{
-              fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-              letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700,
-            }}>Student Archives</span>
-            <span style={{
-              fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-              letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.6)",
-            }}>Play Recordings</span>
+          )}
+
+          {/* Vinyl disc */}
+          <div
+            onClick={() => setShowPlayer(p => !p)}
+            style={{
+              display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer",
+              flexDirection: "row-reverse",
+            }}
+          >
+            <div className={`cad-vinyl-spin ${!isPlaying ? "cad-vinyl-paused" : ""}`} style={{
+              position: "relative", width: 56, height: 56, borderRadius: "50%",
+              background: "#000", display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
+            }}>
+              <div className="cad-vinyl-grooves" style={{ position: "absolute", inset: 0, borderRadius: "50%" }} />
+              <div style={{
+                width: 20, height: 20, borderRadius: "50%", background: "#fbf9f4",
+                border: "0.5px solid #000", display: "flex", alignItems: "center", justifyContent: "center",
+                position: "relative", zIndex: 10,
+              }}>
+                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#000" }} />
+              </div>
+              <div style={{
+                position: "absolute", inset: 0, borderRadius: "50%",
+                background: "linear-gradient(to top right, rgba(255,255,255,0.2), transparent)",
+                mixBlendMode: "overlay",
+              }} />
+            </div>
+            {!showPlayer && (
+              <div style={{ display: "flex", flexDirection: "column", textAlign: "right" }}>
+                <span style={{
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
+                  letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700,
+                }}>
+                  {isPlaying ? "Now Playing" : "Student Archives"}
+                </span>
+                <span style={{
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
+                  letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.5)",
+                }}>
+                  {isPlaying && playingId
+                    ? recordings.find(r => r.id === playingId)?.title ?? ""
+                    : `${recordings.length} Recording${recordings.length !== 1 ? "s" : ""}`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* FOOTER */}
+        {/* ── FOOTER ── */}
         <footer style={{
+          flexShrink: 0,
           display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "2rem 2.5rem", borderTop: "0.5px solid #000", margin: "0 1rem",
+          padding: "0.6rem 2.5rem", borderTop: "0.5px solid #000", margin: "0 1rem",
         }}>
           <div style={{
             fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
