@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadenza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #F2EEE5;
+      --ink:    #1A1814;
+      --muted:  #999;
+      --rule:   rgba(26,24,20,0.14);
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--ink);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────── */
+    header {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 2.75rem;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .h-meta {
+      font-size: 8px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      line-height: 1.9;
+      min-width: 90px;
+    }
+    .h-meta .dim { color: var(--muted); }
+
+    .h-wordmark {
+      font-family: 'Anton', sans-serif;
+      font-size: 1.9rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .h-nav {
+      display: flex;
+      gap: 1.75rem;
+      font-size: 8px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      min-width: 90px;
+      justify-content: flex-end;
+    }
+    .h-nav a { color: var(--ink); text-decoration: none; }
+    .h-nav a.dim { color: var(--muted); }
+
+    /* ── MAIN AREA ───────────────────────────────────────── */
+    .main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: stretch;
+      padding: 0 2.75rem;
+      overflow: hidden;
+    }
+
+    /* ── COL 1 — FORM ──────────────────────────────────── */
+    .col-form {
+      width: 196px;
+      flex-shrink: 0;
+      padding: 2.25rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.125rem;
+    }
+
+    .form-heading {
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 0.125rem;
+    }
+
+    .role-row { display: flex; gap: 1.25rem; }
+
+    .role-label {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 7.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Square radio buttons */
+    .role-label input[type="radio"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--ink);
+      border-radius: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.1s;
+    }
+    .role-label input[type="radio"]:checked { background: var(--ink); }
+
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+
+    .field-label {
+      font-size: 7px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(26,24,20,0.22);
+      outline: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      color: var(--ink);
+      padding: 0.3rem 0;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .field-input::placeholder { color: #C8C3BB; font-size: 10px; }
+    .field-input:focus { border-bottom-color: var(--ink); }
+
+    .btn-join {
+      background: var(--ink);
+      color: var(--bg);
+      border: none;
+      border-radius: 0;
+      width: 100%;
+      padding: 0.8rem 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 7.5px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 0.125rem;
+    }
+    .btn-join:hover { background: #333; }
+
+    .form-alt {
+      font-size: 7px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .form-alt a { color: var(--ink); text-decoration: none; font-weight: 500; }
+    .form-alt a:hover { text-decoration: underline; }
+
+    /* ── VERTICAL RULE — inset top & bottom ─────────────── */
+    .v-rule {
+      flex-shrink: 0;
+      width: 1px;
+      background: var(--rule);
+      margin: 3.5rem 2rem;   /* inset from top/bottom, gap left/right */
+    }
+
+    /* ── COL 2 — MAIN IMAGE ─────────────────────────────── */
+    .col-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;       /* vertically centered — whitespace above & below */
+      justify-content: center;
+      padding: 1.5rem 1rem;
+    }
+
+    .card-main {
+      position: relative;
+      width: 310px;
+      flex-shrink: 0;
+    }
+
+    .card-main img {
+      display: block;
+      width: 100%;
+      height: 460px;
+      object-fit: cover;
+      filter: grayscale(100%) contrast(1.07);
+    }
+
+    /* Small slide index, top-right corner of image */
+    .card-main .badge {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 7px;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Bold caption overlaid at bottom */
+    .card-main .caption {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 4.5rem 1rem 1rem;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+      font-family: 'Anton', sans-serif;
+      font-size: 1.625rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #fff;
+      line-height: 1.06;
+    }
+
+    /* Rotated text on the right outer edge of the image */
+    .card-main .side-label {
+      position: absolute;
+      right: -22px;
+      top: 50%;
+      transform: translateY(-50%) rotate(90deg);
+      font-size: 6.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ── COL 3 — SECONDARY IMAGE ────────────────────────── */
+    .col-secondary {
+      width: 232px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;   /* push image to bottom = offset lower */
+      padding: 1.5rem 0 2.75rem 1rem;
+    }
+
+    .card-secondary img {
+      display: block;
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      filter: grayscale(100%) brightness(0.7);
+    }
+
+    .card-secondary .sec-label {
+      margin-top: 0.5rem;
+      font-size: 7px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ── CAROUSEL NAV ────────────────────────────────────── */
+    .carousel-nav {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.375rem;
+      padding: 0.625rem;
+      border-top: 1px solid var(--rule);
+    }
+
+    .carousel-nav button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--ink);
+      line-height: 1;
+      padding: 0 0.25rem;
+    }
+    .carousel-nav button:hover { opacity: 0.5; }
+
+    .nav-counter {
+      font-size: 7px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      min-width: 52px;
+      text-align: center;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    footer {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 2.75rem;
+      border-top: 1px solid var(--rule);
+    }
+
+    .footer-copy {
+      font-size: 6.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #BBB;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .footer-email {
+      font-size: 6.5px;
+      letter-spacing: 0.07em;
+      color: #BBB;
+      text-decoration: none;
+    }
+
+    /* Diamond logomark — rotated square with inner square */
+    .logomark {
+      width: 22px;
+      height: 22px;
+      background: var(--ink);
+      transform: rotate(45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .logomark::after {
+      content: '';
+      display: block;
+      width: 8px;
+      height: 8px;
+      background: var(--bg);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="h-meta">
+      Toronto, CA<br>
+      <span class="dim" id="clock">—</span>
+    </div>
+    <div class="h-wordmark">Cadenza</div>
+    <nav class="h-nav">
+      <a href="#">Home</a>
+      <a href="mailto:amanda.sf.wu@gmail.com" class="dim">Contact</a>
+    </nav>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- Form -->
+    <div class="col-form">
+      <div class="form-heading">Initiate Access</div>
+
+      <div class="role-row">
+        <label class="role-label">
+          <input type="radio" name="role" value="student" checked>
+          Student
+        </label>
+        <label class="role-label">
+          <input type="radio" name="role" value="teacher">
+          Teacher
+        </label>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Email Address</span>
+        <input class="field-input" type="email" placeholder="you@example.com" id="email-input">
+      </div>
+
+      <div class="field">
+        <span class="field-label">Security Key</span>
+        <input class="field-input" type="password" placeholder="••••••" id="pw-input">
+      </div>
+
+      <button class="btn-join" onclick="handleJoin()">Join the Quorum</button>
+
+      <div class="form-alt">
+        Already have an account?
+        <a href="#" onclick="toggleMode(event)">Sign in</a>
+      </div>
+    </div>
+
+    <!-- Vertical rule -->
+    <div class="v-rule"></div>
+
+    <!-- Main image -->
+    <div class="col-main">
+      <div class="card-main">
+        <img id="main-img" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=900&q=85&auto=format&fit=crop" alt="">
+        <span class="badge" id="badge">4</span>
+        <div class="caption" id="main-caption">Record Your<br>Journey</div>
+        <div class="side-label">Now</div>
+      </div>
+    </div>
+
+    <!-- Secondary image -->
+    <div class="col-secondary">
+      <div class="card-secondary">
+        <img id="preview-img" src="https://images.unsplash.com/photo-1598387993441-a364f854cfdf?w=700&q=85&auto=format&fit=crop" alt="">
+        <div class="sec-label" id="preview-label">Share with Others</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── CAROUSEL NAV ── -->
+  <div class="carousel-nav">
+    <button onclick="prev()">←</button>
+    <span class="nav-counter" id="counter">004 / 010</span>
+    <button onclick="next()">→</button>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <span class="footer-copy">©2026 Cadenza. All rights reserved.</span>
+    <div class="footer-right">
+      <a class="footer-email" href="mailto:amanda.sf.wu@gmail.com">amanda.sf.wu@gmail.com</a>
+      <div class="logomark"></div>
+    </div>
+  </footer>
+
+  <script>
+    // ── Clock ───────────────────────────────────────────
+    (function tick() {
+      document.getElementById('clock').textContent =
+        new Date().toLocaleTimeString('en-CA', {
+          timeZone: 'America/Toronto',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+        }) + ' EST';
+      setTimeout(tick, 30_000);
+    })();
+
+    // ── Carousel ────────────────────────────────────────
+    const SLIDES = [
+      { label: "Record Your\nJourney",   img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=900&q=85&auto=format&fit=crop" },
+      { label: "Share With\nOthers",     img: "https://images.unsplash.com/photo-1598387993441-a364f854cfdf?w=900&q=85&auto=format&fit=crop" },
+      { label: "Get Real\nFeedback",     img: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=900&q=85&auto=format&fit=crop" },
+      { label: "Build Your\nProfile",    img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=900&q=85&auto=format&fit=crop" },
+      { label: "Practice\nDaily",        img: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=900&q=85&auto=format&fit=crop" },
+      { label: "Join The\nCommunity",    img: "https://images.unsplash.com/photo-1470019693664-1d202d2c0907?w=900&q=85&auto=format&fit=crop" },
+      { label: "Learn\nWith AI",         img: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=900&q=85&auto=format&fit=crop" },
+      { label: "Track Your\nGrowth",     img: "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=900&q=85&auto=format&fit=crop" },
+      { label: "Discover Your\nSound",   img: "https://images.unsplash.com/photo-1484876065684-b683cf17d276?w=900&q=85&auto=format&fit=crop" },
+      { label: "Perform For\nThe World", img: "https://images.unsplash.com/photo-1524230572899-a752b3835840?w=900&q=85&auto=format&fit=crop" },
+    ];
+
+    let cur = 3; // start at 004
+
+    const pad = n => String(n).padStart(3, '0');
+
+    function render() {
+      const s = SLIDES[cur];
+      const p = SLIDES[(cur + 1) % SLIDES.length];
+      document.getElementById('main-img').src       = s.img;
+      document.getElementById('main-caption').innerHTML = s.label.replace('\n', '<br>');
+      document.getElementById('badge').textContent  = cur + 1;
+      document.getElementById('counter').textContent = `${pad(cur + 1)} / ${pad(SLIDES.length)}`;
+      document.getElementById('preview-img').src    = p.img;
+      document.getElementById('preview-label').textContent = p.label.replace('\n', ' ');
+    }
+
+    function prev() { cur = (cur - 1 + SLIDES.length) % SLIDES.length; render(); }
+    function next() { cur = (cur + 1) % SLIDES.length; render(); }
+
+    render();
+
+    // ── Sign-in / Sign-up toggle ─────────────────────────
+    let signinMode = false;
+
+    function toggleMode(e) {
+      e.preventDefault();
+      signinMode = !signinMode;
+      document.querySelector('.form-heading').textContent = signinMode ? 'Welcome Back' : 'Initiate Access';
+      document.querySelector('.btn-join').textContent     = signinMode ? 'Access Cadenza' : 'Join the Quorum';
+      document.querySelector('.form-alt').innerHTML       = signinMode
+        ? `Don't have an account? <a href="#" onclick="toggleMode(event)">Create one</a>`
+        : `Already have an account? <a href="#" onclick="toggleMode(event)">Sign in</a>`;
+      document.querySelector('.role-row').style.display  = signinMode ? 'none' : 'flex';
+    }
+
+    function handleJoin() {
+      // Placeholder — in the real app this calls /api/auth
+      const email = document.getElementById('email-input').value;
+      if (!email) { alert('Enter your email address'); return; }
+      alert(signinMode ? `Signing in as ${email}` : `Creating account for ${email}`);
+    }
+  </script>
+
+</body>
+</html>
