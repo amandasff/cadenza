@@ -337,12 +337,12 @@ export default function Home() {
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.12em",
               }}>
                 <button onClick={prevSlide} style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 16,
-                  color: "#000", padding: 2, lineHeight: 1,
+                  background: "none", border: "none", cursor: "pointer", fontSize: 28,
+                  color: "#000", padding: 4, lineHeight: 1,
                 }}>&#8592;</button>
                 <button onClick={nextSlide} style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 16,
-                  color: "#000", padding: 2, lineHeight: 1,
+                  background: "none", border: "none", cursor: "pointer", fontSize: 28,
+                  color: "#000", padding: 4, lineHeight: 1,
                 }}>&#8594;</button>
               </div>
 
