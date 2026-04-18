@@ -20,6 +20,12 @@ const SLIDES = [
 
 const PAD = (n: number) => String(n).padStart(3, "0");
 
+const PASTEL = ["#FFB3B3", "#C4B5F0", "#8FD9B6", "#FFE0A3", "#A3D5F4", "#FFCAA8", "#C4B5F0"];
+const cadenzaLetters = (size?: string) =>
+  "CADENZA".split("").map((ch, i) => (
+    <span key={i} style={{ color: PASTEL[i] }}>{ch}</span>
+  ));
+
 interface Recording { id: string; title: string; url: string; artist: string }
 
 export default function Home() {
@@ -204,6 +210,10 @@ export default function Home() {
         .cad-nav-arrow:hover { opacity: 0.5; }
         .cad-btn-primary { transition: background 0.3s; }
         .cad-btn-primary:hover { background: #3b3b3b !important; }
+        .cad-btn-pastel { transition: filter 0.3s; }
+        .cad-btn-pastel:hover { filter: brightness(0.92); }
+        .cad-input:focus { border-bottom-color: #C4B5F0 !important; }
+        .cad-input-dark:focus { border-bottom-color: #C4B5F0 !important; }
         .cad-btn-outline { transition: background 0.2s; }
         .cad-btn-outline:hover { background: rgba(0,0,0,0.04); }
         .cad-link:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 0.5px; }
@@ -251,7 +261,7 @@ export default function Home() {
                 fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase",
                 lineHeight: 1, margin: 0,
               }}>
-                CADENZA
+                {cadenzaLetters()}
               </h1>
               <span style={{
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
@@ -317,7 +327,7 @@ export default function Home() {
                 ))}
                 <p style={{
                   fontFamily: "'Work Sans', sans-serif", fontSize: 12,
-                  color: "rgba(255,255,255,0.55)", marginTop: 8,
+                  color: "#FFE0A3", marginTop: 8,
                   letterSpacing: "0.02em", lineHeight: 1.4,
                 }}>
                   A practice platform for music learners
@@ -352,7 +362,8 @@ export default function Home() {
               <button
                 onClick={() => setShowForm(true)}
                 style={{
-                  background: "#000", color: "#fbf9f4", border: "none",
+                  background: "linear-gradient(135deg, #FFB3B3, #C4B5F0, #A3D5F4)",
+                  color: "#000", border: "none",
                   fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                   fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
                   padding: "0.7rem 1.5rem", cursor: "pointer", borderRadius: 0,
@@ -379,9 +390,9 @@ export default function Home() {
                   <h1 style={{
                     fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.25rem",
                     fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase",
-                    margin: 0, color: "#fbf9f4",
+                    margin: 0,
                   }}>
-                    CADENZA
+                    {cadenzaLetters()}
                   </h1>
                   <button onClick={() => setShowForm(false)} style={{
                     background: "none", border: "none", color: "rgba(255,255,255,0.5)",
@@ -413,7 +424,7 @@ export default function Home() {
                             <div style={{
                               width: 12, height: 12, borderRadius: "50%",
                               border: "1px solid rgba(255,255,255,0.4)",
-                              background: role === r ? "#fbf9f4" : "transparent",
+                              background: role === r ? (r === "student" ? "#A3D5F4" : "#C4B5F0") : "transparent",
                               transition: "background 0.15s",
                             }} />
                             <span style={{
@@ -451,7 +462,9 @@ export default function Home() {
                     )}
 
                     <button type="submit" disabled={loading} style={{
-                      marginTop: "0.5rem", background: "#fbf9f4", color: "#000", border: "none",
+                      marginTop: "0.5rem",
+                      background: "linear-gradient(135deg, #FFB3B3, #C4B5F0, #A3D5F4)",
+                      color: "#000", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
                       fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em",
                       padding: "1rem 1.5rem", cursor: loading ? "default" : "pointer",
@@ -520,7 +533,7 @@ export default function Home() {
                   fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.5rem, 3vw, 2.75rem)",
                   fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase", lineHeight: 1, margin: 0,
                 }}>
-                  CADENZA
+                  {cadenzaLetters()}
                 </h1>
               </div>
               <nav style={{
@@ -565,7 +578,7 @@ export default function Home() {
                             <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: "none" }} />
                             <div style={{
                               width: 11, height: 11, borderRadius: "50%", border: "1px solid #000",
-                              background: role === r ? "#000" : "transparent", transition: "background 0.15s",
+                              background: role === r ? (r === "student" ? "#A3D5F4" : "#C4B5F0") : "transparent", transition: "background 0.15s",
                             }} />
                             <span style={{
                               fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
@@ -600,8 +613,10 @@ export default function Home() {
                       <div style={{ fontSize: 11, color: "#ba1a1a", letterSpacing: "0.04em" }}>{error}</div>
                     )}
 
-                    <button type="submit" disabled={loading} className="cad-btn-primary" style={{
-                      marginTop: "0.5rem", background: "#000", color: "#fbf9f4", border: "none",
+                    <button type="submit" disabled={loading} className="cad-btn-pastel" style={{
+                      marginTop: "0.5rem",
+                      background: "linear-gradient(135deg, #FFB3B3, #C4B5F0, #A3D5F4)",
+                      color: "#000", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                       textTransform: "uppercase", letterSpacing: "0.15em",
                       padding: "0.85rem 1rem", cursor: loading ? "default" : "pointer",
@@ -721,7 +736,7 @@ export default function Home() {
                 <button onClick={prevSlide} className="cad-nav-arrow" style={{
                   background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#000", padding: "0.25rem", lineHeight: 1,
                 }}>&#8592;</button>
-                <span style={{ fontWeight: 700 }}>{PAD(slide + 1)}</span>
+                <span style={{ fontWeight: 700, color: PASTEL[slide % PASTEL.length] }}>{PAD(slide + 1)}</span>
                 <span style={{ color: "rgba(0,0,0,0.4)" }}>/ {PAD(SLIDES.length)}</span>
                 <button onClick={nextSlide} className="cad-nav-arrow" style={{
                   background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#000", padding: "0.25rem", lineHeight: 1,
