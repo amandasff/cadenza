@@ -6,21 +6,21 @@ import { AuthService } from "@/lib/services/AuthService";
 import type { UserRole } from "@/lib/types";
 
 const SLIDES = [
-  { label: "Record Your\nJourney", img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 1 // ORIGIN" },
-  { label: "Share With\nOthers", img: "https://images.unsplash.com/photo-1598387993441-a364f854cfdf?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 2 // ECHO" },
-  { label: "Get Real\nFeedback", img: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 3 // PULSE" },
-  { label: "Build Your\nProfile", img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 4 // ICON" },
-  { label: "Practice\nDaily", img: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 5 // RITUAL" },
-  { label: "Join The\nCommunity", img: "https://images.unsplash.com/photo-1470019693664-1d202d2c0907?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 6 // CHORUS" },
-  { label: "Learn\nWith AI", img: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 7 // SPARK" },
-  { label: "Track Your\nGrowth", img: "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 8 // ARC" },
-  { label: "Discover Your\nSound", img: "https://images.unsplash.com/photo-1484876065684-b683cf17d276?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 9 // TIMBRE" },
-  { label: "Perform For\nThe World", img: "https://images.unsplash.com/photo-1524230572899-a752b3835840?w=1400&q=85&auto=format&fit=crop", vol: "VOL. 10 // STAGE" },
+  { label: "Record Your\nJourney", img: "/slides/01.png", vol: "VOL. 1 // ORIGIN" },
+  { label: "Share With\nOthers", img: "/slides/02.png", vol: "VOL. 2 // ECHO" },
+  { label: "Get Real\nFeedback", img: "/slides/03.png", vol: "VOL. 3 // PULSE" },
+  { label: "Build Your\nProfile", img: "/slides/04.png", vol: "VOL. 4 // ICON" },
+  { label: "Practice\nDaily", img: "/slides/05.png", vol: "VOL. 5 // RITUAL" },
+  { label: "Join The\nCommunity", img: "/slides/06.png", vol: "VOL. 6 // CHORUS" },
+  { label: "Learn\nWith AI", img: "/slides/07.png", vol: "VOL. 7 // SPARK" },
+  { label: "Track Your\nGrowth", img: "/slides/08.png", vol: "VOL. 8 // ARC" },
+  { label: "Discover Your\nSound", img: "/slides/09.png", vol: "VOL. 9 // TIMBRE" },
+  { label: "Perform For\nThe World", img: "/slides/10.png", vol: "VOL. 10 // STAGE" },
 ];
 
 const PAD = (n: number) => String(n).padStart(3, "0");
 
-const PASTEL = ["#FFB3B3", "#C4B5F0", "#8FD9B6", "#FFE0A3", "#A3D5F4", "#FFCAA8", "#C4B5F0"];
+const PASTEL = ["#D97070", "#8B6FD4", "#4BA87A", "#D4A24C", "#5A9FD4", "#D4855A", "#8B6FD4"];
 const cadenzaLetters = (size?: string) =>
   "CADENZA".split("").map((ch, i) => (
     <span key={i} style={{ color: PASTEL[i] }}>{ch}</span>
@@ -212,8 +212,8 @@ export default function Home() {
         .cad-btn-primary:hover { background: #3b3b3b !important; }
         .cad-btn-pastel { transition: filter 0.3s; }
         .cad-btn-pastel:hover { filter: brightness(0.92); }
-        .cad-input:focus { border-bottom-color: #C4B5F0 !important; }
-        .cad-input-dark:focus { border-bottom-color: #C4B5F0 !important; }
+        .cad-input:focus { border-bottom-color: #8B6FD4 !important; }
+        .cad-input-dark:focus { border-bottom-color: #8B6FD4 !important; }
         .cad-btn-outline { transition: background 0.2s; }
         .cad-btn-outline:hover { background: rgba(0,0,0,0.04); }
         .cad-link:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 0.5px; }
@@ -327,7 +327,7 @@ export default function Home() {
                 ))}
                 <p style={{
                   fontFamily: "'Work Sans', sans-serif", fontSize: 12,
-                  color: "#FFE0A3", marginTop: 8,
+                  color: "#D4A24C", marginTop: 8,
                   letterSpacing: "0.02em", lineHeight: 1.4,
                 }}>
                   A practice platform for music learners
@@ -362,7 +362,7 @@ export default function Home() {
               <button
                 onClick={() => setShowForm(true)}
                 style={{
-                  background: "linear-gradient(135deg, #FFB3B3, #C4B5F0, #A3D5F4)",
+                  background: "linear-gradient(135deg, #D97070, #8B6FD4, #5A9FD4)",
                   color: "#000", border: "none",
                   fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                   fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
@@ -424,7 +424,7 @@ export default function Home() {
                             <div style={{
                               width: 12, height: 12, borderRadius: "50%",
                               border: "1px solid rgba(255,255,255,0.4)",
-                              background: role === r ? (r === "student" ? "#A3D5F4" : "#C4B5F0") : "transparent",
+                              background: role === r ? (r === "student" ? "#5A9FD4" : "#8B6FD4") : "transparent",
                               transition: "background 0.15s",
                             }} />
                             <span style={{
@@ -463,7 +463,7 @@ export default function Home() {
 
                     <button type="submit" disabled={loading} style={{
                       marginTop: "0.5rem",
-                      background: "linear-gradient(135deg, #FFB3B3, #C4B5F0, #A3D5F4)",
+                      background: "linear-gradient(135deg, #D97070, #8B6FD4, #5A9FD4)",
                       color: "#000", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
                       fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em",
@@ -578,7 +578,7 @@ export default function Home() {
                             <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: "none" }} />
                             <div style={{
                               width: 11, height: 11, borderRadius: "50%", border: "1px solid #000",
-                              background: role === r ? (r === "student" ? "#A3D5F4" : "#C4B5F0") : "transparent", transition: "background 0.15s",
+                              background: role === r ? (r === "student" ? "#5A9FD4" : "#8B6FD4") : "transparent", transition: "background 0.15s",
                             }} />
                             <span style={{
                               fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
@@ -615,7 +615,7 @@ export default function Home() {
 
                     <button type="submit" disabled={loading} className="cad-btn-pastel" style={{
                       marginTop: "0.5rem",
-                      background: "linear-gradient(135deg, #FFB3B3, #C4B5F0, #A3D5F4)",
+                      background: "linear-gradient(135deg, #D97070, #8B6FD4, #5A9FD4)",
                       color: "#000", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                       textTransform: "uppercase", letterSpacing: "0.15em",

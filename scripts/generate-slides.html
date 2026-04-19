@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #111; font-family: 'Work Sans', sans-serif; }
+
+  .slide {
+    width: 800px; height: 1000px;
+    position: relative; overflow: hidden;
+    display: none;
+    background: #F8F6F2;
+    color: #2C2824;
+  }
+  .slide:target { display: block; }
+  .slide.active { display: block; }
+
+  .sg { font-family: 'Space Grotesk', sans-serif; }
+  .upper { text-transform: uppercase; letter-spacing: 0.12em; }
+  .muted { color: #9A9590; }
+  .border-b { border-bottom: 1px solid #E8E3D9; }
+
+  /* App chrome */
+  .app-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid #E8E3D9;
+    background: #F8F6F2;
+  }
+  .app-bar h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 900; font-size: 18px; letter-spacing: -0.02em; }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid #E8E3D9;
+    background: #F8F6F2;
+  }
+  .tab-bar .tab {
+    flex: 1; text-align: center;
+    padding: 12px 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: #9A9590;
+    border-bottom: 2px solid transparent;
+  }
+  .tab-bar .tab.active { color: #2C2824; border-bottom-color: #2C2824; font-weight: 700; }
+
+  .content { padding: 24px; flex: 1; }
+
+  /* Cards */
+  .card {
+    background: #fff; border: 1px solid #E8E3D9;
+    padding: 20px; margin-bottom: 16px;
+  }
+
+  /* Streak heatmap mock */
+  .heatmap { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; }
+  .heatmap .cell {
+    aspect-ratio: 1; border-radius: 2px;
+  }
+
+  /* Waveform mock */
+  .waveform { display: flex; align-items: center; gap: 2px; height: 60px; padding: 0 8px; }
+  .waveform .bar {
+    flex: 1; background: #4BA87A; border-radius: 1px; min-width: 3px;
+  }
+
+  /* Chat bubbles */
+  .bubble {
+    padding: 12px 16px; margin-bottom: 10px;
+    max-width: 85%; line-height: 1.5; font-size: 13px;
+  }
+  .bubble.ai { background: #EBF3EE; border: 1px solid #B4D0C4; align-self: flex-start; }
+  .bubble.user { background: #F3EBF0; border: 1px solid #D4B4BE; align-self: flex-end; margin-left: auto; }
+
+  /* Portfolio grid */
+  .portfolio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .portfolio-item {
+    background: #2C2824; aspect-ratio: 1; display: flex;
+    flex-direction: column; justify-content: flex-end; padding: 12px;
+  }
+  .portfolio-item span { color: #F8F6F2; font-size: 11px; }
+
+  /* Stats */
+  .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat-box {
+    flex: 1; background: #fff; border: 1px solid #E8E3D9;
+    padding: 16px; text-align: center;
+  }
+  .stat-box .num { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 900; }
+  .stat-box .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: #9A9590; margin-top: 4px; }
+
+  /* Progress bars */
+  .progress-bar { height: 6px; background: #E8E3D9; margin: 8px 0; }
+  .progress-bar .fill { height: 100%; }
+
+  /* Feed item */
+  .feed-item {
+    display: flex; gap: 14px; padding: 16px 0;
+    border-bottom: 1px solid #E8E3D9;
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #D0CBC0; flex-shrink: 0;
+  }
+
+  /* Piece list */
+  .piece-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid #E8E3D9;
+  }
+  .piece-icon {
+    width: 44px; height: 44px; background: #2C2824;
+    display: flex; align-items: center; justify-content: center;
+    color: #F8F6F2; font-size: 18px; flex-shrink: 0;
+  }
+
+  /* Chart mock */
+  .chart-area {
+    height: 160px; display: flex; align-items: flex-end;
+    gap: 6px; padding: 0 4px;
+  }
+  .chart-bar {
+    flex: 1; background: linear-gradient(to top, #5A9FD4, #8B6FD4);
+    border-radius: 2px 2px 0 0; min-width: 12px;
+  }
+
+  /* Big hero section for some slides */
+  .hero-section {
+    background: #2C2824; color: #F8F6F2;
+    padding: 48px 24px; text-align: center;
+  }
+  .hero-section h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 32px; font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  /* Notation mock */
+  .staff-lines {
+    position: relative; height: 80px;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent, transparent 14px,
+      #D0CBC0 14px, #D0CBC0 15px
+    );
+    margin: 16px 0;
+  }
+  .note {
+    position: absolute;
+    width: 14px; height: 10px;
+    background: #2C2824; border-radius: 50%;
+    transform: rotate(-15deg);
+  }
+  .note::after {
+    content: '';
+    position: absolute; right: -2px; top: -28px;
+    width: 2px; height: 28px; background: #2C2824;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Record Your Journey -->
+<div class="slide" id="slide-1">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Practice Session</span>
+    <h1>Cadenza</h1>
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">02:34</span>
+  </div>
+  <div style="padding: 32px 24px;">
+    <div style="text-align: center; margin-bottom: 24px;">
+      <span class="sg upper muted" style="font-size: 10px;">Now Performing</span>
+      <h2 class="sg" style="font-size: 24px; font-weight: 900; margin-top: 8px;">Nocturne Op. 9 No. 2</h2>
+      <span class="muted" style="font-size: 13px;">Chopin</span>
+    </div>
+    <div class="card" style="background: #2C2824; border: none; padding: 24px;">
+      <div class="waveform">
+        <script>document.currentScript.parentNode.innerHTML += Array.from({length: 60}, () => `<div class="bar" style="height: ${15 + Math.random() * 85}%"></div>`).join('');</script>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 12px;">
+        <span style="font-size: 11px; color: #9A9590;">01:47</span>
+        <span style="font-size: 11px; color: #9A9590;">04:32</span>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: center; gap: 32px; margin-top: 28px;">
+      <div style="width: 48px; height: 48px; border: 1px solid #D0CBC0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">⟲</div>
+      <div style="width: 64px; height: 64px; background: #D97070; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <div style="width: 20px; height: 20px; background: #F8F6F2; border-radius: 3px;"></div>
+      </div>
+      <div style="width: 48px; height: 48px; border: 1px solid #D0CBC0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">♪</div>
+    </div>
+    <div style="margin-top: 32px;">
+      <span class="sg upper muted" style="font-size: 9px;">Segments</span>
+      <div style="margin-top: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #E8E3D9;">
+          <span style="font-size: 12px; color: #4BA87A;">●</span>
+          <span style="font-size: 13px;">Exposition — bars 1-16</span>
+          <span class="muted" style="font-size: 11px; margin-left: auto;">01:12</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #E8E3D9;">
+          <span style="font-size: 12px; color: #8B6FD4;">●</span>
+          <span style="font-size: 13px;">Development — bars 17-32</span>
+          <span class="muted" style="font-size: 11px; margin-left: auto;">00:35</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+          <span style="font-size: 12px; color: #D4A24C;">●</span>
+          <span style="font-size: 13px;">Recapitulation — bars 33-48</span>
+          <span class="muted" style="font-size: 11px; margin-left: auto;">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: Share With Others -->
+<div class="slide" id="slide-2">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Studio</span>
+    <h1>My Studio</h1>
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Chat</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab">Goals</div>
+    <div class="tab active">Chat</div>
+    <div class="tab">Members</div>
+  </div>
+  <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="text-align: center; margin-bottom: 8px;">
+      <span class="muted" style="font-size: 10px;">Today</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: flex-start;">
+      <div class="avatar" style="background: #D97070;"></div>
+      <div>
+        <span class="sg" style="font-size: 11px; font-weight: 700;">Emma C.</span>
+        <div class="bubble ai" style="margin-top: 4px;">
+          Just finished recording my Bach Prelude! Listen to this 🎵
+        </div>
+        <div class="card" style="padding: 12px; margin-top: 6px; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; background: #4BA87A; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">▶</div>
+          <div style="flex: 1;">
+            <div style="font-size: 12px; font-weight: 500;">Bach Prelude in C Major</div>
+            <div style="font-size: 10px; color: #9A9590;">2:34</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: flex-start;">
+      <div class="avatar" style="background: #5A9FD4;"></div>
+      <div>
+        <span class="sg" style="font-size: 11px; font-weight: 700;">Alex K.</span>
+        <div class="bubble ai" style="margin-top: 4px;">That sounds amazing! The dynamics in the middle section are so smooth 👏</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: flex-start;">
+      <div class="avatar" style="background: #8B6FD4;"></div>
+      <div>
+        <span class="sg" style="font-size: 11px; font-weight: 700;">Ms. Rivera</span>
+        <span style="font-size: 9px; background: #8B6FD4; color: #fff; padding: 1px 6px; margin-left: 6px; text-transform: uppercase; letter-spacing: 0.1em;">Teacher</span>
+        <div class="bubble ai" style="margin-top: 4px;">Beautiful work Emma! Pay attention to the voicing in bars 12-14. Try bringing out the soprano line a bit more. Let's work on that in our next lesson.</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: flex-start;">
+      <div class="avatar" style="background: #D4A24C;"></div>
+      <div>
+        <span class="sg" style="font-size: 11px; font-weight: 700;">Jordan L.</span>
+        <div class="bubble ai" style="margin-top: 4px;">
+          I'm working on the same piece! Here's mine for comparison 😊
+        </div>
+        <div class="card" style="padding: 12px; margin-top: 6px; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; background: #D4A24C; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">▶</div>
+          <div style="flex: 1;">
+            <div style="font-size: 12px; font-weight: 500;">Bach Prelude in C (take 3)</div>
+            <div style="font-size: 10px; color: #9A9590;">2:48</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: Get Real Feedback -->
+<div class="slide" id="slide-3">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">AI Coach</span>
+    <h1>Feedback</h1>
+    <span></span>
+  </div>
+  <div style="padding: 20px 24px;">
+    <div class="card" style="background: #2C2824; border: none; padding: 16px;">
+      <div class="waveform" style="height: 40px;">
+        <script>document.currentScript.parentNode.innerHTML += Array.from({length: 50}, () => `<div class="bar" style="height: ${10 + Math.random() * 90}%; background: #4BA87A;"></div>`).join('');</script>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+        <span style="font-size: 10px; color: #9A9590;">Sonata No. 14 — Movement 1</span>
+        <span style="font-size: 10px; color: #9A9590;">5:12</span>
+      </div>
+    </div>
+    <div style="margin-top: 20px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #8B6FD4, #5A9FD4); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">✦</div>
+        <span class="sg" style="font-weight: 700; font-size: 13px;">AI Coach Analysis</span>
+      </div>
+      <div class="card" style="border-left: 3px solid #4BA87A; background: #f5faf7;">
+        <span class="sg upper" style="font-size: 9px; color: #4BA87A; font-weight: 700;">Strengths</span>
+        <p style="font-size: 13px; margin-top: 8px; line-height: 1.6;">Your phrasing in the opening theme is beautifully shaped. The dynamic contrast between pp and mp passages shows real musicality. The pedaling in bars 1-5 creates a gorgeous legato.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid #D4A24C; background: #fdf8f0;">
+        <span class="sg upper" style="font-size: 9px; color: #D4A24C; font-weight: 700;">Areas to Improve</span>
+        <p style="font-size: 13px; margin-top: 8px; line-height: 1.6;">The triplet figure in bars 15-18 rushes slightly. Try practicing with a metronome at ♩=52 before working up to tempo. Also watch the left hand balance — it's overpowering the melody in the second phrase.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid #8B6FD4; background: #f4f0fb;">
+        <span class="sg upper" style="font-size: 9px; color: #8B6FD4; font-weight: 700;">Practice Suggestion</span>
+        <p style="font-size: 13px; margin-top: 8px; line-height: 1.6;">Isolate bars 15-18, hands separately. Right hand: focus on even triplets. Left hand: practice at pp dynamic. Then combine at half tempo.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4: Build Your Profile -->
+<div class="slide" id="slide-4">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Public Profile</span>
+    <h1>@emmachen</h1>
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Edit</span>
+  </div>
+  <div style="padding: 24px; text-align: center;">
+    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #D97070, #8B6FD4); border-radius: 50%; margin: 0 auto 12px;"></div>
+    <h2 class="sg" style="font-size: 20px; font-weight: 900;">Emma Chen</h2>
+    <span class="muted" style="font-size: 12px;">Piano • Grade 8 RCM</span>
+    <p style="font-size: 13px; margin-top: 12px; line-height: 1.5; max-width: 320px; margin-left: auto; margin-right: auto; color: #555;">Aspiring concert pianist. Chopin enthusiast. Currently working through the Beethoven Sonatas.</p>
+    <div class="stat-row" style="margin-top: 20px;">
+      <div class="stat-box">
+        <div class="num" style="color: #D97070;">47</div>
+        <div class="label">Day Streak</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" style="color: #8B6FD4;">12</div>
+        <div class="label">Recordings</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" style="color: #5A9FD4;">2.4k</div>
+        <div class="label">Points</div>
+      </div>
+    </div>
+  </div>
+  <div style="padding: 0 24px;">
+    <span class="sg upper" style="font-size: 10px; font-weight: 700;">Portfolio</span>
+    <div class="portfolio-grid" style="margin-top: 12px;">
+      <div class="portfolio-item" style="background: linear-gradient(135deg, #2C2824, #3d3632);">
+        <span style="font-size: 12px; font-weight: 600;">Nocturne Op. 9</span>
+        <span style="font-size: 10px; opacity: 0.6;">Chopin • 4:32</span>
+      </div>
+      <div class="portfolio-item" style="background: linear-gradient(135deg, #2C2824, #3d3632);">
+        <span style="font-size: 12px; font-weight: 600;">Prelude in C</span>
+        <span style="font-size: 10px; opacity: 0.6;">Bach • 2:34</span>
+      </div>
+      <div class="portfolio-item" style="background: linear-gradient(135deg, #2C2824, #3d3632);">
+        <span style="font-size: 12px; font-weight: 600;">Clair de Lune</span>
+        <span style="font-size: 10px; opacity: 0.6;">Debussy • 5:18</span>
+      </div>
+      <div class="portfolio-item" style="background: linear-gradient(135deg, #2C2824, #3d3632);">
+        <span style="font-size: 12px; font-weight: 600;">Fur Elise</span>
+        <span style="font-size: 10px; opacity: 0.6;">Beethoven • 3:05</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Practice Daily -->
+<div class="slide" id="slide-5">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Dashboard</span>
+    <h1>Practice</h1>
+    <span></span>
+  </div>
+  <div style="padding: 24px;">
+    <div class="card" style="text-align: center; padding: 24px;">
+      <div style="font-size: 14px;">🔥</div>
+      <div class="sg" style="font-size: 48px; font-weight: 900; color: #D97070; margin-top: 4px;">47</div>
+      <span class="sg upper muted" style="font-size: 10px;">Day Streak</span>
+      <div style="margin-top: 16px; display: flex; justify-content: center; gap: 4px;">
+        <span style="font-size: 10px; color: #4BA87A;">M ✓</span>
+        <span style="font-size: 10px; color: #4BA87A;">T ✓</span>
+        <span style="font-size: 10px; color: #4BA87A;">W ✓</span>
+        <span style="font-size: 10px; color: #4BA87A;">T ✓</span>
+        <span style="font-size: 10px; color: #4BA87A;">F ✓</span>
+        <span style="font-size: 10px; color: #D4A24C;">S ●</span>
+        <span style="font-size: 10px; color: #9A9590;">S</span>
+      </div>
+    </div>
+    <div style="margin-top: 20px;">
+      <span class="sg upper" style="font-size: 10px; font-weight: 700;">Practice Heatmap</span>
+      <div class="heatmap" style="margin-top: 12px;">
+        <script>
+          const greens = ['#E8E3D9', '#d4edda', '#8FD9B6', '#4BA87A', '#2d7a55'];
+          document.currentScript.parentNode.innerHTML += Array.from({length: 100}, () =>
+            `<div class="cell" style="background: ${greens[Math.floor(Math.random() * greens.length)]}"></div>`
+          ).join('');
+        </script>
+      </div>
+    </div>
+    <div style="margin-top: 20px;">
+      <span class="sg upper" style="font-size: 10px; font-weight: 700;">Today's Goals</span>
+      <div style="margin-top: 12px;">
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 20px; height: 20px; border: 2px solid #4BA87A; border-radius: 3px; display: flex; align-items: center; justify-content: center; color: #4BA87A; font-size: 12px; background: #EBF3EE;">✓</div>
+          <div style="flex: 1;">
+            <div style="font-size: 13px;">Scales — C Major, G Major</div>
+            <div class="progress-bar"><div class="fill" style="width: 100%; background: #4BA87A;"></div></div>
+          </div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 20px; height: 20px; border: 2px solid #D4A24C; border-radius: 3px;"></div>
+          <div style="flex: 1;">
+            <div style="font-size: 13px;">Nocturne — slow practice bars 15-18</div>
+            <div class="progress-bar"><div class="fill" style="width: 60%; background: #D4A24C;"></div></div>
+          </div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 20px; height: 20px; border: 2px solid #E8E3D9; border-radius: 3px;"></div>
+          <div style="flex: 1;">
+            <div style="font-size: 13px;">Sight reading — 15 minutes</div>
+            <div class="progress-bar"><div class="fill" style="width: 0%; background: #5A9FD4;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6: Join The Community -->
+<div class="slide" id="slide-6">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Explore</span>
+    <h1>Discover</h1>
+    <span></span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active">Trending</div>
+    <div class="tab">Following</div>
+    <div class="tab">Friends</div>
+  </div>
+  <div style="padding: 0 24px;">
+    <div class="feed-item">
+      <div class="avatar" style="background: linear-gradient(135deg, #D97070, #D4A24C);"></div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between;">
+          <span class="sg" style="font-size: 12px; font-weight: 700;">Sophia W.</span>
+          <span class="muted" style="font-size: 10px;">2h ago</span>
+        </div>
+        <div class="card" style="margin-top: 8px; padding: 12px; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; background: #2C2824; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #F8F6F2; font-size: 14px;">▶</div>
+          <div>
+            <div style="font-size: 12px; font-weight: 500;">Arabesque No. 1</div>
+            <span class="muted" style="font-size: 10px;">Debussy • 4:15</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 16px; margin-top: 8px;">
+          <span class="muted" style="font-size: 11px;">♥ 24</span>
+          <span class="muted" style="font-size: 11px;">💬 8</span>
+          <span class="muted" style="font-size: 11px;">🔥 12-day streak</span>
+        </div>
+      </div>
+    </div>
+    <div class="feed-item">
+      <div class="avatar" style="background: linear-gradient(135deg, #5A9FD4, #8B6FD4);"></div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between;">
+          <span class="sg" style="font-size: 12px; font-weight: 700;">Marcus T.</span>
+          <span class="muted" style="font-size: 10px;">5h ago</span>
+        </div>
+        <div class="card" style="margin-top: 8px; padding: 12px; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; background: #2C2824; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #F8F6F2; font-size: 14px;">▶</div>
+          <div>
+            <div style="font-size: 12px; font-weight: 500;">Maple Leaf Rag</div>
+            <span class="muted" style="font-size: 10px;">Joplin • 3:42</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 16px; margin-top: 8px;">
+          <span class="muted" style="font-size: 11px;">♥ 31</span>
+          <span class="muted" style="font-size: 11px;">💬 5</span>
+          <span class="muted" style="font-size: 11px;">🔥 34-day streak</span>
+        </div>
+      </div>
+    </div>
+    <div class="feed-item">
+      <div class="avatar" style="background: linear-gradient(135deg, #4BA87A, #D4A24C);"></div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between;">
+          <span class="sg" style="font-size: 12px; font-weight: 700;">Lily N.</span>
+          <span class="muted" style="font-size: 10px;">8h ago</span>
+        </div>
+        <div class="card" style="margin-top: 8px; padding: 12px; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; background: #2C2824; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #F8F6F2; font-size: 14px;">▶</div>
+          <div>
+            <div style="font-size: 12px; font-weight: 500;">River Flows in You</div>
+            <span class="muted" style="font-size: 10px;">Yiruma • 3:28</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 16px; margin-top: 8px;">
+          <span class="muted" style="font-size: 11px;">♥ 18</span>
+          <span class="muted" style="font-size: 11px;">💬 12</span>
+          <span class="muted" style="font-size: 11px;">🔥 7-day streak</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: Learn With AI -->
+<div class="slide" id="slide-7">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Lesson</span>
+    <h1>AI Coach</h1>
+    <span></span>
+  </div>
+  <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+    <div class="bubble user">Can you help me understand how to play the trill in bar 24 of Moonlight Sonata?</div>
+    <div style="display: flex; gap: 10px; align-items: flex-start;">
+      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #8B6FD4, #5A9FD4); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px;">✦</div>
+      <div class="bubble ai" style="margin: 0;">
+        <p style="margin-bottom: 10px;">Great question! The trill in bar 24 of the first movement should be played as a measured trill. Here's how to approach it:</p>
+        <p style="margin-bottom: 10px;"><strong>1. Start on the main note</strong> (C#), not the upper auxiliary. In Classical period trills, starting on the main note is standard.</p>
+        <p style="margin-bottom: 10px;"><strong>2. Finger grouping:</strong> Use fingers 2-3 for the trill. Keep your hand relaxed and use wrist rotation rather than finger strength.</p>
+        <p><strong>3. Speed:</strong> Begin slowly — eighth notes at ♩=40, then gradually increase. The target is smooth 32nd notes at the marked Adagio tempo.</p>
+      </div>
+    </div>
+    <div class="card" style="background: #f4f0fb; border-color: #d4c8f0;">
+      <span class="sg upper" style="font-size: 9px; color: #8B6FD4; font-weight: 700;">Try This Exercise</span>
+      <div class="staff-lines" style="margin-top: 12px;">
+        <div class="note" style="left: 60px; top: 20px;"></div>
+        <div class="note" style="left: 120px; top: 35px;"></div>
+        <div class="note" style="left: 180px; top: 20px;"></div>
+        <div class="note" style="left: 240px; top: 35px;"></div>
+        <div class="note" style="left: 300px; top: 20px;"></div>
+        <div class="note" style="left: 360px; top: 35px;"></div>
+      </div>
+      <p style="font-size: 12px; color: #555; margin-top: 8px;">Practice this pattern slowly, then gradually speed up while maintaining evenness.</p>
+    </div>
+    <div class="bubble user">That makes sense! Should I use the pedal during the trill?</div>
+    <div style="display: flex; gap: 10px; align-items: flex-start;">
+      <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #8B6FD4, #5A9FD4); border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px;">✦</div>
+      <div class="bubble ai" style="margin: 0;">
+        <p>Yes, use a light pedal — change it on each harmonic shift. The pedal helps sustain the bass octave while you focus on the trill clarity above.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 8: Track Your Growth -->
+<div class="slide" id="slide-8">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Progress</span>
+    <h1>Growth</h1>
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">This Month</span>
+  </div>
+  <div style="padding: 24px;">
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="num" style="color: #D97070;">47</div>
+        <div class="label">Day Streak</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" style="color: #4BA87A;">23h</div>
+        <div class="label">Total Practice</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" style="color: #5A9FD4;">2.4k</div>
+        <div class="label">Points</div>
+      </div>
+    </div>
+    <div class="card">
+      <span class="sg upper" style="font-size: 9px; font-weight: 700;">Weekly Practice</span>
+      <div class="chart-area" style="margin-top: 12px;">
+        <div class="chart-bar" style="height: 45%;"></div>
+        <div class="chart-bar" style="height: 70%;"></div>
+        <div class="chart-bar" style="height: 55%;"></div>
+        <div class="chart-bar" style="height: 90%;"></div>
+        <div class="chart-bar" style="height: 60%;"></div>
+        <div class="chart-bar" style="height: 85%;"></div>
+        <div class="chart-bar" style="height: 100%;"></div>
+        <div class="chart-bar" style="height: 40%;"></div>
+        <div class="chart-bar" style="height: 65%;"></div>
+        <div class="chart-bar" style="height: 75%;"></div>
+        <div class="chart-bar" style="height: 50%;"></div>
+        <div class="chart-bar" style="height: 95%;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+        <span class="muted" style="font-size: 9px;">Mon</span>
+        <span class="muted" style="font-size: 9px;">Wed</span>
+        <span class="muted" style="font-size: 9px;">Fri</span>
+        <span class="muted" style="font-size: 9px;">Sun</span>
+      </div>
+    </div>
+    <div style="margin-top: 16px;">
+      <span class="sg upper" style="font-size: 9px; font-weight: 700;">Skills Progress</span>
+      <div class="card" style="margin-top: 8px;">
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px;">
+            <span>Technique</span><span class="sg" style="font-weight: 700; color: #4BA87A;">85%</span>
+          </div>
+          <div class="progress-bar"><div class="fill" style="width: 85%; background: #4BA87A;"></div></div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px;">
+            <span>Repertoire</span><span class="sg" style="font-weight: 700; color: #8B6FD4;">72%</span>
+          </div>
+          <div class="progress-bar"><div class="fill" style="width: 72%; background: #8B6FD4;"></div></div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px;">
+            <span>Sight Reading</span><span class="sg" style="font-weight: 700; color: #5A9FD4;">58%</span>
+          </div>
+          <div class="progress-bar"><div class="fill" style="width: 58%; background: #5A9FD4;"></div></div>
+        </div>
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;">
+            <span>Theory</span><span class="sg" style="font-weight: 700; color: #D4A24C;">64%</span>
+          </div>
+          <div class="progress-bar"><div class="fill" style="width: 64%; background: #D4A24C;"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 9: Discover Your Sound -->
+<div class="slide" id="slide-9">
+  <div class="app-bar">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Library</span>
+    <h1>Pieces</h1>
+    <span class="sg upper" style="font-size: 10px; color: #9A9590;">Add</span>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active">My Pieces</div>
+    <div class="tab">Explore</div>
+    <div class="tab">Favorites</div>
+  </div>
+  <div style="padding: 0 24px;">
+    <div class="piece-row">
+      <div class="piece-icon" style="background: linear-gradient(135deg, #D97070, #D4855A);">♪</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 500;">Nocturne Op. 9 No. 2</div>
+        <span class="muted" style="font-size: 11px;">Chopin • Romantic</span>
+        <div class="progress-bar" style="margin-top: 6px;"><div class="fill" style="width: 78%; background: #D97070;"></div></div>
+      </div>
+      <span class="sg muted" style="font-size: 10px;">78%</span>
+    </div>
+    <div class="piece-row">
+      <div class="piece-icon" style="background: linear-gradient(135deg, #8B6FD4, #5A9FD4);">♪</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 500;">Prelude in C Major</div>
+        <span class="muted" style="font-size: 11px;">Bach • Baroque</span>
+        <div class="progress-bar" style="margin-top: 6px;"><div class="fill" style="width: 92%; background: #8B6FD4;"></div></div>
+      </div>
+      <span class="sg muted" style="font-size: 10px;">92%</span>
+    </div>
+    <div class="piece-row">
+      <div class="piece-icon" style="background: linear-gradient(135deg, #5A9FD4, #4BA87A);">♪</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 500;">Clair de Lune</div>
+        <span class="muted" style="font-size: 11px;">Debussy • Impressionist</span>
+        <div class="progress-bar" style="margin-top: 6px;"><div class="fill" style="width: 45%; background: #5A9FD4;"></div></div>
+      </div>
+      <span class="sg muted" style="font-size: 10px;">45%</span>
+    </div>
+    <div class="piece-row">
+      <div class="piece-icon" style="background: linear-gradient(135deg, #D4A24C, #D97070);">♪</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 500;">Sonata No. 14 "Moonlight"</div>
+        <span class="muted" style="font-size: 11px;">Beethoven • Classical</span>
+        <div class="progress-bar" style="margin-top: 6px;"><div class="fill" style="width: 30%; background: #D4A24C;"></div></div>
+      </div>
+      <span class="sg muted" style="font-size: 10px;">30%</span>
+    </div>
+    <div class="piece-row">
+      <div class="piece-icon" style="background: linear-gradient(135deg, #4BA87A, #8B6FD4);">♪</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 500;">Maple Leaf Rag</div>
+        <span class="muted" style="font-size: 11px;">Joplin • Ragtime</span>
+        <div class="progress-bar" style="margin-top: 6px;"><div class="fill" style="width: 15%; background: #4BA87A;"></div></div>
+      </div>
+      <span class="sg muted" style="font-size: 10px;">15%</span>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 10: Perform For The World -->
+<div class="slide" id="slide-10">
+  <div class="hero-section" style="padding: 40px 24px;">
+    <span class="sg upper" style="font-size: 10px; color: #9A9590; letter-spacing: 0.2em;">The Stage</span>
+    <h2 style="margin-top: 12px;">Your Music,<br>Your Audience</h2>
+    <p style="font-size: 13px; color: #9A9590; margin-top: 12px; max-width: 300px; margin-left: auto; margin-right: auto; line-height: 1.5;">Share recordings publicly. Build your portfolio. Get discovered.</p>
+  </div>
+  <div style="padding: 20px 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <span class="sg upper" style="font-size: 10px; font-weight: 700;">Public Recordings</span>
+      <span class="sg upper muted" style="font-size: 9px;">See All</span>
+    </div>
+    <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px;">
+      <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #D97070, #8B6FD4); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;">▶</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 600;">Nocturne Op. 9 No. 2</div>
+        <div class="muted" style="font-size: 11px;">Emma Chen • 4:32</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 12px;">♥ 42</div>
+        <div class="muted" style="font-size: 10px;">1.2k views</div>
+      </div>
+    </div>
+    <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px;">
+      <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #5A9FD4, #4BA87A); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;">▶</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 600;">Arabesque No. 1</div>
+        <div class="muted" style="font-size: 11px;">Sophia W. • 4:15</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 12px;">♥ 28</div>
+        <div class="muted" style="font-size: 10px;">890 views</div>
+      </div>
+    </div>
+    <div class="card" style="display: flex; align-items: center; gap: 14px; padding: 16px;">
+      <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #D4A24C, #D97070); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;">▶</div>
+      <div style="flex: 1;">
+        <div style="font-size: 14px; font-weight: 600;">Maple Leaf Rag</div>
+        <div class="muted" style="font-size: 11px;">Marcus T. • 3:42</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 12px;">♥ 35</div>
+        <div class="muted" style="font-size: 10px;">670 views</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Show slide based on hash or default to 1
+  function showSlide(n) {
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById('slide-' + n);
+    if (el) el.classList.add('active');
+  }
+  const hash = parseInt(location.hash.replace('#', '')) || 1;
+  showSlide(hash);
+</script>
+</body>
+</html>
