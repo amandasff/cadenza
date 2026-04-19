@@ -497,7 +497,7 @@ export interface RcmChecklistItemRow {
 // ============================================================
 
 export type CollectibleRarity = 'common' | 'rare' | 'epic' | 'legendary';
-export type CollectibleEra = 'baroque' | 'classical' | 'romantic' | 'impressionist';
+export type CollectibleEra = 'baroque' | 'classical' | 'romantic' | 'impressionist' | 'student_art';
 export type AcquisitionMethod = 'practice_drop' | 'streak_bonus' | 'goal_milestone' | 'performance_edition' | 'teacher_gift' | 'welcome_gift';
 
 export interface ComposerAvatarRow {

@@ -26,9 +26,10 @@ const ERA_LABEL: Record<CollectibleEra, string> = {
   classical:     "Classical",
   romantic:      "Romantic",
   impressionist: "Impressionist",
+  student_art:   "Student Art",
 };
 
-const ERA_ORDER: CollectibleEra[] = ["baroque", "classical", "romantic", "impressionist"];
+const ERA_ORDER: CollectibleEra[] = ["baroque", "classical", "romantic", "impressionist", "student_art"];
 
 // Era set definitions — completing a set unlocks a bonus badge label
 const ERA_SETS: Record<CollectibleEra, { bonus: string; color: string }> = {
@@ -36,6 +37,7 @@ const ERA_SETS: Record<CollectibleEra, { bonus: string; color: string }> = {
   classical:     { bonus: "Prodigy",             color: "var(--sky)" },
   romantic:      { bonus: "Virtuoso of Feeling", color: "var(--lavender)" },
   impressionist: { bonus: "Sound Painter",       color: "var(--peach)" },
+  student_art:   { bonus: "Art Collector",       color: "var(--peach)" },
 };
 
 // ── Composer birth years & countries ─────────────────────────────────────────
@@ -51,6 +53,7 @@ const COMPOSER_COUNTRIES: Record<string, string> = {
   Brahms:       "🇩🇪 Germany",
   Tchaikovsky:  "🇷🇺 Russia",
   Debussy:      "🇫🇷 France",
+  "Queenie's Blob": "🇨🇦 Hamilton, Canada",
 };
 
 const BIRTH_YEARS: Record<string, number> = {
