@@ -1,12 +1,9 @@
 <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-  <!-- Beam + stems as single path to avoid junction artifacts -->
   <path d="M42 68 L42 14 L95 8 L95 50 L89 50 L89 22 L48 28 L48 68 Z" fill="#2C2824"/>
-  <!-- Left note head -->
   <circle cx="28" cy="82" r="20" fill="#2C2824"/>
   <circle cx="21" cy="77" r="2.8" fill="#F8F6F2"/>
   <circle cx="35" cy="77" r="2.8" fill="#F8F6F2"/>
   <path d="M20 85 Q28 94 36 85" stroke="#F8F6F2" stroke-width="2.8" fill="none" stroke-linecap="round"/>
-  <!-- Right note head -->
   <circle cx="76" cy="64" r="20" fill="#2C2824"/>
   <circle cx="69" cy="59" r="2.8" fill="#F8F6F2"/>
   <circle cx="83" cy="59" r="2.8" fill="#F8F6F2"/>
