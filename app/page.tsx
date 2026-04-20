@@ -670,7 +670,7 @@ export default function Home() {
 
                 {/* CENTER — MAIN IMAGE */}
                 <div style={{ width: "40%", flexShrink: 0, height: "100%", position: "relative" }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "2px solid rgba(0,0,0,0.25)" }}>
+                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "4px solid #2C2824" }}>
                     {SLIDES.map((s, i) => (
                       <div key={i} style={{
                         position: "absolute", inset: 0,
@@ -708,7 +708,7 @@ export default function Home() {
 
                 {/* RIGHT — PREVIEW IMAGE */}
                 <div style={{ width: "25%", flexShrink: 0, height: "83.33%", opacity: 0.6 }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "2px solid rgba(0,0,0,0.25)" }}>
+                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "4px solid #2C2824" }}>
                     {SLIDES.map((s, i) => (
                       <div key={i} style={{
                         position: "absolute", inset: 0,
