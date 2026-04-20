@@ -20,11 +20,7 @@ const SLIDES = [
 
 const PAD = (n: number) => String(n).padStart(3, "0");
 
-const PASTEL = ["#D97070", "#8B6FD4", "#4BA87A", "#D4A24C", "#5A9FD4", "#D4855A", "#8B6FD4"];
-const cadenzaLetters = (size?: string) =>
-  "CADENZA".split("").map((ch, i) => (
-    <span key={i} style={{ color: PASTEL[i] }}>{ch}</span>
-  ));
+const cadenzaLetters = () => "CADENZA";
 
 interface Recording { id: string; title: string; url: string; artist: string }
 
@@ -212,8 +208,8 @@ export default function Home() {
         .cad-btn-primary:hover { background: #3b3b3b !important; }
         .cad-btn-pastel { transition: filter 0.3s; }
         .cad-btn-pastel:hover { filter: brightness(0.92); }
-        .cad-input:focus { border-bottom-color: #8B6FD4 !important; }
-        .cad-input-dark:focus { border-bottom-color: #8B6FD4 !important; }
+        .cad-input:focus { border-bottom-color: #2C2824 !important; }
+        .cad-input-dark:focus { border-bottom-color: #F8F6F2 !important; }
         .cad-btn-outline { transition: background 0.2s; }
         .cad-btn-outline:hover { background: rgba(0,0,0,0.04); }
         .cad-link:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 0.5px; }
@@ -327,7 +323,7 @@ export default function Home() {
                 ))}
                 <p style={{
                   fontFamily: "'Work Sans', sans-serif", fontSize: 12,
-                  color: "#D4A24C", marginTop: 8,
+                  color: "#9A9590", marginTop: 8,
                   letterSpacing: "0.02em", lineHeight: 1.4,
                 }}>
                   A practice platform for music learners
@@ -362,7 +358,7 @@ export default function Home() {
               <button
                 onClick={() => setShowForm(true)}
                 style={{
-                  background: "linear-gradient(135deg, #D97070, #8B6FD4, #5A9FD4)",
+                  background: "#2C2824",
                   color: "#000", border: "none",
                   fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                   fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
@@ -424,7 +420,7 @@ export default function Home() {
                             <div style={{
                               width: 12, height: 12, borderRadius: "50%",
                               border: "1px solid rgba(255,255,255,0.4)",
-                              background: role === r ? (r === "student" ? "#5A9FD4" : "#8B6FD4") : "transparent",
+                              background: role === r ? "#F8F6F2" : "transparent",
                               transition: "background 0.15s",
                             }} />
                             <span style={{
@@ -463,7 +459,7 @@ export default function Home() {
 
                     <button type="submit" disabled={loading} style={{
                       marginTop: "0.5rem",
-                      background: "linear-gradient(135deg, #D97070, #8B6FD4, #5A9FD4)",
+                      background: "#2C2824",
                       color: "#000", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
                       fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em",
@@ -578,7 +574,7 @@ export default function Home() {
                             <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: "none" }} />
                             <div style={{
                               width: 11, height: 11, borderRadius: "50%", border: "1px solid #000",
-                              background: role === r ? (r === "student" ? "#5A9FD4" : "#8B6FD4") : "transparent", transition: "background 0.15s",
+                              background: role === r ? "#F8F6F2" : "transparent", transition: "background 0.15s",
                             }} />
                             <span style={{
                               fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
@@ -615,7 +611,7 @@ export default function Home() {
 
                     <button type="submit" disabled={loading} className="cad-btn-pastel" style={{
                       marginTop: "0.5rem",
-                      background: "linear-gradient(135deg, #D97070, #8B6FD4, #5A9FD4)",
+                      background: "#2C2824",
                       color: "#000", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                       textTransform: "uppercase", letterSpacing: "0.15em",
@@ -736,7 +732,7 @@ export default function Home() {
                 <button onClick={prevSlide} className="cad-nav-arrow" style={{
                   background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#000", padding: "0.25rem", lineHeight: 1,
                 }}>&#8592;</button>
-                <span style={{ fontWeight: 700, color: PASTEL[slide % PASTEL.length] }}>{PAD(slide + 1)}</span>
+                <span style={{ fontWeight: 700, color: "#2C2824" }}>{PAD(slide + 1)}</span>
                 <span style={{ color: "rgba(0,0,0,0.4)" }}>/ {PAD(SLIDES.length)}</span>
                 <button onClick={nextSlide} className="cad-nav-arrow" style={{
                   background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#000", padding: "0.25rem", lineHeight: 1,
