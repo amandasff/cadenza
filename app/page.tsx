@@ -687,15 +687,10 @@ export default function Home() {
                         />
                       </div>
                     ))}
-                    <div style={{
-                      position: "absolute", bottom: 0, left: 0, right: 0, height: "40%",
-                      background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)",
-                      pointerEvents: "none", zIndex: 1,
-                    }} />
                     <div style={{ position: "absolute", bottom: 16, left: 16, zIndex: 2 }}>
                       {cur.label.split("\n").map((line, i) => (
                         <p key={i} style={{
-                          fontFamily: "'Space Grotesk', sans-serif", color: "#fff",
+                          fontFamily: "'Space Grotesk', sans-serif", color: "#2C2824",
                           fontSize: "clamp(1.25rem, 2vw, 1.75rem)", fontWeight: 700,
                           letterSpacing: "-0.02em", textTransform: "uppercase", lineHeight: 1, margin: 0,
                         }}>
