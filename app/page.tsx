@@ -326,7 +326,7 @@ export default function Home() {
                   color: "#9A9590", marginTop: 8,
                   letterSpacing: "0.02em", lineHeight: 1.4,
                 }}>
-                  A practice platform for music learners
+                  The social app for music learners &amp; teachers
                 </p>
               </div>
             </div>
@@ -531,13 +531,20 @@ export default function Home() {
                 }}>
                   {cadenzaLetters()}
                 </h1>
+                <p style={{
+                  fontFamily: "'Work Sans', sans-serif", fontSize: 11,
+                  letterSpacing: "0.08em", color: "rgba(0,0,0,0.45)",
+                  margin: "6px 0 0 0", fontWeight: 400,
+                }}>
+                  The social app for music learners &amp; teachers
+                </p>
               </div>
               <nav style={{
                 width: "33.33%", display: "flex", justifyContent: "flex-end", gap: "1.5rem",
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
               }}>
                 <a href="#" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Home</a>
-                <a href="mailto:amanda.sf.wu@gmail.com" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Contact</a>
+                <a href="mailto:hello@cadenza.social" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Contact</a>
               </nav>
             </header>
 
@@ -653,7 +660,7 @@ export default function Home() {
 
                 {/* CENTER — MAIN IMAGE */}
                 <div style={{ width: "40%", flexShrink: 0, height: "100%", position: "relative" }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3" }}>
+                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)" }}>
                     {SLIDES.map((s, i) => (
                       <div key={i} style={{
                         position: "absolute", inset: 0,
@@ -695,7 +702,7 @@ export default function Home() {
 
                 {/* RIGHT — PREVIEW IMAGE */}
                 <div style={{ width: "25%", flexShrink: 0, height: "83.33%", opacity: 0.6 }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3" }}>
+                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)" }}>
                     {SLIDES.map((s, i) => (
                       <div key={i} style={{
                         position: "absolute", inset: 0,
@@ -850,13 +857,13 @@ export default function Home() {
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
                 letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
               }}>
-                &copy;2026 CADENZA. ALL RIGHTS RESERVED.
+                &copy;2026 CADENZA
               </div>
-              <a href="mailto:amanda.sf.wu@gmail.com" className="cad-link" style={{
+              <a href="mailto:hello@cadenza.social" className="cad-link" style={{
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
                 letterSpacing: "0.15em", textTransform: "uppercase", color: "#000", textDecoration: "none",
               }}>
-                amanda.sf.wu@gmail.com
+                hello@cadenza.social
               </a>
             </footer>
           </>
