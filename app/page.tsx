@@ -415,7 +415,7 @@ export default function Home() {
                     fontWeight: 700, textTransform: "uppercase", letterSpacing: "-0.02em",
                     margin: "0 0 2rem 0", color: "#fbf9f4",
                   }}>
-                    {mode === "signup" ? "Initiate Access" : "Welcome Back"}
+                    {mode === "signup" ? "Join Cadenza" : "Welcome Back"}
                   </h2>
 
                   <form
@@ -577,7 +577,7 @@ export default function Home() {
                     fontWeight: 700, textTransform: "uppercase", letterSpacing: "-0.02em",
                     margin: "0 0 1.5rem 0",
                   }}>
-                    {mode === "signup" ? "Initiate Access" : "Welcome Back"}
+                    {mode === "signup" ? "Join Cadenza" : "Welcome Back"}
                   </h2>
 
                   <form
