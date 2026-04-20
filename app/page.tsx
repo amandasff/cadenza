@@ -6,16 +6,16 @@ import { AuthService } from "@/lib/services/AuthService";
 import type { UserRole } from "@/lib/types";
 
 const SLIDES = [
-  { label: "Record Your\nJourney", img: "/slides/01.png", vol: "VOL. 1 // ORIGIN" },
-  { label: "Share With\nOthers", img: "/slides/02.png", vol: "VOL. 2 // ECHO" },
-  { label: "Get Real\nFeedback", img: "/slides/03.png", vol: "VOL. 3 // PULSE" },
-  { label: "Build Your\nProfile", img: "/slides/04.png", vol: "VOL. 4 // ICON" },
-  { label: "Practice\nDaily", img: "/slides/05.png", vol: "VOL. 5 // RITUAL" },
-  { label: "Join The\nCommunity", img: "/slides/06.png", vol: "VOL. 6 // CHORUS" },
-  { label: "Learn\nWith AI", img: "/slides/07.png", vol: "VOL. 7 // SPARK" },
-  { label: "Track Your\nGrowth", img: "/slides/08.png", vol: "VOL. 8 // ARC" },
-  { label: "Discover Your\nSound", img: "/slides/09.png", vol: "VOL. 9 // TIMBRE" },
-  { label: "Perform For\nThe World", img: "/slides/10.png", vol: "VOL. 10 // STAGE" },
+  { label: "Your\nStudio", img: "/slides/10.png", vol: "VOL. 1 // HOME" },
+  { label: "Practice\nAnytime", img: "/slides/01.png", vol: "VOL. 2 // ORIGIN" },
+  { label: "Learn\nWith AI", img: "/slides/09.png", vol: "VOL. 3 // SPARK" },
+  { label: "Chat With\nYour Teacher", img: "/slides/08.png", vol: "VOL. 4 // ECHO" },
+  { label: "Build Your\nRepertoire", img: "/slides/02.png", vol: "VOL. 5 // SOUND" },
+  { label: "Explore\nChords", img: "/slides/04.png", vol: "VOL. 6 // THEORY" },
+  { label: "Compete\n& Play", img: "/slides/03.png", vol: "VOL. 7 // PULSE" },
+  { label: "Collect\nComposers", img: "/slides/06.png", vol: "VOL. 8 // ICON" },
+  { label: "Discover\nNew Music", img: "/slides/05.png", vol: "VOL. 9 // CHORUS" },
+  { label: "Share Your\nJourney", img: "/slides/07.png", vol: "VOL. 10 // STAGE" },
 ];
 
 const PAD = (n: number) => String(n).padStart(3, "0");
