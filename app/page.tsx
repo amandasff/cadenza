@@ -591,7 +591,7 @@ export default function Home() {
                             <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: "none" }} />
                             <div style={{
                               width: 11, height: 11, borderRadius: "50%", border: "1px solid #000",
-                              background: role === r ? "#F8F6F2" : "transparent", transition: "background 0.15s",
+                              background: role === r ? "#2C2824" : "transparent", transition: "background 0.15s",
                             }} />
                             <span style={{
                               fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
