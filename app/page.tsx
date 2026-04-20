@@ -670,7 +670,7 @@ export default function Home() {
 
                 {/* CENTER — MAIN IMAGE */}
                 <div style={{ width: "40%", flexShrink: 0, height: "100%", position: "relative" }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)" }}>
+                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "1px solid rgba(0,0,0,0.12)" }}>
                     {SLIDES.map((s, i) => (
                       <div key={i} style={{
                         position: "absolute", inset: 0,
@@ -687,10 +687,15 @@ export default function Home() {
                         />
                       </div>
                     ))}
-                    <div style={{ position: "absolute", bottom: 16, left: 16, mixBlendMode: "difference", zIndex: 2 }}>
+                    <div style={{
+                      position: "absolute", bottom: 0, left: 0, right: 0, height: "40%",
+                      background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)",
+                      pointerEvents: "none", zIndex: 1,
+                    }} />
+                    <div style={{ position: "absolute", bottom: 16, left: 16, zIndex: 2 }}>
                       {cur.label.split("\n").map((line, i) => (
                         <p key={i} style={{
-                          fontFamily: "'Space Grotesk', sans-serif", color: "#fbf9f4",
+                          fontFamily: "'Space Grotesk', sans-serif", color: "#fff",
                           fontSize: "clamp(1.25rem, 2vw, 1.75rem)", fontWeight: 700,
                           letterSpacing: "-0.02em", textTransform: "uppercase", lineHeight: 1, margin: 0,
                         }}>
@@ -698,21 +703,12 @@ export default function Home() {
                         </p>
                       ))}
                     </div>
-                    <div style={{
-                      position: "absolute", top: 16, right: 16,
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
-                      letterSpacing: "0.15em", color: "#fbf9f4",
-                      mixBlendMode: "difference", transform: "rotate(90deg)", transformOrigin: "right top",
-                      whiteSpace: "nowrap", zIndex: 2,
-                    }}>
-                      {cur.vol}
-                    </div>
                   </div>
                 </div>
 
                 {/* RIGHT — PREVIEW IMAGE */}
                 <div style={{ width: "25%", flexShrink: 0, height: "83.33%", opacity: 0.6 }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)" }}>
+                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "1px solid rgba(0,0,0,0.12)" }}>
                     {SLIDES.map((s, i) => (
                       <div key={i} style={{
                         position: "absolute", inset: 0,
