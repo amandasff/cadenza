@@ -7,15 +7,15 @@ import type { UserRole } from "@/lib/types";
 
 const SLIDES = [
   { label: "Practice\nAnytime", img: "/slides/01.png", vol: "VOL. 1 // ORIGIN" },
-  { label: "Learn\nWith AI", img: "/slides/09.png", vol: "VOL. 2 // SPARK" },
-  { label: "Chat With\nYour Teacher", img: "/slides/08.png", vol: "VOL. 3 // ECHO" },
-  { label: "Build Your\nRepertoire", img: "/slides/02.png", vol: "VOL. 4 // SOUND" },
-  { label: "Explore\nChords", img: "/slides/04.png", vol: "VOL. 5 // THEORY" },
-  { label: "Compete\n& Play", img: "/slides/03.png", vol: "VOL. 6 // PULSE" },
-  { label: "Collect\nComposers", img: "/slides/06.png", vol: "VOL. 7 // ICON" },
-  { label: "Discover\nNew Music", img: "/slides/05.png", vol: "VOL. 8 // CHORUS" },
-  { label: "Your\nStudio", img: "/slides/10.png", vol: "VOL. 9 // ARC" },
-  { label: "Share Your\nJourney", img: "/slides/07.png", vol: "VOL. 10 // STAGE" },
+  { label: "Chat With\nYour Teacher", img: "/slides/08.png", vol: "VOL. 2 // ECHO" },
+  { label: "Build Your\nRepertoire", img: "/slides/02.png", vol: "VOL. 3 // SOUND" },
+  { label: "Explore\nChords", img: "/slides/04.png", vol: "VOL. 4 // THEORY" },
+  { label: "Compete\n& Play", img: "/slides/03.png", vol: "VOL. 5 // PULSE" },
+  { label: "Collect\nComposers", img: "/slides/06.png", vol: "VOL. 6 // ICON" },
+  { label: "Discover\nNew Music", img: "/slides/05.png", vol: "VOL. 7 // CHORUS" },
+  { label: "Your\nStudio", img: "/slides/10.png", vol: "VOL. 8 // ARC" },
+  { label: "Share Your\nJourney", img: "/slides/07.png", vol: "VOL. 9 // STAGE" },
+  { label: "Learn\nWith AI", img: "/slides/09.png", vol: "VOL. 10 // SPARK" },
 ];
 
 const PAD = (n: number) => String(n).padStart(3, "0");
@@ -81,9 +81,19 @@ export default function Home() {
   }, []);
 
   const preview = (slide + 1) % SLIDES.length;
-  const prevSlide = () => setSlide(s => (s - 1 + SLIDES.length) % SLIDES.length);
-  const nextSlide = () => setSlide(s => (s + 1) % SLIDES.length);
+  const prevSlide = useCallback(() => setSlide(s => (s - 1 + SLIDES.length) % SLIDES.length), []);
+  const nextSlide = useCallback(() => setSlide(s => (s + 1) % SLIDES.length), []);
   const switchMode = (m: "signup" | "signin") => { setMode(m); setError(""); setPassword(""); };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).tagName === "INPUT") return;
+      if (e.key === "ArrowLeft") prevSlide();
+      else if (e.key === "ArrowRight") nextSlide();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [prevSlide, nextSlide]);
 
   const playRecording = useCallback((rec: Recording) => {
     if (!audioRef.current) return;
