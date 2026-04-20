@@ -554,7 +554,7 @@ export default function Home() {
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
               }}>
                 <a href="#" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Home</a>
-                <a href="mailto:hello@cadenza.social" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Contact</a>
+                <a href="#" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Contact</a>
               </nav>
             </header>
 
@@ -865,11 +865,11 @@ export default function Home() {
               }}>
                 &copy;2026 CADENZA
               </div>
-              <a href="mailto:hello@cadenza.social" className="cad-link" style={{
+              <a href="#" className="cad-link" style={{
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
                 letterSpacing: "0.15em", textTransform: "uppercase", color: "#000", textDecoration: "none",
               }}>
-                hello@cadenza.social
+                cadenza.social
               </a>
             </footer>
           </>
