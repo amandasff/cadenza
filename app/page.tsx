@@ -483,10 +483,10 @@ export default function Home() {
 
                     <button type="button" onClick={handleGoogle} style={{
                       width: "100%", background: "transparent",
-                      border: "0.5px solid rgba(255,255,255,0.25)",
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                      letterSpacing: "0.12em", textTransform: "uppercase", color: "#fbf9f4",
-                      padding: "0.8rem 1rem", cursor: "pointer", borderRadius: 0,
+                      border: "1.5px solid rgba(255,255,255,0.4)",
+                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
+                      letterSpacing: "0.15em", textTransform: "uppercase", color: "#fbf9f4",
+                      padding: "0.85rem 1rem", cursor: "pointer", borderRadius: 0, fontWeight: 700,
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
                     }}>
                       {googleSvg} Continue with Google
@@ -641,10 +641,10 @@ export default function Home() {
                     </button>
 
                     <button type="button" onClick={handleGoogle} className="cad-btn-outline" style={{
-                      width: "100%", background: "transparent", border: "0.5px solid #000",
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                      letterSpacing: "0.12em", textTransform: "uppercase", color: "#000",
-                      padding: "0.6rem 1rem", cursor: "pointer", borderRadius: 0,
+                      width: "100%", background: "transparent", border: "1.5px solid #2C2824",
+                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
+                      letterSpacing: "0.15em", textTransform: "uppercase", color: "#2C2824",
+                      padding: "0.85rem 1rem", cursor: "pointer", borderRadius: 0, fontWeight: 700,
                       display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
                     }}>
                       {googleSvg} Continue with Google
