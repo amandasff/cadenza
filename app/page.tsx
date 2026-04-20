@@ -6,15 +6,15 @@ import { AuthService } from "@/lib/services/AuthService";
 import type { UserRole } from "@/lib/types";
 
 const SLIDES = [
-  { label: "Your\nStudio", img: "/slides/10.png", vol: "VOL. 1 // HOME" },
-  { label: "Practice\nAnytime", img: "/slides/01.png", vol: "VOL. 2 // ORIGIN" },
-  { label: "Learn\nWith AI", img: "/slides/09.png", vol: "VOL. 3 // SPARK" },
-  { label: "Chat With\nYour Teacher", img: "/slides/08.png", vol: "VOL. 4 // ECHO" },
-  { label: "Build Your\nRepertoire", img: "/slides/02.png", vol: "VOL. 5 // SOUND" },
-  { label: "Explore\nChords", img: "/slides/04.png", vol: "VOL. 6 // THEORY" },
-  { label: "Compete\n& Play", img: "/slides/03.png", vol: "VOL. 7 // PULSE" },
-  { label: "Collect\nComposers", img: "/slides/06.png", vol: "VOL. 8 // ICON" },
-  { label: "Discover\nNew Music", img: "/slides/05.png", vol: "VOL. 9 // CHORUS" },
+  { label: "Practice\nAnytime", img: "/slides/01.png", vol: "VOL. 1 // ORIGIN" },
+  { label: "Learn\nWith AI", img: "/slides/09.png", vol: "VOL. 2 // SPARK" },
+  { label: "Chat With\nYour Teacher", img: "/slides/08.png", vol: "VOL. 3 // ECHO" },
+  { label: "Build Your\nRepertoire", img: "/slides/02.png", vol: "VOL. 4 // SOUND" },
+  { label: "Explore\nChords", img: "/slides/04.png", vol: "VOL. 5 // THEORY" },
+  { label: "Compete\n& Play", img: "/slides/03.png", vol: "VOL. 6 // PULSE" },
+  { label: "Collect\nComposers", img: "/slides/06.png", vol: "VOL. 7 // ICON" },
+  { label: "Discover\nNew Music", img: "/slides/05.png", vol: "VOL. 8 // CHORUS" },
+  { label: "Your\nStudio", img: "/slides/10.png", vol: "VOL. 9 // ARC" },
   { label: "Share Your\nJourney", img: "/slides/07.png", vol: "VOL. 10 // STAGE" },
 ];
 
@@ -283,7 +283,7 @@ export default function Home() {
                     src={s.img} alt={s.label.replace("\n", " ")}
                     style={{
                       width: "100%", height: "100%", objectFit: "cover",
-                      filter: "grayscale(100%) contrast(1.2)", display: "block",
+                      display: "block",
                     }}
                   />
                 </div>
@@ -665,7 +665,7 @@ export default function Home() {
                           className={i === slide ? "cad-hero-img" : undefined}
                           style={{
                             width: "100%", height: "100%", objectFit: "cover",
-                            filter: "grayscale(100%) contrast(1.25)", display: "block",
+                            display: "block",
                           }}
                         />
                       </div>
@@ -705,7 +705,7 @@ export default function Home() {
                           src={s.img} alt={s.label.replace("\n", " ")}
                           style={{
                             width: "100%", height: "100%", objectFit: "cover",
-                            filter: "grayscale(100%) contrast(1.25)", display: "block",
+                            display: "block",
                           }}
                         />
                       </div>
