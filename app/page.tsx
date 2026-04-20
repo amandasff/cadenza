@@ -262,13 +262,16 @@ export default function Home() {
               }}>
                 {time} EST
               </span>
-              <h1 style={{
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.5rem",
-                fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase",
-                lineHeight: 1, margin: 0,
-              }}>
-                {cadenzaLetters()}
-              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <img src="/logo.svg" alt="" style={{ height: "1.4rem", width: "auto" }} />
+                <h1 style={{
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.5rem",
+                  fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase",
+                  lineHeight: 1, margin: 0,
+                }}>
+                  {cadenzaLetters()}
+                </h1>
+              </div>
               <span style={{
                 fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
                 letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.5)",
@@ -534,13 +537,16 @@ export default function Home() {
                   {time} EST
                 </span>
               </div>
-              <div style={{ width: "33.33%", textAlign: "center" }}>
-                <h1 style={{
-                  fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.5rem, 3vw, 2.75rem)",
-                  fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase", lineHeight: 1, margin: 0,
-                }}>
-                  {cadenzaLetters()}
-                </h1>
+              <div style={{ width: "33.33%", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <img src="/logo.svg" alt="" style={{ height: "clamp(1.5rem, 3vw, 2.5rem)", width: "auto" }} />
+                  <h1 style={{
+                    fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.5rem, 3vw, 2.75rem)",
+                    fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase", lineHeight: 1, margin: 0,
+                  }}>
+                    {cadenzaLetters()}
+                  </h1>
+                </div>
                 <p style={{
                   fontFamily: "'Work Sans', sans-serif", fontSize: 11,
                   letterSpacing: "0.08em", color: "rgba(0,0,0,0.45)",

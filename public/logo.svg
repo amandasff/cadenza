@@ -1,0 +1,22 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Beam -->
+  <path d="M42 8 L92 4 L92 22 L42 26 Z" fill="#2C2824" rx="2"/>
+  <!-- Left stem -->
+  <rect x="39" y="26" width="6" height="52" fill="#2C2824"/>
+  <!-- Right stem -->
+  <rect x="86" y="18" width="6" height="42" fill="#2C2824"/>
+  <!-- Left note head -->
+  <circle cx="28" cy="82" r="20" fill="#2C2824"/>
+  <!-- Left eyes -->
+  <circle cx="21" cy="77" r="2.8" fill="#F8F6F2"/>
+  <circle cx="35" cy="77" r="2.8" fill="#F8F6F2"/>
+  <!-- Left smile -->
+  <path d="M20 85 Q28 94 36 85" stroke="#F8F6F2" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <!-- Right note head -->
+  <circle cx="76" cy="64" r="20" fill="#2C2824"/>
+  <!-- Right eyes -->
+  <circle cx="69" cy="59" r="2.8" fill="#F8F6F2"/>
+  <circle cx="83" cy="59" r="2.8" fill="#F8F6F2"/>
+  <!-- Right smile -->
+  <path d="M68 67 Q76 76 84 67" stroke="#F8F6F2" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+</svg>
