@@ -372,7 +372,7 @@ export default function Home() {
                 onClick={() => setShowForm(true)}
                 style={{
                   background: "#2C2824",
-                  color: "#000", border: "none",
+                  color: "#F8F6F2", border: "none",
                   fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                   fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
                   padding: "0.7rem 1.5rem", cursor: "pointer", borderRadius: 0,
@@ -473,7 +473,7 @@ export default function Home() {
                     <button type="submit" disabled={loading} style={{
                       marginTop: "0.5rem",
                       background: "#2C2824",
-                      color: "#000", border: "none",
+                      color: "#F8F6F2", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
                       fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em",
                       padding: "1rem 1.5rem", cursor: loading ? "default" : "pointer",
@@ -635,7 +635,7 @@ export default function Home() {
                     <button type="submit" disabled={loading} className="cad-btn-pastel" style={{
                       marginTop: "0.5rem",
                       background: "#2C2824",
-                      color: "#000", border: "none",
+                      color: "#F8F6F2", border: "none",
                       fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
                       textTransform: "uppercase", letterSpacing: "0.15em",
                       padding: "0.85rem 1rem", cursor: loading ? "default" : "pointer",
