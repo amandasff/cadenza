@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import RcmTechnique from "./RcmTechnique";
+import RcmPiano from "./RcmPiano";
 import { useI18n } from "../../../lib/context/I18nContext";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { Student } from "../../../lib/models/Student";
@@ -1347,7 +1348,7 @@ export default function ReferencePage() {
         </div>
       )}
 
-      {/* ── RCM TECHNIQUE TAB ── */}
+      {/* ── RCM PIANO TAB ── */}
       {mainTab === "rcm" && (
         <div>
           {student?.instrument && !student.instrument.toLowerCase().includes("piano") && (
@@ -1357,11 +1358,11 @@ export default function ReferencePage() {
               fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)",
             }}>
               <p style={{ margin: 0 }}>
-                💡 <strong>Note:</strong> The RCM scales below are written for piano. For {student.instrument}, look for instrument-specific scale patterns in your method books or ask your teacher for the fingering adaptations.
+                💡 <strong>Note:</strong> These RCM Piano requirements are designed for piano students. For {student.instrument}, you may have different requirements — check with your teacher.
               </p>
             </div>
           )}
-          <RcmTechnique />
+          <RcmPiano />
         </div>
       )}
 
