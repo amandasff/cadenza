@@ -1,7 +1,9 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import RcmTechnique from "./RcmTechnique";
 import { useI18n } from "../../../lib/context/I18nContext";
+import { useAuth } from "../../../lib/context/AuthContext";
+import { Student } from "../../../lib/models/Student";
 
 // ── Audio ──────────────────────────────────────────────────────────────────────
 
@@ -613,8 +615,19 @@ type InstrumentTab = "piano" | "guitar" | "ukulele" | "bass";
 
 export default function ReferencePage() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const student = user as Student;
   const [mainTab, setMainTab] = useState<MainTab>("chords");
   const [instrument, setInstrument] = useState<InstrumentTab>("guitar");
+
+  // Auto-select instrument based on student profile
+  useEffect(() => {
+    if (!student?.instrument) return;
+    const inst = student.instrument.toLowerCase();
+    if (inst.includes("guitar")) setInstrument("guitar");
+    else if (inst.includes("ukulele") || inst.includes("uke")) setInstrument("ukulele");
+    // piano is default, don't override
+  }, [student?.instrument]);
 
   // Piano state
   const [root, setRoot] = useState(0);
@@ -1219,7 +1232,22 @@ export default function ReferencePage() {
       )}
 
       {/* ── RCM TECHNIQUE TAB ── */}
-      {mainTab === "rcm" && <RcmTechnique />}
+      {mainTab === "rcm" && (
+        <div>
+          {student?.instrument && !student.instrument.toLowerCase().includes("piano") && (
+            <div style={{
+              background: "rgba(230, 168, 23, 0.08)", border: "1px solid rgba(230, 168, 23, 0.3)",
+              borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.5rem",
+              fontFamily: "Inter, sans-serif", fontSize: "0.875rem", color: "var(--charcoal)",
+            }}>
+              <p style={{ margin: 0 }}>
+                💡 <strong>Note:</strong> The RCM scales below are written for piano. For {student.instrument}, look for instrument-specific scale patterns in your method books or ask your teacher for the fingering adaptations.
+              </p>
+            </div>
+          )}
+          <RcmTechnique />
+        </div>
+      )}
 
       {/* ── Floating video widget ── */}
       <div style={{ position:"fixed", bottom:"5rem", right:"1.25rem", zIndex:50, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"0.5rem" }}>
