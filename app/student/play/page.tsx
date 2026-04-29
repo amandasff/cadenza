@@ -3,6 +3,8 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mic, MicOff, Play, Square, RotateCcw, Music, Zap, FileText, Volume2, VolumeX } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/context/AuthContext";
+import { Student } from "@/lib/models/Student";
 import TranscriptionViewer, { type GameData } from "@/components/TranscriptionViewer";
 
 // ── Pitch detection (YIN algorithm) ─────────────────────────────────────────
@@ -159,6 +161,7 @@ interface Song {
   timeSignature: [number, number];
   notes: TabNote[];
   difficulty: "beginner" | "intermediate" | "advanced";
+  instrument: "guitar" | "ukulele" | "piano";
 }
 
 function midiForNote(string: number, fret: number): number {
@@ -174,6 +177,7 @@ const SONGS: Song[] = [
     bpm: 112,
     timeSignature: [4, 4],
     difficulty: "beginner",
+    instrument: "guitar",
     notes: [
       // Low E bass drone
       { beat: 0,    string: 6, fret: 3,  duration: 4 },   // G2 bass
@@ -213,6 +217,7 @@ const SONGS: Song[] = [
     bpm: 90,
     timeSignature: [4, 4],
     difficulty: "beginner",
+    instrument: "piano",
     notes: [
       // Upper octave — strings 1-2 (E4–D4)
       { beat: 0,    string: 1, fret: 0,  duration: 1 },   // E4
@@ -255,6 +260,7 @@ const SONGS: Song[] = [
     bpm: 124,
     timeSignature: [4, 4],
     difficulty: "beginner",
+    instrument: "guitar",
     notes: [
       // Famous bass riff on string 6 (low E)
       { beat: 0,    string: 6, fret: 7,  duration: 1 },   // B2
@@ -298,6 +304,7 @@ const SONGS: Song[] = [
     bpm: 70,
     timeSignature: [3, 4],
     difficulty: "intermediate",
+    instrument: "guitar",
     notes: [
       // Am — arpeggio strings 5→1
       { beat: 0,    string: 5, fret: 0,  duration: 0.5 }, // A2 (bass)
@@ -415,6 +422,8 @@ export default function PlayPage() {
 
   // ── Practice mode state ───────────────────────────────────────────────────
   const [tab, setTab] = useState<"guitar" | "practice">("guitar");
+  const [instrumentFilter, setInstrumentFilter] = useState<"all" | "guitar" | "ukulele" | "piano">("all");
+  const { user } = useAuth();
   const [studentPieces, setStudentPieces] = useState<PieceWithGame[]>([]);
   const [piecesLoading, setPiecesLoading] = useState(false);
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
@@ -543,6 +552,12 @@ export default function PlayPage() {
   useEffect(() => {
     if (tab === "practice") loadPieces();
   }, [tab, loadPieces]);
+
+  useEffect(() => {
+    if (user instanceof Student && user.instrument) {
+      setInstrumentFilter(user.instrument.toLowerCase() as "guitar" | "ukulele" | "piano");
+    }
+  }, [user]);
 
   // ── Generate game from sheet music ────────────────────────────────────────
   async function generateGame(piece: PieceWithGame) {
@@ -1727,8 +1742,29 @@ export default function PlayPage() {
       {tab === "guitar" && gameState === "idle" && (
         <div>
           <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.75rem" }}>Choose a song</h2>
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+            {(["all", "guitar", "ukulele", "piano"] as const).map(inst => (
+              <button
+                key={inst}
+                onClick={() => setInstrumentFilter(inst)}
+                style={{
+                  padding: "0.375rem 0.875rem",
+                  borderRadius: 20,
+                  border: instrumentFilter === inst ? "2px solid var(--sage)" : "1px solid var(--border)",
+                  background: instrumentFilter === inst ? "var(--white)" : "transparent",
+                  color: instrumentFilter === inst ? "var(--sage)" : "var(--muted)",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "0.8125rem",
+                  textTransform: "capitalize",
+                }}
+              >
+                {inst}
+              </button>
+            ))}
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "0.75rem" }}>
-            {SONGS.map(song => (
+            {SONGS.filter(song => instrumentFilter === "all" || song.instrument === instrumentFilter).map(song => (
               <button
                 key={song.id}
                 onClick={() => { setSelectedSong(song); startGame(song); }}

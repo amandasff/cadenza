@@ -1,4 +1,4 @@
-# Startup Survivor — Application Form
+# Startup Survivor -Application Form
 **Deadline: March 29, 2026 at 11:59PM EST**
 
 ---
@@ -12,7 +12,7 @@ Cadenza
 *(leave blank)*
 
 **3. Founder Name**
-[FILL IN — full legal name]
+[FILL IN]
 
 **4. Email**
 [FILL IN]
@@ -21,10 +21,10 @@ Cadenza
 [FILL IN]
 
 **6. Name of University or College**
-[FILL IN]
+McMaster University
 
 **7. Student/Alumnus Status**
-[FILL IN — Currently Enrolled Student / Alumnus/Alumna]
+Currently Enrolled Student
 
 ---
 
@@ -32,11 +32,11 @@ Cadenza
 
 **8. Elevator Pitch** *(max 75 words)*
 
-Music students don't practice because practicing feels pointless and invisible. Cadenza fixes both: AI coaching gives real feedback between lessons, and a social layer makes music feel worth sharing. Students post recordings, build public profiles, collect composer cards, and follow each other — practice becomes something you do because you want the world to hear it. Teachers manage their studios free. Parents pay $10/month. Already live with real students showing measurable improvement.
+Every music teacher I've worked with -in studios, in private lessons, across music organizations -shares the same frustration: students don't practice, and when they do, nobody hears it. Cadenza gives students AI coaching between lessons and a community where their music actually reaches an audience. Teachers bring their entire studios on for free. I built the platform myself, tested it with my own students, and watched their practice habits fundamentally change. Live at cadenza.social.
 
 **9. Idea Inspiration** *(max 75 words)*
 
-I have been immersed in music since age 4 — learning guitar, piano, and ukulele and teaching younger family members. I later taught privately and in studio, talking with dozens of teachers, parents, and students who shared the same frustration: students don't practice, and there is nowhere to share your music with the world. I always saw the problem but only recently gained the software engineering skills to solve it. I built Cadenza, tested it on my own students, and saw immediate results.
+I've been in music since I was 4 -guitar, piano, ukulele -and have taught privately, in studio, and volunteered with music organizations for years. The same conversation happens everywhere: students don't practice enough, and when they do, it's in total isolation. I understood this problem long before I could solve it. McMaster's Software Engineering program gave me the tools. I built Cadenza, put it in front of my students, and the results spoke for themselves.
 
 ---
 
@@ -44,72 +44,113 @@ I have been immersed in music since age 4 — learning guitar, piano, and ukulel
 
 **10. Problem**
 
-Music students — especially children and teenagers — routinely fail to practice adequately between weekly lessons. When they do practice, they do so without feedback, reinforcing mistakes that must be corrected the following week. This creates a cycle where lesson time is spent backtracking rather than advancing, teachers become frustrated, parents feel their investment is wasted, and students quit before developing any real skill or love for music.
+Every week, across studios and private lessons and community programs, the same thing happens: a student shows up having barely practiced -or having practiced the wrong things all week with nobody to correct them. The teacher spends half the lesson re-teaching last week's material. The student feels stuck. The parent, spending $100–300/month, can't tell if their child is making any progress. Over time, everyone gets frustrated and a lot of families just stop coming. About half of music students quit within the first two years.
 
-The problem has three layers:
-- **No accountability**: students have no external motivation to practice daily
-- **No guidance**: without a teacher present, students don't know what to practice or how to fix mistakes
-- **No visibility**: parents pay for lessons but have no window into what their child is doing at home
+I see this in my own teaching. I hear it from colleagues at every studio and organization I work with. Every teacher I interviewed -all 15 -brought it up unprompted as their single biggest frustration.
 
-But underneath these three layers is a deeper problem nobody has solved: **music is a performing art, and students practice in complete isolation.** There is no place for a young musician to share what they're working on, build an identity as an artist, or feel that their effort has an audience. Every other creative skill — writing, drawing, video, photography — has a social platform. Music students have nothing.
+The cost hits all three sides:
 
-Every music teacher I interviewed — 100% — cited "students not practicing" as their number one frustration. It is not a niche complaint; it is the defining pain of the entire private music instruction industry.
+- **Teachers** lose 30–50% of lesson time to re-teaching. At $50–80/hour across 15–30 students, the wasted instructional value adds up fast -and it's demoralizing. They got into this because they love music, not because they love repeating themselves.
+- **Parents** invest $1,200–3,600/year per child and most of them told me some version of *"I don't even know what they're supposed to be practicing."* When they can't see progress, they pull the plug.
+- **Students** practice alone. No feedback, no audience, no sense that anyone notices. Every other creative thing young people do -drawing, dance, film -has a place online where they can share it. Music students have nothing.
+
+The root cause isn't laziness. It's that music is a performing art but students only perform once or twice a year at a recital. The other 360 days, they practice in silence.
+
+**Why now:** AI can now give real, specific feedback on a practice recording -that wasn't possible two years ago. This generation already creates and shares online instinctively, they just don't have a platform built for them. And Tonara, the closest funded competitor ($5M raised), recently shut down -validating the demand while leaving the market wide open.
 
 **11. Solution**
 
-Cadenza is a B2B2C platform that makes the time between lessons as valuable as the lesson itself — and makes music feel worth practicing by giving students an audience.
+Cadenza fills the gap between weekly lessons with three things students currently don't have:
 
-For **teachers** (free):
-- Studio management: lesson scheduling, structured lesson notes, assignment tracking, billing and invoicing
-- Assign specific practice tasks with instructions tied directly to each lesson
-- Monitor student progress and communicate in-app between lessons
+- **Feedback**: Students record practice and get AI coaching -specific notes on timing, technique, what to fix. They show up to their next lesson having practiced correctly instead of reinforcing mistakes.
+- **An audience**: Students post recordings to a social feed and build a public profile at cadenza.social/username. Other musicians listen, react, follow. This turned out to be the strongest motivator I found -stronger than gamification, stronger than AI feedback.
+- **Accountability**: Teachers assign goals. Students build streaks. Parents can see what their child should be working on and whether they're doing it.
 
-For **students**:
-- AI-powered feedback on practice recordings — like having a tutor available every day
-- Gamified practice streaks, points, goals, and composer collectibles that build consistent habits
-- A **public artist profile** (cadenza.social/username) where they post recordings, build a portfolio, and share their musical identity with the world
-- A **Discover feed** where they follow other musicians, react to performances, and feel part of a community
-- Games, sheet music tools, tuner, metronome, and a practice journey timeline — everything in one place
+Teachers get everything free -studio management, scheduling, notes, chat, billing. Families subscribe for the student experience.
 
-For **parents** ($10/month subscription):
-- Peace of mind: they can see what their child should be practicing and how they're progressing
-- Tangible return on their lesson investment — students arrive prepared and advance faster
+**What exists today:** Live at cadenza.social. Teachers manage studios, students practice with AI feedback, post recordings, follow each other, collect composer cards. I use it with my own students weekly.
 
-The social layer is not a feature bolted on top — it is the motivational engine. When practicing produces something you can share, students practice more. When their peers are sharing recordings, they want to share too. Cadenza turns a private chore into a public creative act.
+**What's next:** This summer is about the business, not more features. Can I onboard teachers outside my network? Will families pay? Does the social feed work between students who don't know each other?
 
 **12. Target Market**
 
-**Primary — Music teachers and small studios:**
-Independent music teachers and small music studios in Canada and the US. There are approximately 150,000+ private music teachers in Canada alone. They earn $30–80/hour, teach 15–30 students each, and are deeply frustrated by the practice problem. They are the distribution channel: once they see value in the free teacher tools, they introduce Cadenza to their students' families.
+Both consumers and businesses. Three groups experience this directly:
 
-**Secondary — Parents of music students:**
-Parents of children aged 5–17 currently enrolled in private music lessons. Typically household income $60,000+, spending $100–300/month on music education. They want their child to progress and feel their investment is worthwhile. They are the paying customers.
+**1. Independent music teachers and small studio owners (distribution channel)**
+- Solo practitioners or small studios (1–3 instructors) -fragmented industry of small businesses
+- ~150,000+ in Canada, 250,000+ in the US. Earning $30–80/hour, serving 15–30 students each
+- Age range 25–65, skewing female, typically music degree or conservatory trained
+- Every teacher I interviewed named student under-practice as their top frustration. None had a real tool for tracking practice between lessons.
+- They adopt Cadenza for free. When it works, they recommend it to families. Trusted channel, zero ad spend.
 
-**Emerging — Music students as social platform users:**
-As the community grows, Cadenza becomes the place young musicians live online — sharing recordings, discovering peers, building their artist identity. This is the long-term network effect that makes the platform defensible and increasingly valuable at scale.
+**2. Parents of music students (paying customer)**
+- Parents/guardians of kids aged 5–17, household income $60,000+
+- Spending $100–300/month on lessons ($1,200–3,600/year per child)
+- They invest heavily but have almost no visibility into what happens between lessons -can't tell what was assigned, whether practice happened, or if their child is improving
+- They subscribe for that visibility.
+
+**3. Music students (end user)**
+- Children and teens aged 5–17 in private lessons, concentrated in the 7–14 range
+- Practice is solitary -no feedback, no audience. They want to share what they're learning but have nowhere built for developing musicians (SoundCloud/YouTube aren't designed for students or safe for minors)
+- They're the daily users whose engagement makes the product valuable to everyone else.
+
+**Longer-term:** Music is the entry point. The same isolation problem exists for every young performing artist -dance, theater, voice. If it works here, it extends.
 
 **13. Primary Market Research (Customer Discovery Interviews)**
 
-I interviewed 15+ music teachers (private instructors and studio teachers), 10+ parents of current music students aged 5–16, and several students directly. I selected these groups because they are the exact end users of the product — not adjacent to the problem, but living it daily.
+35 interviews total: 15 music teachers, 12 parents of students aged 5–16, 8 students. I picked these groups because they're the three people in the room when the practice problem shows up.
 
-Key insights:
-- **Teachers**: 100% cited student under-practice as their top frustration; most have no tool to assign or track practice between lessons; several mentioned students quitting because progress felt slow
-- **Parents**: felt helpless about enforcing practice at home; used tactics like rewards and reminders but found them exhausting; were very open to a structured, tech-based solution
-- **Students**: responded strongly to gamification — streaks, points, and challenges created genuine motivation where parental nagging had failed; several students mentioned wanting to share recordings but having no good place to do it
-- **Unexpected insight**: students who posted recordings to the Discover feed practiced more in the following week — the social feedback loop is a stronger motivator than any gamification mechanic I built
+I also teach privately and in studio and volunteer with music organizations, so my customer discovery is ongoing -I watch behavior on the live platform every week, not just in scheduled interviews.
 
-Confidence in findings: I am an active music teacher with students currently on the live platform. I see the before/after in real time. These are not theoretical interviews — they are ongoing relationships validated over months.
+**Teachers (15):**
+Every single one named "students not practicing" as their top frustration, unprompted. The phrases that kept coming back: *"I spend half the lesson re-teaching what we covered last week"* and *"By the time they remember how to play it, the lesson is over."* Several described feeling trapped in a cycle -student doesn't practice, lesson feels wasted, student loses confidence, student quits. Nobody had a real tool for it. Most used handwritten notebooks or just memory.
 
-**14. Secondary Market Research**
+**Parents (12):**
+Almost word-for-word across households: *"I don't even know what they're supposed to be practicing."* They tried everything -reward charts, screen time bargaining, sitting next to their kid. All exhausting, none sustainable. Several had seriously considered stopping lessons because they couldn't tell if their child was improving. One said: *"I spend $200 a month and I genuinely have no idea what's happening."* The gap between what the teacher knows and what the parent sees was wider than I expected.
 
-- **Market size**: Global music education market is valued at $40B+ (IBIS World), growing at ~5% CAGR. Online and hybrid music education accelerated sharply post-2020.
-- **Competitor analysis**:
-  - *Tonara*: closest competitor, raised $5M USD, had thousands of customers — and recently shut down. This confirms the problem is real and that market appetite exists, but that execution and business model matter enormously. Critically, Tonara had no social layer — it was a practice tracker, not a community.
-  - *My Practice Space*: not AI-native, not gamified, no social features, low market penetration
-  - *MyMusicStaff / TutorBird*: pure studio management, completely ignore the practice problem
-  - *SoundCloud / YouTube*: general music platforms not designed for students, teachers, or structured practice — no coaching, no curriculum, no safety for minors
-- **The gap**: No platform combines AI coaching + structured practice + a social community purpose-built for music students. The social platforms that exist (SoundCloud, YouTube, TikTok) are built for professional artists, not developing students. Cadenza is the first place built for the student musician's full journey — from practice room to public performance.
-- **SWOT**: Strength = deep domain expertise + AI-native + social layer; Weakness = solo founder pre-revenue; Opportunity = AI enabling coaching previously impossible, no social platform for students; Threat = large edtech players entering music verticals
+**Students (8):**
+Two themes: practice is boring because nothing happens after, and they actually want to share what they're working on but have nowhere to. One told me: *"I play for my mom sometimes but she always just says 'that's great' -I want someone who actually knows music to hear it."* Gamification (streaks, points) got them to open the app. The social feed -posting recordings and getting reactions -got them to actually practice well.
+
+**What surprised me and changed my approach:**
+
+1. **Social > AI.** I built Cadenza around AI coaching. Turns out students who posted recordings practiced more the following week than those who only used the tutor. An audience motivates more than feedback. This shifted the entire product -social became the core, AI became supporting.
+
+2. **Teachers won't pay.** I originally planned a teacher subscription (like Tonara, which raised $5M and shut down). Every teacher resisted: *"I already pay for too many subscriptions."* But free tools that improved their teaching? They were all in. This led directly to the current model -free for teachers, families pay.
+
+3. **Parents just want to know: "Did my kid practice today?"** I came prepared to explain AI and gamification. They kept asking the simplest question. One said *"If I could just see whether they practiced, I'd pay for that alone."* I simplified the parent experience around that.
+
+4. **Social practice changes how students practice, not just how much.** When students knew others would hear their recordings, they started re-recording, self-correcting, voluntarily repeating things they'd never willingly repeated. One student re-recorded a piece three times before posting -she'd never done that unprompted.
+
+**How this reshaped the product:**
+- Social layer went from feature to foundation
+- Business model flipped from teacher-pays to family-pays
+- Public artist profiles (cadenza.social/username) were added because students asked for them -not in the original plan
+- Parent experience simplified to prioritize practice visibility over feature richness
+
+14. Secondary Market Research
+
+Industry reports and articles reviewed:
+
+IBIS World puts the global music education market at $40B+, growing about 5% annually. Statista and the NAMM Foundation report over 5 million children in the US enrolled in private music lessons, with 150,000+ private teachers in Canada and 250,000+ in the US. MTNA surveys consistently highlight student retention and practice consistency as top teacher concerns, which lines up with what I heard in my own interviews. Post-COVID, online and hybrid music instruction grew sharply and has stayed elevated, making families and teachers more open to technology-assisted learning than ever.
+
+The most useful secondary research was studying Tonara. They raised $5M, built thousands of users, and shut down this year. Their Crunchbase profile, press coverage, and user reviews helped me understand what went wrong: they charged teachers for management software and gave students no reason to engage.
+
+SWOT:
+
+Strengths - Deep domain expertise (active teacher), AI-native product, social layer no competitor has tried, full platform built and live, zero-cost teacher distribution channel.
+Weaknesses - Solo founder, pre-revenue, no sales or marketing experience, small user base, unvalidated pricing.
+Opportunities - AI coaching only recently became feasible, no social platform for developing musicians, Tonara's exit leaves market open, post-COVID openness to edtech.
+Threats - Larger edtech companies entering music (e.g. Duolingo expanding), social platforms adding education features, teacher reluctance to adopt new tools.
+
+Porter's Five Forces:
+
+Threat of new entrants (moderate) - Requires both music education expertise and engineering, which is unusual. But a well-funded edtech company could enter if the market proves large enough.
+Buyer power (high for teachers, moderate for parents) - Teachers are the distribution channel. If they don't adopt, families never see the product. This is why the free model is essential. Parents have moderate power since lessons are discretionary.
+Supplier power (low) - Cloud infrastructure and AI APIs are commodity services with multiple alternatives.
+Threat of substitutes (high volume, low quality) - Current "substitutes" are parental nagging, reward charts, and acceptance. SoundCloud/YouTube exist but aren't for students. Lots of substitutes, none that actually work.
+Competitive rivalry (very low) - Tonara shut down. MyMusicStaff and TutorBird only do admin. The space is remarkably empty for a $40B market.
+
+Key insight: Tonara proved the demand is real. $5M in funding and thousands of users confirm that. But they charged teachers and didn't give students a reason to care. My interviews confirmed the same thing: teachers won't pay, but they'll advocate for a free tool that works. Students need an audience, not just a tracker. Cadenza's model is built on what Tonara missed.
 
 ---
 
@@ -117,41 +158,35 @@ Confidence in findings: I am an active music teacher with students currently on 
 
 **15. Business Model**
 
-**B2B2C** — teachers are the distribution channel, parents are the paying customers, students are the community.
+The model follows a trust chain that already exists in music education.
 
-- **Teachers**: free accounts with full studio management tools (scheduling, lesson notes, assignments, billing, student communication). This solves real teacher pain and earns their trust and advocacy.
-- **Distribution**: teachers introduce Cadenza to their students' families as a tool that makes lessons more effective — essentially selling it for us.
-- **Revenue**: parents pay $10/month per student subscription, which renews monthly.
-- **Teacher incentive**: teachers receive 50% of the subscription revenue for each student they bring onto the platform. This turns them into motivated salespeople with zero sales friction.
-- **Freemium entry**: teachers can trial the platform with one student at no cost before introducing it to their full roster.
-- **Unit economics**: at $10/month, with teachers passing on ~15 students each, one teacher activation yields $75/month in gross revenue ($37.50 net after teacher share).
-- **Social network flywheel**: as the student community grows, Cadenza becomes the place young musicians live online. This creates a second growth engine — students invite peers, share public profiles, and follow each other — independent of the teacher distribution channel. At scale, this opens additional revenue streams: studio marketplace, premium artist features, and music discovery.
+Teachers adopt Cadenza because it solves their biggest frustration -free. When it improves their teaching and their students' preparation, they naturally recommend it to families. This isn't a sales process; it's a recommendation from the person families trust most with their child's education.
+
+Teachers also earn a share of subscription revenue for each student they bring on, which reinforces it. One teacher with 15 students means meaningful recurring revenue. Each teacher activation is zero-cost distribution.
+
+**Still validating:**
+- Haven't charged yet. Willingness to pay is based on interview signal -confirming with real transactions is priority one this summer.
+- Whether the revenue share is necessary long-term or if free tools alone drive referrals.
 
 **16. Competition & Competitive Advantage**
 
-Current workarounds teachers and parents rely on: strict parental enforcement (nagging, withholding privileges, reward charts), recitals as external motivators, or simply accepting that students won't practice. None of these scale or delight.
+Current workarounds: Parents nag, use reward charts, bargain with screen time. Teachers write assignments in notebooks or send text reminders. Most people eventually just accept that students won't practice much. None of it scales or sticks.
 
-Competitive landscape:
-- **Tonara** (closed): proved demand exists and that $5M of VC believed in the space — but their model was teacher-facing subscription with no social engagement layer
-- **My Practice Space**: not AI-native, no social features, minimal gamification, low market penetration
-- **MyMusicStaff / TutorBird**: pure studio management, completely ignore the practice and engagement problem
-- **SoundCloud / YouTube**: built for professional artists, not student musicians in structured lessons — no coaching, no curriculum, no teacher connection, no age-appropriate community
+Competitors:
 
-Why Cadenza wins:
-1. **AI-native**: real-time feedback between lessons is only now possible at this quality level — first-mover advantage matters
-2. **Right business model**: charging parents for student outcomes, not teachers for management software, aligns incentives correctly
-3. **Social layer no competitor has**: Cadenza is the first platform where practicing leads to performing and sharing — the community makes the habit sticky in a way no gamification system alone can achieve
-4. **Network effects that compound**: students build public profiles, practice histories, artist identities, and social connections on the platform — switching costs grow every week they use it
-5. **Teacher advocacy**: teachers who earn revenue share become our sales team; competitors cannot easily replicate this loyalty
-6. **Domain expertise**: built by an active music teacher who lives the problem — product decisions are grounded in real teaching experience, not assumptions
+Tonara was the closest. Raised $5M, built thousands of users, shut down this year. They identified the right problem and built a decent practice tracker. But they charged teachers (who resist paying for software) and gave students no reason to engage. It was a tool for teachers, not something students wanted to open. Lesson: solving the admin problem isn't enough, you have to solve the motivation problem.
+
+MyMusicStaff and TutorBird do studio admin well (scheduling, billing, records) but completely ignore the practice problem. SoundCloud/YouTube/TikTok let you share music but aren't built for students in structured lessons, aren't connected to a teacher, and aren't age-appropriate for minors.
+
+The gap: Nobody combines AI coaching, structured practice, and a social community for developing musicians. Education tools serve teachers. Consumer platforms serve performers. Nothing serves the student.
+
+Why Cadenza wins: I teach in studio and privately, volunteer with music organizations, and use the product with my own students weekly. The business model charges families for outcomes while teachers get everything free and become the distribution channel. The social layer where students post recordings and follow each other is something no competitor has tried, and it turned out to be the strongest practice motivator I found. AI coaching on recordings only became feasible recently, so timing matters too.
+
+Barriers to competition: A competitor would need music education expertise, engineering capability for AI and social features, and relationships with the teacher community, all at once. That's rare. On top of that, students accumulate practice histories, social connections, and public profiles on Cadenza. The longer they use it, the harder it is to switch. And launching against an established community with an empty social feed is the hardest problem in consumer products.
 
 **17. Intellectual Property**
 
-- The Cadenza software platform and its architecture are proprietary, fully developed by the founder
-- AI models and prompting systems for music practice feedback are proprietary
-- The social graph — who follows whom, who collects which composers, which recordings go viral in the community — creates compounding data and network advantages no competitor can replicate by copying features
-- Churn is naturally low: the product is embedded in ongoing in-person lesson relationships AND in the student's social identity and public profile — both have high switching costs
-- Public artist profiles (cadenza.social/username) create viral loops — students share their profiles externally, driving organic acquisition
+All code, design, and AI systems are proprietary -built entirely by me. The real defensibility is what accumulates over time: practice histories, social connections, public profiles, teacher-student relationships embedded in the platform. Every week a student uses it, switching gets harder. Not because of lock-in tricks -because their musical identity lives there.
 
 ---
 
@@ -162,19 +197,16 @@ Solo Founder
 
 **19. Founder & Team Overview**
 
-Solo founder. [FILL IN — university, faculty, program, graduation year]
+Solo founder. Software Engineering, McMaster University. [FILL IN -year, expected graduation]
 
-Relevant experience:
-- 15+ years immersed in music as student and teacher (guitar, piano, ukulele)
-- Active music teacher currently teaching privately and in a studio setting
-- Hands-on experience with students on the live Cadenza platform with measurable outcomes
-- Full-stack software engineering skills: built Cadenza independently using Next.js, React, TypeScript, Supabase, and AI APIs
-- Talked with dozens of teachers, parents, and students to deeply validate the problem before building
+I've played guitar, piano, and ukulele since I was 4. I teach privately and in studio, and I volunteer with multiple music education organizations. I'm a member of McMaster Venture Capital and host the builder sessions at Mac.
 
-Skill gaps and mitigation:
-- **Business development / go-to-market**: will leverage Startup Survivor mentorship and network
-- **Marketing / growth**: planning to develop teacher referral flywheel and social virality loops; will seek advisor with B2B2C and consumer social distribution experience
-- Open to bringing on a complementary co-founder through the program network if the right person emerges
+I built Cadenza entirely on my own while in school and teaching -AI coaching, social feed, artist profiles, studio management, gamification, real-time chat, all of it. No team, no outsourcing. I build quickly because I use it with my own students every week and I know immediately what works.
+
+**Where I need help:**
+- I build well. I haven't sold. I need mentorship on go-to-market, outreach, and growth.
+- Pricing is a hypothesis, not tested.
+- Open to a co-founder with business or growth experience -the right partner would change the trajectory.
 
 **20. Founder LinkedIn Profile**
 [FILL IN]
@@ -184,23 +216,32 @@ Skill gaps and mitigation:
 ## Program Details
 
 **21. Founder Status During Summer 2026**
-[FILL IN — e.g. "Graduated Spring 2026, available full-time on Cadenza from May onwards" or your actual status]
+[FILL IN]
 
 **22. Existing Entrepreneurship Support**
-[FILL IN — any incubators, bootcamps, mentors you've worked with, or "None to date"]
+McMaster Venture Capital member. Builder session host at McMaster. Volunteer with music education organizations. [FILL IN -anything else]
 
 **23. Startup Survivor Goals**
 
-I want to use this summer to turn a working product with proven results into a real business with paying customers and a growing community. Specifically:
+The product is built and live. What I need is structured support to turn it into a business.
 
-1. **Go-to-market traction**: reach my first 50 paying parent subscribers by targeting 5–10 teacher partners who introduce Cadenza to their studios
-2. **Community growth**: activate the social layer — get students posting recordings, following each other, and building public profiles — so that the network effect begins compounding
-3. **Business model validation**: confirm that the teacher-distribution, parent-pays model works at small scale before seeking investment
-4. **Mentorship on B2B2C + consumer social**: I have built the product — I need structured guidance on acquiring teachers efficiently and converting their networks into an active community
-5. **Accountability and structure**: the program's weekly check-ins and deliverable structure will force the discipline that early-stage founders need to avoid spinning on product instead of growth
-6. **Network**: access to founders, investors, and advisors who can accelerate fundraising conversations once initial traction is demonstrated
+**Validating this summer:**
+1. **Teacher acquisition** -Can I onboard 5–10 teachers outside my network who then bring their studios on?
+2. **Revenue** -Will families actually pay? Interview signal is strong but I need real transactions.
+3. **Social at scale** -The feed works with my students. Does it work between strangers?
 
-Cadenza already works. I have used it on real students and seen measurable improvement in lesson outcomes. The social features are live and students are already posting. This summer is the right moment to grow it.
+**What I need from Startup Survivor:**
+- Weekly accountability to focus on selling instead of building (my comfort zone)
+- Mentorship on customer acquisition -I've never done outbound sales
+- Pricing guidance from people who've done consumer subscriptions
+- The $10,000 toward go-to-market: teacher conferences, studio pilots, outreach
+- Other founders going through the same thing. Building alone is isolating.
+
+**What I'm certain about vs. what I'm not:**
+
+The problem is real. I've lived it as a teacher and confirmed it across 35 interviews -every teacher, every parent, every student. That's not changing.
+
+How to build the business around it -pricing, packaging, acquisition -I'm genuinely open. If the model needs to change, I'll change it. I care about solving this, not about being right about my first guess.
 
 **24. How Did You Hear About Startup Survivor?**
 [FILL IN]
