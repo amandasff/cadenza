@@ -502,20 +502,95 @@ const PRACTICE_GUIDES = [
 
 // ── Theory quick reference ────────────────────────────────────────────────────
 
-const INTERVAL_SONGS: Record<string, string[]> = {
-  "0": ["America the Beautiful", "God Save the King", "Hava Nagila", "Jingle Bells", "Twinkle Twinkle Little Star"],
-  "1": ["Rule, Britannia!", "As Time Goes By", "Jaws Theme", "Isn't She Lovely"],
-  "2": ["Frère Jacques", "Rudolph the Red-Nosed Reindeer", "Silent Night", "Never Gonna Give You Up", "Mary Had a Little Lamb", "Three Blind Mice"],
-  "3": ["The Sound of Silence", "Axel F", "Greensleeves", "Smoke on the Water", "O Canada", "The Impossible Dream", "Iron Man", "Hallelujah"],
-  "4": ["When the Saints Go Marching In", "Swing Low Sweet Chariot", "Beethoven Symphony No. 5", "Stressed Out"],
-  "5": ["Auld Lang Syne", "Oh Christmas Tree", "Here Comes the Bride", "Amazing Grace"],
-  "6": ["Maria from West Side Story", "The Simpsons Theme"],
-  "7": ["Also Sprach Zarathustra", "Can't Help Falling in Love", "My Favorite Things", "Scarborough Fair", "Star Wars Theme", "Twinkle Twinkle Little Star", "Flintstones Theme"],
-  "8": ["In My Life", "The Entertainer", "Nothing Compares 2 U"],
-  "9": ["For He's a Jolly Good Fellow", "Jingle Bells", "Leia's Theme", "My Bonnie Lies Over the Ocean", "My Way", "Sweet Caroline"],
-  "10": ["Star Trek Theme", "Somewhere from West Side Story", "The Winner Takes It All"],
-  "11": ["Take On Me", "Have Yourself a Merry Little Christmas"],
-  "12": ["Over the Rainbow", "Blue Bossa", "The Christmas Song", "Let It Snow", "Don't Look Back in Anger"],
+interface IntervalSong { song: string; direction: "↑" | "↓"; note?: string }
+
+const INTERVAL_SONGS: Record<string, IntervalSong[]> = {
+  "0": [
+    { song: "America the Beautiful", direction: "↑" },
+    { song: "God Save the King", direction: "↑" },
+    { song: "Hava Nagila", direction: "↑" },
+    { song: "Jingle Bells", direction: "↑" },
+    { song: "Twinkle Twinkle Little Star", direction: "↑", note: "first 'twinkle'" },
+  ],
+  "1": [
+    { song: "Rule, Britannia!", direction: "↑" },
+    { song: "As Time Goes By", direction: "↑" },
+    { song: "Jaws Theme", direction: "↑" },
+    { song: "Isn't She Lovely", direction: "↑" },
+  ],
+  "2": [
+    { song: "Frère Jacques", direction: "↑" },
+    { song: "Rudolph the Red-Nosed Reindeer", direction: "↑" },
+    { song: "Silent Night", direction: "↑" },
+    { song: "Never Gonna Give You Up", direction: "↑" },
+    { song: "Mary Had a Little Lamb", direction: "↓" },
+    { song: "Three Blind Mice", direction: "↑" },
+  ],
+  "3": [
+    { song: "The Sound of Silence", direction: "↑" },
+    { song: "Axel F", direction: "↑" },
+    { song: "Greensleeves", direction: "↑" },
+    { song: "Smoke on the Water", direction: "↑" },
+    { song: "O Canada", direction: "↑" },
+    { song: "The Impossible Dream", direction: "↑" },
+    { song: "Iron Man", direction: "↓" },
+    { song: "Hallelujah", direction: "↑" },
+  ],
+  "4": [
+    { song: "When the Saints Go Marching In", direction: "↑" },
+    { song: "Swing Low Sweet Chariot", direction: "↑" },
+    { song: "Beethoven Symphony No. 5", direction: "↓" },
+    { song: "Stressed Out", direction: "↓", note: "on 'turn back time'" },
+  ],
+  "5": [
+    { song: "Auld Lang Syne", direction: "↑" },
+    { song: "Oh Christmas Tree", direction: "↑" },
+    { song: "Here Comes the Bride", direction: "↑" },
+    { song: "Amazing Grace", direction: "↑" },
+  ],
+  "6": [
+    { song: "Maria from West Side Story", direction: "↑" },
+    { song: "The Simpsons Theme", direction: "↑" },
+  ],
+  "7": [
+    { song: "Also Sprach Zarathustra", direction: "↑" },
+    { song: "Can't Help Falling in Love", direction: "↑", note: "on 'wise men'" },
+    { song: "My Favorite Things", direction: "↑" },
+    { song: "Scarborough Fair", direction: "↑" },
+    { song: "Star Wars Theme", direction: "↑" },
+    { song: "Twinkle Twinkle Little Star", direction: "↑", note: "from 1st to 2nd 'twinkle'" },
+    { song: "Flintstones Theme", direction: "↓" },
+    { song: "Back to the Future Theme", direction: "↓" },
+  ],
+  "8": [
+    { song: "In My Life", direction: "↑" },
+    { song: "The Entertainer", direction: "↑", note: "after pick-up" },
+    { song: "Nothing Compares 2 U", direction: "↑" },
+  ],
+  "9": [
+    { song: "For He's a Jolly Good Fellow", direction: "↑" },
+    { song: "Jingle Bells", direction: "↑", note: "on 'dashing through the snow'" },
+    { song: "Leia's Theme", direction: "↓" },
+    { song: "My Bonnie Lies Over the Ocean", direction: "↓" },
+    { song: "My Way", direction: "↓" },
+    { song: "Sweet Caroline", direction: "↓" },
+  ],
+  "10": [
+    { song: "Star Trek Theme", direction: "↑" },
+    { song: "Somewhere from West Side Story", direction: "↑" },
+    { song: "The Winner Takes It All", direction: "↑" },
+  ],
+  "11": [
+    { song: "Take On Me", direction: "↑" },
+    { song: "Have Yourself a Merry Little Christmas", direction: "↓" },
+  ],
+  "12": [
+    { song: "Over the Rainbow", direction: "↑" },
+    { song: "Blue Bossa", direction: "↓" },
+    { song: "The Christmas Song", direction: "↑" },
+    { song: "Let It Snow", direction: "↑" },
+    { song: "Don't Look Back in Anger", direction: "↓" },
+  ],
 };
 
 const INTERVALS = [
@@ -1184,11 +1259,15 @@ export default function ReferencePage() {
                       {expandedInterval===st && (
                         <tr style={{ background:"var(--cream)", borderTop:"1px solid var(--border)" }}>
                           <td colSpan={5} style={{ padding:"0.75rem 1rem" }}>
-                            <div style={{ display:"flex", flexWrap:"wrap", gap:"0.5rem" }}>
-                              {INTERVAL_SONGS[st]?.map(song => (
-                                <button key={song} onClick={()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(song)}`, "_blank")} style={{
-                                  padding:"0.375rem 0.75rem", borderRadius:20, border:"1px solid var(--sage)", background:"transparent", color:"var(--sage)", cursor:"pointer", fontFamily:"Inter,sans-serif", fontSize:"0.75rem", fontWeight:500, whiteSpace:"nowrap",
-                                }} title="Search on YouTube">{song}</button>
+                            <div style={{ display:"flex", flexWrap:"wrap", gap:"0.75rem" }}>
+                              {INTERVAL_SONGS[st]?.map((item, idx) => (
+                                <button key={idx} onClick={()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(item.song)}`, "_blank")} style={{
+                                  padding:"0.375rem 0.75rem", borderRadius:20, border:"1px solid var(--sage)", background:"transparent", color:"var(--sage)", cursor:"pointer", fontFamily:"Inter,sans-serif", fontSize:"0.75rem", fontWeight:500, whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:"0.375rem"
+                                }} title="Search on YouTube">
+                                  <span style={{ fontSize:"0.8125rem", fontWeight:700 }}>{item.direction}</span>
+                                  <span>{item.song}</span>
+                                  {item.note && <span style={{ fontSize:"0.65rem", color:"var(--muted)", fontWeight:400 }}>({item.note})</span>}
+                                </button>
                               ))}
                             </div>
                           </td>
