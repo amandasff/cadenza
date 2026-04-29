@@ -502,6 +502,22 @@ const PRACTICE_GUIDES = [
 
 // ── Theory quick reference ────────────────────────────────────────────────────
 
+const INTERVAL_SONGS: Record<string, string[]> = {
+  "0": ["America the Beautiful", "God Save the King", "Hava Nagila", "Jingle Bells", "Twinkle Twinkle Little Star"],
+  "1": ["Rule, Britannia!", "As Time Goes By", "Jaws Theme", "Isn't She Lovely"],
+  "2": ["Frère Jacques", "Rudolph the Red-Nosed Reindeer", "Silent Night", "Never Gonna Give You Up", "Mary Had a Little Lamb", "Three Blind Mice"],
+  "3": ["The Sound of Silence", "Axel F", "Greensleeves", "Smoke on the Water", "O Canada", "The Impossible Dream", "Iron Man", "Hallelujah"],
+  "4": ["When the Saints Go Marching In", "Swing Low Sweet Chariot", "Beethoven Symphony No. 5", "Stressed Out"],
+  "5": ["Auld Lang Syne", "Oh Christmas Tree", "Here Comes the Bride", "Amazing Grace"],
+  "6": ["Maria from West Side Story", "The Simpsons Theme"],
+  "7": ["Also Sprach Zarathustra", "Can't Help Falling in Love", "My Favorite Things", "Scarborough Fair", "Star Wars Theme", "Twinkle Twinkle Little Star", "Flintstones Theme"],
+  "8": ["In My Life", "The Entertainer", "Nothing Compares 2 U"],
+  "9": ["For He's a Jolly Good Fellow", "Jingle Bells", "Leia's Theme", "My Bonnie Lies Over the Ocean", "My Way", "Sweet Caroline"],
+  "10": ["Star Trek Theme", "Somewhere from West Side Story", "The Winner Takes It All"],
+  "11": ["Take On Me", "Have Yourself a Merry Little Christmas"],
+  "12": ["Over the Rainbow", "Blue Bossa", "The Christmas Song", "Let It Snow", "Don't Look Back in Anger"],
+};
+
 const INTERVALS = [
   ["0","Unison","P1","Same note"],
   ["1","Minor 2nd","m2","Half step"],
@@ -619,6 +635,7 @@ export default function ReferencePage() {
   const student = user as Student;
   const [mainTab, setMainTab] = useState<MainTab>("chords");
   const [instrument, setInstrument] = useState<InstrumentTab>("guitar");
+  const [expandedInterval, setExpandedInterval] = useState<string | null>(null);
 
   // Auto-select instrument based on student profile
   useEffect(() => {
@@ -1146,18 +1163,38 @@ export default function ReferencePage() {
             <div style={{ overflowX:"auto" }}>
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"0.8125rem" }}>
                 <thead><tr style={{ background:"var(--cream)" }}>
-                  {[t.student.referenceSemitonesCol, t.student.referenceNameCol, t.student.referenceSymbolCol, t.student.referenceDistanceCol].map(h=>(
+                  {[t.student.referenceSemitonesCol, t.student.referenceNameCol, t.student.referenceSymbolCol, t.student.referenceDistanceCol, "Reference Songs"].map(h=>(
                     <th key={h} style={{ padding:"0.5rem 1rem", textAlign:"left", fontWeight:500, color:"var(--muted)", fontSize:"0.75rem", letterSpacing:"0.04em" }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
                   {INTERVALS.map(([st,name,sym,dist],i) => (
-                    <tr key={i} style={{ borderTop:"1px solid var(--border)" }}>
-                      <td style={{ padding:"0.5rem 1rem", color:"var(--muted)", fontVariantNumeric:"tabular-nums" }}>{st}</td>
-                      <td style={{ padding:"0.5rem 1rem", color:"var(--charcoal)", fontWeight:500 }}>{name}</td>
-                      <td style={{ padding:"0.5rem 1rem", color:"var(--muted)", fontFamily:"Georgia,serif" }}>{sym}</td>
-                      <td style={{ padding:"0.5rem 1rem", color:"var(--muted)" }}>{dist}</td>
-                    </tr>
+                    <React.Fragment key={i}>
+                      <tr style={{ borderTop:"1px solid var(--border)" }}>
+                        <td style={{ padding:"0.5rem 1rem", color:"var(--muted)", fontVariantNumeric:"tabular-nums" }}>{st}</td>
+                        <td style={{ padding:"0.5rem 1rem", color:"var(--charcoal)", fontWeight:500 }}>{name}</td>
+                        <td style={{ padding:"0.5rem 1rem", color:"var(--muted)", fontFamily:"Georgia,serif" }}>{sym}</td>
+                        <td style={{ padding:"0.5rem 1rem", color:"var(--muted)" }}>{dist}</td>
+                        <td style={{ padding:"0.5rem 1rem", textAlign:"center" }}>
+                          <button onClick={()=>expandedInterval===st ? setExpandedInterval(null) : setExpandedInterval(st)} style={{ background:"none", border:"none", color:"var(--sage)", cursor:"pointer", fontWeight:600, fontSize:"0.75rem" }}>
+                            {expandedInterval===st ? "▼" : "▶"} {INTERVAL_SONGS[st]?.length || 0}
+                          </button>
+                        </td>
+                      </tr>
+                      {expandedInterval===st && (
+                        <tr style={{ background:"var(--cream)", borderTop:"1px solid var(--border)" }}>
+                          <td colSpan={5} style={{ padding:"0.75rem 1rem" }}>
+                            <div style={{ display:"flex", flexWrap:"wrap", gap:"0.5rem" }}>
+                              {INTERVAL_SONGS[st]?.map(song => (
+                                <button key={song} onClick={()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(song)}`, "_blank")} style={{
+                                  padding:"0.375rem 0.75rem", borderRadius:20, border:"1px solid var(--sage)", background:"transparent", color:"var(--sage)", cursor:"pointer", fontFamily:"Inter,sans-serif", fontSize:"0.75rem", fontWeight:500, whiteSpace:"nowrap",
+                                }} title="Search on YouTube">{song}</button>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
