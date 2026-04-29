@@ -130,6 +130,7 @@ function omrPieceToSong(piece: PieceWithGame): Song {
     timeSignature,
     notes,
     difficulty: "intermediate",
+    instrument: "guitar",
   };
 }
 
