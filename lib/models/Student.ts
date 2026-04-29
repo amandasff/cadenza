@@ -8,6 +8,7 @@ export class Student extends User {
   public studioId: string | null;
   public streakFreezeCount: number;
   public isSolo: boolean;
+  public instrument: string | null;
 
   constructor(profile: ProfileRow, email: string) {
     super(
@@ -23,6 +24,7 @@ export class Student extends User {
     this.studioId = profile.studio_id;
     this.streakFreezeCount = profile.streak_freeze_count ?? 0;
     this.isSolo = profile.is_solo ?? false;
+    this.instrument = profile.instrument ?? null;
   }
 
   getHomeRoute(): string {
