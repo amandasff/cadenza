@@ -1,6 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useI18n } from "@/lib/context/I18nContext";
+import { useAuth } from "@/lib/context/AuthContext";
+import { Student } from "@/lib/models/Student";
 
 // ── Note data ──────────────────────────────────────────────────────────────────
 
@@ -252,10 +254,21 @@ type Tab = "piano" | "guitar" | "ukulele";
 
 export default function ChordsPage() {
   const { t: tr } = useI18n();
+  const { user } = useAuth();
+  const student = user as Student;
   const [tab, setTab] = useState<Tab>("piano");
-  const [root, setRoot] = useState(0); // index into NOTE_NAMES
+  const [root, setRoot] = useState(0);
   const [chordType, setChordType] = useState("maj");
   const [search, setSearch] = useState("");
+
+  // Auto-select instrument tab based on student's profile
+  useEffect(() => {
+    if (!student?.instrument) return;
+    const inst = student.instrument.toLowerCase();
+    if (inst.includes("guitar")) setTab("guitar");
+    else if (inst.includes("ukulele") || inst.includes("uke")) setTab("ukulele");
+    else setTab("piano");
+  }, [student?.instrument]);
 
   const selectedChord = CHORD_TYPES.find(c => c.id === chordType) ?? CHORD_TYPES[0];
   const highlightedNotes = selectedChord.intervals.map(i => (root + i) % 12);
