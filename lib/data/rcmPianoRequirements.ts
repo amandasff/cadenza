@@ -646,6 +646,7 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       chords: [
         {
           type: "Triads in all inversions",
+          keys: ["E", "A flat", "B major", "C# minor"],
           tempo: 88,
         },
       ],
@@ -714,11 +715,13 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
           type: "Three-octave",
           tempo: 108,
           hands: "HS",
+          keys: ["F#", "D flat", "F# minor", "B flat minor"],
         },
       ],
       chords: [
         {
           type: "Seventh chords in inversions",
+          keys: ["F#", "D flat", "F# minor", "B flat minor"],
           tempo: 96,
         },
       ],
@@ -785,11 +788,13 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
           type: "Three-octave",
           tempo: 116,
           hands: "HS",
+          keys: ["All major and minor keys"],
         },
       ],
       chords: [
         {
           type: "Extended chord voicings",
+          keys: ["All major and minor keys"],
           tempo: 104,
         },
       ],
@@ -853,6 +858,7 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
           type: "Four-octave",
           tempo: 126,
           hands: "HS",
+          keys: ["All major and minor keys"],
         },
       ],
     },
@@ -916,6 +922,7 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
           type: "Four-octave",
           tempo: 138,
           hands: "HS",
+          keys: ["All major and minor keys"],
         },
       ],
     },
