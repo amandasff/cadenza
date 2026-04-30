@@ -745,6 +745,7 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         },
         {
           skill: "Melody Playback",
+          description: "Play back longer melodies",
           marks: 4,
         },
       ],
@@ -752,6 +753,7 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         {
           type: "Rhythm",
           marks: 3,
+          description: "Complex rhythm patterns",
         },
         {
           type: "Playing",
@@ -803,18 +805,22 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       earTests: [
         {
           skill: "Clapback",
+          description: "Complex melodies",
           marks: 2,
         },
         {
           skill: "Chord Quality",
+          description: "Complex chord types",
           marks: 2,
         },
         {
           skill: "Progressions",
+          description: "Extended chord progressions",
           marks: 2,
         },
         {
           skill: "Playback",
+          description: "Extended melody playback",
           marks: 4,
         },
       ],
@@ -822,10 +828,12 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         {
           type: "Rhythm",
           marks: 3,
+          description: "Advanced rhythm patterns",
         },
         {
           type: "Playing",
           marks: 7,
+          description: "Advanced sight-reading passages",
         },
       ],
     },
@@ -866,18 +874,22 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       earTests: [
         {
           skill: "Clapback",
+          description: "Complex melodies with varied rhythms",
           marks: 2,
         },
         {
           skill: "Chords",
+          description: "Extended and complex chord types",
           marks: 2,
         },
         {
           skill: "Progressions",
+          description: "Complex chord progressions and modulations",
           marks: 2,
         },
         {
           skill: "Playback",
+          description: "Extended melody playback",
           marks: 4,
         },
       ],
@@ -885,10 +897,12 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         {
           type: "Rhythm",
           marks: 3,
+          description: "Complex rhythm patterns and syncopation",
         },
         {
           type: "Playing",
           marks: 7,
+          description: "Advanced sight-reading passages with varied textures",
         },
       ],
     },
@@ -930,18 +944,22 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       earTests: [
         {
           skill: "Clapback",
+          description: "Complex melodies with varied rhythms",
           marks: 2,
         },
         {
           skill: "Chords",
+          description: "Extended and complex chord types",
           marks: 2,
         },
         {
           skill: "Progressions",
+          description: "Complex chord progressions and modulations",
           marks: 2,
         },
         {
           skill: "Playback",
+          description: "Extended melody playback",
           marks: 4,
         },
       ],
@@ -949,10 +967,12 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         {
           type: "Rhythm",
           marks: 3,
+          description: "Complex rhythm patterns and syncopation",
         },
         {
           type: "Playing",
           marks: 7,
+          description: "Advanced sight-reading passages with varied textures",
         },
       ],
     },
@@ -994,18 +1014,22 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       earTests: [
         {
           skill: "Clapback",
+          description: "Complex melodies with varied rhythms",
           marks: 2,
         },
         {
           skill: "Chords",
+          description: "Extended and complex chord types",
           marks: 2,
         },
         {
           skill: "Progressions",
+          description: "Complex chord progressions and modulations",
           marks: 2,
         },
         {
           skill: "Playback",
+          description: "Extended melody playback",
           marks: 4,
         },
       ],
@@ -1013,10 +1037,12 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         {
           type: "Rhythm",
           marks: 3,
+          description: "Complex rhythm patterns and syncopation",
         },
         {
           type: "Playing",
           marks: 7,
+          description: "Advanced sight-reading passages with varied textures",
         },
       ],
     },
