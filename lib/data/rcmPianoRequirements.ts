@@ -779,9 +779,9 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       total: 100,
     },
     repertoire: {
-      listA: { name: "Baroque", count: 1 },
-      listB: { name: "Classical and Classical-style", count: 1 },
-      listC: { name: "Romantic, 20th-, 21st-century", count: 1 },
+      listA: { name: "Baroque", count: 1, style: "Baroque" },
+      listB: { name: "Classical and Classical-style", count: 1, style: "Classical" },
+      listC: { name: "Romantic, 20th-, 21st-century", count: 1, style: "Romantic onwards" },
       memory: { marksPerPiece: 2, totalMarks: 6 },
     },
     technicalTests: {
@@ -854,10 +854,10 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       total: 100,
     },
     repertoire: {
-      listA: { name: "Baroque", count: 1 },
-      listB: { name: "Classical", count: 1 },
-      listC: { name: "Romantic", count: 1 },
-      listD: { name: "Post-Romantic, 20th-, 21st-century", count: 1 },
+      listA: { name: "Baroque", count: 1, style: "Baroque" },
+      listB: { name: "Classical", count: 1, style: "Classical" },
+      listC: { name: "Romantic", count: 1, style: "Romantic" },
+      listD: { name: "Post-Romantic, 20th-, 21st-century", count: 1, style: "Post-Romantic onwards" },
       memory: { marksPerPiece: 2, totalMarks: 6 },
     },
     technicalTests: {
@@ -924,10 +924,10 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       total: 100,
     },
     repertoire: {
-      listA: { name: "Baroque", count: 1 },
-      listB: { name: "Classical", count: 1 },
-      listC: { name: "Romantic", count: 1 },
-      listD: { name: "Post-Romantic, 20th-, 21st-century", count: 1 },
+      listA: { name: "Baroque", count: 1, style: "Baroque" },
+      listB: { name: "Classical", count: 1, style: "Classical" },
+      listC: { name: "Romantic", count: 1, style: "Romantic" },
+      listD: { name: "Post-Romantic, 20th-, 21st-century", count: 1, style: "Post-Romantic onwards" },
       memory: { marksPerPiece: 2, totalMarks: 6 },
     },
     technicalTests: {
@@ -994,11 +994,11 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
       total: 100,
     },
     repertoire: {
-      listA: { name: "Works by J.S. Bach", count: 1 },
-      listB: { name: "Classical Repertoire", count: 1 },
-      listC: { name: "Romantic Repertoire", count: 1 },
-      listD: { name: "Post-Romantic, Impressionist, Early 20th-century", count: 1 },
-      listE: { name: "20th- and 21st-century Repertoire", count: 1 },
+      listA: { name: "Works by J.S. Bach", count: 1, style: "Baroque" },
+      listB: { name: "Classical Repertoire", count: 1, style: "Classical" },
+      listC: { name: "Romantic Repertoire", count: 1, style: "Romantic" },
+      listD: { name: "Post-Romantic, Impressionist, Early 20th-century", count: 1, style: "Post-Romantic onwards" },
+      listE: { name: "20th- and 21st-century Repertoire", count: 1, style: "20th/21st-century" },
       memory: { marksPerPiece: 2, totalMarks: 6 },
     },
     technicalTests: {
