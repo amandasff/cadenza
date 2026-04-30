@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import RcmTechnique from "./RcmTechnique";
 import RcmPiano from "./RcmPiano";
+import RcmPianoDetailed from "./RcmPianoDetailed";
 import { useI18n } from "../../../lib/context/I18nContext";
 import { useAuth } from "../../../lib/context/AuthContext";
 import { Student } from "../../../lib/models/Student";
@@ -1362,7 +1363,7 @@ export default function ReferencePage() {
               </p>
             </div>
           )}
-          <RcmPiano />
+          <RcmPianoDetailed />
         </div>
       )}
 
