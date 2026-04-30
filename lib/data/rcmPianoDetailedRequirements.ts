@@ -38,6 +38,7 @@ export interface EarTestDetail {
   details?: string;
   intervals?: string[];
   chordTypes?: string[];
+  keys?: string[];
   marks?: number;
   approximateLength?: string;
 }
