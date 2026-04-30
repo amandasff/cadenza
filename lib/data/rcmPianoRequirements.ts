@@ -869,6 +869,13 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
           keys: ["All major and minor keys"],
         },
       ],
+      chords: [
+        {
+          type: "All inversions",
+          keys: ["All major and minor keys"],
+          tempo: 108,
+        },
+      ],
     },
     musicianship: {
       earTests: [
@@ -939,6 +946,13 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
           keys: ["All major and minor keys"],
         },
       ],
+      chords: [
+        {
+          type: "All inversions",
+          keys: ["All major and minor keys"],
+          tempo: 120,
+        },
+      ],
     },
     musicianship: {
       earTests: [
@@ -1007,6 +1021,14 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
           type: "Four-octave",
           tempo: 152,
           hands: "HS",
+          keys: ["All major and minor keys"],
+        },
+      ],
+      chords: [
+        {
+          type: "All inversions",
+          keys: ["All major and minor keys"],
+          tempo: 132,
         },
       ],
     },
