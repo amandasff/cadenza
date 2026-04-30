@@ -297,6 +297,7 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         },
         {
           type: "Tonic Triads - Solid/blocked",
+          keys: ["C", "G", "F major", "A", "E", "D minor"],
           tempo: 100,
         },
       ],
@@ -394,6 +395,7 @@ export const RCM_PIANO_LEVELS: Record<string, RCMLevel> = {
         },
         {
           type: "Tonic Triads - Solid/blocked",
+          keys: ["D", "B flat", "E flat major", "B", "G#", "F# minor"],
           tempo: 120,
         },
       ],
