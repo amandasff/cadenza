@@ -89,6 +89,7 @@ export interface RCMLevelDetailed {
       composer: string;
       source?: string;
       page?: number;
+      inCelebrationSeries?: boolean;
     }>;
     canSubstitutePopular?: boolean;
   };
