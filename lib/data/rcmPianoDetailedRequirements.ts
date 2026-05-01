@@ -48,6 +48,7 @@ export interface SightReadingDetail {
   description: string;
   timeSignatures?: string[];
   noteValues?: string[];
+  keys?: string[];
   approximateLength?: string;
   marks?: number;
   details?: string;
