@@ -333,7 +333,7 @@ export default function Home() {
                   {(["student", "teacher"] as UserRole[]).map(r => (
                     <label
                       key={r}
-                      className="cursor-pointer rounded-lg border px-4 py-2.5 text-center text-sm capitalize transition-colors"
+                      className="cursor-pointer rounded-lg border px-4 py-2.5 text-center text-sm transition-colors"
                       style={role === r
                         ? { background: "var(--sage-bg)", borderColor: "var(--sage)", color: "var(--sage)" }
                         : { borderColor: "var(--border-strong)", color: "var(--muted)" }}
