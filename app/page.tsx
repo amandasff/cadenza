@@ -1,32 +1,41 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AuthService } from "@/lib/services/AuthService";
 import type { UserRole } from "@/lib/types";
 
-const SLIDES = [
-  { label: "Practice\nAnytime", img: "/slides/01.png", vol: "VOL. 1 // ORIGIN" },
-  { label: "Chat With\nYour Teacher", img: "/slides/08.png", vol: "VOL. 2 // ECHO" },
-  { label: "Build Your\nRepertoire", img: "/slides/02.png", vol: "VOL. 3 // SOUND" },
-  { label: "Explore\nChords", img: "/slides/04.png", vol: "VOL. 4 // THEORY" },
-  { label: "Compete\n& Play", img: "/slides/03.png", vol: "VOL. 5 // PULSE" },
-  { label: "Collect\nComposers", img: "/slides/06.png", vol: "VOL. 6 // ICON" },
-  { label: "Discover\nNew Music", img: "/slides/05.png", vol: "VOL. 7 // CHORUS" },
-  { label: "Your\nStudio", img: "/slides/10.png", vol: "VOL. 8 // ARC" },
-  { label: "Share Your\nJourney", img: "/slides/07.png", vol: "VOL. 9 // STAGE" },
-  { label: "Learn\nWith AI", img: "/slides/09.png", vol: "VOL. 10 // SPARK" },
+const serif: React.CSSProperties = { fontFamily: "'Cormorant Garamond', Georgia, serif" };
+
+type AuthMode = "signup" | "signin";
+
+const FEATURES = [
+  {
+    icon: "M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z",
+    title: "Practice streaks that stick",
+    body: "A daily practice loop with streaks, points, and goals — momentum students can see, and a reason to sit down and play on a Tuesday.",
+  },
+  {
+    icon: "M8 10h8m-8 4h5m-9 7 3.5-3.5H19a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16z",
+    title: "Your teacher, between lessons",
+    body: "Students send recordings and questions; teachers reply in context. The week between lessons stops being a black box.",
+  },
+  {
+    icon: "M12 2 14.5 9H22l-6 4.5L18.5 21 12 16.5 5.5 21 8 13.5 2 9h7.5L12 2z",
+    title: "An AI tutor that knows the syllabus",
+    body: "Theory questions, exam requirements, practice strategies — grounded in the full RCM curriculum from Prep A to Level 10.",
+  },
+  {
+    icon: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z",
+    title: "Every piece in one place",
+    body: "Repertoire, reference library, ear training, and sight reading — organized by level, not scattered across binders and tabs.",
+  },
 ];
-
-const PAD = (n: number) => String(n).padStart(3, "0");
-
-const cadenzaLetters = () => "CADENZA";
-
-interface Recording { id: string; title: string; url: string; artist: string }
 
 export default function Home() {
   const router = useRouter();
-  const [mode, setMode] = useState<"signup" | "signin">("signup");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [mode, setMode] = useState<AuthMode>("signup");
   const [role, setRole] = useState<UserRole>("student");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,35 +43,6 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [slide, setSlide] = useState(0);
-  const [time, setTime] = useState("");
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth < 768 : false);
-  const [showForm, setShowForm] = useState(false);
-
-  const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [showPlayer, setShowPlayer] = useState(false);
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const touchStartRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  useEffect(() => {
-    const tick = () =>
-      setTime(new Date().toLocaleTimeString("en-CA", {
-        timeZone: "America/Toronto",
-        hour: "2-digit", minute: "2-digit", hour12: false,
-      }));
-    tick();
-    const id = setInterval(tick, 30_000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -73,40 +53,22 @@ export default function Home() {
     });
   }, [router]);
 
-  useEffect(() => {
-    fetch("/api/public/recordings")
-      .then(r => r.json())
-      .then(d => setRecordings(d.recordings ?? []))
-      .catch(() => {});
+  const openAuth = useCallback((m: AuthMode, r?: UserRole) => {
+    setMode(m);
+    if (r) setRole(r);
+    setError("");
+    setAuthOpen(true);
   }, []);
 
-  const preview = (slide + 1) % SLIDES.length;
-  const prevSlide = useCallback(() => setSlide(s => (s - 1 + SLIDES.length) % SLIDES.length), []);
-  const nextSlide = useCallback(() => setSlide(s => (s + 1) % SLIDES.length), []);
-  const switchMode = (m: "signup" | "signin") => { setMode(m); setError(""); setPassword(""); };
+  const closeAuth = useCallback(() => { setAuthOpen(false); setError(""); setPassword(""); }, []);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).tagName === "INPUT") return;
-      if (e.key === "ArrowLeft") prevSlide();
-      else if (e.key === "ArrowRight") nextSlide();
-    };
+    if (!authOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeAuth(); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [prevSlide, nextSlide]);
-
-  const playRecording = useCallback((rec: Recording) => {
-    if (!audioRef.current) return;
-    if (playingId === rec.id) {
-      if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
-      else { audioRef.current.play().catch(() => setIsPlaying(false)); setIsPlaying(true); }
-      return;
-    }
-    audioRef.current.src = rec.url;
-    audioRef.current.play().catch(() => setIsPlaying(false));
-    setPlayingId(rec.id);
-    setIsPlaying(true);
-  }, [playingId, isPlaying]);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+  }, [authOpen, closeAuth]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault(); setError("");
@@ -136,31 +98,16 @@ export default function Home() {
     });
   }, [role]);
 
-  const handleSwipeStart = (e: React.TouchEvent) => { touchStartRef.current = e.touches[0].clientX; };
-  const handleSwipeEnd = (e: React.TouchEvent) => {
-    if (touchStartRef.current === null) return;
-    const diff = touchStartRef.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
-    touchStartRef.current = null;
-  };
-
   if (checking) {
     return (
-      <div style={{
-        height: "100dvh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: "#fbf9f4", fontFamily: "'Space Grotesk', sans-serif",
-        fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#777",
-      }}>
-        Loading
+      <div className="flex h-dvh items-center justify-center" style={{ background: "var(--cream)" }}>
+        <span className="text-sm" style={{ color: "var(--muted)" }}>Loading…</span>
       </div>
     );
   }
 
-  const cur = SLIDES[slide];
-  const nxt = SLIDES[preview];
-
   const googleSvg = (
-    <svg width="14" height="14" viewBox="0 0 18 18">
+    <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
       <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
       <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
       <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
@@ -168,714 +115,301 @@ export default function Home() {
     </svg>
   );
 
-  const lbl: React.CSSProperties = {
-    fontFamily: "'Space Grotesk', sans-serif", fontSize: 10, letterSpacing: "0.15em",
-    textTransform: "uppercase", position: "absolute", top: -16, left: 0, color: "rgba(0,0,0,0.7)",
-  };
-
-  const lblDark: React.CSSProperties = { ...lbl, color: "rgba(255,255,255,0.45)" };
-
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&family=Work+Sans:wght@400;500;600&display=swap');
+    <div style={{ background: "var(--cream)", color: "var(--charcoal)" }} className="min-h-dvh">
 
-        .cad-noise {
-          position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-          pointer-events: none; z-index: 9999; opacity: 0.03;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        }
-
-        @keyframes cad-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .cad-vinyl-spin { animation: cad-spin 8s linear infinite; }
-        .cad-vinyl-paused { animation-play-state: paused; }
-        .cad-vinyl-grooves {
-          background: repeating-radial-gradient(circle, transparent, transparent 2px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 4px);
-        }
-
-        .cad-input {
-          width: 100%; background: transparent; border: none;
-          border-bottom: 1px solid #000; outline: none;
-          font-family: 'Work Sans', sans-serif; font-size: 13px;
-          padding: 6px 0; color: #000; border-radius: 0;
-        }
-        .cad-input::placeholder { color: rgba(0,0,0,0.3); }
-
-        .cad-input-dark {
-          width: 100%; background: transparent; border: none;
-          border-bottom: 1px solid rgba(255,255,255,0.25); outline: none;
-          font-family: 'Work Sans', sans-serif; font-size: 15px;
-          padding: 10px 0; color: #fbf9f4; border-radius: 0;
-        }
-        .cad-input-dark::placeholder { color: rgba(255,255,255,0.2); }
-        .cad-input-dark:focus { border-bottom-color: rgba(255,255,255,0.6); }
-
-        .cad-hero-img { transition: transform 0.7s ease-out; }
-        .cad-hero-img:hover { transform: scale(1.05); }
-        .cad-nav-arrow { transition: opacity 0.2s; }
-        .cad-nav-arrow:hover { opacity: 0.5; }
-        .cad-btn-primary { transition: background 0.3s; }
-        .cad-btn-primary:hover { background: #3b3b3b !important; }
-        .cad-btn-pastel { transition: filter 0.3s; }
-        .cad-btn-pastel:hover { filter: brightness(0.92); }
-        .cad-input:focus { border-bottom-color: #2C2824 !important; }
-        .cad-input-dark:focus { border-bottom-color: #F8F6F2 !important; }
-        .cad-btn-outline { transition: background 0.2s; }
-        .cad-btn-outline:hover { background: rgba(0,0,0,0.04); }
-        .cad-link:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 0.5px; }
-        .cad-track { transition: background 0.15s; }
-        .cad-track:hover { background: rgba(255,255,255,0.08) !important; }
-        .cad-player-scroll::-webkit-scrollbar { width: 3px; }
-        .cad-player-scroll::-webkit-scrollbar-track { background: transparent; }
-        .cad-player-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
-
-        @keyframes cad-sheet-up {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-        .cad-sheet { animation: cad-sheet-up 0.35s ease-out forwards; }
-      `}</style>
-
-      <div className="cad-noise" />
-      <audio ref={audioRef} onEnded={() => { setIsPlaying(false); setPlayingId(null); }} style={{ display: "none" }} />
-
-      <div style={{
-        background: "#fbf9f4", color: "#000", fontFamily: "'Work Sans', sans-serif",
-        height: "100dvh", display: "flex", flexDirection: "column",
-        overflow: "hidden", position: "relative",
-      }}>
-
-        {isMobile ? (
-          /* ═══════════════════════════════════════════════════════════════════
-             MOBILE LAYOUT
-             ═══════════════════════════════════════════════════════════════════ */
-          <>
-            {/* MOBILE HEADER */}
-            <header style={{
-              flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "1rem 1.25rem",
-              borderBottom: "0.5px solid #000",
-            }}>
-              <span style={{
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
-                letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.5)",
-              }}>
-                {time} EST
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <img src="/logo.svg" alt="" style={{ height: "1.4rem", width: "auto" }} />
-                <h1 style={{
-                  fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.5rem",
-                  fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase",
-                  lineHeight: 1, margin: 0,
-                }}>
-                  {cadenzaLetters()}
-                </h1>
-              </div>
-              <span style={{
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
-                letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.5)",
-              }}>
-                {PAD(slide + 1)}/{PAD(SLIDES.length)}
-              </span>
-            </header>
-
-            {/* MOBILE HERO */}
-            <div
-              style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}
-              onTouchStart={handleSwipeStart}
-              onTouchEnd={handleSwipeEnd}
+      {/* ── Nav ─────────────────────────────────────────── */}
+      <header
+        className="sticky top-0 z-40 border-b"
+        style={{ background: "color-mix(in srgb, var(--cream) 92%, transparent)", backdropFilter: "blur(8px)", borderColor: "var(--border)" }}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+          <a href="#" className="flex items-center gap-2">
+            <img src="/logo.svg" alt="" className="h-6 w-auto" />
+            <span className="text-2xl" style={{ ...serif, fontWeight: 500 }}>Cadenza</span>
+          </a>
+          <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "var(--muted)" }}>
+            <a href="#features" className="transition-colors hover:text-[var(--charcoal)]">Features</a>
+            <a href="#teachers" className="transition-colors hover:text-[var(--charcoal)]">For teachers</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            <button onClick={() => openAuth("signin")} className="cursor-pointer text-sm" style={{ color: "var(--muted)" }}>
+              Sign in
+            </button>
+            <button
+              onClick={() => openAuth("signup")}
+              className="cursor-pointer rounded-lg px-4 py-2 text-sm text-white transition-opacity hover:opacity-90"
+              style={{ background: "var(--sage)" }}
             >
-              {SLIDES.map((s, i) => (
-                <div key={i} style={{
-                  position: "absolute", inset: 0,
-                  opacity: i === slide ? 1 : 0, transition: "opacity 0.5s ease",
-                  pointerEvents: i === slide ? "auto" : "none",
-                }}>
-                  <img
-                    src={s.img} alt={s.label.replace("\n", " ")}
-                    style={{
-                      width: "100%", height: "100%", objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
-                </div>
-              ))}
+              Start free
+            </button>
+          </div>
+        </div>
+      </header>
 
-              {/* Gradient overlay for readability */}
-              <div style={{
-                position: "absolute", bottom: 0, left: 0, right: 0, height: "55%",
-                background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)",
-                pointerEvents: "none", zIndex: 1,
-              }} />
+      {/* ── Hero ────────────────────────────────────────── */}
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-14 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:pt-20">
+        <div>
+          <p className="mb-4 text-sm" style={{ color: "var(--peach)" }}>
+            For music students, teachers, and parents
+          </p>
+          <h1 className="text-5xl leading-[1.08] sm:text-6xl" style={{ ...serif, fontWeight: 500 }}>
+            Practice that carries the lesson home
+          </h1>
+          <p className="mt-5 max-w-xl text-lg leading-relaxed" style={{ color: "var(--muted)" }}>
+            Cadenza keeps students playing between lessons — daily streaks, shared
+            repertoire, and an AI tutor built on the RCM syllabus — with teachers
+            and parents in the loop.
+          </p>
 
-              {/* Vol label */}
-              <div style={{
-                position: "absolute", top: 16, right: 16,
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
-                letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)",
-                textTransform: "uppercase", zIndex: 2,
-              }}>
-                {cur.vol}
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <button
+              onClick={() => openAuth("signup", "student")}
+              className="cursor-pointer rounded-xl border p-5 text-left transition-colors"
+              style={{ background: "var(--sage-bg)", borderColor: "var(--sage-light)" }}
+            >
+              <span className="block text-base font-medium" style={{ color: "var(--sage)" }}>I&rsquo;m learning</span>
+              <span className="mt-1 block text-sm leading-snug" style={{ color: "var(--sage-mid)" }}>
+                Build a streak, learn your pieces, get help when you&rsquo;re stuck.
+              </span>
+              <span className="mt-3 inline-block rounded-lg px-4 py-2 text-sm text-white" style={{ background: "var(--sage)" }}>
+                Start practicing — free
+              </span>
+            </button>
+            <button
+              onClick={() => openAuth("signup", "teacher")}
+              className="cursor-pointer rounded-xl border p-5 text-left transition-colors"
+              style={{ background: "var(--white)", borderColor: "var(--border-strong)" }}
+            >
+              <span className="block text-base font-medium">I teach</span>
+              <span className="mt-1 block text-sm leading-snug" style={{ color: "var(--muted)" }}>
+                See who practiced, send feedback mid-week, run your studio in one place.
+              </span>
+              <span className="mt-3 inline-block rounded-lg border px-4 py-2 text-sm" style={{ borderColor: "var(--charcoal)" }}>
+                Set up your studio
+              </span>
+            </button>
+          </div>
+
+          <p className="mt-5 text-sm" style={{ color: "var(--muted)" }}>
+            Free to start · No credit card required
+          </p>
+        </div>
+
+        <div className="rounded-2xl border p-3 shadow-sm" style={{ background: "var(--white)", borderColor: "var(--border)" }}>
+          <img
+            src="/slides/01.png"
+            alt="The Cadenza student home screen: a practice start card, streak and points, teacher chat, and the next scheduled lesson"
+            className="w-full rounded-xl border"
+            style={{ borderColor: "var(--border)" }}
+          />
+        </div>
+      </section>
+
+      {/* ── Features ────────────────────────────────────── */}
+      <section id="features" className="border-t" style={{ background: "var(--white)", borderColor: "var(--border)" }}>
+        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
+          <h2 className="max-w-2xl text-4xl leading-tight" style={{ ...serif, fontWeight: 500 }}>
+            One weekly lesson isn&rsquo;t what makes a musician. It&rsquo;s the six days in between.
+          </h2>
+          <div className="mt-12 grid gap-10 sm:grid-cols-2">
+            {FEATURES.map(f => (
+              <div key={f.title} className="border-t pt-6" style={{ borderColor: "var(--border)" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d={f.icon} />
+                </svg>
+                <h3 className="mt-3 text-lg font-medium">{f.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "var(--muted)" }}>{f.body}</p>
               </div>
+            ))}
+          </div>
 
-              {/* Caption */}
-              <div style={{
-                position: "absolute", bottom: 0, left: 0, right: 0,
-                padding: "0 1.25rem 1.25rem", zIndex: 2,
-              }}>
-                {cur.label.split("\n").map((line, i) => (
-                  <p key={i} style={{
-                    fontFamily: "'Space Grotesk', sans-serif", color: "#fff",
-                    fontSize: "2rem", fontWeight: 900,
-                    letterSpacing: "-0.03em", textTransform: "uppercase",
-                    lineHeight: 1.05, margin: 0,
-                  }}>
-                    {line}
-                  </p>
-                ))}
-                <p style={{
-                  fontFamily: "'Work Sans', sans-serif", fontSize: 12,
-                  color: "#9A9590", marginTop: 8,
-                  letterSpacing: "0.02em", lineHeight: 1.4,
-                }}>
-                  The social app for music learners &amp; teachers
-                </p>
-              </div>
+          <div className="mt-16 grid items-center gap-10 lg:grid-cols-2">
+            <div className="rounded-2xl border p-3" style={{ background: "var(--cream)", borderColor: "var(--border)" }}>
+              <img
+                src="/slides/09.png"
+                alt="The Cadenza AI music tutor answering questions about RCM exams, scales, and theory"
+                className="w-full rounded-xl border"
+                style={{ borderColor: "var(--border)" }}
+              />
             </div>
+            <div>
+              <h3 className="text-3xl leading-tight" style={{ ...serif, fontWeight: 500 }}>
+                Stuck at 8&thinsp;pm on a Wednesday? Ask.
+              </h3>
+              <p className="mt-4 text-[15px] leading-relaxed" style={{ color: "var(--muted)" }}>
+                The AI tutor knows the full RCM curriculum — what your Grade 5 exam
+                requires, how many scales Level 8 needs, why harmonic and melodic
+                minor differ. It answers the questions that used to wait a week for
+                the next lesson.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            {/* MOBILE BOTTOM BAR */}
-            <div style={{
-              flexShrink: 0, display: "flex", alignItems: "center",
-              padding: "0.75rem 1.25rem", gap: "0.75rem",
-              borderTop: "0.5px solid #000",
-            }}>
-              {/* Carousel arrows */}
-              <div style={{
-                display: "flex", alignItems: "center", gap: "0.5rem",
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.12em",
-              }}>
-                <button onClick={prevSlide} style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 28,
-                  color: "#000", padding: 4, lineHeight: 1,
-                }}>&#8592;</button>
-                <button onClick={nextSlide} style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 28,
-                  color: "#000", padding: 4, lineHeight: 1,
-                }}>&#8594;</button>
-              </div>
+      {/* ── For teachers ────────────────────────────────── */}
+      <section id="teachers" className="border-t" style={{ borderColor: "var(--border)" }}>
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 sm:px-8 lg:grid-cols-2">
+          <div>
+            <p className="mb-3 text-sm" style={{ color: "var(--peach)" }}>For teachers</p>
+            <h2 className="text-4xl leading-tight" style={{ ...serif, fontWeight: 500 }}>
+              Know how the week went before the lesson starts
+            </h2>
+            <p className="mt-4 max-w-lg text-[15px] leading-relaxed" style={{ color: "var(--muted)" }}>
+              Your studio in one view: who practiced, what they worked on, and the
+              recordings they sent. Reply when it suits you, assign repertoire, and
+              walk into every lesson already knowing where to begin.
+            </p>
+            <button
+              onClick={() => openAuth("signup", "teacher")}
+              className="mt-6 cursor-pointer rounded-lg px-5 py-2.5 text-sm text-white transition-opacity hover:opacity-90"
+              style={{ background: "var(--charcoal)" }}
+            >
+              Set up your studio
+            </button>
+          </div>
+          <div className="rounded-2xl border p-3" style={{ background: "var(--white)", borderColor: "var(--border)" }}>
+            <img
+              src="/slides/08.png"
+              alt="A teacher and student chatting in Cadenza, with practice recordings shared in the conversation"
+              className="w-full rounded-xl border"
+              style={{ borderColor: "var(--border)" }}
+            />
+          </div>
+        </div>
+      </section>
 
-              <div style={{ flex: 1 }} />
+      {/* ── Final CTA ───────────────────────────────────── */}
+      <section className="border-t" style={{ background: "var(--charcoal)", borderColor: "var(--border)" }}>
+        <div className="mx-auto max-w-6xl px-5 py-16 text-center sm:px-8">
+          <h2 className="text-4xl" style={{ ...serif, fontWeight: 500, color: "var(--cream)" }}>
+            Your first practice session is a minute away
+          </h2>
+          <button
+            onClick={() => openAuth("signup")}
+            className="mt-6 cursor-pointer rounded-lg px-6 py-3 text-sm transition-opacity hover:opacity-90"
+            style={{ background: "var(--cream)", color: "var(--charcoal)" }}
+          >
+            Start free
+          </button>
+        </div>
+      </section>
 
-              {/* CTA */}
-              <button
-                onClick={() => setShowForm(true)}
-                style={{
-                  background: "#2C2824",
-                  color: "#F8F6F2", border: "none",
-                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
-                  fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
-                  padding: "0.7rem 1.5rem", cursor: "pointer", borderRadius: 0,
-                }}
-              >
-                Get Started
+      {/* ── Footer ──────────────────────────────────────── */}
+      <footer className="border-t" style={{ borderColor: "var(--border)" }}>
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6 text-sm sm:px-8" style={{ color: "var(--muted)" }}>
+          <span>© 2026 Cadenza</span>
+          <button onClick={() => openAuth("signin")} className="cursor-pointer">Sign in</button>
+        </div>
+      </footer>
+
+      {/* ── Auth modal ──────────────────────────────────── */}
+      {authOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(44,40,36,0.45)" }}
+          onClick={closeAuth}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-8 shadow-xl"
+            style={{ background: "var(--white)" }}
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="mb-6 flex items-start justify-between">
+              <h2 className="text-3xl" style={{ ...serif, fontWeight: 500 }}>
+                {mode === "signup" ? "Create your account" : "Welcome back"}
+              </h2>
+              <button onClick={closeAuth} aria-label="Close" className="cursor-pointer text-xl leading-none" style={{ color: "var(--muted)" }}>
+                ✕
               </button>
             </div>
 
-            {/* MOBILE FORM OVERLAY */}
-            {showForm && (
-              <div className="cad-sheet" style={{
-                position: "fixed", inset: 0, zIndex: 100,
-                background: "#000", color: "#fbf9f4",
-                display: "flex", flexDirection: "column",
-                overflowY: "auto",
-              }}>
-                {/* Close + wordmark */}
-                <div style={{
-                  flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "1.25rem 1.5rem",
-                  borderBottom: "0.5px solid rgba(255,255,255,0.1)",
-                }}>
-                  <h1 style={{
-                    fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.25rem",
-                    fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase",
-                    margin: 0,
-                  }}>
-                    {cadenzaLetters()}
-                  </h1>
-                  <button onClick={() => setShowForm(false)} style={{
-                    background: "none", border: "none", color: "rgba(255,255,255,0.5)",
-                    cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 0,
-                  }}>
-                    &#10005;
-                  </button>
-                </div>
-
-                {/* Form content */}
-                <div style={{ flex: 1, padding: "2rem 1.5rem 3rem", maxWidth: 400, width: "100%" }}>
-                  <h2 style={{
-                    fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.5rem",
-                    fontWeight: 700, textTransform: "uppercase", letterSpacing: "-0.02em",
-                    margin: "0 0 2rem 0", color: "#fbf9f4",
-                  }}>
-                    {mode === "signup" ? "Join Cadenza" : "Welcome Back"}
-                  </h2>
-
-                  <form
-                    onSubmit={mode === "signup" ? handleSubmit : handleSignIn}
-                    style={{ display: "flex", flexDirection: "column", gap: "2rem" }}
-                  >
-                    {mode === "signup" && (
-                      <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.25rem" }}>
-                        {(["student", "teacher"] as UserRole[]).map(r => (
-                          <label key={r} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                            <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: "none" }} />
-                            <div style={{
-                              width: 12, height: 12, borderRadius: "50%",
-                              border: "1px solid rgba(255,255,255,0.4)",
-                              background: role === r ? "#F8F6F2" : "transparent",
-                              transition: "background 0.15s",
-                            }} />
-                            <span style={{
-                              fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
-                              letterSpacing: "0.15em", textTransform: "uppercase",
-                              opacity: role === r ? 1 : 0.5, transition: "opacity 0.15s",
-                              color: "#fbf9f4",
-                            }}>
-                              {r}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-
-                    {mode === "signup" && (
-                      <div style={{ position: "relative" }}>
-                        <label style={lblDark}>Display Name</label>
-                        <input className="cad-input-dark" type="text" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
-                      </div>
-                    )}
-
-                    <div style={{ position: "relative" }}>
-                      <label style={lblDark}>Email Address</label>
-                      <input className="cad-input-dark" type="email" placeholder="user@domain.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                    </div>
-
-                    <div style={{ position: "relative" }}>
-                      <label style={lblDark}>Security Key</label>
-                      <input className="cad-input-dark" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
-                    </div>
-
-                    {error && (
-                      <div style={{ fontSize: 12, color: "#ff6b6b", letterSpacing: "0.04em" }}>{error}</div>
-                    )}
-
-                    <button type="submit" disabled={loading} style={{
-                      marginTop: "0.5rem",
-                      background: "#2C2824",
-                      color: "#F8F6F2", border: "none",
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 12,
-                      fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em",
-                      padding: "1rem 1.5rem", cursor: loading ? "default" : "pointer",
-                      opacity: loading ? 0.6 : 1, width: "100%", textAlign: "center", borderRadius: 0,
-                    }}>
-                      {mode === "signup"
-                        ? (loading ? "Joining\u2026" : "Join The Quorum")
-                        : (loading ? "Entering\u2026" : "Access Cadenza")}
-                    </button>
-
-                    <button type="button" onClick={handleGoogle} style={{
-                      width: "100%", background: "transparent",
-                      border: "1.5px solid rgba(255,255,255,0.4)",
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
-                      letterSpacing: "0.15em", textTransform: "uppercase", color: "#fbf9f4",
-                      padding: "0.85rem 1rem", cursor: "pointer", borderRadius: 0, fontWeight: 700,
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
-                    }}>
-                      {googleSvg} Continue with Google
-                    </button>
-
-                    <div style={{
-                      textAlign: "center", fontFamily: "'Space Grotesk', sans-serif",
-                      fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase",
-                      marginTop: "0.5rem",
-                    }}>
-                      <span style={{ color: "rgba(255,255,255,0.4)" }}>
-                        {mode === "signup" ? "Already have an account? " : "Don\u2019t have an account? "}
-                      </span>
-                      <button type="button" onClick={() => switchMode(mode === "signup" ? "signin" : "signup")} style={{
-                        background: "none", border: "none", padding: 0, cursor: "pointer",
-                        fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                        letterSpacing: "0.15em", textTransform: "uppercase",
-                        fontWeight: 700, color: "#fbf9f4",
-                      }}>
-                        {mode === "signup" ? "Sign In" : "Create One"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          /* ═══════════════════════════════════════════════════════════════════
-             DESKTOP LAYOUT
-             ═══════════════════════════════════════════════════════════════════ */
-          <>
-            {/* DESKTOP HEADER */}
-            <header style={{
-              flexShrink: 0,
-              display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-              padding: "1.25rem 2.5rem 0.75rem",
-              borderBottom: "0.5px solid #000", margin: "0 1rem",
-            }}>
-              <div style={{ width: "33.33%", display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-                  Toronto, CA
-                </span>
-                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-                  {time} EST
-                </span>
-              </div>
-              <div style={{ width: "33.33%", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <img src="/logo.svg" alt="" style={{ height: "clamp(1.5rem, 3vw, 2.5rem)", width: "auto" }} />
-                  <h1 style={{
-                    fontFamily: "'Space Grotesk', sans-serif", fontSize: "clamp(1.5rem, 3vw, 2.75rem)",
-                    fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase", lineHeight: 1, margin: 0,
-                  }}>
-                    {cadenzaLetters()}
-                  </h1>
-                </div>
-                <p style={{
-                  fontFamily: "'Work Sans', sans-serif", fontSize: 11,
-                  letterSpacing: "0.08em", color: "rgba(0,0,0,0.45)",
-                  margin: "6px 0 0 0", fontWeight: 400,
-                }}>
-                  The social app for music learners &amp; teachers
-                </p>
-              </div>
-              <nav style={{
-                width: "33.33%", display: "flex", justifyContent: "flex-end", gap: "1.5rem",
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
-              }}>
-                <a href="#" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Home</a>
-                <a href="#" className="cad-link" style={{ color: "#000", textDecoration: "none" }}>Contact</a>
-              </nav>
-            </header>
-
-            {/* DESKTOP MAIN */}
-            <main style={{
-              flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
-              padding: "1rem 2.5rem",
-            }}>
-              <div style={{
-                flex: 1, minHeight: 0, display: "flex", gap: "2rem", alignItems: "center",
-              }}>
-                {/* LEFT — FORM */}
-                <div style={{
-                  width: "25%", flexShrink: 0, height: "75%",
-                  display: "flex", flexDirection: "column", justifyContent: "center",
-                  borderRight: "0.5px solid #000", paddingRight: "2rem",
-                }}>
-                  <h2 style={{
-                    fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.35rem",
-                    fontWeight: 700, textTransform: "uppercase", letterSpacing: "-0.02em",
-                    margin: "0 0 1.5rem 0",
-                  }}>
-                    {mode === "signup" ? "Join Cadenza" : "Welcome Back"}
-                  </h2>
-
-                  <form
-                    onSubmit={mode === "signup" ? handleSubmit : handleSignIn}
-                    style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
-                  >
-                    {mode === "signup" && (
-                      <div style={{ display: "flex", gap: "1.25rem", marginBottom: "0.25rem" }}>
-                        {(["student", "teacher"] as UserRole[]).map(r => (
-                          <label key={r} style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
-                            <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} style={{ display: "none" }} />
-                            <div style={{
-                              width: 11, height: 11, borderRadius: "50%", border: "1px solid #000",
-                              background: role === r ? "#2C2824" : "transparent", transition: "background 0.15s",
-                            }} />
-                            <span style={{
-                              fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                              letterSpacing: "0.15em", textTransform: "uppercase",
-                              opacity: role === r ? 1 : 0.6, transition: "opacity 0.15s",
-                            }}>
-                              {r}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-
-                    {mode === "signup" && (
-                      <div style={{ position: "relative" }}>
-                        <label style={lbl}>Display Name</label>
-                        <input className="cad-input" type="text" placeholder="Your name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
-                      </div>
-                    )}
-
-                    <div style={{ position: "relative" }}>
-                      <label style={lbl}>Email Address</label>
-                      <input className="cad-input" type="email" placeholder="user@domain.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                    </div>
-
-                    <div style={{ position: "relative" }}>
-                      <label style={lbl}>Security Key</label>
-                      <input className="cad-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
-                    </div>
-
-                    {error && (
-                      <div style={{ fontSize: 11, color: "#ba1a1a", letterSpacing: "0.04em" }}>{error}</div>
-                    )}
-
-                    <button type="submit" disabled={loading} className="cad-btn-pastel" style={{
-                      marginTop: "0.5rem",
-                      background: "#2C2824",
-                      color: "#F8F6F2", border: "none",
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
-                      textTransform: "uppercase", letterSpacing: "0.15em",
-                      padding: "0.85rem 1rem", cursor: loading ? "default" : "pointer",
-                      opacity: loading ? 0.6 : 1, width: "100%", textAlign: "center", borderRadius: 0,
-                    }}>
-                      {mode === "signup"
-                        ? (loading ? "Joining\u2026" : "Join The Quorum")
-                        : (loading ? "Entering\u2026" : "Access Cadenza")}
-                    </button>
-
-                    <button type="button" onClick={handleGoogle} className="cad-btn-outline" style={{
-                      width: "100%", background: "transparent", border: "1.5px solid #2C2824",
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11,
-                      letterSpacing: "0.15em", textTransform: "uppercase", color: "#2C2824",
-                      padding: "0.85rem 1rem", cursor: "pointer", borderRadius: 0, fontWeight: 700,
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
-                    }}>
-                      {googleSvg} Continue with Google
-                    </button>
-
-                    <div style={{
-                      textAlign: "center", fontFamily: "'Space Grotesk', sans-serif",
-                      fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: "0.5rem",
-                    }}>
-                      <span style={{ color: "rgba(0,0,0,0.6)" }}>
-                        {mode === "signup" ? "Already have an account? " : "Don\u2019t have an account? "}
-                      </span>
-                      <button type="button" onClick={() => switchMode(mode === "signup" ? "signin" : "signup")} style={{
-                        background: "none", border: "none", padding: 0, cursor: "pointer",
-                        fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                        letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700, color: "#000",
-                      }}>
-                        {mode === "signup" ? "Sign In" : "Create One"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-                {/* CENTER — MAIN IMAGE */}
-                <div style={{ width: "40%", flexShrink: 0, height: "100%", position: "relative" }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "2px solid #2C2824" }}>
-                    {SLIDES.map((s, i) => (
-                      <div key={i} style={{
-                        position: "absolute", inset: 0,
-                        opacity: i === slide ? 1 : 0, transition: "opacity 0.6s ease",
-                        pointerEvents: i === slide ? "auto" : "none",
-                      }}>
-                        <img
-                          src={s.img} alt={s.label.replace("\n", " ")}
-                          className={i === slide ? "cad-hero-img" : undefined}
-                          style={{
-                            width: "100%", height: "100%", objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      </div>
-                    ))}
-                    <div style={{ position: "absolute", bottom: 16, left: 16, zIndex: 2 }}>
-                      {cur.label.split("\n").map((line, i) => (
-                        <p key={i} style={{
-                          fontFamily: "'Space Grotesk', sans-serif", color: "#2C2824",
-                          fontSize: "clamp(1.25rem, 2vw, 1.75rem)", fontWeight: 700,
-                          letterSpacing: "-0.02em", textTransform: "uppercase", lineHeight: 1, margin: 0,
-                        }}>
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* RIGHT — PREVIEW IMAGE */}
-                <div style={{ width: "25%", flexShrink: 0, height: "83.33%", opacity: 0.6 }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#eae8e3", border: "2px solid #2C2824" }}>
-                    {SLIDES.map((s, i) => (
-                      <div key={i} style={{
-                        position: "absolute", inset: 0,
-                        opacity: i === preview ? 1 : 0, transition: "opacity 0.6s ease",
-                      }}>
-                        <img
-                          src={s.img} alt={s.label.replace("\n", " ")}
-                          style={{
-                            width: "100%", height: "100%", objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      </div>
-                    ))}
-                    <div style={{ position: "absolute", bottom: 16, left: 16 }}>
-                      <p style={{
-                        fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                        letterSpacing: "0.15em", textTransform: "uppercase",
-                        color: "#fbf9f4", mixBlendMode: "difference", margin: 0,
-                      }}>
-                        {nxt.label.replace("\n", " ")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* CAROUSEL NAV */}
-              <div style={{
-                flexShrink: 0, display: "flex", justifyContent: "center", alignItems: "center",
-                padding: "0.75rem 0", gap: "1rem",
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.15em",
-              }}>
-                <button onClick={prevSlide} className="cad-nav-arrow" style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#000", padding: "0.25rem", lineHeight: 1,
-                }}>&#8592;</button>
-                <span style={{ fontWeight: 700, color: "#2C2824" }}>{PAD(slide + 1)}</span>
-                <span style={{ color: "rgba(0,0,0,0.4)" }}>/ {PAD(SLIDES.length)}</span>
-                <button onClick={nextSlide} className="cad-nav-arrow" style={{
-                  background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#000", padding: "0.25rem", lineHeight: 1,
-                }}>&#8594;</button>
-              </div>
-            </main>
-
-            {/* VINYL PLAYER (desktop only) */}
-            <div style={{
-              position: "fixed", bottom: "4.5rem", right: "2.5rem", zIndex: 50,
-              display: "flex", flexDirection: "column", alignItems: "flex-end",
-            }}>
-              {showPlayer && (
-                <div style={{
-                  marginBottom: "0.75rem", background: "#000", color: "#fbf9f4",
-                  width: 260, maxHeight: 300, display: "flex", flexDirection: "column",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-                }}>
-                  <div style={{
-                    padding: "0.75rem 1rem", borderBottom: "0.5px solid rgba(255,255,255,0.12)",
-                    display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0,
-                  }}>
-                    <span style={{
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                      letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700,
-                    }}>Student Archives</span>
-                    <button onClick={() => setShowPlayer(false)} style={{
-                      background: "none", border: "none", color: "rgba(255,255,255,0.4)",
-                      cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0,
-                    }}>&#10005;</button>
-                  </div>
-                  <div className="cad-player-scroll" style={{ overflowY: "auto", flex: 1 }}>
-                    {recordings.length === 0 ? (
-                      <div style={{
-                        padding: "2rem 1rem", textAlign: "center",
-                        fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                        letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)",
-                      }}>No recordings yet</div>
-                    ) : (
-                      recordings.map(rec => (
-                        <button key={rec.id} className="cad-track" onClick={() => playRecording(rec)} style={{
-                          display: "block", width: "100%", padding: "0.6rem 1rem",
-                          background: playingId === rec.id ? "rgba(255,255,255,0.1)" : "transparent",
-                          border: "none", borderBottom: "0.5px solid rgba(255,255,255,0.06)",
-                          cursor: "pointer", textAlign: "left",
-                        }}>
-                          <div style={{
-                            fontFamily: "'Work Sans', sans-serif", fontSize: 12, color: "#fbf9f4",
-                            display: "flex", alignItems: "center", gap: 6,
-                          }}>
-                            <span style={{ fontSize: 9, opacity: 0.6 }}>
-                              {playingId === rec.id && isPlaying ? "\u25A0" : "\u25B6"}
-                            </span>
-                            {rec.title}
-                          </div>
-                          <div style={{
-                            fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
-                            color: "rgba(255,255,255,0.4)", marginTop: 2,
-                            letterSpacing: "0.1em", textTransform: "uppercase",
-                          }}>{rec.artist}</div>
-                        </button>
-                      ))
-                    )}
-                  </div>
+            <form onSubmit={mode === "signup" ? handleSubmit : handleSignIn} className="flex flex-col gap-4">
+              {mode === "signup" && (
+                <div className="grid grid-cols-2 gap-2">
+                  {(["student", "teacher"] as UserRole[]).map(r => (
+                    <label
+                      key={r}
+                      className="cursor-pointer rounded-lg border px-4 py-2.5 text-center text-sm transition-colors"
+                      style={role === r
+                        ? { background: "var(--sage-bg)", borderColor: "var(--sage)", color: "var(--sage)" }
+                        : { borderColor: "var(--border-strong)", color: "var(--muted)" }}
+                    >
+                      <input type="radio" name="role" value={r} checked={role === r} onChange={() => setRole(r)} className="sr-only" />
+                      {r === "student" ? "I'm learning" : "I teach"}
+                    </label>
+                  ))}
                 </div>
               )}
-              <div onClick={() => setShowPlayer(p => !p)} style={{
-                display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer", flexDirection: "row-reverse",
-              }}>
-                <div className={`cad-vinyl-spin ${!isPlaying ? "cad-vinyl-paused" : ""}`} style={{
-                  position: "relative", width: 56, height: 56, borderRadius: "50%",
-                  background: "#000", display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
-                }}>
-                  <div className="cad-vinyl-grooves" style={{ position: "absolute", inset: 0, borderRadius: "50%" }} />
-                  <div style={{
-                    width: 20, height: 20, borderRadius: "50%", background: "#fbf9f4",
-                    border: "0.5px solid #000", display: "flex", alignItems: "center", justifyContent: "center",
-                    position: "relative", zIndex: 10,
-                  }}>
-                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#000" }} />
-                  </div>
-                  <div style={{
-                    position: "absolute", inset: 0, borderRadius: "50%",
-                    background: "linear-gradient(to top right, rgba(255,255,255,0.2), transparent)",
-                    mixBlendMode: "overlay",
-                  }} />
-                </div>
-                {!showPlayer && (
-                  <div style={{ display: "flex", flexDirection: "column", textAlign: "right" }}>
-                    <span style={{
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
-                      letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 700,
-                    }}>{isPlaying ? "Now Playing" : "Student Archives"}</span>
-                    <span style={{
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 9,
-                      letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.5)",
-                    }}>
-                      {isPlaying && playingId
-                        ? recordings.find(r => r.id === playingId)?.title ?? ""
-                        : `${recordings.length} Recording${recordings.length !== 1 ? "s" : ""}`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {/* DESKTOP FOOTER */}
-            <footer style={{
-              flexShrink: 0,
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "0.6rem 2.5rem", borderTop: "0.5px solid #000", margin: "0 1rem",
-            }}>
-              <div style={{
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
-              }}>
-                &copy;2026 CADENZA
+              {mode === "signup" && (
+                <div>
+                  <label className="mb-1 block text-sm" style={{ color: "var(--muted)" }}>Name</label>
+                  <input
+                    type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} required
+                    placeholder="Your name"
+                    className="w-full rounded-lg border px-3 py-2.5 text-[15px] outline-none focus:border-[var(--sage)]"
+                    style={{ borderColor: "var(--border-strong)", background: "var(--white)" }}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm" style={{ color: "var(--muted)" }}>Email</label>
+                <input
+                  type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                  placeholder="name@example.com"
+                  className="w-full rounded-lg border px-3 py-2.5 text-[15px] outline-none focus:border-[var(--sage)]"
+                  style={{ borderColor: "var(--border-strong)", background: "var(--white)" }}
+                />
               </div>
-              <a href="#" className="cad-link" style={{
-                fontFamily: "'Space Grotesk', sans-serif", fontSize: 10,
-                letterSpacing: "0.15em", textTransform: "uppercase", color: "#000", textDecoration: "none",
-              }}>
-                cadenza.social
-              </a>
-            </footer>
-          </>
-        )}
-      </div>
-    </>
+
+              <div>
+                <label className="mb-1 block text-sm" style={{ color: "var(--muted)" }}>Password</label>
+                <input
+                  type="password" value={password} onChange={e => setPassword(e.target.value)} required
+                  placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
+                  className="w-full rounded-lg border px-3 py-2.5 text-[15px] outline-none focus:border-[var(--sage)]"
+                  style={{ borderColor: "var(--border-strong)", background: "var(--white)" }}
+                />
+              </div>
+
+              {error && <p className="text-sm" style={{ color: "#ba1a1a" }}>{error}</p>}
+
+              <button
+                type="submit" disabled={loading}
+                className="mt-1 w-full cursor-pointer rounded-lg py-2.5 text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                style={{ background: "var(--sage)" }}
+              >
+                {mode === "signup" ? (loading ? "Creating account…" : "Create account") : (loading ? "Signing in…" : "Sign in")}
+              </button>
+
+              <button
+                type="button" onClick={handleGoogle}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border py-2.5 text-sm transition-colors hover:bg-[var(--cream)]"
+                style={{ borderColor: "var(--border-strong)" }}
+              >
+                {googleSvg} Continue with Google
+              </button>
+
+              <p className="mt-1 text-center text-sm" style={{ color: "var(--muted)" }}>
+                {mode === "signup" ? "Already have an account? " : "New to Cadenza? "}
+                <button
+                  type="button"
+                  onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setError(""); setPassword(""); }}
+                  className="cursor-pointer font-medium"
+                  style={{ color: "var(--sage)" }}
+                >
+                  {mode === "signup" ? "Sign in" : "Create one"}
+                </button>
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

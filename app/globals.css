@@ -105,7 +105,11 @@
 }
 
 /* ── Reset ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* In @layer base so Tailwind utilities (a later layer) can override it;
+   unlayered, it silently kills every margin/padding utility app-wide. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 
 html {
   color-scheme: light;
