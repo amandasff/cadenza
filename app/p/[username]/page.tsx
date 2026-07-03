@@ -36,8 +36,9 @@ const getProfile = cache(async function getProfile(username: string) {
   cutoff.setDate(cutoff.getDate() - 364);
   const cutoffStr = formatDate(cutoff);
 
-  // Fetch tracks, raw collectible IDs, featured composer, theme song, and practice data in parallel
-  const [tracksRes, collectiblesRes, featuredComposerRes, themeSongRes, sessionsRes, clipsRes] = await Promise.all([
+  // Fetch tracks, raw collectible IDs, featured composer, theme song, practice data,
+  // current repertoire, and the student's teacher in parallel
+  const [tracksRes, collectiblesRes, featuredComposerRes, themeSongRes, sessionsRes, clipsRes, piecesRes, teacherAssignmentRes] = await Promise.all([
     admin
       .from("portfolio_items")
       .select("id, title, description, recording_url, created_at, collection_count")
@@ -57,7 +58,36 @@ const getProfile = cache(async function getProfile(username: string) {
       : Promise.resolve({ data: null }),
     admin.from("practice_sessions").select("created_at").eq("student_id", p.id).gte("created_at", cutoffStr),
     admin.from("practice_clips").select("created_at").eq("student_id", p.id).gte("created_at", cutoffStr),
+    admin
+      .from("pieces")
+      .select("id, title, composer, status")
+      .eq("student_id", p.id)
+      .in("status", ["learning", "polishing", "performance_ready"])
+      .in("category", ["repertoire", "etude", "free"])
+      .order("sort_order", { ascending: true })
+      .limit(8),
+    admin
+      .from("teacher_student_assignments")
+      .select("teacher_id")
+      .eq("student_id", p.id)
+      .is("ended_at", null)
+      .limit(1)
+      .maybeSingle(),
   ]);
+
+  // Resolve the teacher's display name for the "Studio of …" line
+  let studioTeacherName: string | null = null;
+  const teacherId = (teacherAssignmentRes.data as { teacher_id: string } | null)?.teacher_id;
+  if (teacherId && teacherId !== p.id) {
+    const { data: teacherProfile } = await admin
+      .from("profiles").select("display_name").eq("id", teacherId).single();
+    const teacherName = (teacherProfile as { display_name: string | null } | null)?.display_name ?? null;
+    // Skip when the names match (e.g. a founder testing with linked accounts) —
+    // "Amanda Wu · Studio of Amanda Wu" reads as a glitch
+    if (teacherName && teacherName.toLowerCase() !== (p.display_name ?? "").toLowerCase()) {
+      studioTeacherName = teacherName;
+    }
+  }
 
   // Resolve composer details in a separate explicit query — avoids embedded-join null issues
   const avatarIds = (collectiblesRes.data ?? []).map((c: { avatar_id: string }) => c.avatar_id);
@@ -95,6 +125,8 @@ const getProfile = cache(async function getProfile(username: string) {
     featuredComposer,
     themeSong,
     practiceData,
+    repertoire: (piecesRes.data ?? []) as { id: string; title: string; composer: string | null; status: string }[],
+    studioTeacherName,
   };
 });
 
@@ -104,7 +136,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: "Profile not found · Cadenza" };
 
   const { profile } = data;
-  const name = profile.display_name ?? username;
+  const name = profile.artist_name ?? profile.display_name ?? username;
   const desc = profile.instrument
     ? `${name} plays ${profile.instrument} on Cadenza.`
     : `Listen to ${name}'s music on Cadenza.`;
